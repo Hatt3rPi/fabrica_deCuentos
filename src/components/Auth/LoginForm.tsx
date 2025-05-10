@@ -30,7 +30,7 @@ const LoginForm: React.FC = () => {
           <LogIn className="w-12 h-12 text-purple-600" />
         </div>
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">
-          Fábrica de Sueños
+          Fábrica de Cuentos
         </h2>
         
         <form onSubmit={handleSubmit} className="space-y-6">

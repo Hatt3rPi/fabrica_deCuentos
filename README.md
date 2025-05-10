@@ -1,4 +1,4 @@
-# 📚 Fábrica de Sueños
+# 📚 Fábrica de Cuentos
 
 Plataforma web interactiva para crear cuentos infantiles personalizados con ilustraciones generadas mediante inteligencia artificial.
 
@@ -92,4 +92,4 @@ Las contribuciones son bienvenidas. Por favor, abre un issue primero para discut
 
 ## ✨ Créditos
 
-Desarrollado con ❤️ por el equipo de Fábrica de Sueños
+Desarrollado con ❤️ por el equipo de Fábrica de Cuentos
