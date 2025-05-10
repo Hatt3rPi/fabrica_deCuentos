@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { useAuth } from '../../../context/AuthContext';
-import { Magic, RefreshCw, Trash2, Plus, Loader } from 'lucide-react';
+import { Magnet as Magic, RefreshCw, Trash2, Plus, Loader } from 'lucide-react';
 import { Character } from '../../../types';
 
 const CharactersStep: React.FC = () => {
