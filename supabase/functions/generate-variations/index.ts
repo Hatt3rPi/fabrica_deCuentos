@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    const apiKey = import.meta.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error('OpenAI API key not found in environment');
     }
