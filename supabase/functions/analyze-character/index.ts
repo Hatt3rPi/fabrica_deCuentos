@@ -11,16 +11,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get API key from environment or header
-    let apiKey = Deno.env.get('OPENAI_API_KEY');
-    
-    // If not in environment, try header
+    // Get API key from header
+    const apiKey = req.headers.get('x-openai-key');
     if (!apiKey) {
-      apiKey = req.headers.get('x-openai-key');
-    }
-
-    if (!apiKey) {
-      throw new Error('OpenAI API key not found');
+      throw new Error('OpenAI API key not found in request headers');
     }
 
     if (!apiKey.startsWith('sk-')) {
