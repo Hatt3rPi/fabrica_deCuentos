@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { useAuth } from '../../../context/AuthContext';
-import * as LucideReact from 'lucide-react';
+import { Magic, RefreshCw, Trash2, Plus, Loader } from 'lucide-react';
 import { Character } from '../../../types';
 
 const CharactersStep: React.FC = () => {
@@ -169,7 +169,7 @@ const CharactersStep: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <LucideReact.Loader className="w-8 h-8 text-purple-600 animate-spin" />
+        <Loader className="w-8 h-8 text-purple-600 animate-spin" />
       </div>
     );
   }
@@ -194,7 +194,7 @@ const CharactersStep: React.FC = () => {
                   className="text-red-500 hover:text-red-700"
                   aria-label="Eliminar personaje"
                 >
-                  <LucideReact.Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-5 h-5" />
                 </button>
               )}
             </div>
@@ -240,12 +240,12 @@ const CharactersStep: React.FC = () => {
                 >
                   {generatingFor === character.id ? (
                     <>
-                      <LucideReact.RefreshCw className="w-5 h-5 animate-spin" />
+                      <RefreshCw className="w-5 h-5 animate-spin" />
                       <span>Generando...</span>
                     </>
                   ) : (
                     <>
-                      <LucideReact.Magic className="w-5 h-5" />
+                      <Magic className="w-5 h-5" />
                       <span>Generar imágenes</span>
                     </>
                   )}
@@ -279,7 +279,7 @@ const CharactersStep: React.FC = () => {
                 ) : (
                   <div className="flex items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
                     <div className="text-center p-6">
-                      <LucideReact.Magic className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <Magic className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                       <p className="text-gray-500">
                         Completa la información y haz clic en "Generar imágenes" para ver las opciones
                       </p>
@@ -298,7 +298,7 @@ const CharactersStep: React.FC = () => {
             onClick={addCharacter}
             className="py-2 px-4 border border-purple-300 rounded-full text-purple-700 flex items-center gap-2 hover:bg-purple-50"
           >
-            <LucideReact.Plus className="w-5 h-5" />
+            <Plus className="w-5 h-5" />
             <span>Añadir personaje</span>
           </button>
         </div>
