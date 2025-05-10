@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { imageUrl } = await req.json();
+    const { image } = await req.json();
 
     // Analyze image with GPT-4 Vision
     const analysis = await openai.chat.completions.create({
@@ -31,7 +31,9 @@ Deno.serve(async (req) => {
             },
             {
               type: 'image_url',
-              image_url: imageUrl,
+              image_url: {
+                url: image,
+              },
             },
           ],
         },

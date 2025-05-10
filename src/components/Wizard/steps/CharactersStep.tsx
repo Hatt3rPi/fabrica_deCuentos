@@ -23,7 +23,16 @@ const CharactersStep: React.FC = () => {
     }
   }, [user]);
 
-  const analyzeImage = async (imageUrl: string, characterId: string) => {
+  const getBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const analyzeImage = async (base64Image: string, characterId: string) => {
     setIsAnalyzing(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
@@ -32,14 +41,13 @@ const CharactersStep: React.FC = () => {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ imageUrl }),
+        body: JSON.stringify({ image: base64Image }),
       });
 
       if (!response.ok) throw new Error('Error analyzing image');
 
       const { description } = await response.json();
       
-      // Update character description with AI analysis
       const character = characters.find(c => c.id === characterId);
       if (character) {
         updateCharacter(characterId, {
@@ -86,7 +94,6 @@ const CharactersStep: React.FC = () => {
     const character = characters.find(c => c.id === characterId);
     if (!character) return;
 
-    const newImages: string[] = [];
     const existingImages = character.variants?.length || 0;
     const remainingSlots = 3 - existingImages;
 
@@ -109,45 +116,38 @@ const CharactersStep: React.FC = () => {
       }
 
       try {
-        const filename = `${user?.id}/${characterId}/${Date.now()}-${file.name}`;
-        const { data, error } = await supabase.storage
-          .from('character-images')
-          .upload(filename, file);
-
-        if (error) throw error;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('character-images')
-          .getPublicUrl(filename);
-
-        newImages.push(publicUrl);
+        const base64Image = await getBase64(file);
+        await analyzeImage(base64Image, characterId);
         
-        // Analyze each uploaded image
-        await analyzeImage(publicUrl, characterId);
+        // Add temporary preview URL for the uploaded image
+        const previewUrl = URL.createObjectURL(file);
+        const updatedVariants = [
+          ...(character.variants || []),
+          {
+            id: Date.now().toString(),
+            imageUrl: previewUrl,
+            seed: Date.now().toString(),
+            style: 'uploaded'
+          }
+        ];
+
+        await updateCharacter(characterId, { variants: updatedVariants });
       } catch (error) {
-        console.error('Error uploading image:', error);
-        setUploadError('Error al subir la imagen');
+        console.error('Error processing image:', error);
+        setUploadError('Error al procesar la imagen');
         return;
       }
     }
-
-    // Update character with new images
-    const updatedVariants = [
-      ...(character.variants || []),
-      ...newImages.map(url => ({
-        id: Date.now().toString(),
-        imageUrl: url,
-        seed: Date.now().toString(),
-        style: 'uploaded'
-      }))
-    ];
-
-    await updateCharacter(characterId, { variants: updatedVariants });
   };
 
   const removeImage = async (characterId: string, variantId: string) => {
     const character = characters.find(c => c.id === characterId);
     if (!character) return;
+
+    const variant = character.variants.find(v => v.id === variantId);
+    if (variant && variant.style === 'uploaded') {
+      URL.revokeObjectURL(variant.imageUrl);
+    }
 
     const updatedVariants = character.variants.filter(v => v.id !== variantId);
     await updateCharacter(characterId, { variants: updatedVariants });
@@ -170,7 +170,16 @@ const CharactersStep: React.FC = () => {
   const removeCharacter = async (id: string) => {
     if (characters.length > 1) {
       try {
-        // If the character exists in the database, delete it
+        const character = characters.find(c => c.id === id);
+        if (character) {
+          // Clean up any object URLs
+          character.variants.forEach(variant => {
+            if (variant.style === 'uploaded') {
+              URL.revokeObjectURL(variant.imageUrl);
+            }
+          });
+        }
+
         if (id.length === 36) { // UUID length check
           await supabase
             .from('characters')
@@ -190,8 +199,7 @@ const CharactersStep: React.FC = () => {
     );
     setCharacters(updatedCharacters);
 
-    // If the character exists in the database, update it
-    if (id.length === 36) { // UUID length check
+    if (id.length === 36) {
       try {
         const { error } = await supabase
           .from('characters')
@@ -207,7 +215,6 @@ const CharactersStep: React.FC = () => {
         console.error('Error updating character:', error);
       }
     } else if (updates.name && updates.description) {
-      // If it's a new character with required fields, create it
       try {
         const { data, error } = await supabase
           .from('characters')
@@ -223,7 +230,6 @@ const CharactersStep: React.FC = () => {
 
         if (error) throw error;
 
-        // Update the local state with the new database ID
         if (data) {
           setCharacters(characters.map(char =>
             char.id === id ? { ...char, id: data.id } : char
@@ -258,7 +264,6 @@ const CharactersStep: React.FC = () => {
 
       const { variations, spriteSheet } = await response.json();
       
-      // Update character with new variations and sprite sheet
       updateCharacter(id, {
         variants: [...variations, spriteSheet],
         selectedVariant: null
