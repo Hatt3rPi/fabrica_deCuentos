@@ -20,3 +20,5 @@ const Header: React.FC = () => {
     </header>
   );
 };
+
+export default Header
