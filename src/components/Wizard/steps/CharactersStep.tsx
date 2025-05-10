@@ -259,6 +259,7 @@ const CharactersStep: React.FC = () => {
     if (!character || !character.name || !character.description) return;
 
     setGeneratingFor(id);
+    setUploadError(null);
 
     try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
@@ -273,17 +274,28 @@ const CharactersStep: React.FC = () => {
         }),
       });
 
-      if (!response.ok) throw new Error('Error generating variations');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error generating variations');
+      }
 
-      const { variations, spriteSheet } = await response.json();
+      const data = await response.json();
       
+      if (!data.variations || !data.spriteSheet) {
+        throw new Error('Invalid response format from server');
+      }
+
       updateCharacter(id, {
-        variants: [...variations, spriteSheet],
+        variants: [...data.variations, data.spriteSheet],
         selectedVariant: null
       });
     } catch (error) {
       console.error('Error generating variations:', error);
-      setUploadError('Error al generar variaciones');
+      setUploadError(
+        error instanceof Error 
+          ? `Error al generar variaciones: ${error.message}` 
+          : 'Error al generar variaciones'
+      );
     } finally {
       setGeneratingFor(null);
     }

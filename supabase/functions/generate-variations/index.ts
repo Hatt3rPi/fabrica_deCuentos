@@ -1,21 +1,32 @@
 import OpenAI from 'npm:openai@4.28.0';
 
-const openai = new OpenAI({
-  apiKey: Deno.env.get('OPENAI_API_KEY'),
-});
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 Deno.serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    // Check for OpenAI API key
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      throw new Error('OpenAI API key is not configured');
+    }
+
+    const openai = new OpenAI({
+      apiKey: openaiApiKey,
+    });
+
+    // Parse and validate request body
     const { name, description } = await req.json();
+    if (!name || !description) {
+      throw new Error('Name and description are required');
+    }
 
     // Generate character variations with DALL-E 3
     const variations = await openai.images.generate({
@@ -55,8 +66,14 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
+    console.error('Error in generate-variations:', error);
+    
+    // Return a structured error response
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
+        details: error instanceof Error ? error.stack : undefined
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
