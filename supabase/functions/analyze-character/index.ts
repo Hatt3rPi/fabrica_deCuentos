@@ -13,12 +13,24 @@ Deno.serve(async (req) => {
   try {
     const apiKey = Deno.env.get('OPENAI_API_KEY');
     if (!apiKey) {
-      throw new Error('OpenAI API key not found in environment');
+      throw new Error('OPENAI_API_KEY no encontrada en las variables de entorno');
     }
 
-    const openai = new OpenAI({
-      apiKey: apiKey,
-    });
+    // Intentar crear el cliente OpenAI para validar la API key
+    let openai;
+    try {
+      openai = new OpenAI({
+        apiKey: apiKey,
+      });
+      
+      // Hacer una llamada simple para validar la API key
+      await openai.models.list();
+    } catch (error) {
+      if (error.status === 401) {
+        throw new Error('OPENAI_API_KEY inválida');
+      }
+      throw error;
+    }
 
     const { image } = await req.json();
     if (!image) {
