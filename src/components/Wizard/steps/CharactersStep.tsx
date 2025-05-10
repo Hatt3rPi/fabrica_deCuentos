@@ -34,6 +34,8 @@ const CharactersStep: React.FC = () => {
 
   const analyzeImage = async (base64Image: string, characterId: string) => {
     setIsAnalyzing(true);
+    setUploadError(null);
+    
     try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
         method: 'POST',
@@ -44,21 +46,32 @@ const CharactersStep: React.FC = () => {
         body: JSON.stringify({ image: base64Image }),
       });
 
-      if (!response.ok) throw new Error('Error analyzing image');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
 
-      const { description } = await response.json();
+      const data = await response.json();
       
+      if (!data.description) {
+        throw new Error('No description received from analysis');
+      }
+
       const character = characters.find(c => c.id === characterId);
       if (character) {
         updateCharacter(characterId, {
           description: character.description 
-            ? `${character.description}\n\nAnálisis de la imagen:\n${description}`
-            : description
+            ? `${character.description}\n\nAnálisis de la imagen:\n${data.description}`
+            : data.description
         });
       }
     } catch (error) {
       console.error('Error analyzing image:', error);
-      setUploadError('Error al analizar la imagen');
+      setUploadError(
+        error instanceof Error 
+          ? `Error al analizar la imagen: ${error.message}` 
+          : 'Error al analizar la imagen'
+      );
     } finally {
       setIsAnalyzing(false);
     }
@@ -362,11 +375,20 @@ const CharactersStep: React.FC = () => {
                   <Button
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={character.variants.length >= 3}
+                    disabled={character.variants.length >= 3 || isAnalyzing}
                     className="w-full"
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Subir imágenes ({character.variants.length}/3)
+                    {isAnalyzing ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        <span>Analizando imagen...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        <span>Subir imágenes ({character.variants.length}/3)</span>
+                      </>
+                    )}
                   </Button>
 
                   <Button

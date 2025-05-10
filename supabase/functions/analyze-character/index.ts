@@ -1,10 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import OpenAI from 'npm:openai@4.28.0';
 
-const openai = new OpenAI({
-  apiKey: Deno.env.get('OPENAI_API_KEY'),
-});
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -16,7 +12,19 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!apiKey) {
+      throw new Error('OpenAI API key is not configured');
+    }
+
+    const openai = new OpenAI({
+      apiKey: apiKey,
+    });
+
     const { image } = await req.json();
+    if (!image) {
+      throw new Error('No image data provided');
+    }
 
     // Analyze image with GPT-4 Vision
     const analysis = await openai.chat.completions.create({
@@ -41,6 +49,10 @@ Deno.serve(async (req) => {
       max_tokens: 500,
     });
 
+    if (!analysis.choices[0]?.message?.content) {
+      throw new Error('No analysis result received from OpenAI');
+    }
+
     return new Response(
       JSON.stringify({ description: analysis.choices[0].message.content }),
       {
@@ -48,8 +60,12 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
+    console.error('Error in analyze-character function:', error);
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'An unexpected error occurred'
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
