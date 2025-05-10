@@ -12,8 +12,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const openaiKey = req.headers.get('x-openai-key');
+    if (!openaiKey) {
+      throw new Error('OpenAI API key not found in request headers');
+    }
+
     const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
+      apiKey: openaiKey,
     });
 
     const { name, description, generateSpriteSheet = false, selectedVariantUrl } = await req.json();
