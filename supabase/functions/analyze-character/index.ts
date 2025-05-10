@@ -1,4 +1,3 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import OpenAI from 'npm:openai@4.28.0';
 
 const corsHeaders = {
@@ -26,7 +25,11 @@ Deno.serve(async (req) => {
       throw new Error('No image data provided');
     }
 
-    // Analyze image with GPT-4 Vision
+    // Convert base64 to blob
+    const imageBlob = await fetch(image).then(res => res.blob());
+    const imageFile = new File([imageBlob], 'image.jpg', { type: 'image/jpeg' });
+
+    // Use GPT-4 Vision to analyze the image
     const analysis = await openai.chat.completions.create({
       model: 'gpt-4-vision-preview',
       messages: [
