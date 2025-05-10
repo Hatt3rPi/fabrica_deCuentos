@@ -1,12 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { ChevronLeft, ChevronRight, RefreshCw, Pencil } from 'lucide-react';
 
 const PreviewStep: React.FC = () => {
-  const { generatedPages, setGeneratedPages, isGenerating } = useWizard();
+  const { generatedPages, setGeneratedPages, isGenerating, setIsGenerating } = useWizard();
   const [currentPage, setCurrentPage] = useState(0);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [promptText, setPromptText] = useState('');
+
+  useEffect(() => {
+    // Simular tiempo de carga inicial
+    setIsGenerating(true);
+    const timer = setTimeout(() => {
+      setIsGenerating(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [setIsGenerating]);
 
   const handlePrevPage = () => {
     setCurrentPage((prev) => Math.max(0, prev - 1));
@@ -22,21 +31,26 @@ const PreviewStep: React.FC = () => {
   };
 
   const handleRegeneratePage = async (pageId: string, prompt: string) => {
-    // Simular regeneración de imagen
-    const updatedPages = generatedPages.map((page) =>
-      page.id === pageId
-        ? {
-            ...page,
-            prompt,
-            imageUrl: 'https://images.pexels.com/photos/3662157/pexels-photo-3662157.jpeg', // Imagen de ejemplo
-          }
-        : page
-    );
-    setGeneratedPages(updatedPages);
-    setEditingPrompt(null);
+    setIsGenerating(true);
+    try {
+      // Simular regeneración de imagen
+      const updatedPages = generatedPages.map((page) =>
+        page.id === pageId
+          ? {
+              ...page,
+              prompt,
+              imageUrl: 'https://images.pexels.com/photos/3662157/pexels-photo-3662157.jpeg',
+            }
+          : page
+      );
+      setGeneratedPages(updatedPages);
+    } finally {
+      setIsGenerating(false);
+      setEditingPrompt(null);
+    }
   };
 
-  if (generatedPages.length === 0) {
+  if (isGenerating) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin mb-4">
@@ -47,6 +61,19 @@ const PreviewStep: React.FC = () => {
         </h3>
         <p className="text-gray-600">
           Estamos dando vida a tu historia. Este proceso puede tomar unos minutos...
+        </p>
+      </div>
+    );
+  }
+
+  if (!generatedPages || generatedPages.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+          No hay páginas generadas
+        </h3>
+        <p className="text-gray-600">
+          Por favor, completa los pasos anteriores para generar tu cuento.
         </p>
       </div>
     );
@@ -77,14 +104,18 @@ const PreviewStep: React.FC = () => {
         </button>
 
         <div className="relative w-[600px] aspect-square bg-white rounded-lg shadow-lg overflow-hidden">
-          <img
-            src={currentPageData.imageUrl}
-            alt={`Página ${currentPage + 1}`}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
-            <p className="text-white text-lg">{currentPageData.text}</p>
-          </div>
+          {currentPageData && (
+            <>
+              <img
+                src={currentPageData.imageUrl}
+                alt={`Página ${currentPage + 1}`}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
+                <p className="text-white text-lg">{currentPageData.text}</p>
+              </div>
+            </>
+          )}
         </div>
 
         <button
@@ -105,7 +136,7 @@ const PreviewStep: React.FC = () => {
           <div className="flex items-start justify-between">
             <div className="flex-grow">
               <h4 className="text-sm font-medium text-purple-800 mb-1">Prompt de la imagen</h4>
-              {editingPrompt === currentPageData.id ? (
+              {editingPrompt === currentPageData?.id ? (
                 <div className="space-y-2">
                   <textarea
                     value={promptText}
@@ -134,10 +165,10 @@ const PreviewStep: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-600">{currentPageData.prompt}</p>
+                <p className="text-gray-600">{currentPageData?.prompt}</p>
               )}
             </div>
-            {editingPrompt !== currentPageData.id && (
+            {!editingPrompt && currentPageData && (
               <button
                 onClick={() => handleEditPrompt(currentPageData.id, currentPageData.prompt)}
                 className="p-1 text-purple-600 hover:text-purple-800"
