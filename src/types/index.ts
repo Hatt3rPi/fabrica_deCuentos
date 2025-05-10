@@ -1,11 +1,14 @@
 // Tipos para el personaje
 export interface Character {
   id: string;
+  user_id: string;
   name: string;
   description: string;
   photo?: File;
-  selectedVariant: string | null;
+  selected_variant: string | null;
   variants: CharacterVariant[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CharacterVariant {

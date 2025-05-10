@@ -1,39 +1,124 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWizard } from '../../../context/WizardContext';
+import { useAuth } from '../../../context/AuthContext';
 import * as LucideReact from 'lucide-react';
 import { Character } from '../../../types';
 
 const CharactersStep: React.FC = () => {
   const { characters, setCharacters } = useWizard();
+  const { supabase, user } = useAuth();
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      loadUserCharacters();
+    }
+  }, [user]);
+
+  const loadUserCharacters = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('characters')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setCharacters(data.map(char => ({
+          ...char,
+          variants: char.variants || [],
+          selectedVariant: char.selected_variant
+        })));
+      }
+    } catch (error) {
+      console.error('Error loading characters:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const addCharacter = () => {
     if (characters.length < 3) {
-      setCharacters([
-        ...characters,
-        {
-          id: Date.now().toString(),
-          name: '',
-          description: '',
-          selectedVariant: null,
-          variants: [],
-        },
-      ]);
+      const newCharacter = {
+        id: Date.now().toString(),
+        user_id: user?.id || '',
+        name: '',
+        description: '',
+        selected_variant: null,
+        variants: [],
+      };
+      setCharacters([...characters, newCharacter]);
     }
   };
 
-  const removeCharacter = (id: string) => {
+  const removeCharacter = async (id: string) => {
     if (characters.length > 1) {
-      setCharacters(characters.filter((c) => c.id !== id));
+      try {
+        // If the character exists in the database, delete it
+        if (id.length === 36) { // UUID length check
+          await supabase
+            .from('characters')
+            .delete()
+            .eq('id', id);
+        }
+        setCharacters(characters.filter((c) => c.id !== id));
+      } catch (error) {
+        console.error('Error removing character:', error);
+      }
     }
   };
 
-  const updateCharacter = (id: string, updates: Partial<Character>) => {
-    setCharacters(
-      characters.map((character) =>
-        character.id === id ? { ...character, ...updates } : character
-      )
+  const updateCharacter = async (id: string, updates: Partial<Character>) => {
+    const updatedCharacters = characters.map((character) =>
+      character.id === id ? { ...character, ...updates } : character
     );
+    setCharacters(updatedCharacters);
+
+    // If the character exists in the database, update it
+    if (id.length === 36) { // UUID length check
+      try {
+        const { error } = await supabase
+          .from('characters')
+          .update({
+            ...updates,
+            selected_variant: updates.selectedVariant,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error updating character:', error);
+      }
+    } else if (updates.name && updates.description) {
+      // If it's a new character with required fields, create it
+      try {
+        const { data, error } = await supabase
+          .from('characters')
+          .insert({
+            name: updates.name,
+            description: updates.description,
+            user_id: user?.id,
+            variants: updates.variants || [],
+            selected_variant: updates.selectedVariant,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Update the local state with the new database ID
+        if (data) {
+          setCharacters(characters.map(char =>
+            char.id === id ? { ...char, id: data.id } : char
+          ));
+        }
+      } catch (error) {
+        console.error('Error creating character:', error);
+      }
+    }
   };
 
   const generateVariants = (id: string) => {
@@ -80,6 +165,14 @@ const CharactersStep: React.FC = () => {
   const selectVariant = (characterId: string, variantId: string) => {
     updateCharacter(characterId, { selectedVariant: variantId });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <LucideReact.Loader className="w-8 h-8 text-purple-600 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
