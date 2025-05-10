@@ -14,6 +14,7 @@ const CharactersStep: React.FC = () => {
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -21,6 +22,39 @@ const CharactersStep: React.FC = () => {
       loadUserCharacters();
     }
   }, [user]);
+
+  const analyzeImage = async (imageUrl: string, characterId: string) => {
+    setIsAnalyzing(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ imageUrl }),
+      });
+
+      if (!response.ok) throw new Error('Error analyzing image');
+
+      const { description } = await response.json();
+      
+      // Update character description with AI analysis
+      const character = characters.find(c => c.id === characterId);
+      if (character) {
+        updateCharacter(characterId, {
+          description: character.description 
+            ? `${character.description}\n\nAnálisis de la imagen:\n${description}`
+            : description
+        });
+      }
+    } catch (error) {
+      console.error('Error analyzing image:', error);
+      setUploadError('Error al analizar la imagen');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const loadUserCharacters = async () => {
     try {
@@ -64,7 +98,6 @@ const CharactersStep: React.FC = () => {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Validate file size and type
       if (file.size > MAX_FILE_SIZE) {
         setUploadError('El archivo es demasiado grande. Máximo 5MB');
         return;
@@ -88,6 +121,9 @@ const CharactersStep: React.FC = () => {
           .getPublicUrl(filename);
 
         newImages.push(publicUrl);
+        
+        // Analyze each uploaded image
+        await analyzeImage(publicUrl, characterId);
       } catch (error) {
         console.error('Error uploading image:', error);
         setUploadError('Error al subir la imagen');
@@ -199,45 +235,40 @@ const CharactersStep: React.FC = () => {
     }
   };
 
-  const generateVariants = (id: string) => {
+  const generateVariants = async (id: string) => {
     const character = characters.find((c) => c.id === id);
     if (!character || !character.name || !character.description) return;
 
     setGeneratingFor(id);
 
-    // Simular generación de variantes con un timeout
-    setTimeout(() => {
-      // Generar variantes de muestra (en una aplicación real, esto vendría de la API)
-      const variants = [
-        {
-          id: '1',
-          imageUrl: 'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg',
-          seed: '12345',
-          style: 'cartoon',
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
         },
-        {
-          id: '2',
-          imageUrl: 'https://images.pexels.com/photos/1252869/pexels-photo-1252869.jpeg',
-          seed: '67890',
-          style: 'realistic',
-        },
-        {
-          id: '3',
-          imageUrl: 'https://images.pexels.com/photos/1468376/pexels-photo-1468376.jpeg',
-          seed: '54321',
-          style: 'watercolor',
-        },
-        {
-          id: '4',
-          imageUrl: 'https://images.pexels.com/photos/3662157/pexels-photo-3662157.jpeg',
-          seed: '09876',
-          style: 'pixar',
-        },
-      ];
+        body: JSON.stringify({
+          name: character.name,
+          description: character.description,
+        }),
+      });
 
-      updateCharacter(id, { variants, selectedVariant: null });
+      if (!response.ok) throw new Error('Error generating variations');
+
+      const { variations, spriteSheet } = await response.json();
+      
+      // Update character with new variations and sprite sheet
+      updateCharacter(id, {
+        variants: [...variations, spriteSheet],
+        selectedVariant: null
+      });
+    } catch (error) {
+      console.error('Error generating variations:', error);
+      setUploadError('Error al generar variaciones');
+    } finally {
       setGeneratingFor(null);
-    }, 2000);
+    }
   };
 
   const selectVariant = (characterId: string, variantId: string) => {
