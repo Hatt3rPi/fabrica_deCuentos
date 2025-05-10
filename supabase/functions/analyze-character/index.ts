@@ -13,15 +13,16 @@ Deno.serve(async (req) => {
   try {
     const apiKey = Deno.env.get('OPENAI_API_KEY');
     
-    // Log para debugging (solo durante desarrollo)
-    console.log('API Key found:', apiKey ? 'Yes (length: ' + apiKey.length + ')' : 'No');
-    
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY no encontrada en las variables de entorno');
-    }
-
-    if (!apiKey.startsWith('sk-')) {
-      throw new Error('OPENAI_API_KEY inválida: debe comenzar con "sk-"');
+      // Try to get the key from the request headers
+      const authHeader = req.headers.get('x-openai-key');
+      if (!authHeader) {
+        throw new Error('OpenAI API key not found');
+      }
+      if (!authHeader.startsWith('sk-')) {
+        throw new Error('Invalid OpenAI API key format');
+      }
+      apiKey = authHeader;
     }
 
     const openai = new OpenAI({
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
     
     let errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     
-    // Agregar información adicional si es un error de OpenAI
+    // Add additional information if it's an OpenAI error
     if (error.response?.data?.error) {
       errorMessage += `: ${error.response.data.error.message}`;
     }

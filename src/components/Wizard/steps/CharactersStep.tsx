@@ -43,6 +43,7 @@ const CharactersStep: React.FC = () => {
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
+          'x-openai-key': import.meta.env.OPENAI_API_KEY
         },
         body: JSON.stringify({ image: base64Image }),
       });
@@ -276,6 +277,7 @@ const CharactersStep: React.FC = () => {
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
+          'x-openai-key': import.meta.env.OPENAI_API_KEY
         },
         body: JSON.stringify({
           name: character.name,
@@ -334,6 +336,7 @@ const CharactersStep: React.FC = () => {
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
+          'x-openai-key': import.meta.env.OPENAI_API_KEY
         },
         body: JSON.stringify({
           name: character.name,
