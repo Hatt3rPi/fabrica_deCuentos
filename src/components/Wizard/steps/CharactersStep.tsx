@@ -1,14 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { useAuth } from '../../../context/AuthContext';
-import { Magnet as Magic, RefreshCw, Trash2, Plus, Loader } from 'lucide-react';
+import { Magnet as Magic, RefreshCw, Trash2, Plus, Loader, Upload, X } from 'lucide-react';
 import { Character } from '../../../types';
+import Button from '../../UI/Button';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const CharactersStep: React.FC = () => {
   const { characters, setCharacters } = useWizard();
   const { supabase, user } = useAuth();
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -37,6 +43,78 @@ const CharactersStep: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFileUpload = async (characterId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+
+    const character = characters.find(c => c.id === characterId);
+    if (!character) return;
+
+    const newImages: string[] = [];
+    const existingImages = character.variants?.length || 0;
+    const remainingSlots = 3 - existingImages;
+
+    if (files.length > remainingSlots) {
+      setUploadError(`Solo puedes subir ${remainingSlots} imagen${remainingSlots !== 1 ? 'es' : ''} más`);
+      return;
+    }
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      // Validate file size and type
+      if (file.size > MAX_FILE_SIZE) {
+        setUploadError('El archivo es demasiado grande. Máximo 5MB');
+        return;
+      }
+
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        setUploadError('Tipo de archivo no permitido. Use JPG, PNG o WebP');
+        return;
+      }
+
+      try {
+        const filename = `${user?.id}/${characterId}/${Date.now()}-${file.name}`;
+        const { data, error } = await supabase.storage
+          .from('character-images')
+          .upload(filename, file);
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('character-images')
+          .getPublicUrl(filename);
+
+        newImages.push(publicUrl);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        setUploadError('Error al subir la imagen');
+        return;
+      }
+    }
+
+    // Update character with new images
+    const updatedVariants = [
+      ...(character.variants || []),
+      ...newImages.map(url => ({
+        id: Date.now().toString(),
+        imageUrl: url,
+        seed: Date.now().toString(),
+        style: 'uploaded'
+      }))
+    ];
+
+    await updateCharacter(characterId, { variants: updatedVariants });
+  };
+
+  const removeImage = async (characterId: string, variantId: string) => {
+    const character = characters.find(c => c.id === characterId);
+    if (!character) return;
+
+    const updatedVariants = character.variants.filter(v => v.id !== variantId);
+    await updateCharacter(characterId, { variants: updatedVariants });
   };
 
   const addCharacter = () => {
@@ -179,9 +257,15 @@ const CharactersStep: React.FC = () => {
       <div className="text-center">
         <h2 className="text-2xl font-bold text-purple-800 mb-2">Crea tus personajes</h2>
         <p className="text-gray-600">
-          Describe hasta 3 personajes para tu cuento. Podrás generar imágenes a partir de tu descripción.
+          Describe hasta 3 personajes para tu cuento. Puedes subir imágenes o generarlas.
         </p>
       </div>
+
+      {uploadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {uploadError}
+        </div>
+      )}
 
       <div className="space-y-8">
         {characters.map((character, index) => (
@@ -229,49 +313,76 @@ const CharactersStep: React.FC = () => {
                   />
                 </div>
 
-                <button
-                  onClick={() => generateVariants(character.id)}
-                  disabled={!character.name || !character.description || generatingFor === character.id}
-                  className={`w-full py-2 px-4 rounded-md flex items-center justify-center gap-2 ${
-                    !character.name || !character.description || generatingFor === character.id
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700'
-                  }`}
-                >
-                  {generatingFor === character.id ? (
-                    <>
-                      <RefreshCw className="w-5 h-5 animate-spin" />
-                      <span>Generando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Magic className="w-5 h-5" />
-                      <span>Generar imágenes</span>
-                    </>
-                  )}
-                </button>
+                <div className="space-y-3">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".jpg,.jpeg,.png,.webp"
+                    multiple
+                    onChange={(e) => handleFileUpload(character.id, e.target.files)}
+                  />
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={character.variants.length >= 3}
+                    className="w-full"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Subir imágenes ({character.variants.length}/3)
+                  </Button>
+
+                  <Button
+                    onClick={() => generateVariants(character.id)}
+                    disabled={!character.name || !character.description || generatingFor === character.id}
+                    className="w-full"
+                  >
+                    {generatingFor === character.id ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        <span>Generando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Magic className="w-4 h-4 mr-2" />
+                        <span>Generar imágenes</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
 
               <div>
                 {character.variants.length > 0 ? (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Selecciona una variante</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Imágenes del personaje</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {character.variants.map((variant) => (
                         <div
                           key={variant.id}
-                          onClick={() => selectVariant(character.id, variant.id)}
-                          className={`border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                            character.selectedVariant === variant.id
-                              ? 'border-purple-500 ring-2 ring-purple-300'
-                              : 'border-gray-200 hover:border-purple-300'
-                          }`}
+                          className="relative group"
                         >
-                          <img
-                            src={variant.imageUrl}
-                            alt={`Variante ${variant.id} de ${character.name}`}
-                            className="w-full h-36 object-cover"
-                          />
+                          <div
+                            onClick={() => selectVariant(character.id, variant.id)}
+                            className={`border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                              character.selectedVariant === variant.id
+                                ? 'border-purple-500 ring-2 ring-purple-300'
+                                : 'border-gray-200 hover:border-purple-300'
+                            }`}
+                          >
+                            <img
+                              src={variant.imageUrl}
+                              alt={`Variante ${variant.id} de ${character.name}`}
+                              className="w-full h-36 object-cover"
+                            />
+                          </div>
+                          <button
+                            onClick={() => removeImage(character.id, variant.id)}
+                            className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -279,9 +390,9 @@ const CharactersStep: React.FC = () => {
                 ) : (
                   <div className="flex items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
                     <div className="text-center p-6">
-                      <Magic className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                       <p className="text-gray-500">
-                        Completa la información y haz clic en "Generar imágenes" para ver las opciones
+                        Sube hasta 3 imágenes o genera variantes automáticamente
                       </p>
                     </div>
                   </div>
