@@ -9,9 +9,18 @@ export interface Character {
   variants: CharacterVariant[];
   created_at?: string;
   updated_at?: string;
+  sprite_sheet: SpriteSheet | null;
+  sprite_sheet_status: 'pending' | 'generating' | 'completed' | 'failed';
 }
 
 export interface CharacterVariant {
+  id: string;
+  imageUrl: string;
+  seed: string;
+  style: string;
+}
+
+export interface SpriteSheet {
   id: string;
   imageUrl: string;
   seed: string;
