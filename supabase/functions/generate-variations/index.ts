@@ -23,44 +23,54 @@ Deno.serve(async (req) => {
     });
 
     // Parse and validate request body
-    const { name, description } = await req.json();
+    const { name, description, generateSpriteSheet = false, selectedVariantUrl } = await req.json();
     if (!name || !description) {
       throw new Error('Name and description are required');
     }
 
-    // Generate character variations with DALL-E 3
-    const variations = await openai.images.generate({
-      model: 'dall-e-3',
-      n: 3,
-      size: '1024x1024',
-      quality: 'standard',
-      prompt: `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging.`,
-    });
+    if (generateSpriteSheet && !selectedVariantUrl) {
+      throw new Error('Selected variant URL is required for sprite sheet generation');
+    }
 
-    // Generate sprite sheet
-    const spriteSheet = await openai.images.generate({
-      model: 'dall-e-3',
-      n: 1,
-      size: '1024x1024',
-      quality: 'standard',
-      prompt: `Create a sprite sheet showing front, side, and back views of the character "${name}". ${description}. Arrange the views horizontally in a single image. Style should match children's book illustration.`,
-    });
+    let response = {};
+
+    // Only generate variations if not generating sprite sheet
+    if (!generateSpriteSheet) {
+      // Generate character variations with DALL-E 3
+      const variations = await openai.images.generate({
+        model: 'dall-e-3',
+        n: 3,
+        size: '1024x1024',
+        quality: 'standard',
+        prompt: `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging.`,
+      });
+
+      response.variations = variations.data.map(img => ({
+        id: crypto.randomUUID(),
+        imageUrl: img.url,
+        seed: img.seed || '',
+        style: 'dall-e-3'
+      }));
+    } else {
+      // Generate sprite sheet based on selected variant
+      const spriteSheet = await openai.images.generate({
+        model: 'dall-e-3',
+        n: 1,
+        size: '1024x1024',
+        quality: 'standard',
+        prompt: `Create a sprite sheet showing front, side, and back views of this character: ${description}. Use this image as reference: ${selectedVariantUrl}. Arrange the views horizontally in a single image. Match the exact style of the reference image.`,
+      });
+
+      response.spriteSheet = {
+        id: crypto.randomUUID(),
+        imageUrl: spriteSheet.data[0].url,
+        seed: spriteSheet.data[0].seed || '',
+        style: 'sprite-sheet'
+      };
+    }
 
     return new Response(
-      JSON.stringify({
-        variations: variations.data.map(img => ({
-          id: crypto.randomUUID(),
-          imageUrl: img.url,
-          seed: img.seed || '',
-          style: 'dall-e-3'
-        })),
-        spriteSheet: {
-          id: crypto.randomUUID(),
-          imageUrl: spriteSheet.data[0].url,
-          seed: spriteSheet.data[0].seed || '',
-          style: 'sprite-sheet'
-        }
-      }),
+      JSON.stringify(response),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },

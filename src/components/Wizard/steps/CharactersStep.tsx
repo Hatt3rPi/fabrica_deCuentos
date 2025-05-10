@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { useAuth } from '../../../context/AuthContext';
-import { Magnet as Magic, RefreshCw, Trash2, Plus, Loader, Upload, X } from 'lucide-react';
+import { Magnet as Magic, RefreshCw, Trash2, Plus, Loader, Upload, X, Layers } from 'lucide-react';
 import { Character } from '../../../types';
 import Button from '../../UI/Button';
 
@@ -12,6 +12,7 @@ const CharactersStep: React.FC = () => {
   const { characters, setCharacters } = useWizard();
   const { supabase, user } = useAuth();
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+  const [generatingSpriteSheet, setGeneratingSpriteSheet] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -90,7 +91,9 @@ const CharactersStep: React.FC = () => {
         setCharacters(data.map(char => ({
           ...char,
           variants: char.variants || [],
-          selectedVariant: char.selected_variant
+          selectedVariant: char.selected_variant,
+          spriteSheet: char.sprite_sheet,
+          spriteSheetStatus: char.sprite_sheet_status
         })));
       }
     } catch (error) {
@@ -175,6 +178,8 @@ const CharactersStep: React.FC = () => {
         description: '',
         selected_variant: null,
         variants: [],
+        sprite_sheet: null,
+        sprite_sheet_status: 'pending'
       };
       setCharacters([...characters, newCharacter]);
     }
@@ -219,6 +224,8 @@ const CharactersStep: React.FC = () => {
           .update({
             ...updates,
             selected_variant: updates.selectedVariant,
+            sprite_sheet: updates.spriteSheet,
+            sprite_sheet_status: updates.spriteSheetStatus,
             updated_at: new Date().toISOString(),
           })
           .eq('id', id);
@@ -237,6 +244,8 @@ const CharactersStep: React.FC = () => {
             user_id: user?.id,
             variants: updates.variants || [],
             selected_variant: updates.selectedVariant,
+            sprite_sheet: updates.spriteSheet,
+            sprite_sheet_status: updates.spriteSheetStatus
           })
           .select()
           .single();
@@ -271,6 +280,7 @@ const CharactersStep: React.FC = () => {
         body: JSON.stringify({
           name: character.name,
           description: character.description,
+          generateSpriteSheet: false
         }),
       });
 
@@ -281,13 +291,15 @@ const CharactersStep: React.FC = () => {
 
       const data = await response.json();
       
-      if (!data.variations || !data.spriteSheet) {
+      if (!data.variations) {
         throw new Error('Invalid response format from server');
       }
 
       updateCharacter(id, {
-        variants: [...data.variations, data.spriteSheet],
-        selectedVariant: null
+        variants: data.variations,
+        selectedVariant: null,
+        spriteSheet: null,
+        spriteSheetStatus: 'pending'
       });
     } catch (error) {
       console.error('Error generating variations:', error);
@@ -301,8 +313,72 @@ const CharactersStep: React.FC = () => {
     }
   };
 
+  const generateSpriteSheet = async (characterId: string, variantId: string) => {
+    const character = characters.find((c) => c.id === characterId);
+    if (!character) return;
+
+    const selectedVariant = character.variants.find((v) => v.id === variantId);
+    if (!selectedVariant) return;
+
+    setGeneratingSpriteSheet(characterId);
+    setUploadError(null);
+
+    try {
+      // Update status to generating
+      await updateCharacter(characterId, {
+        spriteSheetStatus: 'generating'
+      });
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: character.name,
+          description: character.description,
+          generateSpriteSheet: true,
+          selectedVariantUrl: selectedVariant.imageUrl
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error generating sprite sheet');
+      }
+
+      const data = await response.json();
+      
+      if (!data.spriteSheet) {
+        throw new Error('Invalid response format from server');
+      }
+
+      await updateCharacter(characterId, {
+        spriteSheet: data.spriteSheet,
+        spriteSheetStatus: 'completed'
+      });
+    } catch (error) {
+      console.error('Error generating sprite sheet:', error);
+      await updateCharacter(characterId, {
+        spriteSheetStatus: 'failed'
+      });
+      setUploadError(
+        error instanceof Error 
+          ? `Error al generar sprite sheet: ${error.message}` 
+          : 'Error al generar sprite sheet'
+      );
+    } finally {
+      setGeneratingSpriteSheet(null);
+    }
+  };
+
   const selectVariant = (characterId: string, variantId: string) => {
-    updateCharacter(characterId, { selectedVariant: variantId });
+    updateCharacter(characterId, { 
+      selectedVariant: variantId,
+      spriteSheet: null,
+      spriteSheetStatus: 'pending'
+    });
   };
 
   if (isLoading) {
@@ -447,15 +523,44 @@ const CharactersStep: React.FC = () => {
                               className="w-full h-36 object-cover"
                             />
                           </div>
-                          <button
-                            onClick={() => removeImage(character.id, variant.id)}
-                            className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                          <div className="absolute top-2 right-2 flex gap-1">
+                            {character.selectedVariant === variant.id && (
+                              <button
+                                onClick={() => generateSpriteSheet(character.id, variant.id)}
+                                disabled={generatingSpriteSheet === character.id}
+                                className="bg-purple-500 text-white p-1 rounded-full hover:bg-purple-600 transition-colors"
+                                title="Generar sprite sheet"
+                              >
+                                {generatingSpriteSheet === character.id ? (
+                                  <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Layers className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => removeImage(character.id, variant.id)}
+                              className="bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
+
+                    {character.spriteSheet && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Sprite Sheet</h4>
+                        <div className="border-2 border-purple-200 rounded-lg overflow-hidden">
+                          <img
+                            src={character.spriteSheet.imageUrl}
+                            alt={`Sprite sheet de ${character.name}`}
+                            className="w-full object-cover"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
