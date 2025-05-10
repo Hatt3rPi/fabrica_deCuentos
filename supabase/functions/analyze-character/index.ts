@@ -12,25 +12,21 @@ Deno.serve(async (req) => {
 
   try {
     const apiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    // Log para debugging (solo durante desarrollo)
+    console.log('API Key found:', apiKey ? 'Yes (length: ' + apiKey.length + ')' : 'No');
+    
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY no encontrada en las variables de entorno');
     }
 
-    // Intentar crear el cliente OpenAI para validar la API key
-    let openai;
-    try {
-      openai = new OpenAI({
-        apiKey: apiKey,
-      });
-      
-      // Hacer una llamada simple para validar la API key
-      await openai.models.list();
-    } catch (error) {
-      if (error.status === 401) {
-        throw new Error('OPENAI_API_KEY inválida');
-      }
-      throw error;
+    if (!apiKey.startsWith('sk-')) {
+      throw new Error('OPENAI_API_KEY inválida: debe comenzar con "sk-"');
     }
+
+    const openai = new OpenAI({
+      apiKey: apiKey,
+    });
 
     const { image } = await req.json();
     if (!image) {
@@ -73,10 +69,15 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in analyze-character function:', error);
     
+    let errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    
+    // Agregar información adicional si es un error de OpenAI
+    if (error.response?.data?.error) {
+      errorMessage += `: ${error.response.data.error.message}`;
+    }
+    
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
