@@ -78,8 +78,8 @@ const LoginForm: React.FC = () => {
 
           <div className="text-center text-sm text-gray-600">
             <p>Credenciales de prueba:</p>
-            <p>Email: demo@fabrica.com</p>
-            <p>Contraseña: demo123</p>
+            <p>Email: test@fabrica.com</p>
+            <p>Contraseña: test123</p>
           </div>
         </form>
       </div>
