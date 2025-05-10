@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    const apiKey = import.meta.env.OPENAI_API_KEY;
     
     if (!apiKey) {
       // Try to get the key from the request headers
