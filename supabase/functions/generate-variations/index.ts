@@ -12,13 +12,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      throw new Error('OpenAI API key is not configured');
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!apiKey) {
+      throw new Error('OpenAI API key not found in environment');
     }
 
     const openai = new OpenAI({
-      apiKey: openaiApiKey,
+      apiKey: apiKey,
     });
 
     const { name, description, generateSpriteSheet = false, selectedVariantUrl } = await req.json();
@@ -33,51 +33,29 @@ Deno.serve(async (req) => {
     let response = {};
 
     if (!generateSpriteSheet) {
-      // Download the base image for variations
-      const baseImageResponse = await fetch('https://images.pexels.com/photos/3662157/pexels-photo-3662157.jpeg');
-      const baseImageBlob = await baseImageResponse.blob();
+      // Generate variations
+      const variations = await openai.images.generate({
+        model: 'dall-e-3',
+        n: 3,
+        size: '1024x1024',
+        quality: 'standard',
+        prompt: `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging.`,
+      });
 
-      // Convert blob to File object
-      const baseImageFile = new File([baseImageBlob], 'base.jpg', { type: 'image/jpeg' });
-
-      // Generate variations using image edits
-      const variations = await Promise.all([1, 2, 3].map(async () => {
-        const result = await openai.images.edit({
-          image: baseImageFile,
-          prompt: `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging.`,
-          model: "gpt-image-1",
-          n: 1,
-          size: "640x640",
-          quality: "high",
-          background: "auto",
-          moderation: "auto",
-        });
-
-        return {
-          id: crypto.randomUUID(),
-          imageUrl: result.data[0].url,
-          seed: result.data[0].seed || '',
-          style: 'dall-e-3'
-        };
+      response.variations = variations.data.map(img => ({
+        id: crypto.randomUUID(),
+        imageUrl: img.url,
+        seed: img.seed || '',
+        style: 'dall-e-3'
       }));
-
-      response.variations = variations;
     } else {
-      // Download the selected variant for sprite sheet generation
-      const variantResponse = await fetch(selectedVariantUrl);
-      const variantBlob = await variantResponse.blob();
-      const variantFile = new File([variantBlob], 'variant.jpg', { type: 'image/jpeg' });
-
-      // Generate sprite sheet using image edits
-      const spriteSheetResult = await openai.images.edit({
-        image: variantFile,
-        prompt: `Create a sprite sheet showing front, side, and back views of this character: ${description}. Arrange the views horizontally in a single image. Match the exact style of the input image.`,
-        model: "gpt-image-1",
+      // Generate sprite sheet
+      const spriteSheetResult = await openai.images.generate({
+        model: 'dall-e-3',
         n: 1,
-        size: "640x640",
-        quality: "high",
-        background: "auto",
-        moderation: "auto",
+        size: '1024x1024',
+        quality: 'standard',
+        prompt: `Create a sprite sheet showing front, side, and back views of this character: ${description}. Arrange the views horizontally in a single image. Match the exact style of the input image.`,
       });
 
       response.spriteSheet = {

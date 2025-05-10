@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
   try {
     const apiKey = Deno.env.get('OPENAI_API_KEY');
     if (!apiKey) {
-      throw new Error('OpenAI API key is not configured');
+      throw new Error('OpenAI API key not found in environment');
     }
 
     const openai = new OpenAI({
@@ -24,10 +24,6 @@ Deno.serve(async (req) => {
     if (!image) {
       throw new Error('No image data provided');
     }
-
-    // Convert base64 to blob
-    const imageBlob = await fetch(image).then(res => res.blob());
-    const imageFile = new File([imageBlob], 'image.jpg', { type: 'image/jpeg' });
 
     // Use GPT-4 Vision to analyze the image
     const analysis = await openai.chat.completions.create({
