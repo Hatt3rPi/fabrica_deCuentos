@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
 
     // Use GPT-4 Vision to analyze the image
     const analysis = await openai.chat.completions.create({
-      model: 'gpt-4-vision-preview',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'user',
