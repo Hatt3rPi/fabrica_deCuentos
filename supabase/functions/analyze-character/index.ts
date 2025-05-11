@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Analiza únicamente lo que se observa en la imagen o imágenes proporcionadas. Estás viendo a un mismo personaje, por lo que si hay más de una imagen, consolida la información para describirlo de forma unificada. Describe al personaje en detalle, incluyendo su apariencia física, vestimenta, expresión facial, postura y cualquier característica distintiva. En caso de que el personaje use distintas vestimentas, incluye todas las variantes y proporciona una descripción más robusta. Omite completamente detalles del entorno o fondo. No inventes ni asumas información que no esté claramente visible. Proporciona una descripción estructurada que pueda usarse para un cuento infantil."
+                text: "Observa cuidadosamente todas las imágenes proporcionadas. Todas muestran al mismo personaje desde diferentes ángulos o momentos. Tu tarea es generar una única descripción consolidada del personaje, sin separar la información por imagen.\n\nDescribe exclusivamente lo que es observable directamente en las imágenes.\n\nSi el personaje presenta diferentes atuendos o expresiones, integra todos los elementos relevantes en una sola descripción robusta.\n\nNo incluyas información del entorno, ni describas objetos que no estén claramente relacionados con el personaje. No inventes ni asumas detalles no visibles.\n\nEl resultado debe entregarse en el siguiente formato estructurado, para ser utilizado en un cuento infantil:\n\n    Apariencia física: [Color y estilo de cabello, rasgos faciales, edad aparente, contextura, altura relativa, etc.]\n\n    Vestimenta: [Descripción de una o más tenidas visibles. Incluir colores, patrones, estilo, tipo de calzado, accesorios visibles.]\n\n    Expresión facial y actitud: [Gestos predominantes, emociones visibles, energía del personaje, mirada.]\n\n    Postura y acciones: [Cómo se posiciona, qué hace, si está en movimiento o estática, nivel de dinamismo.]\n\n    Características distintivas: [Detalles únicos como peinados, adornos, marcas, gestos, accesorios o elementos que contribuyen a su identidad visual.]"
               },
               {
                 type: "image_url",
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
             ]
           }
         ],
-        max_tokens: 500
+        max_tokens: 1000
       })
     });
 
