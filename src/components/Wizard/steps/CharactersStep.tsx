@@ -38,7 +38,6 @@ const CharactersStep: React.FC = () => {
     const userDescription = sections[0] || '';
     const analyses = sections.slice(1).filter(s => s.startsWith('Análisis de imagen'));
     
-    // Add new analysis with a number if there are multiple
     const newAnalysisWithHeader = `Análisis de imagen ${analyses.length + 1}:\n${newAnalysis}`;
     
     return [
@@ -151,7 +150,6 @@ const CharactersStep: React.FC = () => {
         const base64Image = await getBase64(file);
         await analyzeImage(base64Image, characterId);
         
-        // Add temporary preview URL for the uploaded image
         const previewUrl = URL.createObjectURL(file);
         const updatedVariants = [
           ...(character.variants || []),
@@ -206,7 +204,6 @@ const CharactersStep: React.FC = () => {
       try {
         const character = characters.find(c => c.id === id);
         if (character) {
-          // Clean up any object URLs
           character.variants.forEach(variant => {
             if (variant.style === 'uploaded') {
               URL.revokeObjectURL(variant.imageUrl);
@@ -214,7 +211,7 @@ const CharactersStep: React.FC = () => {
           });
         }
 
-        if (id.length === 36) { // UUID length check
+        if (id.length === 36) {
           await supabase
             .from('characters')
             .delete()
