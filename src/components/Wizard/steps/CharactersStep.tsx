@@ -51,7 +51,7 @@ const CharactersStep: React.FC = () => {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ image: base64Image }),
+        body: JSON.stringify({ imageUrl: base64Image }),
       });
 
       if (!response.ok) {
@@ -143,17 +143,28 @@ const CharactersStep: React.FC = () => {
 
       try {
         const base64Image = await getBase64(file);
-        const previewUrl = URL.createObjectURL(file);
+        
+        // Upload to Supabase Storage
+        const fileName = `${Date.now()}-${file.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('character-images')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('character-images')
+          .getPublicUrl(fileName);
         
         updatedVariants.push({
           id: Date.now().toString() + i,
-          imageUrl: previewUrl,
+          imageUrl: publicUrl,
           seed: Date.now().toString(),
           style: 'uploaded'
         });
 
         await updateCharacter(characterId, { variants: updatedVariants });
-        await analyzeImage(base64Image, characterId);
+        await analyzeImage(publicUrl, characterId);
       } catch (error) {
         console.error('Error processing image:', error);
         setUploadError('Error al procesar la imagen');
@@ -167,12 +178,26 @@ const CharactersStep: React.FC = () => {
     if (!character) return;
 
     const variant = character.variants.find(v => v.id === variantId);
-    if (variant && variant.style === 'uploaded') {
-      URL.revokeObjectURL(variant.imageUrl);
-    }
+    if (!variant) return;
 
-    const updatedVariants = character.variants.filter(v => v.id !== variantId);
-    await updateCharacter(characterId, { variants: updatedVariants });
+    try {
+      if (variant.style === 'uploaded') {
+        // Extract filename from URL
+        const url = new URL(variant.imageUrl);
+        const fileName = url.pathname.split('/').pop();
+        if (fileName) {
+          await supabase.storage
+            .from('character-images')
+            .remove([fileName]);
+        }
+      }
+
+      const updatedVariants = character.variants.filter(v => v.id !== variantId);
+      await updateCharacter(characterId, { variants: updatedVariants });
+    } catch (error) {
+      console.error('Error removing image:', error);
+      setUploadError('Error al eliminar la imagen');
+    }
   };
 
   const addCharacter = () => {
@@ -196,11 +221,18 @@ const CharactersStep: React.FC = () => {
       try {
         const character = characters.find(c => c.id === id);
         if (character) {
-          character.variants.forEach(variant => {
+          // Remove all uploaded images from storage
+          for (const variant of character.variants) {
             if (variant.style === 'uploaded') {
-              URL.revokeObjectURL(variant.imageUrl);
+              const url = new URL(variant.imageUrl);
+              const fileName = url.pathname.split('/').pop();
+              if (fileName) {
+                await supabase.storage
+                  .from('character-images')
+                  .remove([fileName]);
+              }
             }
-          });
+          }
         }
 
         if (id.length === 36) {
@@ -399,9 +431,13 @@ const CharactersStep: React.FC = () => {
     }
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     const currentCharacter = characters.find(c => c.id === characters[0].id);
     if (currentCharacter && currentCharacterStep < 2 && canProceedToNextStep(currentCharacter)) {
+      if (currentCharacterStep === 0) {
+        // Automatically generate variations when moving to the Propuestas step
+        await generateVariants(currentCharacter.id);
+      }
       setCurrentCharacterStep(prev => prev + 1);
     }
   };
@@ -520,7 +556,7 @@ const CharactersStep: React.FC = () => {
               ) : (
                 <>
                   <Magic className="w-4 h-4 mr-2" />
-                  <span>Generar propuestas</span>
+                  <span>Regenerar propuestas</span>
                 </>
               )}
             </Button>
