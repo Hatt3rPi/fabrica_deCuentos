@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Analiza únicamente lo que se observa en la imagen. Describe este personaje en detalle, incluyendo su apariencia física, vestimenta, expresión facial, postura y cualquier característica distintiva. No inventes ni asumas información que no esté claramente visible. Proporciona una descripción estructurada que pueda usarse para un cuento infantil."
+                text: "Analiza únicamente lo que se observa en la imagen o imágenes proporcionadas. Estás viendo a un mismo personaje, por lo que si hay más de una imagen, consolida la información para describirlo de forma unificada. Describe al personaje en detalle, incluyendo su apariencia física, vestimenta, expresión facial, postura y cualquier característica distintiva. En caso de que el personaje use distintas vestimentas, incluye todas las variantes y proporciona una descripción más robusta. Omite completamente detalles del entorno o fondo. No inventes ni asumas información que no esté claramente visible. Proporciona una descripción estructurada que pueda usarse para un cuento infantil."
               },
               {
                 type: "image_url",
