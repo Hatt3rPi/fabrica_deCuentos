@@ -33,6 +33,21 @@ const CharactersStep: React.FC = () => {
     });
   };
 
+  const consolidateDescription = (currentDescription: string, newAnalysis: string): string => {
+    const sections = currentDescription.split('\n\n');
+    const userDescription = sections[0] || '';
+    const analyses = sections.slice(1).filter(s => s.startsWith('Análisis de imagen'));
+    
+    // Add new analysis with a number if there are multiple
+    const newAnalysisWithHeader = `Análisis de imagen ${analyses.length + 1}:\n${newAnalysis}`;
+    
+    return [
+      userDescription,
+      ...analyses,
+      newAnalysisWithHeader
+    ].filter(Boolean).join('\n\n');
+  };
+
   const analyzeImage = async (base64Image: string, characterId: string) => {
     setIsAnalyzing(true);
     setUploadError(null);
@@ -60,11 +75,12 @@ const CharactersStep: React.FC = () => {
 
       const character = characters.find(c => c.id === characterId);
       if (character) {
-        updateCharacter(characterId, {
-          description: character.description 
-            ? `${character.description}\n\nAnálisis de la imagen:\n${data.description}`
-            : data.description
-        });
+        const updatedDescription = consolidateDescription(
+          character.description || '',
+          data.description
+        );
+        
+        updateCharacter(characterId, { description: updatedDescription });
       }
     } catch (error) {
       console.error('Error analyzing image:', error);
