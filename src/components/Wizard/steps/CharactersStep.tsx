@@ -144,8 +144,10 @@ const CharactersStep: React.FC = () => {
       try {
         const base64Image = await getBase64(file);
         
+        // Create URL-safe filename by encoding the original filename
+        const fileName = `${Date.now()}-${encodeURIComponent(file.name)}`;
+        
         // Upload to Supabase Storage
-        const fileName = `${Date.now()}-${file.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('character-images')
           .upload(fileName, file);
@@ -184,7 +186,7 @@ const CharactersStep: React.FC = () => {
       if (variant.style === 'uploaded') {
         // Extract filename from URL
         const url = new URL(variant.imageUrl);
-        const fileName = url.pathname.split('/').pop();
+        const fileName = decodeURIComponent(url.pathname.split('/').pop() || '');
         if (fileName) {
           await supabase.storage
             .from('character-images')
@@ -225,7 +227,7 @@ const CharactersStep: React.FC = () => {
           for (const variant of character.variants) {
             if (variant.style === 'uploaded') {
               const url = new URL(variant.imageUrl);
-              const fileName = url.pathname.split('/').pop();
+              const fileName = decodeURIComponent(url.pathname.split('/').pop() || '');
               if (fileName) {
                 await supabase.storage
                   .from('character-images')
