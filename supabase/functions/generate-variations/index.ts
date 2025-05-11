@@ -5,6 +5,104 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface GenerationOptions {
+  openai: {
+    model: string;
+    quality: string;
+  };
+  stable_diffusion: {
+    model: string;
+    cfg_scale: number;
+    steps: number;
+  };
+}
+
+async function generateWithOpenAI(
+  openai: OpenAI,
+  prompt: string,
+  options: GenerationOptions['openai']
+) {
+  const result = await openai.images.generate({
+    model: options.model,
+    n: 1,
+    size: '1024x1024',
+    quality: options.quality,
+    prompt,
+  });
+
+  return {
+    id: crypto.randomUUID(),
+    imageUrl: result.data[0].url,
+    seed: result.data[0].seed || '',
+    style: 'dall-e-3'
+  };
+}
+
+async function generateWithStableDiffusion(
+  prompt: string,
+  options: GenerationOptions['stable_diffusion']
+) {
+  const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${Deno.env.get('STABILITYDIFUSION_API_KEY')}`,
+    },
+    body: JSON.stringify({
+      cfg_scale: options.cfg_scale,
+      steps: options.steps,
+      width: 1024,
+      height: 1024,
+      samples: 1,
+      text_prompts: [
+        {
+          text: prompt,
+          weight: 1
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error generating image with Stable Diffusion');
+  }
+
+  const result = await response.json();
+  const base64Image = result.artifacts[0].base64;
+  
+  // Convert base64 to URL using Supabase Storage
+  const imageBuffer = Uint8Array.from(atob(base64Image), c => c.charCodeAt(0));
+  const filename = `${crypto.randomUUID()}.png`;
+  
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
+  const { data: uploadData, error: uploadError } = await supabaseClient
+    .storage
+    .from('character-images')
+    .upload(filename, imageBuffer, {
+      contentType: 'image/png',
+      cacheControl: '3600'
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data: publicUrl } = supabaseClient
+    .storage
+    .from('character-images')
+    .getPublicUrl(filename);
+
+  return {
+    id: crypto.randomUUID(),
+    imageUrl: publicUrl.publicUrl,
+    seed: result.artifacts[0].seed.toString(),
+    style: 'stable-diffusion'
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -24,43 +122,52 @@ Deno.serve(async (req) => {
       throw new Error('Selected variant URL is required for sprite sheet generation');
     }
 
+    // Get current engine settings
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { data: settingsData, error: settingsError } = await supabaseAdmin
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'image_generation')
+      .single();
+
+    if (settingsError) throw settingsError;
+
+    const settings = settingsData.value;
+    const engine = settings.engine;
+    const options = settings.options;
+
     let response = {};
 
     if (!generateSpriteSheet) {
-      // Generate variations one at a time since DALL-E 3 only supports n=1
+      // Generate variations one at a time
       const variations = [];
-      for (let i = 0; i < 3; i++) {
-        const result = await openai.images.generate({
-          model: 'dall-e-3',
-          n: 1,
-          size: '1024x1024',
-          quality: 'standard',
-          prompt: `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging. Make this variation unique and different from the others.`,
-        });
+      const basePrompt = `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging.`;
 
-        variations.push({
-          id: crypto.randomUUID(),
-          imageUrl: result.data[0].url,
-          seed: result.data[0].seed || '',
-          style: 'dall-e-3'
-        });
+      for (let i = 0; i < 3; i++) {
+        const prompt = `${basePrompt} Make this variation unique and different from the others.`;
+        
+        const variation = engine === 'openai'
+          ? await generateWithOpenAI(openai, prompt, options.openai)
+          : await generateWithStableDiffusion(prompt, options.stable_diffusion);
+
+        variations.push(variation);
       }
       
       response.variations = variations;
     } else {
       // Generate sprite sheet
-      const spriteSheetResult = await openai.images.generate({
-        model: 'dall-e-3',
-        n: 1,
-        size: '1024x1024',
-        quality: 'standard',
-        prompt: `Create a sprite sheet showing front, side, and back views of this character: ${description}. Arrange the views horizontally in a single image. Match the exact style of the input image.`,
-      });
+      const spriteSheetPrompt = `Create a sprite sheet showing front, side, and back views of this character: ${description}. Arrange the views horizontally in a single image. Match the exact style of the input image.`;
+      
+      const spriteSheet = engine === 'openai'
+        ? await generateWithOpenAI(openai, spriteSheetPrompt, options.openai)
+        : await generateWithStableDiffusion(spriteSheetPrompt, options.stable_diffusion);
 
       response.spriteSheet = {
-        id: crypto.randomUUID(),
-        imageUrl: spriteSheetResult.data[0].url,
-        seed: spriteSheetResult.data[0].seed || '',
+        ...spriteSheet,
         style: 'sprite-sheet'
       };
     }

@@ -27,6 +27,27 @@ export interface SpriteSheet {
   style: string;
 }
 
+// Tipos para la configuración del sistema
+export interface SystemSettings {
+  image_generation: ImageGenerationSettings;
+}
+
+export interface ImageGenerationSettings {
+  engine: 'openai' | 'stable_diffusion';
+  last_updated: string;
+  options: {
+    openai: {
+      model: string;
+      quality: string;
+    };
+    stable_diffusion: {
+      model: string;
+      cfg_scale: number;
+      steps: number;
+    };
+  };
+}
+
 // Tipos para la configuración del cuento
 export interface StorySettings {
   targetAge: string;
