@@ -14,6 +14,8 @@ Deno.serve(async (req) => {
       throw new Error('No image data provided');
     }
 
+    console.log('Sending request to OpenAI API...');
+
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -21,7 +23,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-4-turbo",
+        model: "gpt-4-vision-preview",
         messages: [
           {
             role: "user",
@@ -43,19 +45,22 @@ Deno.serve(async (req) => {
       })
     });
 
+    const responseData = await response.json();
+    console.log('OpenAI API Response:', JSON.stringify(responseData, null, 2));
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to analyze image');
+      throw new Error(responseData.error?.message || 'Failed to analyze image');
     }
 
-    const analysis = await response.json();
-
-    if (!analysis.choices?.[0]?.message?.content) {
+    if (!responseData.choices?.[0]?.message?.content) {
       throw new Error('No analysis result received from OpenAI');
     }
 
+    const description = responseData.choices[0].message.content;
+    console.log('Extracted description:', description);
+
     return new Response(
-      JSON.stringify({ description: analysis.choices[0].message.content }),
+      JSON.stringify({ description }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
