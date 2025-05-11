@@ -36,60 +36,68 @@ const CharactersStep: React.FC = () => {
     });
   };
 
-  const consolidateDescription = (currentDescription: string, newAnalysis: string): string => {
+  const consolidateDescription = (currentDescription: string, newAnalyses: string[]): string => {
     const sections = currentDescription.split('\n\n');
     const userDescription = sections[0] || '';
-    const analyses = sections.slice(1).filter(s => s.startsWith('Análisis de imagen'));
+    const existingAnalyses = sections.slice(1).filter(s => s.startsWith('Análisis de imagen'));
     
-    const newAnalysisWithHeader = `Análisis de imagen ${analyses.length + 1}:\n${newAnalysis}`;
+    const newAnalysesWithHeaders = newAnalyses.map((analysis, index) => 
+      `Análisis de imagen ${existingAnalyses.length + index + 1}:\n${analysis}`
+    );
     
     return [
       userDescription,
-      ...analyses,
-      newAnalysisWithHeader
+      ...existingAnalyses,
+      ...newAnalysesWithHeaders
     ].filter(Boolean).join('\n\n');
   };
 
-  const analyzeImage = async (base64Image: string, characterId: string) => {
+  const analyzeImages = async (base64Images: string[], characterId: string) => {
     setIsAnalyzing(true);
     setUploadError(null);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ image: base64Image }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const analyses: string[] = [];
       
-      if (!data.description) {
-        throw new Error('No description received from analysis');
+      for (const base64Image of base64Images) {
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ image: base64Image }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data.description) {
+          throw new Error('No description received from analysis');
+        }
+
+        analyses.push(data.description);
       }
 
       const character = characters.find(c => c.id === characterId);
       if (character) {
         const updatedDescription = consolidateDescription(
           character.description || '',
-          data.description
+          analyses
         );
         
-        updateCharacter(characterId, { description: updatedDescription });
+        await updateCharacter(characterId, { description: updatedDescription });
       }
     } catch (error) {
-      console.error('Error analyzing image:', error);
+      console.error('Error analyzing images:', error);
       setUploadError(
         error instanceof Error 
-          ? `Error al analizar la imagen: ${error.message}` 
-          : 'Error al analizar la imagen'
+          ? `Error al analizar las imágenes: ${error.message}` 
+          : 'Error al analizar las imágenes'
       );
     } finally {
       setIsAnalyzing(false);
@@ -136,6 +144,10 @@ const CharactersStep: React.FC = () => {
       return;
     }
 
+    const base64Images: string[] = [];
+    const filePromises: Promise<void>[] = [];
+    const newVariants: CharacterVariant[] = [];
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
@@ -149,27 +161,32 @@ const CharactersStep: React.FC = () => {
         return;
       }
 
-      try {
-        const base64Image = await getBase64(file);
-        await analyzeImage(base64Image, characterId);
-        
-        const previewUrl = URL.createObjectURL(file);
-        const updatedVariants = [
-          ...(character.variants || []),
-          {
-            id: Date.now().toString(),
+      filePromises.push(
+        getBase64(file).then(base64Image => {
+          base64Images.push(base64Image);
+          const previewUrl = URL.createObjectURL(file);
+          newVariants.push({
+            id: Date.now().toString() + i,
             imageUrl: previewUrl,
             seed: Date.now().toString(),
             style: 'uploaded'
-          }
-        ];
+          });
+        })
+      );
+    }
 
-        await updateCharacter(characterId, { variants: updatedVariants });
-      } catch (error) {
-        console.error('Error processing image:', error);
-        setUploadError('Error al procesar la imagen');
-        return;
-      }
+    try {
+      await Promise.all(filePromises);
+      
+      // First update the variants to show the images immediately
+      const updatedVariants = [...(character.variants || []), ...newVariants];
+      await updateCharacter(characterId, { variants: updatedVariants });
+
+      // Then analyze all images in batch
+      await analyzeImages(base64Images, characterId);
+    } catch (error) {
+      console.error('Error processing images:', error);
+      setUploadError('Error al procesar las imágenes');
     }
   };
 
@@ -474,7 +491,7 @@ const CharactersStep: React.FC = () => {
                 {isAnalyzing ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    <span>Analizando imagen...</span>
+                    <span>Analizando imágenes...</span>
                   </>
                 ) : (
                   <>
