@@ -46,9 +46,8 @@ const CharactersStep: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${openaiKey}`,
           'Content-Type': 'application/json',
-          'X-OpenAI-Key': openaiKey
         },
         body: JSON.stringify({ image: base64Image }),
       });
@@ -285,9 +284,8 @@ const CharactersStep: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${openaiKey}`,
           'Content-Type': 'application/json',
-          'X-OpenAI-Key': openaiKey
         },
         body: JSON.stringify({
           name: character.name,
@@ -349,9 +347,8 @@ const CharactersStep: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${openaiKey}`,
           'Content-Type': 'application/json',
-          'X-OpenAI-Key': openaiKey
         },
         body: JSON.stringify({
           name: character.name,

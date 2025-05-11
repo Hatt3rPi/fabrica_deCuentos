@@ -3,7 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-openai-key',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 Deno.serve(async (req) => {
@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const openaiKey = req.headers.get('X-OpenAI-Key');
+    const openaiKey = req.headers.get('authorization')?.split(' ')[1];
     if (!openaiKey) {
       throw new Error('OpenAI API key not found in request headers');
     }
