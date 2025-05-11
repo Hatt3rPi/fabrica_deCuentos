@@ -1,5 +1,3 @@
-import OpenAI from 'npm:openai@4.28.0';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -11,37 +9,48 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
-    });
-
     const { image } = await req.json();
     if (!image) {
       throw new Error('No image data provided');
     }
 
-    // Use GPT-4 Vision
-    const analysis = await openai.chat.completions.create({
-      model: 'gpt-4-vision-preview',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Describe este personaje en detalle, incluyendo su apariencia física, vestimenta, expresión facial, postura y cualquier característica distintiva. Proporciona una descripción estructurada que pueda usarse para un cuento infantil.',
-            },
-            {
-              type: 'image_url',
-              image_url: image,
-            },
-          ],
-        },
-      ],
-      max_tokens: 500,
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Describe este personaje en detalle, incluyendo su apariencia física, vestimenta, expresión facial, postura y cualquier característica distintiva. Proporciona una descripción estructurada que pueda usarse para un cuento infantil."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: image
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 500
+      })
     });
 
-    if (!analysis.choices[0]?.message?.content) {
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Failed to analyze image');
+    }
+
+    const analysis = await response.json();
+
+    if (!analysis.choices?.[0]?.message?.content) {
       throw new Error('No analysis result received from OpenAI');
     }
 
@@ -55,11 +64,6 @@ Deno.serve(async (req) => {
     console.error('Error in analyze-character function:', error);
     
     let errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-    
-    // Add additional information if it's an OpenAI error
-    if (error.response?.data?.error) {
-      errorMessage += `: ${error.response.data.error.message}`;
-    }
     
     return new Response(
       JSON.stringify({ error: errorMessage }),
