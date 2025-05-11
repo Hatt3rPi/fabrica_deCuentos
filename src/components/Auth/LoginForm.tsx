@@ -57,7 +57,10 @@ const LoginForm: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await signIn(email, password);
+      const { error: signInError } = await signIn(email, password);
+      if (signInError) {
+        throw signInError;
+      }
     } catch (err) {
       setError('Error al iniciar sesión. Por favor, verifica tus credenciales.');
     } finally {
