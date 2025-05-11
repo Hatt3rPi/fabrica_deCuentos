@@ -9,9 +9,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { image } = await req.json();
-    if (!image) {
-      throw new Error('No image data provided');
+    const { image, imageUrl } = await req.json();
+    if (!image && !imageUrl) {
+      throw new Error('No image data or URL provided');
     }
 
     console.log('Sending request to OpenAI API...');
@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-4-turbo",
+        model: "gpt-4-vision-preview",
         messages: [
           {
             role: "user",
@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
               {
                 type: "image_url",
                 image_url: {
-                  url: image
+                  url: imageUrl || image
                 }
               }
             ]
