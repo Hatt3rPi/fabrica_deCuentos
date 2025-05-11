@@ -51,7 +51,7 @@ const CharactersStep: React.FC = () => {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ imageUrl: base64Image }),
+        body: JSON.stringify({ image: base64Image }),
       });
 
       if (!response.ok) {
@@ -143,30 +143,17 @@ const CharactersStep: React.FC = () => {
 
       try {
         const base64Image = await getBase64(file);
-        
-        // Create URL-safe filename by encoding the original filename
-        const fileName = `${Date.now()}-${encodeURIComponent(file.name)}`;
-        
-        // Upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('character-images')
-          .upload(fileName, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('character-images')
-          .getPublicUrl(fileName);
+        const previewUrl = URL.createObjectURL(file);
         
         updatedVariants.push({
           id: Date.now().toString() + i,
-          imageUrl: publicUrl,
+          imageUrl: previewUrl,
           seed: Date.now().toString(),
           style: 'uploaded'
         });
 
         await updateCharacter(characterId, { variants: updatedVariants });
-        await analyzeImage(publicUrl, characterId);
+        await analyzeImage(base64Image, characterId);
       } catch (error) {
         console.error('Error processing image:', error);
         setUploadError('Error al procesar la imagen');
@@ -180,26 +167,12 @@ const CharactersStep: React.FC = () => {
     if (!character) return;
 
     const variant = character.variants.find(v => v.id === variantId);
-    if (!variant) return;
-
-    try {
-      if (variant.style === 'uploaded') {
-        // Extract filename from URL
-        const url = new URL(variant.imageUrl);
-        const fileName = decodeURIComponent(url.pathname.split('/').pop() || '');
-        if (fileName) {
-          await supabase.storage
-            .from('character-images')
-            .remove([fileName]);
-        }
-      }
-
-      const updatedVariants = character.variants.filter(v => v.id !== variantId);
-      await updateCharacter(characterId, { variants: updatedVariants });
-    } catch (error) {
-      console.error('Error removing image:', error);
-      setUploadError('Error al eliminar la imagen');
+    if (variant && variant.style === 'uploaded') {
+      URL.revokeObjectURL(variant.imageUrl);
     }
+
+    const updatedVariants = character.variants.filter(v => v.id !== variantId);
+    await updateCharacter(characterId, { variants: updatedVariants });
   };
 
   const addCharacter = () => {
@@ -223,18 +196,11 @@ const CharactersStep: React.FC = () => {
       try {
         const character = characters.find(c => c.id === id);
         if (character) {
-          // Remove all uploaded images from storage
-          for (const variant of character.variants) {
+          character.variants.forEach(variant => {
             if (variant.style === 'uploaded') {
-              const url = new URL(variant.imageUrl);
-              const fileName = decodeURIComponent(url.pathname.split('/').pop() || '');
-              if (fileName) {
-                await supabase.storage
-                  .from('character-images')
-                  .remove([fileName]);
-              }
+              URL.revokeObjectURL(variant.imageUrl);
             }
-          }
+          });
         }
 
         if (id.length === 36) {
@@ -433,13 +399,9 @@ const CharactersStep: React.FC = () => {
     }
   };
 
-  const handleNextStep = async () => {
+  const handleNextStep = () => {
     const currentCharacter = characters.find(c => c.id === characters[0].id);
     if (currentCharacter && currentCharacterStep < 2 && canProceedToNextStep(currentCharacter)) {
-      if (currentCharacterStep === 0) {
-        // Automatically generate variations when moving to the Propuestas step
-        await generateVariants(currentCharacter.id);
-      }
       setCurrentCharacterStep(prev => prev + 1);
     }
   };
@@ -558,7 +520,7 @@ const CharactersStep: React.FC = () => {
               ) : (
                 <>
                   <Magic className="w-4 h-4 mr-2" />
-                  <span>Regenerar propuestas</span>
+                  <span>Generar propuestas</span>
                 </>
               )}
             </Button>
