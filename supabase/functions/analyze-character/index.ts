@@ -20,9 +20,9 @@ Deno.serve(async (req) => {
       throw new Error('No image data provided');
     }
 
-    // Use GPT-4 Vision to analyze the image
+    // Use GPT-4 with vision capabilities
     const analysis = await openai.chat.completions.create({
-      model: 'gpt-4-vision-preview',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'user',
@@ -33,7 +33,9 @@ Deno.serve(async (req) => {
             },
             {
               type: 'image_url',
-              image_url: image,
+              image_url: {
+                url: image
+              },
             },
           ],
         },
