@@ -288,8 +288,7 @@ const CharactersStep: React.FC = () => {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'X-OpenAI-Key': openaiKey,
           'Content-Type': 'application/json'
-        }
-
+        },
         body: JSON.stringify({
           name: character.name,
           description: character.description,
