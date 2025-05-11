@@ -35,7 +35,10 @@ Deno.serve(async (req) => {
           n: 1,
           size: '1024x1024',
           quality: 'standard',
-          prompt: `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging. Make this variation unique and different from the others.`,
+          prompt: `Crea una ilustración digital de un personaje infantil para un cuento. 
+El personaje se llama ${name}. sigue la siguiente descripcion ${description}.
+Debe tener un estilo visual amigable y encantador para niños pequeños. 
+Utiliza colores suaves y figuras redondeadas, al estilo de los libros ilustrados infantiles`,
         });
 
         variations.push({
