@@ -17,6 +17,8 @@ const CharactersStep: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentCharacterStep, setCurrentCharacterStep] = useState(0);
+  const characterSteps = ['Inspiración', 'Propuestas', 'Personaje Final'];
 
   useEffect(() => {
     if (user) {
@@ -393,6 +395,31 @@ const CharactersStep: React.FC = () => {
     });
   };
 
+  const canProceedToNextStep = () => {
+    switch (currentCharacterStep) {
+      case 0: // Inspiración
+        return character.name && character.description && character.variants.some(v => v.style === 'uploaded');
+      case 1: // Propuestas
+        return character.selectedVariant !== null;
+      case 2: // Personaje Final
+        return character.spriteSheet !== null && character.spriteSheetStatus === 'completed';
+      default:
+        return false;
+    }
+  };
+
+  const handleNextStep = () => {
+    if (currentCharacterStep < 2 && canProceedToNextStep()) {
+      setCurrentCharacterStep(prev => prev + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (currentCharacterStep > 0) {
+      setCurrentCharacterStep(prev => prev - 1);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -415,6 +442,8 @@ const CharactersStep: React.FC = () => {
           {uploadError}
         </div>
       )}
+
+      <StepProgress steps={characterSteps} currentStep={currentCharacterStep} />
 
       <div className="space-y-8">
         {characters.map((character, index) => (
