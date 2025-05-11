@@ -119,8 +119,8 @@ const LoginForm: React.FC = () => {
 
     try {
       const { error: updateError } = await supabase.rpc('reset_password', {
-        token: recoveryToken,
-        new_password: newPassword
+        p_token: recoveryToken,
+        p_new_password: newPassword
       });
 
       if (updateError) throw updateError;
