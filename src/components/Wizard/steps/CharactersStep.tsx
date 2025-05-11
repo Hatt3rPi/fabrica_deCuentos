@@ -396,7 +396,7 @@ const CharactersStep: React.FC = () => {
     });
   };
 
-  const canProceedToNextStep = () => {
+  const canProceedToNextStep = (character: Character) => {
     switch (currentCharacterStep) {
       case 0: // Inspiración
         return character.name && character.description && character.variants.some(v => v.style === 'uploaded');
@@ -410,7 +410,8 @@ const CharactersStep: React.FC = () => {
   };
 
   const handleNextStep = () => {
-    if (currentCharacterStep < 2 && canProceedToNextStep()) {
+    const currentCharacter = characters.find(c => c.id === characters[0].id);
+    if (currentCharacter && currentCharacterStep < 2 && canProceedToNextStep(currentCharacter)) {
       setCurrentCharacterStep(prev => prev + 1);
     }
   };
@@ -687,7 +688,7 @@ const CharactersStep: React.FC = () => {
               </Button>
               <Button
                 onClick={handleNextStep}
-                disabled={!canProceedToNextStep()}
+                disabled={!canProceedToNextStep(character)}
               >
                 {currentCharacterStep === 2 ? 'Finalizar' : 'Siguiente'}
               </Button>
