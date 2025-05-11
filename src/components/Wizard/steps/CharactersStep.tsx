@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { Magnet as Magic, RefreshCw, Trash2, Plus, Loader, Upload, X, Layers, ImageIcon } from 'lucide-react';
 import { Character } from '../../../types';
 import Button from '../../UI/Button';
+import StepProgress from '../../UI/StepProgress';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -420,6 +421,219 @@ const CharactersStep: React.FC = () => {
     }
   };
 
+  const renderStepContent = (character: Character) => {
+    switch (currentCharacterStep) {
+      case 0: // Inspiración
+        return (
+          <div className="space-y-6">
+            <div className="mb-4">
+              <label htmlFor={`name-${character.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre del personaje
+              </label>
+              <input
+                type="text"
+                id={`name-${character.id}`}
+                value={character.name}
+                onChange={(e) => updateCharacter(character.id, { name: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Ej. Luna, el gato mágico"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label htmlFor={`description-${character.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                Descripción detallada
+              </label>
+              <textarea
+                id={`description-${character.id}`}
+                value={character.description}
+                onChange={(e) => updateCharacter(character.id, { description: e.target.value })}
+                rows={4}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Describe cómo es el personaje, su personalidad, apariencia..."
+              />
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".jpg,.jpeg,.png,.webp"
+                multiple
+                onChange={(e) => handleFileUpload(character.id, e.target.files)}
+              />
+              
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={character.variants.length >= 3 || isAnalyzing}
+                className="w-full"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    <span>Analizando imagen...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    <span>Subir imágenes ({character.variants.length}/3)</span>
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {character.variants.some(v => v.style === 'uploaded') && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Imágenes de inspiración</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  {character.variants
+                    .filter(v => v.style === 'uploaded')
+                    .map((variant) => (
+                      <div key={variant.id} className="relative group">
+                        <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
+                          <img
+                            src={variant.imageUrl}
+                            alt={`Inspiración para ${character.name}`}
+                            className="w-full h-36 object-cover"
+                          />
+                        </div>
+                        <button
+                          onClick={() => removeImage(character.id, variant.id)}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 1: // Propuestas
+        return (
+          <div className="space-y-6">
+            <Button
+              onClick={() => generateVariants(character.id)}
+              disabled={!character.name || !character.description || generatingFor === character.id}
+              className="w-full"
+            >
+              {generatingFor === character.id ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  <span>Generando...</span>
+                </>
+              ) : (
+                <>
+                  <Magic className="w-4 h-4 mr-2" />
+                  <span>Generar propuestas</span>
+                </>
+              )}
+            </Button>
+
+            {character.variants.some(v => v.style === 'dall-e-3') && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Selecciona una propuesta</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  {character.variants
+                    .filter(v => v.style === 'dall-e-3')
+                    .map((variant) => {
+                      const isSelected = character.selectedVariant === variant.id;
+                      const isLocked = character.selectedVariant && !isSelected;
+
+                      return (
+                        <div
+                          key={variant.id}
+                          className={`relative group ${isLocked ? 'opacity-50' : ''}`}
+                        >
+                          <div
+                            onClick={() => !isLocked && selectVariant(character.id, variant.id)}
+                            className={`border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-purple-500 ring-2 ring-purple-300'
+                                : isLocked
+                                ? 'border-gray-300 cursor-not-allowed'
+                                : 'border-gray-200 hover:border-purple-300'
+                            }`}
+                          >
+                            <img
+                              src={variant.imageUrl}
+                              alt={`Variante ${variant.id} de ${character.name}`}
+                              className="w-full h-48 object-cover"
+                            />
+                            {isSelected && (
+                              <div className="absolute inset-0 bg-purple-600 bg-opacity-10 flex items-center justify-center">
+                                <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-sm">
+                                  Seleccionado
+                                </div>
+                              </div>
+                            )}
+                            {isLocked && (
+                              <div className="absolute inset-0 bg-gray-900 bg-opacity-40 flex items-center justify-center">
+                                <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
+                                  Bloqueado
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 2: // Personaje Final
+        return (
+          <div className="space-y-6">
+            {character.selectedVariant && (
+              <Button
+                onClick={() => generateSpriteSheet(character.id, character.selectedVariant)}
+                disabled={generatingSpriteSheet === character.id}
+                className="w-full"
+              >
+                {generatingSpriteSheet === character.id ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    <span>Generando sprite sheet...</span>
+                  </>
+                ) : (
+                  <>
+                    <Layers className="w-4 h-4 mr-2" />
+                    <span>Generar sprite sheet</span>
+                  </>
+                )}
+              </Button>
+            )}
+
+            {character.spriteSheet && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Sprite Sheet Final</h4>
+                <div className="border-2 border-purple-200 rounded-lg overflow-hidden bg-white p-4">
+                  <div className="aspect-[3/1] relative">
+                    <img
+                      src={character.spriteSheet.imageUrl}
+                      alt={`Sprite sheet de ${character.name}`}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="mt-4 text-center">
+                    <div className="text-sm font-medium text-gray-700">Vistas del personaje</div>
+                    <div className="text-sm text-gray-500">Frontal, lateral y posterior</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -431,9 +645,9 @@ const CharactersStep: React.FC = () => {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-purple-800 mb-2">Crea tus personajes</h2>
+        <h2 className="text-2xl font-bold text-purple-800 mb-2">Creación de personaje</h2>
         <p className="text-gray-600">
-          Describe hasta 3 personajes para tu cuento. Puedes subir imágenes o generarlas.
+          Sigue los pasos para crear tu personaje
         </p>
       </div>
 
@@ -448,7 +662,7 @@ const CharactersStep: React.FC = () => {
       <div className="space-y-8">
         {characters.map((character, index) => (
           <div key={character.id} className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold text-purple-700">Personaje {index + 1}</h3>
               {characters.length > 1 && (
                 <button
@@ -461,211 +675,22 @@ const CharactersStep: React.FC = () => {
               )}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <div className="mb-4">
-                  <label htmlFor={`name-${character.id}`} className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre del personaje
-                  </label>
-                  <input
-                    type="text"
-                    id={`name-${character.id}`}
-                    value={character.name}
-                    onChange={(e) => updateCharacter(character.id, { name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Ej. Luna, el gato mágico"
-                  />
-                </div>
+            {renderStepContent(character)}
 
-                <div className="mb-4">
-                  <label htmlFor={`description-${character.id}`} className="block text-sm font-medium text-gray-700 mb-1">
-                    Descripción detallada
-                  </label>
-                  <textarea
-                    id={`description-${character.id}`}
-                    value={character.description}
-                    onChange={(e) => updateCharacter(character.id, { description: e.target.value })}
-                    rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Describe cómo es el personaje, su personalidad, apariencia..."
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept=".jpg,.jpeg,.png,.webp"
-                    multiple
-                    onChange={(e) => handleFileUpload(character.id, e.target.files)}
-                  />
-                  
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={character.variants.length >= 3 || isAnalyzing}
-                    className="w-full"
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        <span>Analizando imagen...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        <span>Subir imágenes ({character.variants.length}/3)</span>
-                      </>
-                    )}
-                  </Button>
-
-                  <Button
-                    onClick={() => generateVariants(character.id)}
-                    disabled={!character.name || !character.description || generatingFor === character.id}
-                    className="w-full"
-                  >
-                    {generatingFor === character.id ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        <span>Generando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Magic className="w-4 h-4 mr-2" />
-                        <span>Generar imágenes</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                {/* Sección de Inspiración */}
-                {character.variants.some(v => v.style === 'uploaded') && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Inspiración</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      {character.variants
-                        .filter(v => v.style === 'uploaded')
-                        .map((variant) => (
-                          <div key={variant.id} className="relative group">
-                            <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
-                              <img
-                                src={variant.imageUrl}
-                                alt={`Inspiración para ${character.name}`}
-                                className="w-full h-36 object-cover"
-                              />
-                            </div>
-                            <button
-                              onClick={() => removeImage(character.id, variant.id)}
-                              className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sección de Personajes Propuestos */}
-                {character.variants.some(v => v.style === 'dall-e-3') && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Personajes Propuestos</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      {character.variants
-                        .filter(v => v.style === 'dall-e-3')
-                        .map((variant) => {
-                          const isSelected = character.selectedVariant === variant.id;
-                          const isLocked = character.selectedVariant && !isSelected;
-
-                          return (
-                            <div
-                              key={variant.id}
-                              className={`relative group ${isLocked ? 'opacity-50' : ''}`}
-                            >
-                              <div
-                                onClick={() => !isLocked && selectVariant(character.id, variant.id)}
-                                className={`border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                                  isSelected
-                                    ? 'border-purple-500 ring-2 ring-purple-300'
-                                    : isLocked
-                                    ? 'border-gray-300 cursor-not-allowed'
-                                    : 'border-gray-200 hover:border-purple-300'
-                                }`}
-                              >
-                                <img
-                                  src={variant.imageUrl}
-                                  alt={`Variante ${variant.id} de ${character.name}`}
-                                  className="w-full h-36 object-cover"
-                                />
-                                {isSelected && (
-                                  <div className="absolute inset-0 bg-purple-600 bg-opacity-10 flex items-center justify-center">
-                                    <div className="bg-purple-600 text-white px-2 py-1 rounded-full text-xs">
-                                      Seleccionado
-                                    </div>
-                                  </div>
-                                )}
-                                {isLocked && (
-                                  <div className="absolute inset-0 bg-gray-900 bg-opacity-40 flex items-center justify-center">
-                                    <div className="bg-gray-800 text-white px-2 py-1 rounded-full text-xs">
-                                      Bloqueado
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                              {isSelected && (
-                                <button
-                                  onClick={() => generateSpriteSheet(character.id, variant.id)}
-                                  disabled={generatingSpriteSheet === character.id}
-                                  className="absolute top-2 right-2 bg-purple-500 text-white p-1 rounded-full hover:bg-purple-600 transition-colors"
-                                  title="Generar sprite sheet"
-                                >
-                                  {generatingSpriteSheet === character.id ? (
-                                    <RefreshCw className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    <Layers className="w-4 h-4" />
-                                  )}
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sección de Personaje Seleccionado (Sprite Sheet) */}
-                {character.spriteSheet && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Personaje Seleccionado</h4>
-                    <div className="border-2 border-purple-200 rounded-lg overflow-hidden bg-white p-4">
-                      <div className="aspect-[3/1] relative">
-                        <img
-                          src={character.spriteSheet.imageUrl}
-                          alt={`Sprite sheet de ${character.name}`}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div className="mt-2 text-center text-sm text-gray-600">
-                        Vista frontal, lateral y posterior
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {character.variants.length === 0 && (
-                  <div className="flex items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-                    <div className="text-center p-6">
-                      <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500">
-                        Sube hasta 3 imágenes o genera variantes automáticamente
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <div className="mt-6 flex justify-between">
+              <Button
+                variant="outline"
+                onClick={handlePrevStep}
+                disabled={currentCharacterStep === 0}
+              >
+                Anterior
+              </Button>
+              <Button
+                onClick={handleNextStep}
+                disabled={!canProceedToNextStep()}
+              >
+                {currentCharacterStep === 2 ? 'Finalizar' : 'Siguiente'}
+              </Button>
             </div>
           </div>
         ))}
