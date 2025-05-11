@@ -21,14 +21,14 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4-turbo",
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Describe este personaje en detalle, incluyendo su apariencia física, vestimenta, expresión facial, postura y cualquier característica distintiva. Proporciona una descripción estructurada que pueda usarse para un cuento infantil."
+                text: "Analiza únicamente lo que se observa en la imagen. Describe este personaje en detalle, incluyendo su apariencia física, vestimenta, expresión facial, postura y cualquier característica distintiva. No inventes ni asumas información que no esté claramente visible. Proporciona una descripción estructurada que pueda usarse para un cuento infantil."
               },
               {
                 type: "image_url",
