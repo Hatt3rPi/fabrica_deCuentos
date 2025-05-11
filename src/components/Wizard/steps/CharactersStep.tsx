@@ -46,8 +46,9 @@ const CharactersStep: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openaiKey}`,
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'X-OpenAI-Key': openaiKey,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ image: base64Image }),
       });
