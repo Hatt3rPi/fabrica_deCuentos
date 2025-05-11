@@ -36,68 +36,50 @@ const CharactersStep: React.FC = () => {
     });
   };
 
-  const consolidateDescription = (currentDescription: string, newAnalyses: string[]): string => {
-    const sections = currentDescription.split('\n\n');
-    const userDescription = sections[0] || '';
-    const existingAnalyses = sections.slice(1).filter(s => s.startsWith('Análisis de imagen'));
-    
-    const newAnalysesWithHeaders = newAnalyses.map((analysis, index) => 
-      `Análisis de imagen ${existingAnalyses.length + index + 1}:\n${analysis}`
-    );
-    
-    return [
-      userDescription,
-      ...existingAnalyses,
-      ...newAnalysesWithHeaders
-    ].filter(Boolean).join('\n\n');
+  const consolidateDescription = (currentDescription: string, newAnalysis: string): string => {
+    return currentDescription ? `${currentDescription}\n\n${newAnalysis}` : newAnalysis;
   };
 
-  const analyzeImages = async (base64Images: string[], characterId: string) => {
+  const analyzeImage = async (base64Image: string, characterId: string) => {
     setIsAnalyzing(true);
     setUploadError(null);
     
     try {
-      const analyses: string[] = [];
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ image: base64Image }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      for (const base64Image of base64Images) {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ image: base64Image }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (!data.description) {
-          throw new Error('No description received from analysis');
-        }
-
-        analyses.push(data.description);
+      if (!data.description) {
+        throw new Error('No description received from analysis');
       }
 
       const character = characters.find(c => c.id === characterId);
       if (character) {
         const updatedDescription = consolidateDescription(
           character.description || '',
-          analyses
+          data.description
         );
         
         await updateCharacter(characterId, { description: updatedDescription });
       }
     } catch (error) {
-      console.error('Error analyzing images:', error);
+      console.error('Error analyzing image:', error);
       setUploadError(
         error instanceof Error 
-          ? `Error al analizar las imágenes: ${error.message}` 
-          : 'Error al analizar las imágenes'
+          ? `Error al analizar la imagen: ${error.message}` 
+          : 'Error al analizar la imagen'
       );
     } finally {
       setIsAnalyzing(false);
@@ -144,10 +126,6 @@ const CharactersStep: React.FC = () => {
       return;
     }
 
-    const base64Images: string[] = [];
-    const filePromises: Promise<void>[] = [];
-    const newVariants: CharacterVariant[] = [];
-
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
@@ -161,32 +139,27 @@ const CharactersStep: React.FC = () => {
         return;
       }
 
-      filePromises.push(
-        getBase64(file).then(base64Image => {
-          base64Images.push(base64Image);
-          const previewUrl = URL.createObjectURL(file);
-          newVariants.push({
-            id: Date.now().toString() + i,
+      try {
+        const base64Image = await getBase64(file);
+        await analyzeImage(base64Image, characterId);
+        
+        const previewUrl = URL.createObjectURL(file);
+        const updatedVariants = [
+          ...(character.variants || []),
+          {
+            id: Date.now().toString(),
             imageUrl: previewUrl,
             seed: Date.now().toString(),
             style: 'uploaded'
-          });
-        })
-      );
-    }
+          }
+        ];
 
-    try {
-      await Promise.all(filePromises);
-      
-      // First update the variants to show the images immediately
-      const updatedVariants = [...(character.variants || []), ...newVariants];
-      await updateCharacter(characterId, { variants: updatedVariants });
-
-      // Then analyze all images in batch
-      await analyzeImages(base64Images, characterId);
-    } catch (error) {
-      console.error('Error processing images:', error);
-      setUploadError('Error al procesar las imágenes');
+        await updateCharacter(characterId, { variants: updatedVariants });
+      } catch (error) {
+        console.error('Error processing image:', error);
+        setUploadError('Error al procesar la imagen');
+        return;
+      }
     }
   };
 
