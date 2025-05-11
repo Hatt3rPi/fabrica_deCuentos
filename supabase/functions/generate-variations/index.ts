@@ -27,25 +27,26 @@ Deno.serve(async (req) => {
     let response = {};
 
     if (!generateSpriteSheet) {
-      // Generate variations by making three separate requests
-      const imagePromises = Array(3).fill(null).map(() => 
-        openai.images.generate({
+      // Generate variations one at a time since DALL-E 3 only supports n=1
+      const variations = [];
+      for (let i = 0; i < 3; i++) {
+        const result = await openai.images.generate({
           model: 'dall-e-3',
           n: 1,
           size: '1024x1024',
           quality: 'standard',
-          prompt: `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging.`,
-        })
-      );
+          prompt: `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging. Make this variation unique and different from the others.`,
+        });
 
-      const results = await Promise.all(imagePromises);
+        variations.push({
+          id: crypto.randomUUID(),
+          imageUrl: result.data[0].url,
+          seed: result.data[0].seed || '',
+          style: 'dall-e-3'
+        });
+      }
       
-      response.variations = results.map(result => ({
-        id: crypto.randomUUID(),
-        imageUrl: result.data[0].url,
-        seed: result.data[0].seed || '',
-        style: 'dall-e-3'
-      }));
+      response.variations = variations;
     } else {
       // Generate sprite sheet
       const spriteSheetResult = await openai.images.generate({
