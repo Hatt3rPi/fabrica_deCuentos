@@ -285,9 +285,11 @@ const CharactersStep: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openaiKey}`,
-          'Content-Type': 'application/json',
-        },
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'X-OpenAI-Key': openaiKey,
+          'Content-Type': 'application/json'
+        }
+
         body: JSON.stringify({
           name: character.name,
           description: character.description,
@@ -348,9 +350,10 @@ const CharactersStep: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openaiKey}`,
-          'Content-Type': 'application/json',
-        },
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'X-OpenAI-Key': openaiKey,
+          'Content-Type': 'application/json'
+        }        ,
         body: JSON.stringify({
           name: character.name,
           description: character.description,
