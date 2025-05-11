@@ -27,19 +27,23 @@ Deno.serve(async (req) => {
     let response = {};
 
     if (!generateSpriteSheet) {
-      // Generate variations
-      const variations = await openai.images.generate({
-        model: 'dall-e-3',
-        n: 3,
-        size: '1024x1024',
-        quality: 'standard',
-        prompt: `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging.`,
-      });
+      // Generate variations by making three separate requests
+      const imagePromises = Array(3).fill(null).map(() => 
+        openai.images.generate({
+          model: 'dall-e-3',
+          n: 1,
+          size: '1024x1024',
+          quality: 'standard',
+          prompt: `Create a character illustration for a children's book named "${name}". ${description}. The style should be child-friendly and engaging.`,
+        })
+      );
 
-      response.variations = variations.data.map(img => ({
+      const results = await Promise.all(imagePromises);
+      
+      response.variations = results.map(result => ({
         id: crypto.randomUUID(),
-        imageUrl: img.url,
-        seed: img.seed || '',
+        imageUrl: result.data[0].url,
+        seed: result.data[0].seed || '',
         style: 'dall-e-3'
       }));
     } else {
