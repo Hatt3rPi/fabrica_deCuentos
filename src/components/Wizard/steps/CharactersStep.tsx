@@ -126,6 +126,8 @@ const CharactersStep: React.FC = () => {
       return;
     }
 
+    const updatedVariants = [...(character.variants || [])];
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
@@ -141,20 +143,17 @@ const CharactersStep: React.FC = () => {
 
       try {
         const base64Image = await getBase64(file);
-        await analyzeImage(base64Image, characterId);
-        
         const previewUrl = URL.createObjectURL(file);
-        const updatedVariants = [
-          ...(character.variants || []),
-          {
-            id: Date.now().toString(),
-            imageUrl: previewUrl,
-            seed: Date.now().toString(),
-            style: 'uploaded'
-          }
-        ];
+        
+        updatedVariants.push({
+          id: Date.now().toString() + i,
+          imageUrl: previewUrl,
+          seed: Date.now().toString(),
+          style: 'uploaded'
+        });
 
         await updateCharacter(characterId, { variants: updatedVariants });
+        await analyzeImage(base64Image, characterId);
       } catch (error) {
         console.error('Error processing image:', error);
         setUploadError('Error al procesar la imagen');
@@ -389,7 +388,8 @@ const CharactersStep: React.FC = () => {
   const canProceedToNextStep = (character: Character) => {
     switch (currentCharacterStep) {
       case 0: // Inspiración
-        return character.name && character.description && character.variants.some(v => v.style === 'uploaded');
+        return character.name.trim() !== '' && 
+               character.description.trim() !== '';
       case 1: // Propuestas
         return character.selectedVariant !== null;
       case 2: // Personaje Final
