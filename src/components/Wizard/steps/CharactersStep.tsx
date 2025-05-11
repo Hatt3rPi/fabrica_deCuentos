@@ -38,15 +38,10 @@ const CharactersStep: React.FC = () => {
     setUploadError(null);
     
     try {
-      const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
-      if (!openaiKey) {
-        throw new Error('OpenAI API key not found in environment variables');
-      }
-
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openaiKey}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ image: base64Image }),
@@ -276,15 +271,10 @@ const CharactersStep: React.FC = () => {
     setUploadError(null);
 
     try {
-      const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
-      if (!openaiKey) {
-        throw new Error('OpenAI API key not found in environment variables');
-      }
-
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openaiKey}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -334,11 +324,6 @@ const CharactersStep: React.FC = () => {
     setUploadError(null);
 
     try {
-      const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
-      if (!openaiKey) {
-        throw new Error('OpenAI API key not found in environment variables');
-      }
-
       // Update status to generating
       await updateCharacter(characterId, {
         spriteSheetStatus: 'generating'
@@ -347,7 +332,7 @@ const CharactersStep: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openaiKey}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

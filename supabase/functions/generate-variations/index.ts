@@ -1,5 +1,4 @@
 import OpenAI from 'npm:openai@4.28.0';
-import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,13 +11,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const openaiKey = req.headers.get('authorization')?.split(' ')[1];
-    if (!openaiKey) {
-      throw new Error('OpenAI API key not found in request headers');
-    }
-
     const openai = new OpenAI({
-      apiKey: openaiKey,
+      apiKey: Deno.env.get('OPENAI_API_KEY'),
     });
 
     const { name, description, generateSpriteSheet = false, selectedVariantUrl } = await req.json();
