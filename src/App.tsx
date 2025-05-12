@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { WizardProvider } from './context/WizardContext';
 import { useAuth } from './context/AuthContext';
@@ -6,6 +7,7 @@ import Wizard from './components/Wizard/Wizard';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import LoginForm from './components/Auth/LoginForm';
+import MyStories from './pages/MyStories';
 
 function AppContent() {
   const { user } = useAuth();
@@ -26,9 +28,10 @@ function AppContent() {
         <div className="flex-1 flex flex-col min-h-screen">
           <Header />
           <main className="flex-grow p-4 md:p-6 lg:p-8">
-            <div className="max-w-[1200px] mx-auto">
-              <Wizard />
-            </div>
+            <Routes>
+              <Route path="/" element={<MyStories />} />
+              <Route path="/wizard/:storyId?" element={<Wizard />} />
+            </Routes>
           </main>
           <footer className="py-4 text-center text-purple-600 text-sm">
             <p>Fábrica de Sueños © {new Date().getFullYear()}</p>
@@ -41,9 +44,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
   );
 }
 
