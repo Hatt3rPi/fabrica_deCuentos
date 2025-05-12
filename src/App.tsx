@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { WizardProvider } from './context/WizardContext';
 import { useAuth } from './context/AuthContext';
@@ -6,6 +7,12 @@ import Wizard from './components/Wizard/Wizard';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import LoginForm from './components/Auth/LoginForm';
+import MyStories from './pages/MyStories';
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/login" />;
+}
 
 function AppContent() {
   const { user } = useAuth();
@@ -25,10 +32,11 @@ function AppContent() {
         {/* Main content area */}
         <div className="flex-1 flex flex-col min-h-screen">
           <Header />
-          <main className="flex-grow p-4 md:p-6 lg:p-8">
-            <div className="max-w-[1200px] mx-auto">
-              <Wizard />
-            </div>
+          <main className="flex-grow">
+            <Routes>
+              <Route path="/" element={<MyStories />} />
+              <Route path="/wizard/*" element={<Wizard />} />
+            </Routes>
           </main>
           <footer className="py-4 text-center text-purple-600 text-sm">
             <p>Fábrica de Sueños © {new Date().getFullYear()}</p>
@@ -41,9 +49,21 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginForm />} />
+          <Route
+            path="/*"
+            element={
+              <PrivateRoute>
+                <AppContent />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
 }
 
