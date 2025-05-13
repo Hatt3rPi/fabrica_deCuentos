@@ -160,13 +160,15 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 'characters':
-        return characters.every(
-          (c) => {
-            const name = typeof c.name === 'string' ? c.name.trim() : '';
-            const description = typeof c.description === 'string' ? c.description.trim() : '';
-            return name !== '' && description !== '' && c.selectedVariant !== null;
-          }
-        );
+        return characters.every((c) => {
+          const name = typeof c.name === 'string' ? c.name.trim() : '';
+          const description = typeof c.description === 'object' 
+            ? c.description.es.trim() 
+            : typeof c.description === 'string' 
+              ? c.description.trim() 
+              : '';
+          return name !== '' && description !== '' && c.thumbnailUrl !== null;
+        });
       case 'story':
         return (
           storySettings.targetAge !== '' &&

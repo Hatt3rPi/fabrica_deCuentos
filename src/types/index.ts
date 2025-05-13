@@ -3,7 +3,10 @@ export interface Character {
   id: string;
   user_id: string;
   name: string;
-  description: string;
+  description: {
+    es: string;
+    en: string;
+  } | string;
   age: string;
   images: string[];
   thumbnailUrl: string | null;
