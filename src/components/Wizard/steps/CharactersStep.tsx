@@ -13,9 +13,10 @@ const RETRY_DELAY = 1000; // 1 second
 const CharactersStep: React.FC = () => {
   const { characters, setCharacters } = useWizard();
   const { supabase, user } = useAuth();
-  const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -23,6 +24,15 @@ const CharactersStep: React.FC = () => {
       loadUserCharacters();
     }
   }, [user]);
+
+  const getBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
 
   const loadUserCharacters = async () => {
     try {
@@ -34,7 +44,11 @@ const CharactersStep: React.FC = () => {
       if (error) throw error;
 
       if (data) {
-        setCharacters(data);
+        setCharacters(data.map(char => ({
+          ...char,
+          images: char.images || [],
+          thumbnailUrl: char.thumbnail_url
+        })));
       }
     } catch (error) {
       console.error('Error loading characters:', error);
@@ -43,46 +57,43 @@ const CharactersStep: React.FC = () => {
     }
   };
 
-  const getBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  };
-
   const handleFileUpload = async (characterId: string, files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setUploadError(null);
-
-    const character = characters.find(c => c.id === characterId);
-    if (!character) return;
+    if (!files || files.length === 0) {
+      setUploadError('Necesitamos al menos una foto del personaje');
+      return;
+    }
 
     const file = files[0];
+    setUploadError(null);
 
     if (file.size > MAX_FILE_SIZE) {
-      setUploadError('El archivo es demasiado grande. Máximo 5MB');
+      setUploadError('Imagen demasiado grande, sube una de hasta 5 MB');
       return;
     }
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setUploadError('Tipo de archivo no permitido. Use JPG, PNG o WebP');
+      setUploadError('Formato no soportado, usa JPG o PNG');
       return;
     }
 
+    setIsUploading(true);
+
     try {
       const base64Image = await getBase64(file);
-      await updateCharacter(characterId, {
-        images: [base64Image],
-        thumbnailUrl: null
-      });
+      const character = characters.find(c => c.id === characterId);
+      if (!character) return;
 
-      // Generate thumbnail after uploading image
-      await generateThumbnail(characterId);
+      const updatedCharacter = {
+        ...character,
+        images: [...(character.images || []), base64Image]
+      };
+
+      await updateCharacter(characterId, { images: updatedCharacter.images });
     } catch (error) {
-      console.error('Error processing image:', error);
-      setUploadError('Error al procesar la imagen');
+      console.error('Error uploading image:', error);
+      setUploadError('Error al subir la imagen');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -131,12 +142,9 @@ const CharactersStep: React.FC = () => {
         throw new Error('No se pudo generar la miniatura');
       }
 
-      // Extract the Spanish description from the response
-      const description = data.description?.es || character.description;
-
       await updateCharacter(characterId, {
         thumbnailUrl: data.thumbnailUrl,
-        description
+        description: data.description || character.description
       });
     } catch (error) {
       console.error('Error generating thumbnail:', error);
@@ -155,16 +163,14 @@ const CharactersStep: React.FC = () => {
 
   const addCharacter = () => {
     if (characters.length < 3) {
-      const newCharacter: Character = {
-        id: crypto.randomUUID(),
+      const newCharacter = {
+        id: Date.now().toString(),
         user_id: user?.id || '',
         name: '',
-        description: '',
         age: '',
+        description: '',
         images: [],
-        thumbnailUrl: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        thumbnailUrl: null
       };
       setCharacters([...characters, newCharacter]);
     }
@@ -198,6 +204,7 @@ const CharactersStep: React.FC = () => {
           .from('characters')
           .update({
             ...updates,
+            thumbnail_url: updates.thumbnailUrl,
             updated_at: new Date().toISOString(),
           })
           .eq('id', id);
@@ -205,6 +212,31 @@ const CharactersStep: React.FC = () => {
         if (error) throw error;
       } catch (error) {
         console.error('Error updating character:', error);
+      }
+    } else if (updates.name && updates.description) {
+      try {
+        const { data, error } = await supabase
+          .from('characters')
+          .insert({
+            name: updates.name,
+            age: updates.age,
+            description: updates.description,
+            user_id: user?.id,
+            images: updates.images || [],
+            thumbnail_url: updates.thumbnailUrl
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          setCharacters(characters.map(char =>
+            char.id === id ? { ...char, id: data.id } : char
+          ));
+        }
+      } catch (error) {
+        console.error('Error creating character:', error);
       }
     }
   };
@@ -220,30 +252,29 @@ const CharactersStep: React.FC = () => {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-purple-800 mb-2">Creación de personajes</h2>
+        <h2 className="text-2xl font-bold text-purple-800 mb-2">Creación de personaje</h2>
         <p className="text-gray-600">
-          Crea hasta 3 personajes para tu historia
+          Describe tus personajes y nosotros les daremos vida
         </p>
       </div>
 
       {uploadError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <p className="text-red-700">{uploadError}</p>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <p>{uploadError}</p>
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {characters.map((character, index) => (
-          <div key={character.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div key={character.id} className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Personaje {index + 1}
-              </h3>
+              <h3 className="text-lg font-bold text-purple-700">Personaje {index + 1}</h3>
               {characters.length > 1 && (
                 <button
                   onClick={() => removeCharacter(character.id)}
                   className="text-red-500 hover:text-red-700"
+                  aria-label="Eliminar personaje"
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
@@ -253,50 +284,48 @@ const CharactersStep: React.FC = () => {
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre
+                  <label htmlFor={`name-${character.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre del personaje
                   </label>
                   <input
                     type="text"
+                    id={`name-${character.id}`}
                     value={character.name}
                     onChange={(e) => updateCharacter(character.id, { name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Ej: Luna"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Ej. Luna, el gato mágico"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor={`age-${character.id}`} className="block text-sm font-medium text-gray-700 mb-1">
                     Edad
                   </label>
                   <input
                     type="text"
+                    id={`age-${character.id}`}
                     value={character.age}
                     onChange={(e) => updateCharacter(character.id, { age: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Ej: 8 años"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Ej. 8 años"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Descripción
+                  <label htmlFor={`description-${character.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                    Descripción detallada
                   </label>
                   <textarea
+                    id={`description-${character.id}`}
                     value={character.description}
                     onChange={(e) => updateCharacter(character.id, { description: e.target.value })}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Describe cómo es el personaje..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Describe cómo es el personaje, su personalidad, apariencia..."
                   />
                 </div>
-              </div>
 
-              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Imagen de referencia
-                  </label>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -304,63 +333,79 @@ const CharactersStep: React.FC = () => {
                     accept=".jpg,.jpeg,.png,.webp"
                     onChange={(e) => handleFileUpload(character.id, e.target.files)}
                   />
+                  
                   <Button
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={isGenerating === character.id}
+                    disabled={isUploading}
                     className="w-full"
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    <span>Subir imagen</span>
+                    {isUploading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        <span>Subiendo imagen...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        <span>Subir imagen de referencia</span>
+                      </>
+                    )}
                   </Button>
                 </div>
 
+                {character.images?.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {character.images.map((image, idx) => (
+                      <div key={idx} className="aspect-square rounded-lg overflow-hidden">
+                        <img
+                          src={image}
+                          alt={`Referencia ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
                 {character.thumbnailUrl ? (
-                  <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                  <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
                     <img
                       src={character.thumbnailUrl}
                       alt={character.name}
                       className="w-full h-full object-cover"
                     />
-                    <Button
-                      variant="outline"
-                      onClick={() => generateThumbnail(character.id)}
-                      disabled={isGenerating === character.id}
-                      className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap"
-                    >
-                      {isGenerating === character.id ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          <span>Generando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                          <span>Regenerar</span>
-                        </>
-                      )}
-                    </Button>
                   </div>
                 ) : (
-                  <div className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-                    <Button
-                      onClick={() => generateThumbnail(character.id)}
-                      disabled={isGenerating === character.id || (!character.description && !character.images?.length)}
-                    >
-                      {isGenerating === character.id ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          <span>Generando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                          <span>Generar imagen</span>
-                        </>
-                      )}
-                    </Button>
+                  <div className="aspect-square rounded-lg bg-gray-100 flex items-center justify-center">
+                    <p className="text-gray-500 text-center px-4">
+                      Sube una imagen o describe tu personaje para generar una vista previa
+                    </p>
                   </div>
                 )}
+
+                <Button
+                  onClick={() => generateThumbnail(character.id)}
+                  disabled={
+                    (!character.description && (!character.images || character.images.length === 0)) || 
+                    isGenerating === character.id
+                  }
+                  className="w-full"
+                >
+                  {isGenerating === character.id ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <span>Generando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      <span>Generar miniatura</span>
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>
@@ -369,10 +414,13 @@ const CharactersStep: React.FC = () => {
 
       {characters.length < 3 && (
         <div className="flex justify-center">
-          <Button variant="outline" onClick={addCharacter}>
-            <Plus className="w-4 h-4 mr-2" />
+          <button
+            onClick={addCharacter}
+            className="py-2 px-4 border border-purple-300 rounded-full text-purple-700 flex items-center gap-2 hover:bg-purple-50"
+          >
+            <Plus className="w-5 h-5" />
             <span>Añadir personaje</span>
-          </Button>
+          </button>
         </div>
       )}
     </div>
