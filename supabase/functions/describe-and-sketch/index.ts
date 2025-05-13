@@ -51,7 +51,7 @@ Entrega la descripción estructurada en dos idiomas: español latino e inglés, 
 
 Asegúrate de mantener coherencia y precisión en ambas versiones del texto.
 
-Antecedentes del usuario dados por el usuario:
+Antecedentes dados por el usuario:
 Edad del personaje: ${age}
 Notas del usuario: ${userNotes}`
             },
