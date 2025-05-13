@@ -34,7 +34,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { imageBase64, userNotes, name, age } = await req.json();
+    // Verify OpenAI API key is present
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiKey) {
+      throw new Error('Error de configuración: Falta la clave de API de OpenAI');
+    }
+
+    const { imageBase64, userNotes, name, age } = await req.json().catch(() => ({}));
 
     // Validate inputs
     const sanitizedName = sanitizeText(name);
@@ -50,7 +56,7 @@ Deno.serve(async (req) => {
     }
 
     const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
+      apiKey: openaiKey,
     });
 
     // Create messages array based on available data
@@ -94,7 +100,16 @@ Deno.serve(async (req) => {
       model: "gpt-4-vision-preview",
       messages,
       max_tokens: 500,
+    }).catch((error) => {
+      if (error.status === 429) {
+        throw new Error('Demasiadas solicitudes a OpenAI. Por favor, intenta de nuevo en unos momentos.');
+      }
+      throw new Error(`Error al analizar el personaje: ${error.message}`);
     });
+
+    if (!description.choices?.[0]?.message?.content) {
+      throw new Error('No se pudo generar la descripción del personaje');
+    }
 
     // Create a simplified prompt for DALL-E
     const imagePrompt = `Create a child-friendly illustration of ${sanitizedName || 'a character'} for a children's book. ${
@@ -108,7 +123,16 @@ Deno.serve(async (req) => {
       size: "1024x1024",
       quality: "standard",
       n: 1,
+    }).catch((error) => {
+      if (error.status === 429) {
+        throw new Error('Demasiadas solicitudes a OpenAI. Por favor, intenta de nuevo en unos momentos.');
+      }
+      throw new Error(`Error al generar la imagen: ${error.message}`);
     });
+
+    if (!imageResponse.data?.[0]?.url) {
+      throw new Error('No se pudo generar la imagen del personaje');
+    }
 
     return new Response(
       JSON.stringify({
@@ -121,15 +145,14 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in describe-and-sketch:', error);
     
-    // Return a more specific error message
-    const errorMessage = error.message === 'Se requiere una descripción o una imagen' || 
-                        error.message === 'Formato de imagen inválido'
-      ? error.message
-      : 'Error al generar la miniatura';
-
     return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: error.message || 'Error al generar la miniatura'
+      }),
+      { 
+        status: error.status || 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });

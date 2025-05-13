@@ -99,9 +99,12 @@ const CharactersStep: React.FC = () => {
 
   const generateThumbnail = async (characterId: string, retryCount = 0) => {
     const character = characters.find(c => c.id === characterId);
-    if (!character) return;
+    if (!character) {
+      setUploadError('No se encontró el personaje');
+      return;
+    }
 
-    if (!character.description && !character.images?.length) {
+    if (!character.description && (!character.images || character.images.length === 0)) {
       setUploadError('Se requiere una descripción o una imagen del personaje');
       return;
     }
@@ -124,14 +127,19 @@ const CharactersStep: React.FC = () => {
         }),
       });
 
-      const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.error || 'Error al generar la miniatura');
+        const errorData = await response.json().catch(() => ({ error: 'Error de red' }));
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
       }
 
+      const data = await response.json();
+      
       if (data.error) {
         throw new Error(data.error);
+      }
+
+      if (!data.thumbnailUrl) {
+        throw new Error('No se pudo generar la miniatura');
       }
 
       await updateCharacter(characterId, {
@@ -141,9 +149,9 @@ const CharactersStep: React.FC = () => {
     } catch (error) {
       console.error('Error generating thumbnail:', error);
 
-      // Retry logic for specific errors
       if (retryCount < MAX_RETRIES && error.message.includes('429')) {
         setTimeout(() => generateThumbnail(characterId, retryCount + 1), RETRY_DELAY * Math.pow(2, retryCount));
+        setUploadError('Demasiadas solicitudes. Reintentando...');
         return;
       }
 
