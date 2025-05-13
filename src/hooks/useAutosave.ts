@@ -2,12 +2,22 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { WizardState } from '../types';
 
+const isValidUUID = (uuid: string) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
+
 export const useAutosave = (state: WizardState, storyId: string) => {
   const { supabase } = useAuth();
   const timeoutRef = useRef<number>();
 
   useEffect(() => {
     const save = async () => {
+      if (!storyId || !isValidUUID(storyId)) {
+        console.log('No valid storyId provided, skipping autosave');
+        return;
+      }
+
       try {
         // Guardar en localStorage
         localStorage.setItem(`story_draft_${storyId}`, JSON.stringify(state));

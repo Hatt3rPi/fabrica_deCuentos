@@ -66,6 +66,11 @@ const samplePages: GeneratedPage[] = [
   }
 ];
 
+const isValidUUID = (uuid: string) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
+
 export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { storyId } = useParams();
   const { supabase } = useAuth();
@@ -87,43 +92,46 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   useAutosave(state, storyId || '');
 
   useEffect(() => {
-    if (storyId) {
-      const loadDraft = async () => {
-        const savedDraft = localStorage.getItem(`story_draft_${storyId}`);
-        if (savedDraft) {
-          setState(JSON.parse(savedDraft));
-          return;
+    const loadDraft = async () => {
+      if (!storyId || !isValidUUID(storyId)) {
+        console.log('No valid storyId provided, skipping draft load');
+        return;
+      }
+
+      const savedDraft = localStorage.getItem(`story_draft_${storyId}`);
+      if (savedDraft) {
+        setState(JSON.parse(savedDraft));
+        return;
+      }
+
+      try {
+        const { data: story, error } = await supabase
+          .from('stories')
+          .select('*')
+          .eq('id', storyId)
+          .single();
+
+        if (error) throw error;
+
+        if (story) {
+          setState({
+            ...state,
+            meta: {
+              title: story.title,
+              targetAge: story.target_age,
+              literaryStyle: story.literary_style,
+              centralMessage: story.central_message,
+              additionalDetails: story.additional_details,
+              status: story.status
+            }
+          });
         }
+      } catch (error) {
+        console.error('Error loading draft:', error);
+      }
+    };
 
-        try {
-          const { data: story, error } = await supabase
-            .from('stories')
-            .select('*')
-            .eq('id', storyId)
-            .single();
-
-          if (error) throw error;
-
-          if (story) {
-            setState({
-              ...state,
-              meta: {
-                title: story.title,
-                targetAge: story.target_age,
-                literaryStyle: story.literary_style,
-                centralMessage: story.central_message,
-                additionalDetails: story.additional_details,
-                status: story.status
-              }
-            });
-          }
-        } catch (error) {
-          console.error('Error loading draft:', error);
-        }
-      };
-
-      loadDraft();
-    }
+    loadDraft();
   }, [storyId]);
 
   const [currentStep, setCurrentStep] = useState<WizardStep>('characters');
