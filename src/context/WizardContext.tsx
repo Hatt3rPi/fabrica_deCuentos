@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Character, StorySettings, DesignSettings } from '../types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useParams } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+import { useAutosave } from '../hooks/useAutosave';
+import { Character, StorySettings, DesignSettings, WizardState } from '../types';
 
 export type WizardStep = 'characters' | 'story' | 'design' | 'preview';
 
@@ -39,7 +42,6 @@ export const useWizard = () => {
   return context;
 };
 
-// Datos de ejemplo para la vista previa
 const samplePages: GeneratedPage[] = [
   {
     id: '1',
@@ -65,6 +67,65 @@ const samplePages: GeneratedPage[] = [
 ];
 
 export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { storyId } = useParams();
+  const { supabase } = useAuth();
+  const [state, setState] = useState<WizardState>({
+    characters: [],
+    styles: [],
+    spreads: [],
+    meta: {
+      title: '',
+      synopsis: '',
+      targetAge: '',
+      literaryStyle: '',
+      centralMessage: '',
+      additionalDetails: '',
+      status: 'draft'
+    }
+  });
+
+  useAutosave(state, storyId || '');
+
+  useEffect(() => {
+    if (storyId) {
+      const loadDraft = async () => {
+        const savedDraft = localStorage.getItem(`story_draft_${storyId}`);
+        if (savedDraft) {
+          setState(JSON.parse(savedDraft));
+          return;
+        }
+
+        try {
+          const { data: story, error } = await supabase
+            .from('stories')
+            .select('*')
+            .eq('id', storyId)
+            .single();
+
+          if (error) throw error;
+
+          if (story) {
+            setState({
+              ...state,
+              meta: {
+                title: story.title,
+                targetAge: story.target_age,
+                literaryStyle: story.literary_style,
+                centralMessage: story.central_message,
+                additionalDetails: story.additional_details,
+                status: story.status
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error loading draft:', error);
+        }
+      };
+
+      loadDraft();
+    }
+  }, [storyId]);
+
   const [currentStep, setCurrentStep] = useState<WizardStep>('characters');
   const [characters, setCharacters] = useState<Character[]>([{ id: '1', name: '', description: '', selectedVariant: null, variants: [] }]);
   const [storySettings, setStorySettings] = useState<StorySettings>({
