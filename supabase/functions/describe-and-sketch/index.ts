@@ -59,6 +59,26 @@ Deno.serve(async (req) => {
       apiKey: openaiKey,
     });
 
+    // Generate thumbnail first with DALL-E 2 for speed
+    const imagePrompt = `Clean full-body pencil sketch illustration for a children's book. Character: ${sanitizedAge}. ${sanitizedNotes}. Simple lines, no background, child-friendly.`;
+
+    const imageResponse = await openai.images.generate({
+      model: "dall-e-2",
+      prompt: imagePrompt,
+      size: "256x256",
+      n: 1,
+    }).catch((error) => {
+      if (error.status === 429) {
+        throw new Error('Demasiadas solicitudes a OpenAI. Por favor, intenta de nuevo en unos momentos.');
+      }
+      throw new Error(`Error al generar la imagen: ${error.message}`);
+    });
+
+    if (!imageResponse.data?.[0]?.url) {
+      throw new Error('No se pudo generar la imagen del personaje');
+    }
+
+    // Now get the character description
     const prompt = `Analiza cuidadosamente la(s) imágen(es) proporcionada(s) y, si existe, considera también la descripción ingresada por el usuario. Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes. Si sólo cuentas con las imágenes, realiza la descripción basándote exclusivamente en ellas.
 
 Describe detalladamente al personaje, cubriendo estos aspectos específicos:
@@ -131,29 +151,6 @@ Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`;
     }
 
     const parsedDescription = JSON.parse(description.choices[0].message.content);
-
-    // Create a simplified prompt for DALL-E using the English description
-    const imagePrompt = `Create a child-friendly illustration of ${sanitizedName || 'a character'} for a children's book. ${
-      parsedDescription.en.slice(0, 300)
-    }. Style: Colorful, engaging, suitable for children.`;
-
-    // Generate thumbnail
-    const imageResponse = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: imagePrompt,
-      size: "1024x1024",
-      quality: "standard",
-      n: 1,
-    }).catch((error) => {
-      if (error.status === 429) {
-        throw new Error('Demasiadas solicitudes a OpenAI. Por favor, intenta de nuevo en unos momentos.');
-      }
-      throw new Error(`Error al generar la imagen: ${error.message}`);
-    });
-
-    if (!imageResponse.data?.[0]?.url) {
-      throw new Error('No se pudo generar la imagen del personaje');
-    }
 
     return new Response(
       JSON.stringify({
