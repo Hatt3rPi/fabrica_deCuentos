@@ -51,14 +51,25 @@ const StoryStep: React.FC = () => {
                 <div
                   key={option.value}
                   onClick={() => handleChange('literaryStyle', option.value)}
-                  className={`cursor-pointer p-4 rounded-lg border-2 transition-all ${
+                  className={`group cursor-pointer p-4 rounded-lg border-2 transition-all relative overflow-hidden ${
                     storySettings.literaryStyle === option.value
                       ? 'border-purple-500 bg-purple-50'
                       : 'border-gray-200 hover:border-purple-200'
                   }`}
                 >
                   <h3 className="font-medium text-gray-900 mb-2">{option.label}</h3>
-                  <p className="text-sm text-gray-600 line-clamp-3">{option.example}</p>
+                  <div className="relative">
+                    <p className="text-sm text-gray-600 line-clamp-2 group-hover:line-clamp-none">
+                      {option.example}
+                    </p>
+                    {/* Overlay that appears on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-white to-transparent opacity-100 group-hover:opacity-0 transition-opacity pointer-events-none" />
+                  </div>
+                  {/* Expanded text that shows on hover */}
+                  <div className="absolute inset-0 bg-white p-4 opacity-0 group-hover:opacity-100 transition-opacity overflow-y-auto">
+                    <h3 className="font-medium text-gray-900 mb-2">{option.label}</h3>
+                    <p className="text-sm text-gray-600">{option.example}</p>
+                  </div>
                 </div>
               ))}
             </div>
