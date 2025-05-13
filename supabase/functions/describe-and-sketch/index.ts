@@ -26,7 +26,14 @@ Deno.serve(async (req) => {
           content: [
             { 
               type: "text", 
-              text: `Analiza cuidadosamente la(s) imágen(es) proporcionada(s) y, si existe, considera también la descripción ingresada por el usuario. Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes. Si sólo cuentas con las imágenes, realiza la descripción basándote exclusivamente en ellas.
+              text: `Respond with a JSON object containing descriptions in Spanish and English. Format your response as follows:
+
+{
+  "es": "[Descripción en español latino]",
+  "en": "[Description in English]"
+}
+
+Analiza cuidadosamente la(s) imágen(es) proporcionada(s) y, si existe, considera también la descripción ingresada por el usuario. Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes. Si sólo cuentas con las imágenes, realiza la descripción basándote exclusivamente en ellas.
 
 Describe detalladamente al personaje, cubriendo estos aspectos específicos:
 
@@ -41,15 +48,6 @@ Postura (posición corporal, lenguaje corporal evidente).
 Cualquier característica distintiva o notable (elementos particulares como objetos especiales, rasgos únicos visibles).
 
 No inventes ni supongas información que no esté claramente visible en las imágenes o proporcionada explícitamente en la descripción del usuario.
-
-Entrega la descripción estructurada en dos idiomas: español latino e inglés, dentro de un arreglo claramente etiquetado para facilitar la selección posterior del idioma requerido, siguiendo este formato:
-
-{
-"es": "[Descripción en español latino]",
-"en": "[Description in English]"
-}
-
-Asegúrate de mantener coherencia y precisión en ambas versiones del texto.
 
 Antecedentes dados por el usuario:
 Edad del personaje: ${age}
