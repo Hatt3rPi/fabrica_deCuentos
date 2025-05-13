@@ -86,7 +86,9 @@ Asegúrate de mantener coherencia y precisión en ambas versiones del texto.
 
 Antecedentes del usuario dados por el usuario:
 Edad del personaje: ${sanitizedAge}
-Notas del usuario: ${sanitizedNotes}`;
+Notas del usuario: ${sanitizedNotes}
+
+Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`;
 
     // Create messages array based on available data
     const messages = [
