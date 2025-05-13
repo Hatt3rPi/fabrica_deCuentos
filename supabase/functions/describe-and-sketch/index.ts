@@ -11,31 +11,45 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { image, text } = await req.json();
+    const { imageBase64, userNotes, name, age } = await req.json();
     
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY'),
     });
 
-    // Analizar imagen y texto
+    // Analyze image and text
     const analysisResponse = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview",
+      model: "gpt-4-turbo",
       messages: [
         {
           role: "user",
           content: [
-            { type: "text", text: `Analiza esta imagen y combínala con la descripción: ${text}` },
-            { type: "image_url", image_url: { url: image } }
+            { 
+              type: "text", 
+              text: `Analiza esta imagen y combínala con la siguiente información:
+                Nombre: ${name}
+                Edad: ${age}
+                Notas del usuario: ${userNotes}
+                
+                Genera una descripción detallada del personaje basada en la imagen y la información proporcionada.` 
+            },
+            { 
+              type: "image_url", 
+              image_url: { 
+                url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
+              } 
+            }
           ]
         }
-      ]
+      ],
+      max_tokens: 1000
     });
 
-    // Generar thumbnail
+    // Generate thumbnail
     const imageResponse = await openai.images.generate({
       model: "dall-e-3",
-      prompt: analysisResponse.choices[0].message.content || "",
-      size: "256x256",
+      prompt: `Create a character illustration for a children's book. The character is ${name}, ${age}. ${analysisResponse.choices[0].message.content}. Style should be child-friendly and engaging.`,
+      size: "1024x1024",
       quality: "standard",
       n: 1,
     });
@@ -43,11 +57,12 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         description: analysisResponse.choices[0].message.content,
-        thumbnail: imageResponse.data[0].url
+        thumbnailUrl: imageResponse.data[0].url
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    console.error('Error in describe-and-sketch:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
