@@ -22,10 +22,17 @@ function isValidBase64Image(str: string) {
 }
 
 // Clean and validate text for OpenAI
-function sanitizeText(text: string | null | undefined): string {
+function sanitizeText(text: string | null | undefined | object): string {
   if (!text) return '';
-  // Remove any potentially problematic characters and limit length
-  return text.replace(/[^\w\s.,!?-]/g, '').trim().slice(0, 500);
+  
+  // If text is an object with es property, use that
+  if (typeof text === 'object' && 'es' in text) {
+    return sanitizeText((text as { es: string }).es);
+  }
+  
+  // Convert to string and sanitize
+  const stringText = String(text);
+  return stringText.replace(/[^\w\s.,!?-]/g, '').trim().slice(0, 500);
 }
 
 Deno.serve(async (req) => {
