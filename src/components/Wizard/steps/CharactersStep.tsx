@@ -111,7 +111,8 @@ const CharactersStep: React.FC = () => {
       return;
     }
 
-    if (!character.description && (!character.images || character.images.length === 0)) {
+    const description = getDescription(character.description);
+    if (!description && (!character.images || character.images.length === 0)) {
       setUploadError('Se requiere una descripción o una imagen del personaje');
       return;
     }
@@ -128,7 +129,7 @@ const CharactersStep: React.FC = () => {
         },
         body: JSON.stringify({
           imageBase64: character.images?.[0] || null,
-          userNotes: character.description || '',
+          userNotes: description,
           name: character.name || '',
           age: character.age || ''
         }),
