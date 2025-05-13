@@ -13,8 +13,8 @@ const CharactersStep: React.FC = () => {
   const { supabase, user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -44,6 +44,7 @@ const CharactersStep: React.FC = () => {
       if (data) {
         setCharacters(data.map(char => ({
           ...char,
+          images: char.images || [],
           thumbnailUrl: char.thumbnail_url
         })));
       }
@@ -73,14 +74,35 @@ const CharactersStep: React.FC = () => {
       return;
     }
 
-    const character = characters.find(c => c.id === characterId);
-    if (!character) return;
-
-    setIsAnalyzing(true);
+    setIsUploading(true);
 
     try {
       const base64Image = await getBase64(file);
-      
+      const character = characters.find(c => c.id === characterId);
+      if (!character) return;
+
+      const updatedCharacter = {
+        ...character,
+        images: [...(character.images || []), base64Image]
+      };
+
+      await updateCharacter(characterId, { images: updatedCharacter.images });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setUploadError('Error al subir la imagen');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const generateThumbnail = async (characterId: string) => {
+    const character = characters.find(c => c.id === characterId);
+    if (!character || (!character.description && !character.images.length)) return;
+
+    setIsGenerating(characterId);
+    setUploadError(null);
+
+    try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
         method: 'POST',
         headers: {
@@ -88,7 +110,7 @@ const CharactersStep: React.FC = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          imageBase64: base64Image,
+          images: character.images,
           userNotes: character.description,
           name: character.name,
           age: character.age
@@ -96,58 +118,20 @@ const CharactersStep: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Error al analizar la imagen');
+        throw new Error('Error al generar la miniatura');
       }
 
       const data = await response.json();
       
       await updateCharacter(characterId, {
-        description: data.description,
-        thumbnailUrl: data.thumbnailUrl
+        thumbnailUrl: data.thumbnailUrl,
+        description: data.description || character.description
       });
     } catch (error) {
-      console.error('Error processing image:', error);
-      setUploadError('Error al procesar la imagen');
+      console.error('Error generating thumbnail:', error);
+      setUploadError('Error al generar la miniatura');
     } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const regenerateThumbnail = async (characterId: string) => {
-    const character = characters.find(c => c.id === characterId);
-    if (!character) return;
-
-    setIsRegenerating(characterId);
-    setUploadError(null);
-
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: character.name,
-          description: character.description,
-          age: character.age
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al regenerar la miniatura');
-      }
-
-      const data = await response.json();
-      
-      await updateCharacter(characterId, {
-        thumbnailUrl: data.thumbnailUrl
-      });
-    } catch (error) {
-      console.error('Error regenerating thumbnail:', error);
-      setUploadError('Error al regenerar la miniatura');
-    } finally {
-      setIsRegenerating(null);
+      setIsGenerating(null);
     }
   };
 
@@ -159,6 +143,7 @@ const CharactersStep: React.FC = () => {
         name: '',
         age: '',
         description: '',
+        images: [],
         thumbnailUrl: null
       };
       setCharacters([...characters, newCharacter]);
@@ -211,6 +196,7 @@ const CharactersStep: React.FC = () => {
             age: updates.age,
             description: updates.description,
             user_id: user?.id,
+            images: updates.images || [],
             thumbnail_url: updates.thumbnailUrl
           })
           .select()
@@ -325,13 +311,13 @@ const CharactersStep: React.FC = () => {
                   <Button
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={isAnalyzing}
+                    disabled={isUploading}
                     className="w-full"
                   >
-                    {isAnalyzing ? (
+                    {isUploading ? (
                       <>
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        <span>Analizando imagen...</span>
+                        <span>Subiendo imagen...</span>
                       </>
                     ) : (
                       <>
@@ -341,6 +327,20 @@ const CharactersStep: React.FC = () => {
                     )}
                   </Button>
                 </div>
+
+                {character.images.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {character.images.map((image, idx) => (
+                      <div key={idx} className="aspect-square rounded-lg overflow-hidden">
+                        <img
+                          src={image}
+                          alt={`Referencia ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -355,25 +355,28 @@ const CharactersStep: React.FC = () => {
                 ) : (
                   <div className="aspect-square rounded-lg bg-gray-100 flex items-center justify-center">
                     <p className="text-gray-500 text-center px-4">
-                      Sube una imagen o describe tu personaje para ver una vista previa
+                      Sube una imagen o describe tu personaje para generar una vista previa
                     </p>
                   </div>
                 )}
 
                 <Button
-                  onClick={() => regenerateThumbnail(character.id)}
-                  disabled={!character.name || !character.description || isRegenerating === character.id}
+                  onClick={() => generateThumbnail(character.id)}
+                  disabled={
+                    (!character.description && !character.images.length) || 
+                    isGenerating === character.id
+                  }
                   className="w-full"
                 >
-                  {isRegenerating === character.id ? (
+                  {isGenerating === character.id ? (
                     <>
                       <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      <span>Regenerando...</span>
+                      <span>Generando...</span>
                     </>
                   ) : (
                     <>
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      <span>Regenerar miniatura</span>
+                      <span>Generar miniatura</span>
                     </>
                   )}
                 </Button>
