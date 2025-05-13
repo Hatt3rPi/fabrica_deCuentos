@@ -59,6 +59,35 @@ Deno.serve(async (req) => {
       apiKey: openaiKey,
     });
 
+    const prompt = `Analiza cuidadosamente la(s) imágen(es) proporcionada(s) y, si existe, considera también la descripción ingresada por el usuario. Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes. Si sólo cuentas con las imágenes, realiza la descripción basándote exclusivamente en ellas.
+
+Describe detalladamente al personaje, cubriendo estos aspectos específicos:
+
+Apariencia física (color y tipo de cabello, color de ojos, contextura, tono de piel, altura aproximada, edad aparente).
+
+Vestimenta (tipo, colores, detalles distintivos, accesorios).
+
+Expresión facial (estado de ánimo aparente, gestos notorios).
+
+Postura (posición corporal, lenguaje corporal evidente).
+
+Cualquier característica distintiva o notable (elementos particulares como objetos especiales, rasgos únicos visibles).
+
+No inventes ni supongas información que no esté claramente visible en las imágenes o proporcionada explícitamente en la descripción del usuario.
+
+Entrega la descripción estructurada en dos idiomas: español latino e inglés, dentro de un arreglo claramente etiquetado para facilitar la selección posterior del idioma requerido, siguiendo este formato:
+
+{
+"es": "[Descripción en español latino]",
+"en": "[Description in English]"
+}
+
+Asegúrate de mantener coherencia y precisión en ambas versiones del texto.
+
+Antecedentes del usuario dados por el usuario:
+Edad del personaje: ${sanitizedAge}
+Notas del usuario: ${sanitizedNotes}`;
+
     // Create messages array based on available data
     const messages = [
       {
@@ -66,20 +95,7 @@ Deno.serve(async (req) => {
         content: [
           {
             type: "text",
-            text: `Describe este personaje para un libro infantil. ${
-              imageBase64 ? 'Analiza la imagen proporcionada y ' : ''
-            }considera la descripción del usuario si está disponible.
-
-            Información disponible:
-            ${sanitizedName ? `Nombre: ${sanitizedName}` : ''}
-            ${sanitizedAge ? `Edad: ${sanitizedAge}` : ''}
-            ${sanitizedNotes ? `Descripción: ${sanitizedNotes}` : ''}
-
-            Proporciona una descripción detallada que incluya:
-            - Apariencia física
-            - Vestimenta
-            - Expresión y personalidad
-            - Características distintivas`
+            text: prompt
           }
         ]
       }
@@ -99,7 +115,8 @@ Deno.serve(async (req) => {
     const description = await openai.chat.completions.create({
       model: "gpt-4-vision-preview",
       messages,
-      max_tokens: 500,
+      max_tokens: 1000,
+      response_format: { type: "json_object" }
     }).catch((error) => {
       if (error.status === 429) {
         throw new Error('Demasiadas solicitudes a OpenAI. Por favor, intenta de nuevo en unos momentos.');
@@ -111,9 +128,11 @@ Deno.serve(async (req) => {
       throw new Error('No se pudo generar la descripción del personaje');
     }
 
-    // Create a simplified prompt for DALL-E
+    const parsedDescription = JSON.parse(description.choices[0].message.content);
+
+    // Create a simplified prompt for DALL-E using the English description
     const imagePrompt = `Create a child-friendly illustration of ${sanitizedName || 'a character'} for a children's book. ${
-      description.choices[0].message.content.slice(0, 300)
+      parsedDescription.en.slice(0, 300)
     }. Style: Colorful, engaging, suitable for children.`;
 
     // Generate thumbnail
@@ -136,7 +155,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        description: description.choices[0].message.content,
+        description: parsedDescription,
         thumbnailUrl: imageResponse.data[0].url,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
