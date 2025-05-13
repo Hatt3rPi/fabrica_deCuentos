@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useAutosave } from '../hooks/useAutosave';
 import { Character, StorySettings, DesignSettings, WizardState } from '../types';
 
-export type WizardStep = 'characters' | 'story' | 'design' | 'preview';
+export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'export';
 
 interface WizardContextType {
   currentStep: WizardStep;
@@ -22,6 +22,7 @@ interface WizardContextType {
   nextStep: () => void;
   prevStep: () => void;
   canProceed: () => boolean;
+  resetWizard: () => void;
 }
 
 export interface GeneratedPage {
@@ -42,65 +43,47 @@ export const useWizard = () => {
   return context;
 };
 
-const samplePages: GeneratedPage[] = [
-  {
-    id: '1',
-    pageNumber: 1,
-    text: 'En un jardín mágico, Luna el gato descubrió una puerta brillante entre las flores...',
-    imageUrl: 'https://images.pexels.com/photos/1314550/pexels-photo-1314550.jpeg',
-    prompt: 'Un gato mágico en un jardín encantado con una puerta brillante, estilo acuarela suave',
-  },
-  {
-    id: '2',
-    pageNumber: 2,
-    text: 'Al cruzar la puerta, se encontró con un mundo de nubes de algodón y estrellas danzantes...',
-    imageUrl: 'https://images.pexels.com/photos/1183434/pexels-photo-1183434.jpeg',
-    prompt: 'Paisaje mágico con nubes de algodón y estrellas brillantes, estilo fantasía infantil',
-  },
-  {
-    id: '3',
-    pageNumber: 3,
-    text: 'Allí conoció a Pip, un pequeño dragón que coleccionaba sonrisas en frascos de cristal...',
-    imageUrl: 'https://images.pexels.com/photos/3075993/pexels-photo-3075993.jpeg',
-    prompt: 'Un dragón adorable con frascos de cristal brillantes, estilo cartoon amigable',
+const INITIAL_STATE: WizardState = {
+  characters: [],
+  styles: [],
+  spreads: [],
+  meta: {
+    title: '',
+    synopsis: '',
+    targetAge: '',
+    literaryStyle: '',
+    centralMessage: '',
+    additionalDetails: '',
+    status: 'draft'
   }
-];
-
-const isValidUUID = (uuid: string) => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
 };
 
 export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { storyId } = useParams();
-  const { supabase } = useAuth();
-  const [state, setState] = useState<WizardState>({
-    characters: [],
-    styles: [],
-    spreads: [],
-    meta: {
-      title: '',
-      synopsis: '',
-      targetAge: '',
-      literaryStyle: '',
-      centralMessage: '',
-      additionalDetails: '',
-      status: 'draft'
-    }
+  const navigate = useNavigate();
+  const { supabase, user } = useAuth();
+  const [state, setState] = useState<WizardState>(INITIAL_STATE);
+  const [currentStep, setCurrentStep] = useState<WizardStep>('characters');
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [storySettings, setStorySettings] = useState<StorySettings>({
+    targetAge: '',
+    literaryStyle: '',
+    centralMessage: '',
+    additionalDetails: '',
   });
+  const [designSettings, setDesignSettings] = useState<DesignSettings>({
+    visualStyle: '',
+    colorPalette: '',
+  });
+  const [generatedPages, setGeneratedPages] = useState<GeneratedPage[]>([]);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
   useAutosave(state, storyId || '');
 
   useEffect(() => {
     const loadDraft = async () => {
-      if (!storyId || !isValidUUID(storyId)) {
-        console.log('No valid storyId provided, skipping draft load');
-        return;
-      }
-
-      const savedDraft = localStorage.getItem(`story_draft_${storyId}`);
-      if (savedDraft) {
-        setState(JSON.parse(savedDraft));
+      if (!storyId || !user) {
+        navigate('/');
         return;
       }
 
@@ -114,42 +97,33 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (error) throw error;
 
         if (story) {
-          setState({
-            ...state,
-            meta: {
-              title: story.title,
-              targetAge: story.target_age,
-              literaryStyle: story.literary_style,
-              centralMessage: story.central_message,
-              additionalDetails: story.additional_details,
-              status: story.status
-            }
-          });
+          const savedState = localStorage.getItem(`story_draft_${storyId}`);
+          if (savedState) {
+            setState(JSON.parse(savedState));
+          } else {
+            setState({
+              ...INITIAL_STATE,
+              meta: {
+                title: story.title || '',
+                targetAge: story.target_age || '',
+                literaryStyle: story.literary_style || '',
+                centralMessage: story.central_message || '',
+                additionalDetails: story.additional_details || '',
+                status: story.status
+              }
+            });
+          }
         }
       } catch (error) {
         console.error('Error loading draft:', error);
+        navigate('/');
       }
     };
 
     loadDraft();
-  }, [storyId]);
+  }, [storyId, user]);
 
-  const [currentStep, setCurrentStep] = useState<WizardStep>('characters');
-  const [characters, setCharacters] = useState<Character[]>([{ id: '1', name: '', description: '', selectedVariant: null, variants: [] }]);
-  const [storySettings, setStorySettings] = useState<StorySettings>({
-    targetAge: '',
-    literaryStyle: '',
-    centralMessage: '',
-    additionalDetails: '',
-  });
-  const [designSettings, setDesignSettings] = useState<DesignSettings>({
-    visualStyle: '',
-    colorPalette: '',
-  });
-  const [generatedPages, setGeneratedPages] = useState<GeneratedPage[]>(samplePages);
-  const [isGenerating, setIsGenerating] = useState<boolean>(false);
-
-  const steps: WizardStep[] = ['characters', 'story', 'design', 'preview'];
+  const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'export'];
 
   const nextStep = () => {
     const currentIndex = steps.indexOf(currentStep);
@@ -163,6 +137,24 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (currentIndex > 0) {
       setCurrentStep(steps[currentIndex - 1]);
     }
+  };
+
+  const resetWizard = () => {
+    setState(INITIAL_STATE);
+    setCurrentStep('characters');
+    setCharacters([]);
+    setStorySettings({
+      targetAge: '',
+      literaryStyle: '',
+      centralMessage: '',
+      additionalDetails: '',
+    });
+    setDesignSettings({
+      visualStyle: '',
+      colorPalette: '',
+    });
+    setGeneratedPages([]);
+    setIsGenerating(false);
   };
 
   const canProceed = (): boolean => {
@@ -179,6 +171,8 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         );
       case 'design':
         return designSettings.visualStyle !== '' && designSettings.colorPalette !== '';
+      case 'preview':
+        return generatedPages.length > 0;
       default:
         return true;
     }
@@ -202,6 +196,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         nextStep,
         prevStep,
         canProceed,
+        resetWizard,
       }}
     >
       {children}

@@ -1,14 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useWizard } from '../../context/WizardContext';
 import CharactersStep from './steps/CharactersStep';
 import StoryStep from './steps/StoryStep';
 import DesignStep from './steps/DesignStep';
 import PreviewStep from './steps/PreviewStep';
+import ExportStep from './steps/ExportStep';
 import WizardNav from './WizardNav';
 import StepIndicator from './StepIndicator';
 
 const Wizard: React.FC = () => {
-  const { currentStep } = useWizard();
+  const { currentStep, setCurrentStep } = useWizard();
+  const { storyId } = useParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!storyId) {
+      navigate('/');
+    }
+  }, [storyId, navigate]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -20,6 +30,8 @@ const Wizard: React.FC = () => {
         return <DesignStep />;
       case 'preview':
         return <PreviewStep />;
+      case 'export':
+        return <ExportStep />;
       default:
         return <CharactersStep />;
     }
