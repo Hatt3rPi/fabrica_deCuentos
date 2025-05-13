@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     // Generate new thumbnail
     const imageResponse = await openai.images.generate({
       model: "dall-e-2",
-      prompt: `Clean pencil sketch portrait for a children's book. ` +
+      prompt: `Clean full-body pencil sketch illustration for a children's book. ` +
         `Character: ${age}. ${description}. Simple lines, no background, child-friendly.`,
       size: "256x256",
       //quality: "standard",
