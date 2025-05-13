@@ -12,28 +12,23 @@ Deno.serve(async (req) => {
 
   try {
     const { imageBase64, userNotes, name, age } = await req.json();
-    
+
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY'),
     });
 
-    // Analyze image and text
-    const analysisResponse = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { 
-              type: "text", 
-              text: `Respond with a JSON object containing descriptions in Spanish and English. Format your response as follows:
+    // Create messages array based on available data
+    const messages = [
+      {
+        type: "text",
+        text: `Respond with a JSON object containing descriptions in Spanish and English. Format your response as follows:
 
 {
   "es": "[Descripción en español latino]",
   "en": "[Description in English]"
 }
 
-Analiza cuidadosamente la(s) imágen(es) proporcionada(s) y, si existe, considera también la descripción ingresada por el usuario. Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes. Si sólo cuentas con las imágenes, realiza la descripción basándote exclusivamente en ellas.
+${imageBase64 ? 'Analiza cuidadosamente la imagen proporcionada y, ' : ''}si existe, considera también la descripción ingresada por el usuario. ${imageBase64 && userNotes ? 'Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes.' : ''} ${imageBase64 && !userNotes ? 'Realiza la descripción basándote exclusivamente en las imágenes.' : ''}
 
 Describe detalladamente al personaje, cubriendo estos aspectos específicos:
 
@@ -50,16 +45,28 @@ Cualquier característica distintiva o notable (elementos particulares como obje
 No inventes ni supongas información que no esté claramente visible en las imágenes o proporcionada explícitamente en la descripción del usuario.
 
 Antecedentes dados por el usuario:
-Edad del personaje: ${age}
-Notas del usuario: ${userNotes}`
-            },
-            { 
-              type: "image_url", 
-              image_url: { 
-                url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
-              } 
-            }
-          ]
+Edad del personaje: ${age || 'No especificada'}
+Notas del usuario: ${userNotes || 'No proporcionadas'}`
+      }
+    ];
+
+    // Only add image analysis if an image is provided
+    if (imageBase64) {
+      messages.push({
+        type: "image_url",
+        image_url: {
+          url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
+        }
+      });
+    }
+
+    // Analyze image and text
+    const analysisResponse = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [
+        {
+          role: "user",
+          content: messages
         }
       ],
       max_tokens: 1500,
@@ -71,7 +78,7 @@ Notas del usuario: ${userNotes}`
     // Generate thumbnail using Spanish description
     const imageResponseES = await openai.images.generate({
       model: "dall-e-3",
-      prompt: `Create a character illustration for a children's book. The character is ${name}, ${age}. ${descriptions.es}. Style should be child-friendly and engaging.`,
+      prompt: `Create a character illustration for a children's book. The character is ${name || 'unnamed'}, ${age || 'age unknown'}. ${descriptions.es}. Style should be child-friendly and engaging.`,
       size: "1024x1024",
       quality: "standard",
       n: 1,
@@ -80,7 +87,7 @@ Notas del usuario: ${userNotes}`
     // Generate thumbnail using English description
     const imageResponseEN = await openai.images.generate({
       model: "dall-e-3",
-      prompt: `Create a character illustration for a children's book. The character is ${name}, ${age}. ${descriptions.en}. Style should be child-friendly and engaging.`,
+      prompt: `Create a character illustration for a children's book. The character is ${name || 'unnamed'}, ${age || 'age unknown'}. ${descriptions.en}. Style should be child-friendly and engaging.`,
       size: "1024x1024",
       quality: "standard",
       n: 1,

@@ -97,7 +97,7 @@ const CharactersStep: React.FC = () => {
 
   const generateThumbnail = async (characterId: string) => {
     const character = characters.find(c => c.id === characterId);
-    if (!character || (!character.description && !character.images.length)) return;
+    if (!character || (!character.description && !character.images?.length)) return;
 
     setIsGenerating(characterId);
     setUploadError(null);
@@ -110,10 +110,10 @@ const CharactersStep: React.FC = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          images: character.images,
-          userNotes: character.description,
-          name: character.name,
-          age: character.age
+          imageBase64: character.images?.[0] || null,
+          userNotes: character.description || '',
+          name: character.name || '',
+          age: character.age || ''
         }),
       });
 
@@ -123,6 +123,10 @@ const CharactersStep: React.FC = () => {
 
       const data = await response.json();
       
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       await updateCharacter(characterId, {
         thumbnailUrl: data.thumbnailUrl,
         description: data.description || character.description
@@ -328,7 +332,7 @@ const CharactersStep: React.FC = () => {
                   </Button>
                 </div>
 
-                {character.images.length > 0 && (
+                {character.images?.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
                     {character.images.map((image, idx) => (
                       <div key={idx} className="aspect-square rounded-lg overflow-hidden">
@@ -363,7 +367,7 @@ const CharactersStep: React.FC = () => {
                 <Button
                   onClick={() => generateThumbnail(character.id)}
                   disabled={
-                    (!character.description && !character.images.length) || 
+                    (!character.description && (!character.images || character.images.length === 0)) || 
                     isGenerating === character.id
                   }
                   className="w-full"
