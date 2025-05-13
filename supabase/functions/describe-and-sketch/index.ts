@@ -22,12 +22,12 @@ function isValidBase64Image(str: string) {
 }
 
 // Clean and validate text for OpenAI
-function sanitizeText(text: string | null | undefined | object): string {
+function sanitizeText(text: string | null | undefined | { es: string; en: string }): string {
   if (!text) return '';
   
-  // If text is an object with es property, use that
+  // Handle object with es/en properties
   if (typeof text === 'object' && 'es' in text) {
-    return sanitizeText((text as { es: string }).es);
+    return sanitizeText(text.es);
   }
   
   // Convert to string and sanitize
