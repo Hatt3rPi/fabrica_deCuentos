@@ -28,36 +28,51 @@ const DesignStep: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Estilo visual
             </label>
-            <select
-              value={designSettings.visualStyle}
-              onChange={(e) => handleChange('visualStyle', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="">Selecciona un estilo</option>
+            <div className="grid grid-cols-2 gap-4">
               {visualStyleOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+                <div
+                  key={option.value}
+                  onClick={() => handleChange('visualStyle', option.value)}
+                  className={`cursor-pointer p-4 rounded-lg border-2 transition-all ${
+                    designSettings.visualStyle === option.value
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-purple-200'
+                  }`}
+                >
+                  <h3 className="font-medium text-gray-900">{option.label}</h3>
+                </div>
               ))}
-            </select>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Paleta de colores
             </label>
-            <select
-              value={designSettings.colorPalette}
-              onChange={(e) => handleChange('colorPalette', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="">Selecciona una paleta</option>
+            <div className="grid grid-cols-2 gap-4">
               {colorPaletteOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+                <div
+                  key={option.value}
+                  onClick={() => handleChange('colorPalette', option.value)}
+                  className={`cursor-pointer p-4 rounded-lg border-2 transition-all ${
+                    designSettings.colorPalette === option.value
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-purple-200'
+                  }`}
+                >
+                  <h3 className="font-medium text-gray-900 mb-2">{option.label}</h3>
+                  <div className="flex gap-1">
+                    {option.colors.map((color, index) => (
+                      <div
+                        key={index}
+                        className="w-6 h-6 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
-            </select>
+            </div>
           </div>
         </div>
 
