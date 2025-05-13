@@ -75,3 +75,5 @@ const generateThumbnail = async (characterId: string, retryCount = 0) => {
   };
 
   // ... (rest of the code remains the same)
+
+export default generateThumbnail
