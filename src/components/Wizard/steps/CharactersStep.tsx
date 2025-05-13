@@ -81,7 +81,7 @@ const CharactersStep: React.FC = () => {
     try {
       const base64Image = await getBase64(file);
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/api/character/describe-and-sketch`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -121,7 +121,7 @@ const CharactersStep: React.FC = () => {
     setUploadError(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/api/image/regenerate`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-variations`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
