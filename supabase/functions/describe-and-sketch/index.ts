@@ -5,6 +5,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Validate image base64 string
+function isValidBase64Image(str: string) {
+  if (!str) return false;
+  try {
+    // Check if it's a data URL
+    if (str.startsWith('data:image/')) {
+      const base64 = str.split(',')[1];
+      return base64 && base64.length > 0;
+    }
+    // Check if it's a raw base64 string
+    return /^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$/.test(str);
+  } catch {
+    return false;
+  }
+}
+
+// Clean and validate text for OpenAI
+function sanitizeText(text: string | null | undefined): string {
+  if (!text) return '';
+  // Remove any potentially problematic characters and limit length
+  return text.replace(/[^\w\s.,!?-]/g, '').trim().slice(0, 500);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -13,6 +36,19 @@ Deno.serve(async (req) => {
   try {
     const { imageBase64, userNotes, name, age } = await req.json();
 
+    // Validate inputs
+    const sanitizedName = sanitizeText(name);
+    const sanitizedAge = sanitizeText(age);
+    const sanitizedNotes = sanitizeText(userNotes);
+
+    if (!sanitizedNotes && !imageBase64) {
+      throw new Error('Se requiere una descripción o una imagen');
+    }
+
+    if (imageBase64 && !isValidBase64Image(imageBase64)) {
+      throw new Error('Formato de imagen inválido');
+    }
+
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY'),
     });
@@ -20,39 +56,32 @@ Deno.serve(async (req) => {
     // Create messages array based on available data
     const messages = [
       {
-        type: "text",
-        text: `Respond with a JSON object containing descriptions in Spanish and English. Format your response as follows:
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Describe este personaje para un libro infantil. ${
+              imageBase64 ? 'Analiza la imagen proporcionada y ' : ''
+            }considera la descripción del usuario si está disponible.
 
-{
-  "es": "[Descripción en español latino]",
-  "en": "[Description in English]"
-}
+            Información disponible:
+            ${sanitizedName ? `Nombre: ${sanitizedName}` : ''}
+            ${sanitizedAge ? `Edad: ${sanitizedAge}` : ''}
+            ${sanitizedNotes ? `Descripción: ${sanitizedNotes}` : ''}
 
-${imageBase64 ? 'Analiza cuidadosamente la imagen proporcionada y, ' : ''}si existe, considera también la descripción ingresada por el usuario. ${imageBase64 && userNotes ? 'Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes.' : ''} ${imageBase64 && !userNotes ? 'Realiza la descripción basándote exclusivamente en las imágenes.' : ''}
-
-Describe detalladamente al personaje, cubriendo estos aspectos específicos:
-
-Apariencia física (color y tipo de cabello, color de ojos, contextura, tono de piel, altura aproximada, edad aparente).
-
-Vestimenta (tipo, colores, detalles distintivos, accesorios).
-
-Expresión facial (estado de ánimo aparente, gestos notorios).
-
-Postura (posición corporal, lenguaje corporal evidente).
-
-Cualquier característica distintiva o notable (elementos particulares como objetos especiales, rasgos únicos visibles).
-
-No inventes ni supongas información que no esté claramente visible en las imágenes o proporcionada explícitamente en la descripción del usuario.
-
-Antecedentes dados por el usuario:
-Edad del personaje: ${age || 'No especificada'}
-Notas del usuario: ${userNotes || 'No proporcionadas'}`
+            Proporciona una descripción detallada que incluya:
+            - Apariencia física
+            - Vestimenta
+            - Expresión y personalidad
+            - Características distintivas`
+          }
+        ]
       }
     ];
 
-    // Only add image analysis if an image is provided
+    // Only add image analysis if a valid image is provided
     if (imageBase64) {
-      messages.push({
+      messages[0].content.push({
         type: "image_url",
         image_url: {
           url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
@@ -60,34 +89,22 @@ Notas del usuario: ${userNotes || 'No proporcionadas'}`
       });
     }
 
-    // Analyze image and text
-    const analysisResponse = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [
-        {
-          role: "user",
-          content: messages
-        }
-      ],
-      max_tokens: 1500,
-      response_format: { type: "json_object" }
+    // Get character description
+    const description = await openai.chat.completions.create({
+      model: "gpt-4-vision-preview",
+      messages,
+      max_tokens: 500,
     });
 
-    const descriptions = JSON.parse(analysisResponse.choices[0].message.content);
+    // Create a simplified prompt for DALL-E
+    const imagePrompt = `Create a child-friendly illustration of ${sanitizedName || 'a character'} for a children's book. ${
+      description.choices[0].message.content.slice(0, 300)
+    }. Style: Colorful, engaging, suitable for children.`;
 
-    // Generate thumbnail using Spanish description
-    const imageResponseES = await openai.images.generate({
+    // Generate thumbnail
+    const imageResponse = await openai.images.generate({
       model: "dall-e-3",
-      prompt: `Create a character illustration for a children's book. The character is ${name || 'unnamed'}, ${age || 'age unknown'}. ${descriptions.es}. Style should be child-friendly and engaging.`,
-      size: "1024x1024",
-      quality: "standard",
-      n: 1,
-    });
-
-    // Generate thumbnail using English description
-    const imageResponseEN = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: `Create a character illustration for a children's book. The character is ${name || 'unnamed'}, ${age || 'age unknown'}. ${descriptions.en}. Style should be child-friendly and engaging.`,
+      prompt: imagePrompt,
       size: "1024x1024",
       quality: "standard",
       n: 1,
@@ -95,18 +112,24 @@ Notas del usuario: ${userNotes || 'No proporcionadas'}`
 
     return new Response(
       JSON.stringify({
-        description: descriptions.es, // Store Spanish description in character.description
-        thumbnailUrl: imageResponseES.data[0].url, // Use Spanish version as primary thumbnail
-        thumbnailUrlEN: imageResponseEN.data[0].url, // Store English version as alternative
-        descriptions // Store both descriptions for future use
+        description: description.choices[0].message.content,
+        thumbnailUrl: imageResponse.data[0].url,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
     console.error('Error in describe-and-sketch:', error);
+    
+    // Return a more specific error message
+    const errorMessage = error.message === 'Se requiere una descripción o una imagen' || 
+                        error.message === 'Formato de imagen inválido'
+      ? error.message
+      : 'Error al generar la miniatura';
+
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: errorMessage }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

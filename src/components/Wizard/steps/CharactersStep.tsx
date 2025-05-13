@@ -7,6 +7,8 @@ import Button from '../../UI/Button';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
 
 const CharactersStep: React.FC = () => {
   const { characters, setCharacters } = useWizard();
@@ -61,7 +63,7 @@ const CharactersStep: React.FC = () => {
       return;
     }
 
-    const file = files[0]; // Solo procesamos la primera imagen
+    const file = files[0];
     setUploadError(null);
 
     if (file.size > MAX_FILE_SIZE) {
@@ -95,9 +97,14 @@ const CharactersStep: React.FC = () => {
     }
   };
 
-  const generateThumbnail = async (characterId: string) => {
+  const generateThumbnail = async (characterId: string, retryCount = 0) => {
     const character = characters.find(c => c.id === characterId);
-    if (!character || (!character.description && !character.images?.length)) return;
+    if (!character) return;
+
+    if (!character.description && !character.images?.length) {
+      setUploadError('Se requiere una descripción o una imagen del personaje');
+      return;
+    }
 
     setIsGenerating(characterId);
     setUploadError(null);
@@ -117,12 +124,12 @@ const CharactersStep: React.FC = () => {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Error al generar la miniatura');
-      }
-
       const data = await response.json();
       
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al generar la miniatura');
+      }
+
       if (data.error) {
         throw new Error(data.error);
       }
@@ -133,7 +140,14 @@ const CharactersStep: React.FC = () => {
       });
     } catch (error) {
       console.error('Error generating thumbnail:', error);
-      setUploadError('Error al generar la miniatura');
+
+      // Retry logic for specific errors
+      if (retryCount < MAX_RETRIES && error.message.includes('429')) {
+        setTimeout(() => generateThumbnail(characterId, retryCount + 1), RETRY_DELAY * Math.pow(2, retryCount));
+        return;
+      }
+
+      setUploadError(error.message || 'Error al generar la miniatura');
     } finally {
       setIsGenerating(null);
     }
