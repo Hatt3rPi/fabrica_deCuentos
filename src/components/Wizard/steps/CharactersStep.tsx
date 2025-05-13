@@ -19,6 +19,13 @@ const CharactersStep: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const getDescription = (description: string | { es: string; en: string }) => {
+    if (typeof description === 'object' && description.es) {
+      return description.es;
+    }
+    return description || '';
+  };
+
   useEffect(() => {
     if (user) {
       loadUserCharacters();
@@ -317,7 +324,7 @@ const CharactersStep: React.FC = () => {
                   </label>
                   <textarea
                     id={`description-${character.id}`}
-                    value={character.description}
+                    value={getDescription(character.description)}
                     onChange={(e) => updateCharacter(character.id, { description: e.target.value })}
                     rows={4}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
