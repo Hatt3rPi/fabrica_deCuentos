@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Observa cuidadosamente todas las imágenes proporcionadas. Todas muestran al mismo personaje desde diferentes ángulos o momentos. Tu tarea es generar una única descripción consolidada del personaje, sin separar la información por imagen.\n\nDescribe exclusivamente lo que es observable directamente en las imágenes.\n\nSi el personaje presenta diferentes atuendos o expresiones, integra todos los elementos relevantes en una sola descripción robusta.\n\nNo incluyas información del entorno, ni describas objetos que no estén claramente relacionados con el personaje. No inventes ni asumas detalles no visibles.\n\nEl resultado debe entregarse en el siguiente formato estructurado, para ser utilizado en un cuento infantil:\n\n    Apariencia física: [Color y estilo de cabello, rasgos faciales, edad aparente, contextura, altura relativa, etc.]\n\n    Vestimenta: [Descripción de una o más tenidas visibles. Incluir colores, patrones, estilo, tipo de calzado, accesorios visibles.]\n\n    Expresión facial y actitud: [Gestos predominantes, emociones visibles, energía del personaje, mirada.]\n\n    Postura y acciones: [Cómo se posiciona, qué hace, si está en movimiento o estática, nivel de dinamismo.]\n\n    Características distintivas: [Detalles únicos como peinados, adornos, marcas, gestos, accesorios o elementos que contribuyen a su identidad visual.]"
+                text: "Please analyze this image and provide a JSON response with the following structure: { description: string }. Observe carefully and describe what you see in detail."
               },
               {
                 type: "image_url",
@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
             ]
           }
         ],
-        max_tokens: 1500
+        max_tokens: 1500,
+        response_format: { type: "json_object" }
       })
     });
 
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
       throw new Error('No analysis result received from OpenAI');
     }
 
-    const description = responseData.choices[0].message.content;
+    const description = JSON.parse(responseData.choices[0].message.content).description;
     console.log('Extracted description:', description);
 
     return new Response(
