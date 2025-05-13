@@ -161,7 +161,11 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     switch (currentStep) {
       case 'characters':
         return characters.every(
-          (c) => c.name.trim() !== '' && c.description.trim() !== '' && c.selectedVariant !== null
+          (c) => {
+            const name = typeof c.name === 'string' ? c.name.trim() : '';
+            const description = typeof c.description === 'string' ? c.description.trim() : '';
+            return name !== '' && description !== '' && c.selectedVariant !== null;
+          }
         );
       case 'story':
         return (
