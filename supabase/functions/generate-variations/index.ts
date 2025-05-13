@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     const imageResponse = await openai.images.generate({
       model: "dall-e-3",
       prompt: `Create a character illustration for a children's book. The character is ${name}, ${age}. ${description}. Style should be child-friendly and engaging. Make this variation unique and different from previous versions.`,
-      size: "1024x1024",
+      size: "320x320",
       quality: "standard",
       n: 1,
     });
