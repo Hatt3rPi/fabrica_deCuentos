@@ -274,6 +274,6 @@ const CharactersStep: React.FC = () => {
 
   // Resto del componente sin cambios...
   // (El JSX y demás lógica de renderizado se mantiene igual)
-});
+};
 
 export default CharactersStep;
