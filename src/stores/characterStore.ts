@@ -1,33 +1,33 @@
 import { create } from 'zustand';
-import { Character } from '../types/character';
+import { Character } from '../types';
 
-interface CharacterState {
+interface CharacterStore {
   characters: Character[];
-  stylePreviews: Record<string, string>;
-  coverUrl: string | null;
+  currentCharacter: Character | null;
   setCharacters: (characters: Character[]) => void;
-  setStylePreview: (style: string, url: string) => void;
-  setCoverUrl: (url: string) => void;
+  setCurrentCharacter: (character: Character | null) => void;
+  addCharacter: (character: Character) => void;
+  updateCharacter: (id: string, character: Partial<Character>) => void;
+  deleteCharacter: (id: string) => void;
 }
 
-export const useCharacterStore = create<CharacterState>((set) => ({
+export const useCharacterStore = create<CharacterStore>((set) => ({
   characters: [],
-  stylePreviews: {},
-  coverUrl: null,
+  currentCharacter: null,
   setCharacters: (characters) => set({ characters }),
-  setStylePreview: (style, url) => 
+  setCurrentCharacter: (character) => set({ currentCharacter: character }),
+  addCharacter: (character) => 
     set((state) => ({ 
-      stylePreviews: { ...state.stylePreviews, [style]: url } 
+      characters: [...state.characters, character] 
     })),
-  setCoverUrl: (url) => set({ coverUrl: url }),
+  updateCharacter: (id, updatedCharacter) =>
+    set((state) => ({
+      characters: state.characters.map((char) =>
+        char.id === id ? { ...char, ...updatedCharacter } : char
+      ),
+    })),
+  deleteCharacter: (id) =>
+    set((state) => ({
+      characters: state.characters.filter((char) => char.id !== id),
+    })),
 }));
-
-export const visualStyles = [
-  "Acuarela digital",
-  "Kawaii", 
-  "Recortes de papel",
-  "Dibujado a mano"
-];
-
-export const defaultPalette = "Pasteles vibrantes";
-export const defaultStyle = "Acuarela digital";
