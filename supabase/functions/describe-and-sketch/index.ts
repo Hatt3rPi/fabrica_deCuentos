@@ -9,30 +9,20 @@ const corsHeaders = {
 function isValidBase64Image(str: string) {
   if (!str) return false;
   try {
-    // Check if it's a data URL
     if (str.startsWith('data:image/')) {
       const base64 = str.split(',')[1];
       return base64 && base64.length > 0;
     }
-    // Check if it's a raw base64 string
     return /^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$/.test(str);
   } catch {
     return false;
   }
 }
 
-// Clean and validate text for OpenAI
-function sanitizeText(text: string | null | undefined | { es: string; en: string }): string {
+// Clean and validate text
+function sanitizeText(text: string | null | undefined): string {
   if (!text) return '';
-  
-  // Handle object with es/en properties
-  if (typeof text === 'object' && 'es' in text) {
-    return sanitizeText(text.es);
-  }
-  
-  // Convert to string and sanitize
-  const stringText = String(text);
-  return stringText.replace(/[^\w\s.,!?-]/g, '').trim().slice(0, 500);
+  return String(text).replace(/[^\w\s.,!?-]/g, '').trim().slice(0, 500);
 }
 
 Deno.serve(async (req) => {
@@ -41,142 +31,95 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify OpenAI API key is present
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiKey) {
-      throw new Error('Error de configuración: Falta la clave de API de OpenAI');
-    }
-
-    const { imageBase64, userNotes, name, age } = await req.json().catch(() => ({}));
-
-    // Validate inputs
-    const sanitizedName = sanitizeText(name);
-    const sanitizedAge = sanitizeText(age);
-    const sanitizedNotes = sanitizeText(userNotes);
-
-    if (!sanitizedNotes && !imageBase64) {
-      throw new Error('Se requiere una descripción o una imagen');
-    }
-
-    if (imageBase64 && !isValidBase64Image(imageBase64)) {
-      throw new Error('Formato de imagen inválido');
+    const { image, name, age, description } = await req.json();
+    
+    if (!image && !description) {
+      throw new Error('Se requiere una imagen o descripción');
     }
 
     const openai = new OpenAI({
-      apiKey: openaiKey,
+      apiKey: Deno.env.get('OPENAI_API_KEY'),
     });
 
-    // Generate thumbnail first with DALL-E 2 for speed
-    const imagePrompt = `Clean full-body pencil sketch illustration for a children's book. Character: ${sanitizedAge}. ${sanitizedNotes}. Simple lines, no background, child-friendly.`;
+    // Generate initial sketch
+    const sketchPrompt = `Convert this character into a children's book character.
+Clean pencil drawing, simple lines.
+Full body illustration.
+White background.
+Name: ${sanitizeText(name)}
+Age: ${sanitizeText(age)}
+Description: ${sanitizeText(description)}`;
 
-    const imageResponse = await openai.images.generate({
-      model: "dall-e-2",
-      prompt: imagePrompt,
-      size: "256x256",
+    const sketchResponse = await openai.images.edit({
+      image: image,
+      prompt: sketchPrompt,
+      size: "512x512",
       n: 1,
-    }).catch((error) => {
-      if (error.status === 429) {
-        throw new Error('Demasiadas solicitudes a OpenAI. Por favor, intenta de nuevo en unos momentos.');
-      }
-      throw new Error(`Error al generar la imagen: ${error.message}`);
     });
 
-    if (!imageResponse.data?.[0]?.url) {
-      throw new Error('No se pudo generar la imagen del personaje');
-    }
+    const thumbnailUrl = sketchResponse.data[0].url;
 
-    // Now get the character description
-    const prompt = `Analiza cuidadosamente la(s) imágen(es) proporcionada(s) y, si existe, considera también la descripción ingresada por el usuario. Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes. Si sólo cuentas con las imágenes, realiza la descripción basándote exclusivamente en ellas.
-
-Describe detalladamente al personaje, cubriendo estos aspectos específicos:
-
-Apariencia física (color y tipo de cabello, color de ojos, contextura, tono de piel, altura aproximada, edad aparente).
-
-Vestimenta (tipo, colores, detalles distintivos, accesorios).
-
-Expresión facial (estado de ánimo aparente, gestos notorios).
-
-Postura (posición corporal, lenguaje corporal evidente).
-
-Cualquier característica distintiva o notable (elementos particulares como objetos especiales, rasgos únicos visibles).
-
-No inventes ni supongas información que no esté claramente visible en las imágenes o proporcionada explícitamente en la descripción del usuario.
-
-Entrega la descripción estructurada en dos idiomas: español latino e inglés, dentro de un arreglo claramente etiquetado para facilitar la selección posterior del idioma requerido, siguiendo este formato:
-
-{
-"es": "[Descripción en español latino]",
-"en": "[Description in English]"
-}
-
-Asegúrate de mantener coherencia y precisión en ambas versiones del texto.
-
-Antecedentes del usuario dados por el usuario:
-Edad del personaje: ${sanitizedAge}
-Notas del usuario: ${sanitizedNotes}
-
-Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`;
-
-    // Create messages array based on available data
-    const messages = [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: prompt
-          }
-        ]
-      }
+    // Generate three reference views
+    const views = [
+      "Full body front view, white background.",
+      "Full body three-quarter left view, white background.",
+      "Full body right profile view, white background."
     ];
 
-    // Only add image analysis if a valid image is provided
-    if (imageBase64) {
-      messages[0].content.push({
-        type: "image_url",
-        image_url: {
-          url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
-        }
-      });
-    }
+    const referenceUrls = await Promise.all(
+      views.map(async (viewPrompt) => {
+        const response = await openai.images.edit({
+          image: image,
+          prompt: `${sketchPrompt}\n${viewPrompt}`,
+          size: "512x512",
+          n: 1,
+        });
+        return response.data[0].url;
+      })
+    );
 
-    // Get character description
-    const description = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages,
-      max_tokens: 1000,
+    // Generate bilingual description
+    const analysisResponse = await openai.chat.completions.create({
+      model: "gpt-4-vision-preview",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Analyze this character and provide a detailed description in both Spanish and English. Include:
+- Physical appearance (hair, eyes, build, height, etc.)
+- Base clothing and accessories
+- Personality traits visible in expression/posture
+Format as JSON: { "es": "Spanish description", "en": "English description" }`
+            },
+            {
+              type: "image_url",
+              image_url: { url: thumbnailUrl }
+            }
+          ]
+        }
+      ],
       response_format: { type: "json_object" }
-    }).catch((error) => {
-      if (error.status === 429) {
-        throw new Error('Demasiadas solicitudes a OpenAI. Por favor, intenta de nuevo en unos momentos.');
-      }
-      throw new Error(`Error al analizar el personaje: ${error.message}`);
     });
 
-    if (!description.choices?.[0]?.message?.content) {
-      throw new Error('No se pudo generar la descripción del personaje');
-    }
-
-    const parsedDescription = JSON.parse(description.choices[0].message.content);
+    const description = JSON.parse(analysisResponse.choices[0].message.content);
 
     return new Response(
       JSON.stringify({
-        description: parsedDescription,
-        thumbnailUrl: imageResponse.data[0].url,
+        thumbnailUrl,
+        referenceUrls,
+        description
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
-    console.error('Error in describe-and-sketch:', error);
-    
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message || 'Error al generar la miniatura'
-      }),
+      JSON.stringify({ error: error.message }),
       { 
-        status: error.status || 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        status: error.status || 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
