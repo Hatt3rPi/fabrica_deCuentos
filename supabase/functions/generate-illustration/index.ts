@@ -1,5 +1,5 @@
 import OpenAI from "npm:openai@4.28.0";
-import { GenerateIllustrationParams } from "../../../src/types/illustration";
+import { GenerateIllustrationParams } from "./types.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
