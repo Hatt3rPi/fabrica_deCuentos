@@ -164,7 +164,7 @@ const CharactersStep: React.FC = () => {
         description: data.description || character.description
       });
 
-      // Actualizar el store global
+      // Update the store
       const updatedCharacters = characters.map(c => 
         c.id === characterId 
           ? { ...c, thumbnailUrl: data.thumbnailUrl, description: data.description || c.description }
@@ -222,7 +222,7 @@ const CharactersStep: React.FC = () => {
   const removeCharacter = async (id: string) => {
     if (characters.length > 1) {
       try {
-        // Eliminar imágenes del storage
+        // Delete images from storage
         const character = characters.find(c => c.id === id);
         if (character?.reference_urls?.length) {
           for (const url of character.reference_urls) {
@@ -235,7 +235,7 @@ const CharactersStep: React.FC = () => {
           }
         }
 
-        // Eliminar registro de la base de datos
+        // Delete record from database
         await supabase
           .from('characters')
           .delete()
@@ -272,8 +272,190 @@ const CharactersStep: React.FC = () => {
     }
   };
 
-  // Resto del componente sin cambios...
-  // (El JSX y demás lógica de renderizado se mantiene igual)
+  return (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-purple-800 mb-2">
+          Personajes de tu Historia
+        </h2>
+        <p className="text-gray-600">
+          Crea hasta 3 personajes para tu cuento
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {characters.map((character) => (
+          <div
+            key={character.id}
+            className="bg-white rounded-lg shadow-md overflow-hidden"
+          >
+            {/* Character thumbnail */}
+            <div className="aspect-square relative bg-gray-100">
+              {character.thumbnailUrl ? (
+                <img
+                  src={character.thumbnailUrl}
+                  alt={character.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center p-4">
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">
+                      Sube una foto o describe al personaje
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading overlay */}
+              {isGenerating === character.id && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <Loader className="w-8 h-8 animate-spin mx-auto mb-2" />
+                    <p className="text-sm">Generando miniatura...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Character form */}
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  value={character.name}
+                  onChange={(e) =>
+                    updateCharacter(character.id, { name: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Nombre del personaje"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Edad
+                </label>
+                <input
+                  type="text"
+                  value={character.age}
+                  onChange={(e) =>
+                    updateCharacter(character.id, { age: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Edad del personaje"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Descripción
+                </label>
+                <textarea
+                  value={
+                    typeof character.description === 'object'
+                      ? character.description.es
+                      : character.description
+                  }
+                  onChange={(e) =>
+                    updateCharacter(character.id, { description: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  rows={3}
+                  placeholder="Describe al personaje..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Imágenes de referencia
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {character.reference_urls?.map((url, index) => (
+                    <div
+                      key={index}
+                      className="w-16 h-16 relative rounded overflow-hidden"
+                    >
+                      <img
+                        src={url}
+                        alt={`Referencia ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                  {(!character.reference_urls ||
+                    character.reference_urls.length < 3) && (
+                    <label className="w-16 h-16 flex items-center justify-center border-2 border-dashed border-gray-300 rounded cursor-pointer hover:border-purple-500">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(character.id, e.target.files)
+                        }
+                      />
+                      <Plus className="w-6 h-6 text-gray-400" />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => generateThumbnail(character.id)}
+                  disabled={isGenerating === character.id}
+                  className="flex-1"
+                >
+                  {isGenerating === character.id ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      <span>Generando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Generar</span>
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => removeCharacter(character.id)}
+                  disabled={characters.length <= 1}
+                  className="flex-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Eliminar</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {characters.length < 3 && (
+          <button
+            onClick={addCharacter}
+            className="h-full min-h-[400px] border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-colors"
+          >
+            <Plus className="w-12 h-12" />
+            <span className="text-lg">Añadir personaje</span>
+          </button>
+        )}
+      </div>
+
+      {uploadError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-600">{uploadError}</p>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default CharactersStep;
