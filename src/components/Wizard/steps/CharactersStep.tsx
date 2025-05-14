@@ -67,16 +67,16 @@ const CharactersStep: React.FC = () => {
   const uploadImageToStorage = async (file: File, characterId: string): Promise<string> => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${characterId}/${Date.now()}.${fileExt}`;
-    const filePath = `reference-images/${fileName}`;
+    const filePath = fileName;
 
     const { error: uploadError, data } = await supabase.storage
-      .from('characters')
+      .from('reference-images')
       .upload(filePath, file);
 
     if (uploadError) throw uploadError;
 
     const { data: { publicUrl } } = supabase.storage
-      .from('characters')
+      .from('reference-images')
       .getPublicUrl(filePath);
 
     return publicUrl;
@@ -240,8 +240,8 @@ const CharactersStep: React.FC = () => {
             const path = url.split('/').pop();
             if (path) {
               await supabase.storage
-                .from('characters')
-                .remove([`reference-images/${id}/${path}`]);
+                .from('reference-images')
+                .remove([`${id}/${path}`]);
             }
           }
         }
