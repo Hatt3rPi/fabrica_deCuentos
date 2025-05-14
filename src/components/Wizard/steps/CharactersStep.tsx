@@ -132,13 +132,16 @@ const CharactersStep: React.FC = () => {
         body: formData,
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Error de red' }));
-        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+        // Check for resource limit error
+        if (data.code === 'WORKER_LIMIT') {
+          throw new Error('El servicio está temporalmente ocupado. Por favor, inténtalo de nuevo en unos minutos.');
+        }
+        throw new Error(data.error || `Error ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      
       if (data.error) {
         throw new Error(data.error);
       }
@@ -154,9 +157,12 @@ const CharactersStep: React.FC = () => {
     } catch (error) {
       console.error('Error generating thumbnail:', error);
 
-      if (retryCount < MAX_RETRIES && error.message.includes('429')) {
-        setTimeout(() => generateThumbnail(characterId, retryCount + 1), RETRY_DELAY * Math.pow(2, retryCount));
-        setUploadError('Demasiadas solicitudes. Reintentando...');
+      // Retry logic for resource limit errors
+      if (retryCount < MAX_RETRIES && 
+          (error.message.includes('temporalmente ocupado') || error.message.includes('429'))) {
+        const delay = RETRY_DELAY * Math.pow(2, retryCount);
+        setUploadError(`Servicio ocupado. Reintentando en ${delay/1000} segundos...`);
+        setTimeout(() => generateThumbnail(characterId, retryCount + 1), delay);
         return;
       }
 

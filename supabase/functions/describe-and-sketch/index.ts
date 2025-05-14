@@ -39,46 +39,39 @@ Deno.serve(async (req) => {
       apiKey: Deno.env.get('OPENAI_API_KEY'),
     });
 
-    // Generate thumbnail sketch
+    // Generate thumbnail sketch with reduced size
     const thumbnailResponse = await openai.images.edit({
       image: buffer,
       prompt: `${FIXED_PROMPT}\nNombre: ${name}\nEdad: ${age}\nDescripción: ${description}`,
-      size: "512x512",
+      size: "256x256",
       n: 1,
       model: "gpt-image-1"
     });
 
     const thumbnailUrl = thumbnailResponse.data[0].url;
 
-    // Generate reference views
-    const viewPrompts = [
-      "Vista frontal de cuerpo entero, fondo blanco.",
-      "Vista tres cuartos izquierda de cuerpo entero, fondo blanco.",
-      "Vista de perfil derecho de cuerpo entero, fondo blanco."
-    ];
-
-    const referenceUrls = await Promise.all(
-      viewPrompts.map(async (viewPrompt) => {
-        const response = await openai.images.edit({
-          image: buffer,
-          prompt: `${FIXED_PROMPT}\n${viewPrompt}\nNombre: ${name}\nEdad: ${age}\nDescripción: ${description}`,
-          size: "512x512",
-          n: 1,
-          model: "gpt-image-1"
-        });
-        return response.data[0].url;
-      })
-    );
-
+    // Return only the thumbnail URL to reduce resource usage
     return new Response(
       JSON.stringify({
         thumbnailUrl,
-        referenceUrls
+        referenceUrls: [] // Empty array instead of generating multiple views
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error:', error);
+    
+    // Check if it's a resource limit error
+    if (error.message?.includes('capacity') || error.message?.includes('limit')) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Servicio temporalmente no disponible. Por favor, inténtalo de nuevo en unos minutos.',
+          code: 'WORKER_LIMIT'
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
