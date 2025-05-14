@@ -95,14 +95,22 @@ Deno.serve(async (req) => {
       apiKey: openaiKey,
     });
 
-    // Generate thumbnail first with DALL-E 2 for speed
-    const imagePrompt = `Clean full-body pencil sketch illustration for a children's book. Character: ${sanitizedAge}. ${sanitizedNotes}. Simple lines, no background, child-friendly.`;
+    // Generate thumbnail using gpt-image-1
+    const imagePrompt = `Convierte a la persona presente en la(s) imagen(es) adjunta(s) en un personaje de cuento infantil.
+    El personaje debe mantener la apariencia visual consistente con la persona real: considera su edad, color de piel, tipo de cabello, rasgos faciales y complexión.
+    Usa colores suaves, expresiones dulces y formas redondeadas para que el personaje transmita ternura y se integre bien en un cuento infantil.
+    Si hay más de una imagen, intégralas para obtener una descripción consolidada del personaje.
+    Si se incluye un texto adicional, úsalo para complementar la interpretación: puedes tomar inspiración de su personalidad, profesión, gustos, emociones o rol en el cuento.
+    El fondo debe ser blanco o neutro, ya que la imagen será utilizada como miniatura o como parte de un kit de identidad.
+    texto adicional: ${sanitizedNotes || 'sin información'}`;
 
     const imageResponse = await openai.images.generate({
-      model: "dall-e-2",
+      model: "gpt-image-1",
       prompt: imagePrompt,
-      size: "256x256",
+      size: "1024x1024",
       n: 1,
+      referenced_image_ids: imageBase64 ? [imageBase64] : undefined,
+      response_format: "url",
     }).catch((error) => {
       if (error.status === 429) {
         throw new Error('Demasiadas solicitudes a OpenAI. Por favor, intenta de nuevo en unos momentos.');
@@ -117,34 +125,34 @@ Deno.serve(async (req) => {
     // Now get the character description
     const prompt = `Analiza cuidadosamente la(s) imágen(es) proporcionada(s) y, si existe, considera también la descripción ingresada por el usuario. Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes. Si sólo cuentas con las imágenes, realiza la descripción basándote exclusivamente en ellas.
 
-Describe detalladamente al personaje, cubriendo estos aspectos específicos:
+    Describe detalladamente al personaje, cubriendo estos aspectos específicos:
 
-Apariencia física (color y tipo de cabello, color de ojos, contextura, tono de piel, altura aproximada, edad aparente).
+    Apariencia física (color y tipo de cabello, color de ojos, contextura, tono de piel, altura aproximada, edad aparente).
 
-Vestimenta (tipo, colores, detalles distintivos, accesorios).
+    Vestimenta (tipo, colores, detalles distintivos, accesorios).
 
-Expresión facial (estado de ánimo aparente, gestos notorios).
+    Expresión facial (estado de ánimo aparente, gestos notorios).
 
-Postura (posición corporal, lenguaje corporal evidente).
+    Postura (posición corporal, lenguaje corporal evidente).
 
-Cualquier característica distintiva o notable (elementos particulares como objetos especiales, rasgos únicos visibles).
+    Cualquier característica distintiva o notable (elementos particulares como objetos especiales, rasgos únicos visibles).
 
-No inventes ni supongas información que no esté claramente visible en las imágenes o proporcionada explícitamente en la descripción del usuario.
+    No inventes ni supongas información que no esté claramente visible en las imágenes o proporcionada explícitamente en la descripción del usuario.
 
-Entrega la descripción estructurada en dos idiomas: español latino e inglés, dentro de un arreglo claramente etiquetado para facilitar la selección posterior del idioma requerido, siguiendo este formato:
+    Entrega la descripción estructurada en dos idiomas: español latino e inglés, dentro de un arreglo claramente etiquetado para facilitar la selección posterior del idioma requerido, siguiendo este formato:
 
-{
-"es": "[Descripción en español latino]",
-"en": "[Description in English]"
-}
+    {
+    "es": "[Descripción en español latino]",
+    "en": "[Description in English]"
+    }
 
-Asegúrate de mantener coherencia y precisión en ambas versiones del texto.
+    Asegúrate de mantener coherencia y precisión en ambas versiones del texto.
 
-Antecedentes del usuario dados por el usuario:
-Edad del personaje: ${sanitizedAge}
-Notas del usuario: ${sanitizedNotes}
+    Antecedentes del usuario dados por el usuario:
+    Edad del personaje: ${sanitizedAge}
+    Notas del usuario: ${sanitizedNotes}
 
-Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`;
+    Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`;
 
     // Create messages array based on available data
     const messages = [
