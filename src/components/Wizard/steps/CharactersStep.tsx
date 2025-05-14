@@ -10,6 +10,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
+const DEBOUNCE_DELAY = 500; // 500ms debounce delay
 
 const CharactersStep: React.FC = () => {
   const { characters, setCharacters } = useWizard();
@@ -20,12 +21,22 @@ const CharactersStep: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setCharacters: setStoreCharacters } = useCharacterStore();
+  const updateTimeoutRef = useRef<number>();
 
   useEffect(() => {
     if (user) {
       loadUserCharacters();
     }
   }, [user]);
+
+  useEffect(() => {
+    // Cleanup timeout on unmount
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const loadUserCharacters = async () => {
     try {
@@ -164,7 +175,7 @@ const CharactersStep: React.FC = () => {
         description: data.description || character.description
       });
 
-      // Update the store
+      // Update global store
       const updatedCharacters = characters.map(c => 
         c.id === characterId 
           ? { ...c, thumbnailUrl: data.thumbnailUrl, description: data.description || c.description }
@@ -196,7 +207,7 @@ const CharactersStep: React.FC = () => {
             user_id: user?.id,
             name: '',
             age: '',
-            description: '',
+            description: { es: '', en: '' },
             reference_urls: [],
             thumbnail_url: null
           })
@@ -251,25 +262,53 @@ const CharactersStep: React.FC = () => {
   };
 
   const updateCharacter = async (id: string, updates: Partial<Character>) => {
-    try {
-      const { error } = await supabase
-        .from('characters')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      const updatedCharacters = characters.map((character) =>
-        character.id === id ? { ...character, ...updates } : character
-      );
-      setCharacters(updatedCharacters);
-      setStoreCharacters(updatedCharacters);
-    } catch (error) {
-      console.error('Error updating character:', error);
+    // Clear any existing timeout
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
     }
+
+    // Update local state immediately for smooth UI
+    const updatedCharacters = characters.map((character) =>
+      character.id === id ? { ...character, ...updates } : character
+    );
+    setCharacters(updatedCharacters);
+
+    // Debounce the database update
+    updateTimeoutRef.current = setTimeout(async () => {
+      try {
+        const character = characters.find(c => c.id === id);
+        if (!character) return;
+
+        // Handle description update
+        let finalUpdates = { ...updates };
+        if ('description' in updates) {
+          const currentDescription = typeof character.description === 'object' 
+            ? character.description 
+            : { es: character.description, en: '' };
+          
+          finalUpdates.description = {
+            ...currentDescription,
+            es: updates.description as string
+          };
+        }
+
+        const { error } = await supabase
+          .from('characters')
+          .update({
+            ...finalUpdates,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+        setStoreCharacters(updatedCharacters);
+      } catch (error) {
+        console.error('Error updating character:', error);
+        // Revert local state on error
+        setCharacters(characters);
+        setStoreCharacters(characters);
+      }
+    }, DEBOUNCE_DELAY);
   };
 
   return (
