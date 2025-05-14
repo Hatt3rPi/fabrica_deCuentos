@@ -16,9 +16,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { imageBase64, name, age, description } = await req.json();
+    const formData = await req.formData();
+    const image = formData.get('image') as File;
+    const name = formData.get('name') as string;
+    const age = formData.get('age') as string;
+    const description = formData.get('description') as string;
     
-    if (!imageBase64) {
+    if (!image) {
       throw new Error('Se requiere una imagen');
     }
 
@@ -28,8 +32,8 @@ Deno.serve(async (req) => {
 
     // Generate thumbnail sketch
     const thumbnailResponse = await openai.images.edit({
-      image: imageBase64,
-      prompt: FIXED_PROMPT,
+      image,
+      prompt: `${FIXED_PROMPT}\nNombre: ${name}\nEdad: ${age}\nDescripción: ${description}`,
       size: "512x512",
       n: 1,
       model: "gpt-image-1"
@@ -47,8 +51,8 @@ Deno.serve(async (req) => {
     const referenceUrls = await Promise.all(
       viewPrompts.map(async (viewPrompt) => {
         const response = await openai.images.edit({
-          image: imageBase64,
-          prompt: `${FIXED_PROMPT}\n${viewPrompt}`,
+          image,
+          prompt: `${FIXED_PROMPT}\n${viewPrompt}\nNombre: ${name}\nEdad: ${age}\nDescripción: ${description}`,
           size: "512x512",
           n: 1,
           model: "gpt-image-1"

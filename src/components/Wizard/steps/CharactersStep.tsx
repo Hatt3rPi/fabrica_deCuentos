@@ -32,15 +32,6 @@ const CharactersStep: React.FC = () => {
     }
   }, [user]);
 
-  const getBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  };
-
   const loadUserCharacters = async () => {
     try {
       const { data, error } = await supabase
@@ -86,13 +77,12 @@ const CharactersStep: React.FC = () => {
     setIsUploading(true);
 
     try {
-      const base64Image = await getBase64(file);
       const character = characters.find(c => c.id === characterId);
       if (!character) return;
 
       const updatedCharacter = {
         ...character,
-        images: [...(character.images || []), base64Image]
+        images: [...(character.images || []), file]
       };
 
       await updateCharacter(characterId, { images: updatedCharacter.images });
@@ -121,18 +111,20 @@ const CharactersStep: React.FC = () => {
     setUploadError(null);
 
     try {
+      const formData = new FormData();
+      if (character.images?.[0]) {
+        formData.append('image', character.images[0]);
+      }
+      formData.append('name', character.name || '');
+      formData.append('age', character.age || '');
+      formData.append('description', description);
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          imageBase64: character.images?.[0] || null,
-          userNotes: description,
-          name: character.name || '',
-          age: character.age || ''
-        }),
+        body: formData
       });
 
       if (!response.ok) {
@@ -367,7 +359,7 @@ const CharactersStep: React.FC = () => {
                     {character.images.map((image, idx) => (
                       <div key={idx} className="aspect-square rounded-lg overflow-hidden">
                         <img
-                          src={image}
+                          src={URL.createObjectURL(image)}
                           alt={`Referencia ${idx + 1}`}
                           className="w-full h-full object-cover"
                         />
