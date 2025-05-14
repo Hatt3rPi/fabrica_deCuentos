@@ -8,10 +8,7 @@ const corsHeaders = {
 interface Character {
   name: string;
   age: string;
-  description: {
-    es: string;
-    en: string;
-  };
+  description: string;
   referenceUrls: string[];
 }
 
@@ -23,6 +20,14 @@ interface SceneRequest {
     visualStyle: string;
     colorPalette: string;
   };
+}
+
+function buildCharacterBlock(character: Character) {
+  return `
+Nombre: ${character.name}
+Edad/apariencia: ${character.age}
+Ropa base: ${character.description}
+Personalidad: ${character.description}`;
 }
 
 Deno.serve(async (req) => {
@@ -37,34 +42,27 @@ Deno.serve(async (req) => {
       apiKey: Deno.env.get('OPENAI_API_KEY'),
     });
 
-    // Build character identity blocks
-    const characterBlocks = characters.map(char => `
-Character: ${char.name}
-Age/Appearance: ${char.age}
-Base description: ${char.description.en}
-    `).join('\n');
+    // Build identity blocks
+    const identityBlocks = characters.map(buildCharacterBlock).join('\n\n');
 
     // Build scene block
     const sceneBlock = `
-Scene:
-- Background: ${scene.background}
-- Action: ${scene.action}
-- Keep physical traits and clothing exactly as in reference images
-- Visual style: ${scene.visualStyle}
-- Color palette: ${scene.colorPalette}
-- Children's book illustration. Panoramic format for spreads.
-    `;
+Escenario o fondo: ${scene.background}
+Acción o pose: ${scene.action}
+Mantén los rasgos físicos y la ropa exactamente como en la referencia.
+Estilo gráfico: ${scene.visualStyle}
+Paleta de color: ${scene.colorPalette}
+Ilustración para libro infantil. Formato panorámico si es spread.`;
 
-    // Generate scene image
+    // Generate scene image using max 2 reference images per character
     const response = await openai.images.generate({
       model: "gpt-image-1",
-      prompt: `${characterBlocks}\n${sceneBlock}`,
+      prompt: `${identityBlocks}\n${sceneBlock}`,
       referenced_image_ids: characters.flatMap(char => 
-        char.referenceUrls.slice(0, 2) // Use max 2 references per character
+        char.referenceUrls.slice(0, 2)
       ),
-      size: "1792x1024",
-      quality: "hd",
-      n: 1,
+      size: "1024x1024",
+      n: 1
     });
 
     return new Response(
@@ -75,10 +73,7 @@ Scene:
     console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
-        status: error.status || 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
