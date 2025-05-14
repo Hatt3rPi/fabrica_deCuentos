@@ -1,4 +1,4 @@
-import OpenAI from 'npm:openai@4.28.0';
+import OpenAI from "npm:openai@4.28.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -171,7 +171,7 @@ Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`;
 
     // Get character description
     const description = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview",
+      model: "gpt-4-turbo",
       messages,
       max_tokens: 1000,
       response_format: { type: "json_object" }
