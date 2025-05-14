@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, X, Loader } from 'lucide-react';
+import { Plus, X, Loader, Trash2, Edit } from 'lucide-react';
 import { Character } from '../../types';
+import Button from '../UI/Button';
 
 interface ModalPersonajesProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,6 +51,48 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
   const handleCreateCharacter = () => {
     onClose();
     navigate('/wizard/characters');
+  };
+
+  const handleEditCharacter = (characterId: string) => {
+    onClose();
+    navigate(`/wizard/characters/${characterId}`);
+  };
+
+  const handleDeleteCharacter = async (characterId: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este personaje?')) return;
+
+    setIsDeleting(characterId);
+    try {
+      // Delete character images from storage
+      const character = characters.find(c => c.id === characterId);
+      if (character?.reference_urls?.length) {
+        for (const url of character.reference_urls) {
+          const path = url.split('/').pop();
+          if (path) {
+            await supabase.storage
+              .from('characters')
+              .remove([`reference-images/${characterId}/${path}`]);
+          }
+        }
+      }
+
+      // Delete character from database
+      const { error } = await supabase
+        .from('characters')
+        .delete()
+        .eq('id', characterId);
+
+      if (error) throw error;
+
+      // Update local state
+      setCharacters(prev => prev.filter(c => c.id !== characterId));
+      setSelectedCharacters(prev => prev.filter(id => id !== characterId));
+    } catch (error) {
+      console.error('Error deleting character:', error);
+      alert('Error al eliminar el personaje');
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   const handleContinue = async () => {
@@ -114,24 +158,44 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
               {characters.map((character) => (
                 <div
                   key={character.id}
-                  onClick={() => toggleCharacter(character.id)}
                   className={`relative cursor-pointer group ${
                     selectedCharacters.includes(character.id)
                       ? 'ring-2 ring-purple-500'
                       : ''
                   }`}
                 >
-                  <div className="aspect-square rounded-lg overflow-hidden">
+                  <div 
+                    onClick={() => toggleCharacter(character.id)}
+                    className="aspect-square rounded-lg overflow-hidden"
+                  >
                     <img
-                      src={character.selected_variant ? 
-                        character.variants.find(v => v.id === character.selected_variant)?.imageUrl :
-                        'https://images.pexels.com/photos/1314550/pexels-photo-1314550.jpeg'
-                      }
+                      src={character.thumbnailUrl || 'https://images.pexels.com/photos/1314550/pexels-photo-1314550.jpeg'}
                       alt={character.name}
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity" />
+                  
+                  {/* Character actions */}
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEditCharacter(character.id)}
+                      className="p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
+                    >
+                      <Edit className="w-4 h-4 text-purple-600" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCharacter(character.id)}
+                      disabled={isDeleting === character.id}
+                      className="p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
+                    >
+                      {isDeleting === character.id ? (
+                        <Loader className="w-4 h-4 text-red-600 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      )}
+                    </button>
+                  </div>
+
                   {selectedCharacters.includes(character.id) && (
                     <div className="absolute inset-0 bg-purple-600 bg-opacity-20 flex items-center justify-center">
                       <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center">
@@ -156,13 +220,13 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
         </div>
 
         <div className="p-6 border-t border-gray-200">
-          <button
+          <Button
             onClick={handleContinue}
             disabled={selectedCharacters.length === 0}
-            className="w-full py-3 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full"
           >
             Continuar
-          </button>
+          </Button>
         </div>
       </div>
     </div>
