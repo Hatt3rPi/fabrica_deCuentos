@@ -115,10 +115,7 @@ const CharactersStep: React.FC = () => {
       
       // Ensure we have a valid image file
       if (character.images?.[0] instanceof File) {
-        const imageFile = character.images[0];
-        // Create a new Blob from the File to ensure proper content type
-        const imageBlob = new Blob([imageFile], { type: imageFile.type });
-        formData.append('image', imageBlob, imageFile.name);
+        formData.append('image', character.images[0]);
       } else {
         throw new Error('No se encontró una imagen válida');
       }
@@ -132,7 +129,7 @@ const CharactersStep: React.FC = () => {
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: formData
+        body: formData,
       });
 
       if (!response.ok) {

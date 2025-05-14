@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     }
 
     const formData = await req.formData();
-    const imageFile = formData.get('image');
+    const imageFile = formData.get('image') as File;
     const name = formData.get('name') as string;
     const age = formData.get('age') as string;
     const description = formData.get('description') as string;
