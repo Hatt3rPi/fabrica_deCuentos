@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { useAuth } from '../../../context/AuthContext';
-import { Upload, RefreshCw, Trash2, Plus, Loader, AlertCircle } from 'lucide-react';
+import { Upload, RefreshCw, Trash2, Plus, Loader, AlertCircle, Info } from 'lucide-react';
 import { Character } from '../../../types';
 import Button from '../../UI/Button';
 import { useCharacterStore } from '../../../stores/characterStore';
@@ -122,6 +122,11 @@ const CharactersStep: React.FC = () => {
     }
   };
 
+  const canGenerateThumbnail = (character: Character): boolean => {
+    const description = typeof character.description === 'object' ? character.description.es : character.description;
+    return !!(description || (character.reference_urls && character.reference_urls.length > 0));
+  };
+
   const generateThumbnail = async (characterId: string, retryCount = 0) => {
     const character = characters.find(c => c.id === characterId);
     if (!character) {
@@ -130,7 +135,7 @@ const CharactersStep: React.FC = () => {
     }
 
     const description = typeof character.description === 'object' ? character.description.es : character.description;
-    if (!description && (!character.reference_urls || character.reference_urls.length === 0)) {
+    if (!canGenerateThumbnail(character)) {
       setUploadError('Se requiere una descripción o una imagen del personaje');
       return;
     }
@@ -446,7 +451,7 @@ const CharactersStep: React.FC = () => {
               <div className="flex gap-2">
                 <Button
                   onClick={() => generateThumbnail(character.id)}
-                  disabled={isGenerating === character.id}
+                  disabled={isGenerating === character.id || !canGenerateThumbnail(character)}
                   className="flex-1"
                 >
                   {isGenerating === character.id ? (
@@ -472,6 +477,13 @@ const CharactersStep: React.FC = () => {
                   <span>Eliminar</span>
                 </Button>
               </div>
+
+              {!canGenerateThumbnail(character) && (
+                <div className="flex items-start gap-2 text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <p>Añade una descripción o una imagen para generar la miniatura</p>
+                </div>
+              )}
             </div>
           </div>
         ))}
