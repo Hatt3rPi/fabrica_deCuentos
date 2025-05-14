@@ -11,24 +11,43 @@ Dibujo limpio a lápiz, líneas simples.
 Ilustración de cuerpo entero.`;
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Ensure we have a valid request with form data
+    // Validate request
     if (!req.body) {
-      throw new Error('Request body is empty');
+      return new Response(
+        JSON.stringify({ error: 'Request body is empty' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const formData = await req.formData();
-    const imageFile = formData.get('image') as File;
-    const name = formData.get('name') as string;
-    const age = formData.get('age') as string;
-    const description = formData.get('description') as string;
+    // Parse form data with error handling
+    let formData;
+    try {
+      formData = await req.formData();
+    } catch (error) {
+      console.error('Error parsing form data:', error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid form data format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Extract and validate form fields
+    const imageFile = formData.get('image');
+    const name = formData.get('name')?.toString() || '';
+    const age = formData.get('age')?.toString() || '';
+    const description = formData.get('description')?.toString() || '';
     
     if (!imageFile || !(imageFile instanceof File)) {
-      throw new Error('Se requiere una imagen válida');
+      return new Response(
+        JSON.stringify({ error: 'Se requiere una imagen válida' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Convert the File to a Buffer for OpenAI
@@ -50,7 +69,7 @@ Deno.serve(async (req) => {
 
     const thumbnailUrl = thumbnailResponse.data[0].url;
 
-    // Return only the thumbnail URL to reduce resource usage
+    // Return the response
     return new Response(
       JSON.stringify({
         thumbnailUrl,
@@ -72,9 +91,16 @@ Deno.serve(async (req) => {
       );
     }
     
+    // Return a generic error response
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: error.message || 'An unexpected error occurred',
+        code: error.code || 'INTERNAL_ERROR'
+      }),
+      { 
+        status: error.status || 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });

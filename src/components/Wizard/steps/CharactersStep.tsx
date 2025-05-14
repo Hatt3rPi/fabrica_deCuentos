@@ -115,16 +115,18 @@ const CharactersStep: React.FC = () => {
       
       // Ensure we have a valid image file
       if (character.images?.[0] instanceof File) {
-        formData.append('image', character.images[0]);
+        formData.append('image', character.images[0], character.images[0].name);
       } else {
         throw new Error('No se encontró una imagen válida');
       }
 
-      formData.append('name', character.name || '');
-      formData.append('age', character.age || '');
-      formData.append('description', description);
+      // Ensure all text fields are strings
+      formData.append('name', character.name?.toString() || '');
+      formData.append('age', character.age?.toString() || '');
+      formData.append('description', description?.toString() || '');
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`;
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -132,19 +134,18 @@ const CharactersStep: React.FC = () => {
         body: formData,
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        
         // Check for resource limit error
-        if (data.code === 'WORKER_LIMIT') {
+        if (response.status === 503 || data.code === 'WORKER_LIMIT') {
           throw new Error('El servicio está temporalmente ocupado. Por favor, inténtalo de nuevo en unos minutos.');
         }
+        
         throw new Error(data.error || `Error ${response.status}: ${response.statusText}`);
       }
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
+      const data = await response.json();
 
       if (!data.thumbnailUrl) {
         throw new Error('No se pudo generar la miniatura');
@@ -159,7 +160,7 @@ const CharactersStep: React.FC = () => {
 
       // Retry logic for resource limit errors
       if (retryCount < MAX_RETRIES && 
-          (error.message.includes('temporalmente ocupado') || error.message.includes('429'))) {
+          (error.message.includes('temporalmente ocupado') || error.status === 503)) {
         const delay = RETRY_DELAY * Math.pow(2, retryCount);
         setUploadError(`Servicio ocupado. Reintentando en ${delay/1000} segundos...`);
         setTimeout(() => generateThumbnail(characterId, retryCount + 1), delay);
