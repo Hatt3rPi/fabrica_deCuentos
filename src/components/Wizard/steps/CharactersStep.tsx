@@ -135,14 +135,7 @@ const CharactersStep: React.FC = () => {
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        
-        // Check for resource limit error
-        if (response.status === 503 || data.code === 'WORKER_LIMIT') {
-          throw new Error('El servicio está temporalmente ocupado. Por favor, inténtalo de nuevo en unos minutos.');
-        }
-        
-        throw new Error(data.error || `Error ${response.status}: ${response.statusText}`);
+        throw new Error('Error al generar la miniatura. Por favor, inténtalo de nuevo.');
       }
 
       const data = await response.json();
@@ -158,16 +151,15 @@ const CharactersStep: React.FC = () => {
     } catch (error) {
       console.error('Error generating thumbnail:', error);
 
-      // Retry logic for resource limit errors
-      if (retryCount < MAX_RETRIES && 
-          (error.message.includes('temporalmente ocupado') || error.status === 503)) {
+      // Generic retry logic for any error
+      if (retryCount < MAX_RETRIES) {
         const delay = RETRY_DELAY * Math.pow(2, retryCount);
-        setUploadError(`Servicio ocupado. Reintentando en ${delay/1000} segundos...`);
+        setUploadError(`Error al generar la miniatura. Reintentando en ${delay/1000} segundos...`);
         setTimeout(() => generateThumbnail(characterId, retryCount + 1), delay);
         return;
       }
 
-      setUploadError(error.message || 'Error al generar la miniatura');
+      setUploadError('Error al generar la miniatura. Por favor, inténtalo de nuevo más tarde.');
     } finally {
       setIsGenerating(null);
     }
