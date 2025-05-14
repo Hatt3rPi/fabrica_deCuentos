@@ -136,8 +136,8 @@ const CharactersStep: React.FC = () => {
 
     const description = typeof character.description === 'object' ? character.description.es : character.description;
     
-    // Enhanced validation to prevent API calls when requirements aren't met
-    if (!description?.trim() && (!character.reference_urls || character.reference_urls.length === 0)) {
+    // Enhanced validation with early return and specific error message
+    if (!canGenerateThumbnail(character)) {
       setUploadError('Se requiere una descripción o una imagen del personaje');
       return;
     }
