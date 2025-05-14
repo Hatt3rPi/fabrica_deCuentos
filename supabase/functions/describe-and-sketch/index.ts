@@ -17,8 +17,16 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Log request start
+    console.log('Processing request:', {
+      method: req.method,
+      url: req.url,
+      headers: Object.fromEntries(req.headers.entries())
+    });
+
     // Validate request
     if (!req.body) {
+      console.error('Empty request body');
       return new Response(
         JSON.stringify({ error: 'Request body is empty' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -29,6 +37,9 @@ Deno.serve(async (req) => {
     let formData;
     try {
       formData = await req.formData();
+      console.log('Form data received:', {
+        fields: Array.from(formData.entries()).map(([key]) => key)
+      });
     } catch (error) {
       console.error('Error parsing form data:', error);
       return new Response(
@@ -43,7 +54,17 @@ Deno.serve(async (req) => {
     const age = formData.get('age')?.toString() || '';
     const description = formData.get('description')?.toString() || '';
     
+    console.log('Processing character:', {
+      name,
+      age,
+      descriptionLength: description?.length,
+      hasImage: !!imageFile,
+      imageType: imageFile instanceof File ? imageFile.type : null,
+      imageSize: imageFile instanceof File ? imageFile.size : null
+    });
+    
     if (!imageFile || !(imageFile instanceof File)) {
+      console.error('Invalid image file:', { imageFile });
       return new Response(
         JSON.stringify({ error: 'Se requiere una imagen válida' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -54,31 +75,65 @@ Deno.serve(async (req) => {
     const arrayBuffer = await imageFile.arrayBuffer();
     const buffer = new Uint8Array(arrayBuffer);
 
+    // Verify OpenAI API key
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!apiKey) {
+      console.error('OpenAI API key not found');
+      throw new Error('Configuration error: OpenAI API key not found');
+    }
+
     const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
+      apiKey: apiKey,
+    });
+
+    // Log OpenAI request parameters
+    console.log('OpenAI request parameters:', {
+      model: 'gpt-image-1',
+      size: '256x256',
+      promptLength: FIXED_PROMPT.length + name.length + age.length + description.length,
+      bufferSize: buffer.length
     });
 
     // Generate thumbnail sketch with reduced size
-    const thumbnailResponse = await openai.images.edit({
-      image: buffer,
-      prompt: `${FIXED_PROMPT}\nNombre: ${name}\nEdad: ${age}\nDescripción: ${description}`,
-      size: "256x256",
-      n: 1,
-      model: "gpt-image-1"
-    });
+    try {
+      const thumbnailResponse = await openai.images.edit({
+        image: buffer,
+        prompt: `${FIXED_PROMPT}\nNombre: ${name}\nEdad: ${age}\nDescripción: ${description}`,
+        size: "256x256",
+        n: 1,
+        model: "gpt-image-1"
+      });
 
-    const thumbnailUrl = thumbnailResponse.data[0].url;
+      console.log('OpenAI response received:', {
+        success: true,
+        hasUrl: !!thumbnailResponse.data[0].url
+      });
 
-    // Return the response
-    return new Response(
-      JSON.stringify({
-        thumbnailUrl,
-        referenceUrls: [] // Empty array instead of generating multiple views
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      const thumbnailUrl = thumbnailResponse.data[0].url;
+
+      // Return the response
+      return new Response(
+        JSON.stringify({
+          thumbnailUrl,
+          referenceUrls: [] // Empty array instead of generating multiple views
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('OpenAI API error:', {
+        message: error.message,
+        code: error.code,
+        type: error.type,
+        status: error.status
+      });
+      throw error;
+    }
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     
     // Check if it's a resource limit error
     if (error.message?.includes('capacity') || error.message?.includes('limit')) {

@@ -97,12 +97,18 @@ const CharactersStep: React.FC = () => {
   const generateThumbnail = async (characterId: string, retryCount = 0) => {
     const character = characters.find(c => c.id === characterId);
     if (!character) {
+      console.error('Character not found:', characterId);
       setUploadError('No se encontró el personaje');
       return;
     }
 
     const description = getDescription(character.description);
     if (!description && (!character.images || character.images.length === 0)) {
+      console.error('Missing required data:', { 
+        characterId, 
+        hasDescription: !!description, 
+        hasImages: character.images?.length > 0 
+      });
       setUploadError('Se requiere una descripción o una imagen del personaje');
       return;
     }
@@ -111,11 +117,25 @@ const CharactersStep: React.FC = () => {
     setUploadError(null);
 
     try {
+      console.log('Starting thumbnail generation:', {
+        characterId,
+        name: character.name,
+        age: character.age,
+        descriptionLength: description?.length,
+        imageCount: character.images?.length
+      });
+
       const formData = new FormData();
       
       // Ensure we have a valid image file
       if (character.images?.[0] instanceof File) {
-        formData.append('image', character.images[0], character.images[0].name);
+        const image = character.images[0];
+        console.log('Image details:', {
+          name: image.name,
+          type: image.type,
+          size: image.size
+        });
+        formData.append('image', image, image.name);
       } else {
         throw new Error('No se encontró una imagen válida');
       }
@@ -126,6 +146,8 @@ const CharactersStep: React.FC = () => {
       formData.append('description', description?.toString() || '');
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`;
+      console.log('Calling Edge Function:', apiUrl);
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -134,11 +156,20 @@ const CharactersStep: React.FC = () => {
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error('Error al generar la miniatura. Por favor, inténtalo de nuevo.');
-      }
-
       const data = await response.json();
+      console.log('Edge Function response:', {
+        status: response.status,
+        ok: response.ok,
+        data
+      });
+
+      if (!response.ok) {
+        // Handle specific error codes
+        if (data.code === 'WORKER_LIMIT') {
+          throw new Error('El servicio está temporalmente sobrecargado. Por favor, espera unos minutos y vuelve a intentarlo.');
+        }
+        throw new Error(data.error || 'Error al generar la miniatura');
+      }
 
       if (!data.thumbnailUrl) {
         throw new Error('No se pudo generar la miniatura');
@@ -148,18 +179,33 @@ const CharactersStep: React.FC = () => {
         thumbnailUrl: data.thumbnailUrl,
         description: data.description || character.description
       });
+
+      console.log('Thumbnail generation successful:', {
+        characterId,
+        thumbnailUrl: data.thumbnailUrl?.substring(0, 50) + '...'
+      });
     } catch (error) {
-      console.error('Error generating thumbnail:', error);
+      console.error('Error generating thumbnail:', {
+        characterId,
+        error,
+        retryCount,
+        maxRetries: MAX_RETRIES
+      });
 
       // Generic retry logic for any error
       if (retryCount < MAX_RETRIES) {
         const delay = RETRY_DELAY * Math.pow(2, retryCount);
+        console.log('Scheduling retry:', {
+          characterId,
+          retryCount: retryCount + 1,
+          delay
+        });
         setUploadError(`Error al generar la miniatura. Reintentando en ${delay/1000} segundos...`);
         setTimeout(() => generateThumbnail(characterId, retryCount + 1), delay);
         return;
       }
 
-      setUploadError('Error al generar la miniatura. Por favor, inténtalo de nuevo más tarde.');
+      setUploadError(error.message || 'Error al generar la miniatura. Por favor, inténtalo de nuevo más tarde.');
     } finally {
       setIsGenerating(null);
     }
