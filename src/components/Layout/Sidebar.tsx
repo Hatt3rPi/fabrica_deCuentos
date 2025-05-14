@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, User, Settings, LogOut, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { ImageGenerationSettings } from '../../types';
+import { ImageGenerationSettings, ImageEngine, OpenAIModel, StabilityModel } from '../../types';
 
 const Sidebar: React.FC = () => {
   const { signOut, user, supabase } = useAuth();
@@ -35,34 +35,123 @@ const Sidebar: React.FC = () => {
     loadSettings();
   }, [user, supabase, isAdmin]);
 
-  const handleEngineChange = async (engine: 'openai' | 'stable_diffusion') => {
-    if (!isAdmin) return;
+  const handleEngineChange = async (
+    type: 'thumbnail' | 'variations' | 'spriteSheet',
+    provider: 'openai' | 'stability',
+    model: OpenAIModel | StabilityModel,
+    quality?: string,
+    size?: string,
+    style?: string
+  ) => {
+    if (!isAdmin || !settings) return;
     setIsLoading(true);
 
+    const updatedEngine: ImageEngine = {
+      provider,
+      model,
+      ...(quality && { quality }),
+      ...(size && { size }),
+      ...(style && { style })
+    };
+
     try {
+      const updatedSettings: ImageGenerationSettings = {
+        ...settings,
+        engines: {
+          ...settings.engines,
+          [type]: updatedEngine
+        },
+        last_updated: new Date().toISOString()
+      };
+
       const { error } = await supabase
         .from('system_settings')
         .update({
-          value: {
-            ...settings,
-            engine,
-            last_updated: new Date().toISOString()
-          }
+          value: updatedSettings
         })
         .eq('key', 'image_generation');
 
       if (error) throw error;
 
-      setSettings(prev => prev ? {
-        ...prev,
-        engine,
-        last_updated: new Date().toISOString()
-      } : null);
+      setSettings(updatedSettings);
     } catch (error) {
       console.error('Error updating settings:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const renderEngineSelector = (
+    type: 'thumbnail' | 'variations' | 'spriteSheet',
+    label: string
+  ) => {
+    const engine = settings?.engines[type];
+    
+    return (
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          {label}
+        </label>
+        <select
+          value={`${engine?.provider}:${engine?.model}`}
+          onChange={(e) => {
+            const [provider, model] = e.target.value.split(':');
+            handleEngineChange(
+              type,
+              provider as 'openai' | 'stability',
+              model as OpenAIModel | StabilityModel
+            );
+          }}
+          disabled={isLoading}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        >
+          <optgroup label="OpenAI">
+            <option value="openai:dall-e-2">DALL-E 2</option>
+            <option value="openai:dall-e-3">DALL-E 3</option>
+            <option value="openai:gpt-image-1">GPT-4 Vision</option>
+          </optgroup>
+          <optgroup label="Stability AI">
+            <option value="stability:stable-diffusion-3.5">Stable Diffusion 3.5</option>
+          </optgroup>
+        </select>
+
+        {engine?.provider === 'openai' && engine.model === 'dall-e-3' && (
+          <>
+            <select
+              value={engine.quality || 'standard'}
+              onChange={(e) => handleEngineChange(
+                type,
+                engine.provider,
+                engine.model,
+                e.target.value,
+                engine.size,
+                engine.style
+              )}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-2"
+            >
+              <option value="standard">Calidad Estándar</option>
+              <option value="hd">Calidad HD</option>
+            </select>
+
+            <select
+              value={engine.style || 'vivid'}
+              onChange={(e) => handleEngineChange(
+                type,
+                engine.provider,
+                engine.model,
+                engine.quality,
+                engine.size,
+                e.target.value
+              )}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-2"
+            >
+              <option value="vivid">Estilo Vívido</option>
+              <option value="natural">Estilo Natural</option>
+            </select>
+          </>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -98,23 +187,14 @@ const Sidebar: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Motor de generación
-                  </label>
-                  <select
-                    value={settings?.engine || 'openai'}
-                    onChange={(e) => handleEngineChange(e.target.value as 'openai' | 'stable_diffusion')}
-                    disabled={isLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  >
-                    <option value="openai">OpenAI DALL-E 3</option>
-                    <option value="stable_diffusion">Stable Diffusion 3.5</option>
-                  </select>
+                <div className="space-y-4">
+                  {renderEngineSelector('thumbnail', 'Motor para miniaturas')}
+                  {renderEngineSelector('variations', 'Motor para variaciones')}
+                  {renderEngineSelector('spriteSheet', 'Motor para sprite sheets')}
                 </div>
 
                 {settings && (
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-4 text-xs text-gray-500">
                     Última actualización: {new Date(settings.last_updated).toLocaleString()}
                   </p>
                 )}

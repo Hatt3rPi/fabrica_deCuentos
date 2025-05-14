@@ -20,20 +20,24 @@ export interface SystemSettings {
 }
 
 export interface ImageGenerationSettings {
-  engine: 'openai' | 'stable_diffusion';
-  last_updated: string;
-  options: {
-    openai: {
-      model: string;
-      quality: string;
-    };
-    stable_diffusion: {
-      model: string;
-      cfg_scale: number;
-      steps: number;
-    };
+  engines: {
+    thumbnail: ImageEngine;
+    variations: ImageEngine;
+    spriteSheet: ImageEngine;
   };
+  last_updated: string;
 }
+
+export interface ImageEngine {
+  provider: 'openai' | 'stability';
+  model: OpenAIModel | StabilityModel;
+  quality?: string;
+  size?: string;
+  style?: string;
+}
+
+export type OpenAIModel = 'dall-e-2' | 'dall-e-3' | 'gpt-image-1';
+export type StabilityModel = 'stable-diffusion-3.5';
 
 // Tipos para la configuración del cuento
 export interface StorySettings {
