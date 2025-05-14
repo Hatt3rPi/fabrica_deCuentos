@@ -8,6 +8,8 @@ import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import LoginForm from './components/Auth/LoginForm';
 import MyStories from './pages/MyStories';
+import CharacterForm from './components/Character/CharacterForm';
+import CharactersGrid from './components/Character/CharactersGrid';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -38,6 +40,30 @@ function AppContent() {
                 element={
                   <PrivateRoute>
                     <Wizard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/nuevo-cuento/personajes"
+                element={
+                  <PrivateRoute>
+                    <CharactersGrid />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/nuevo-cuento/personaje/nuevo"
+                element={
+                  <PrivateRoute>
+                    <CharacterForm />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/nuevo-cuento/personaje/:id/editar"
+                element={
+                  <PrivateRoute>
+                    <CharacterForm />
                   </PrivateRoute>
                 }
               />
