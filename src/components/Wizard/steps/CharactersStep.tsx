@@ -121,18 +121,20 @@ const CharactersStep: React.FC = () => {
     setUploadError(null);
 
     try {
+      const payload = {
+        imageBase64: character.images?.[0] || null,
+        userNotes: description || '',
+        name: character.name || '',
+        age: character.age || ''
+      };
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          imageBase64: character.images?.[0] || null,
-          userNotes: description,
-          name: character.name || '',
-          age: character.age || ''
-        }),
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -157,9 +159,9 @@ const CharactersStep: React.FC = () => {
     } catch (error) {
       console.error('Error generating thumbnail:', error);
 
-      if (retryCount < MAX_RETRIES && error.message.includes('429')) {
+      if (retryCount < MAX_RETRIES) {
         setTimeout(() => generateThumbnail(characterId, retryCount + 1), RETRY_DELAY * Math.pow(2, retryCount));
-        setUploadError('Demasiadas solicitudes. Reintentando...');
+        setUploadError('Error al generar. Reintentando...');
         return;
       }
 

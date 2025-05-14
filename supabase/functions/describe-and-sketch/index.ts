@@ -35,6 +35,30 @@ function sanitizeText(text: string | null | undefined | { es: string; en: string
   return stringText.replace(/[^\w\s.,!?-]/g, '').trim().slice(0, 500);
 }
 
+// Validate request payload
+interface RequestPayload {
+  imageBase64: string | null;
+  userNotes: string;
+  name: string;
+  age: string;
+}
+
+function validatePayload(payload: any): RequestPayload {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Invalid request payload');
+  }
+
+  // Ensure all required fields are present and of correct type
+  const validatedPayload: RequestPayload = {
+    imageBase64: payload.imageBase64 === null ? null : String(payload.imageBase64 || ''),
+    userNotes: String(payload.userNotes || ''),
+    name: String(payload.name || ''),
+    age: String(payload.age || '')
+  };
+
+  return validatedPayload;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -47,7 +71,12 @@ Deno.serve(async (req) => {
       throw new Error('Error de configuración: Falta la clave de API de OpenAI');
     }
 
-    const { imageBase64, userNotes, name, age } = await req.json().catch(() => ({}));
+    // Parse and validate request payload
+    const rawPayload = await req.json().catch(() => {
+      throw new Error('Invalid JSON payload');
+    });
+    
+    const { imageBase64, userNotes, name, age } = validatePayload(rawPayload);
 
     // Validate inputs
     const sanitizedName = sanitizeText(name);
@@ -142,7 +171,7 @@ Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`;
 
     // Get character description
     const description = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-4-vision-preview",
       messages,
       max_tokens: 1000,
       response_format: { type: "json_object" }
