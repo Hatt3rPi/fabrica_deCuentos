@@ -124,7 +124,7 @@ const CharactersStep: React.FC = () => {
 
   const canGenerateThumbnail = (character: Character): boolean => {
     const description = typeof character.description === 'object' ? character.description.es : character.description;
-    return !!(description || (character.reference_urls && character.reference_urls.length > 0));
+    return !!(description && description.trim() !== '') || !!(character.reference_urls && character.reference_urls.length > 0);
   };
 
   const generateThumbnail = async (characterId: string, retryCount = 0) => {
@@ -135,7 +135,9 @@ const CharactersStep: React.FC = () => {
     }
 
     const description = typeof character.description === 'object' ? character.description.es : character.description;
-    if (!canGenerateThumbnail(character)) {
+    
+    // Enhanced validation to prevent API calls when requirements aren't met
+    if (!description?.trim() && (!character.reference_urls || character.reference_urls.length === 0)) {
       setUploadError('Se requiere una descripción o una imagen del personaje');
       return;
     }
