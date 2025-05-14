@@ -16,15 +16,24 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Ensure we have a valid request with form data
+    if (!req.body) {
+      throw new Error('Request body is empty');
+    }
+
     const formData = await req.formData();
-    const image = formData.get('image') as File;
+    const imageFile = formData.get('image');
     const name = formData.get('name') as string;
     const age = formData.get('age') as string;
     const description = formData.get('description') as string;
     
-    if (!image) {
-      throw new Error('Se requiere una imagen');
+    if (!imageFile || !(imageFile instanceof File)) {
+      throw new Error('Se requiere una imagen válida');
     }
+
+    // Convert the File to a Buffer for OpenAI
+    const arrayBuffer = await imageFile.arrayBuffer();
+    const buffer = new Uint8Array(arrayBuffer);
 
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY'),
@@ -32,7 +41,7 @@ Deno.serve(async (req) => {
 
     // Generate thumbnail sketch
     const thumbnailResponse = await openai.images.edit({
-      image,
+      image: buffer,
       prompt: `${FIXED_PROMPT}\nNombre: ${name}\nEdad: ${age}\nDescripción: ${description}`,
       size: "512x512",
       n: 1,
@@ -51,7 +60,7 @@ Deno.serve(async (req) => {
     const referenceUrls = await Promise.all(
       viewPrompts.map(async (viewPrompt) => {
         const response = await openai.images.edit({
-          image,
+          image: buffer,
           prompt: `${FIXED_PROMPT}\n${viewPrompt}\nNombre: ${name}\nEdad: ${age}\nDescripción: ${description}`,
           size: "512x512",
           n: 1,

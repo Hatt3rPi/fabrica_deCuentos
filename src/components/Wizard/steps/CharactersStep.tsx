@@ -112,9 +112,17 @@ const CharactersStep: React.FC = () => {
 
     try {
       const formData = new FormData();
-      if (character.images?.[0]) {
-        formData.append('image', character.images[0]);
+      
+      // Ensure we have a valid image file
+      if (character.images?.[0] instanceof File) {
+        const imageFile = character.images[0];
+        // Create a new Blob from the File to ensure proper content type
+        const imageBlob = new Blob([imageFile], { type: imageFile.type });
+        formData.append('image', imageBlob, imageFile.name);
+      } else {
+        throw new Error('No se encontró una imagen válida');
       }
+
       formData.append('name', character.name || '');
       formData.append('age', character.age || '');
       formData.append('description', description);
