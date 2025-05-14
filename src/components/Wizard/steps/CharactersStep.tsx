@@ -122,10 +122,10 @@ const CharactersStep: React.FC = () => {
 
     try {
       const payload = {
-        imageBase64: character.images?.[0] || null,
-        userNotes: description || '',
+        description: description || '',
         name: character.name || '',
-        age: character.age || ''
+        age: character.age || '',
+        referenceImage: character.images?.[0] || null
       };
 
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
