@@ -182,8 +182,8 @@ const CharacterForm: React.FC = () => {
       setFormData(prev => ({
         ...prev,
         description: {
-          es: descriptionData.description,
-          en: ''
+          es: descriptionData.description.es,
+          en: descriptionData.description.en
         }
       }));
 
@@ -200,7 +200,7 @@ const CharacterForm: React.FC = () => {
         body: JSON.stringify({
           name: formData.name,
           age: formData.age,
-          description: descriptionData.description,
+          description: descriptionData.description.es,
           referenceImage: formData.reference_urls[0] || null
         })
       });

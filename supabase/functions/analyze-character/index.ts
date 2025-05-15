@@ -18,16 +18,36 @@ const handleOpenAIError = (error: any) => {
   };
 };
 
+async function fetchImageAsBase64(imageUrl: string): Promise<string> {
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error fetching image:', error);
+    throw new Error('Failed to fetch and convert image');
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { image, imageUrl, name, age, description: sanitizedNotes } = await req.json();
-    if (!image && !imageUrl) {
-      throw new Error('No image data or URL provided');
+    const { imageUrl, name, age, description: sanitizedNotes } = await req.json();
+    
+    if (!imageUrl) {
+      throw new Error('No image URL provided');
     }
+
+    // Convert the image URL to base64
+    const base64Image = await fetchImageAsBase64(imageUrl);
 
     const requestBody = {
       model: "gpt-4-turbo-preview",
@@ -64,14 +84,12 @@ Deno.serve(async (req) => {
 
     Antecedentes del usuario dados por el usuario:
     Edad del personaje: ${age || 'no especificada'}
-    Notas del usuario: ${sanitizedNotes || 'sin información'}
-
-    Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`
+    Notas del usuario: ${sanitizedNotes || 'sin información'}\n\n    Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`
             },
             {
               type: "image_url",
               image_url: {
-                url: imageUrl || image
+                url: base64Image
               }
             }
           ]
@@ -81,7 +99,7 @@ Deno.serve(async (req) => {
       response_format: { type: "json_object" }
     };
 
-    console.log('[analyze-character] [Análisis de imagen] [IN]', JSON.stringify(requestBody, null, 2));
+    console.log('[analyze-character] [Análisis de imagen] [IN] Sending request to OpenAI');
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -93,7 +111,7 @@ Deno.serve(async (req) => {
     });
 
     const responseData = await response.json();
-    console.log('[analyze-character] [Análisis de imagen] [OUT]', JSON.stringify(responseData, null, 2));
+    console.log('[analyze-character] [Análisis de imagen] [OUT] Received response from OpenAI');
 
     if (!response.ok) {
       const error = handleOpenAIError({ response, message: responseData.error?.message });
