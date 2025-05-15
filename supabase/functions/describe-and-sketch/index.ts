@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       apiKey: openaiKey,
     });
 
-    // Generate thumbnail using gpt-image-1
+    // Replace placeholders in the character prompt
     const imagePrompt = characterPrompt
       .replace('{{name}}', sanitizedName)
       .replace('{{age}}', sanitizedAge)
@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
       response_format: "url"
     };
 
-    console.log('[describe-and-sketch] [Generación de imagen] [IN]', JSON.stringify(imageGenerationParams, null, 2));
+    console.log('[describe-and-sketch] [Generación de imagen] [IN] Sending request to OpenAI:', imagePrompt);
 
     const imageResponse = await openai.images.generate(imageGenerationParams).catch((error) => {
       if (error.status === 429) {
@@ -130,13 +130,13 @@ Deno.serve(async (req) => {
       throw new Error(`Error al generar la imagen: ${error.message}`);
     });
 
-    console.log('[describe-and-sketch] [Generación de imagen] [OUT]', JSON.stringify(imageResponse, null, 2));
+    console.log('[describe-and-sketch] [Generación de imagen] [OUT] Received response from OpenAI');
 
     if (!imageResponse.data?.[0]?.url) {
       throw new Error('No se pudo generar la imagen del personaje');
     }
 
-    // Now get the character description using the environment variable prompt
+    // Replace placeholders in the description prompt
     const prompt = descriptionPrompt
       .replace('{{name}}', sanitizedName)
       .replace('{{age}}', sanitizedAge)
@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
       response_format: { type: "json_object" }
     };
 
-    console.log('[describe-and-sketch] [Análisis de personaje] [IN]', JSON.stringify(descriptionParams, null, 2));
+    console.log('[describe-and-sketch] [Análisis de personaje] [IN] Sending request to OpenAI:', prompt);
 
     // Get character description
     const description = await openai.chat.completions.create(descriptionParams).catch((error) => {
@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
       throw new Error(`Error al analizar el personaje: ${error.message}`);
     });
 
-    console.log('[describe-and-sketch] [Análisis de personaje] [OUT]', JSON.stringify(description, null, 2));
+    console.log('[describe-and-sketch] [Análisis de personaje] [OUT] Received response from OpenAI');
 
     if (!description.choices?.[0]?.message?.content) {
       throw new Error('No se pudo generar la descripción del personaje');
