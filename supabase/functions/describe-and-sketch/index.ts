@@ -117,41 +117,8 @@ Deno.serve(async (req) => {
     console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbUrl);
     if (!thumbUrl) throw new Error('No se pudo generar la imagen del personaje');
 
-    // Análisis de personaje
-    const descText = descriptionPrompt
-      .replace('{{name}}',  sanitizedName)
-      .replace('{{age}}',   sanitizedAge)
-      .replace('{{notes}}', sanitizedNotes);
-
-    console.log('[describe-and-sketch] [Análisis de personaje] [IN] ', descText);
-
-    const chatResp = await openai.chat.completions.create({
-      model:           "gpt-4-turbo-preview",
-      messages: [{
-        role: "user",
-        content: [
-          { type: "text", text: descText },
-          ...(imageBase64 ? [{
-            type:      "image_url",
-            image_url: { url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}` }
-          }] : [])
-        ]
-      }],
-      max_tokens:      1000,
-      response_format: { type: "json_object" }
-    }).catch(err => {
-      if (err.status === 429) throw new Error('Demasiadas solicitudes a OpenAI');
-      throw new Error(`Error al analizar el personaje: ${err.message}`);
-    });
-
-    console.log('[describe-and-sketch] [Análisis de personaje] [OUT] ', chatResp);
-
-    const content = chatResp.choices?.[0]?.message?.content;
-    if (!content) throw new Error('No se pudo generar la descripción del personaje');
-    const parsedDescription = JSON.parse(content);
 
     return new Response(JSON.stringify({
-      description:  parsedDescription,
       thumbnailUrl: thumbUrl
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
