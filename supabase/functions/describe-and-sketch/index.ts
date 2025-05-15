@@ -71,10 +71,15 @@ Deno.serve(async (req) => {
       throw new Error('Error de configuración: Falta la clave de API de OpenAI');
     }
 
-    // Get the character prompt from environment variable
+    // Get the character prompts from environment variables
     const characterPrompt = Deno.env.get('PROMPT_CREAR_MINIATURA_PERSONAJE');
     if (!characterPrompt) {
       throw new Error('Error de configuración: Falta el prompt de generación de personaje');
+    }
+
+    const descriptionPrompt = Deno.env.get('PROMPT_DESCRIPCION_PERSONAJE');
+    if (!descriptionPrompt) {
+      throw new Error('Error de configuración: Falta el prompt de descripción de personaje');
     }
 
     // Parse and validate request payload
@@ -131,37 +136,11 @@ Deno.serve(async (req) => {
       throw new Error('No se pudo generar la imagen del personaje');
     }
 
-    // Now get the character description
-    const prompt = `Analiza cuidadosamente la(s) imágen(es) proporcionada(s) y, si existe, considera también la descripción ingresada por el usuario. Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes. Si sólo cuentas con las imágenes, realiza la descripción basándote exclusivamente en ellas.
-
-    Describe detalladamente al personaje, cubriendo estos aspectos específicos:
-
-    Apariencia física (color y tipo de cabello, color de ojos, contextura, tono de piel, altura aproximada, edad aparente).
-
-    Vestimenta (tipo, colores, detalles distintivos, accesorios).
-
-    Expresión facial (estado de ánimo aparente, gestos notorios).
-
-    Postura (posición corporal, lenguaje corporal evidente).
-
-    Cualquier característica distintiva o notable (elementos particulares como objetos especiales, rasgos únicos visibles).
-
-    No inventes ni supongas información que no esté claramente visible en las imágenes o proporcionada explícitamente en la descripción del usuario.
-
-    Entrega la descripción estructurada en dos idiomas: español latino e inglés, dentro de un arreglo claramente etiquetado para facilitar la selección posterior del idioma requerido, siguiendo este formato:
-
-    {
-    "es": "[Descripción en español latino]",
-    "en": "[Description in English]"
-    }
-
-    Asegúrate de mantener coherencia y precisión en ambas versiones del texto.
-
-    Antecedentes del usuario dados por el usuario:
-    Edad del personaje: ${sanitizedAge}
-    Notas del usuario: ${sanitizedNotes}
-
-    Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`;
+    // Now get the character description using the environment variable prompt
+    const prompt = descriptionPrompt
+      .replace('{{name}}', sanitizedName)
+      .replace('{{age}}', sanitizedAge)
+      .replace('{{notes}}', sanitizedNotes);
 
     // Create messages array based on available data
     const messages = [
