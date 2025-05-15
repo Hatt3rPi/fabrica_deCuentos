@@ -68,10 +68,10 @@ Deno.serve(async (req) => {
       throw new Error('Payload JSON inválido');
     });
     console.log('[describe-and-sketch] [INIT] rawPayload =', rawPayload);
-
+  
     const { imageBase64, userNotes, name, age } = validatePayload(rawPayload);
-    // Además de imageBase64, esperar que el frontend pase la descripción ya generada:
-    const { description: existingDescription } = rawPayload;
+    // la descripción generada:
+    const existingDescription = rawPayload.description;
     if (!existingDescription) {
       throw new Error('Falta la descripción generada previamente');
     }
