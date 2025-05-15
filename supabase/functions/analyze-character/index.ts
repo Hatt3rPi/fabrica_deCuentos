@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     }
 
     const requestBody = {
-      model: "gpt-4-turbo",
+      model: "gpt-4-turbo-preview",
       messages: [
         {
           role: "user",
