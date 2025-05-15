@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { image, imageUrl } = await req.json();
+    const { image, imageUrl, description: sanitizedNotes } = await req.json();
     if (!image && !imageUrl) {
       throw new Error('No image data or URL provided');
     }
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     Si hay más de una imagen, intégralas para obtener una descripción consolidada del personaje.
     Si se incluye un texto adicional, úsalo para complementar la interpretación: puedes tomar inspiración de su personalidad, profesión, gustos, emociones o rol en el cuento.
     El fondo debe ser blanco o neutro, ya que la imagen será utilizada como miniatura o como parte de un kit de identidad.
-    texto adicional: ${sanitizedNotes || 'sin información'}`;
+    texto adicional: ${sanitizedNotes || 'sin información'}`
             },
             {
               type: "image_url",
