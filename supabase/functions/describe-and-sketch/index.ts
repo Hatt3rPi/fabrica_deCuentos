@@ -70,18 +70,7 @@ Deno.serve(async (req) => {
     console.log('[describe-and-sketch] [INIT] rawPayload =', rawPayload);
   
     const { imageBase64, userNotes, name, age } = validatePayload(rawPayload);
-    // la descripción generada:
-    const existingDescription = rawPayload.description;
-    // Solo sanitizamos userNotes (las notas manuales)
-    const sanitizedNotes = sanitizeText(userNotes);
-    // Y seguimos usando existingDescription.es para la descripción generada
-    const descEs = existingDescription?.es;
 
-    if (!existingDescription) {
-      throw new Error('Falta la descripción generada previamente');
-    }
-    // Ya no hacemos sanitize aquí, asumimos que analyze-character guardó un objeto {es,en} limpio:
-    const { es: descEs } = existingDescription;
     const sanitizedName  = sanitizeText(name);
     const sanitizedAge   = sanitizeText(age);
     const sanitizedNotes = sanitizeText(userNotes);
