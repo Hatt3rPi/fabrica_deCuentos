@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCharacterStore } from '../../stores/characterStore';
-import Button from '../UI/Button';
 
 const CharacterForm: React.FC = () => {
   const navigate = useNavigate();
@@ -12,11 +11,13 @@ const CharacterForm: React.FC = () => {
   const { addCharacter } = useCharacterStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [character, setCharacter] = useState({
     name: '',
     age: '',
     description: { es: '', en: '' },
     reference_urls: [] as string[],
+    thumbnailUrl: null as string | null,
   });
 
   const { getRootProps, getInputProps } = useDropzone({
@@ -36,7 +37,7 @@ const CharacterForm: React.FC = () => {
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `reference-images/${fileName}`;
 
-        const { error: uploadError, data } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('characters')
           .upload(filePath, file);
 
@@ -50,6 +51,9 @@ const CharacterForm: React.FC = () => {
           ...prev,
           reference_urls: [...(prev.reference_urls || []), publicUrl]
         }));
+
+        // Generate thumbnail after upload
+        await generateThumbnail(publicUrl);
       } catch (err) {
         setError('Error al subir la imagen');
         console.error(err);
@@ -58,6 +62,35 @@ const CharacterForm: React.FC = () => {
       }
     }
   });
+
+  const generateThumbnail = async (imageUrl: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: character.name,
+          age: character.age,
+          description: typeof character.description === 'object' ? character.description.es : character.description,
+          referenceImage: imageUrl
+        })
+      });
+
+      if (!response.ok) throw new Error('Error generando miniatura');
+      
+      const data = await response.json();
+      setCharacter(prev => ({
+        ...prev,
+        thumbnailUrl: data.thumbnailUrl
+      }));
+    } catch (err) {
+      setError('Error al generar la miniatura');
+      console.error(err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,21 +115,33 @@ const CharacterForm: React.FC = () => {
       return;
     }
 
+    setIsLoading(true);
+
     try {
       const { data, error } = await supabase
         .from('characters')
-        .insert([character])
+        .insert([{
+          ...character,
+          thumbnail_url: character.thumbnailUrl
+        }])
         .select()
         .single();
 
       if (error) throw error;
+      
       if (data) {
         addCharacter(data);
-        navigate('/nuevo-cuento/personajes');
+        setIsRedirecting(true);
+        
+        // Wait 2 seconds before redirecting
+        setTimeout(() => {
+          navigate('/nuevo-cuento/personajes');
+        }, 2000);
       }
     } catch (err) {
       setError('Error al guardar el personaje');
       console.error(err);
+      setIsLoading(false);
     }
   };
 
@@ -155,20 +200,49 @@ const CharacterForm: React.FC = () => {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Imagen de referencia
-          </label>
-          <div {...getRootProps()} className="mt-2">
-            <input {...getInputProps()} />
-            <div className="w-full h-40 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-purple-500">
-              {isLoading ? (
-                <Loader className="w-8 h-8 text-purple-600 animate-spin" />
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Imagen de referencia
+            </label>
+            <div {...getRootProps()}>
+              <input {...getInputProps()} />
+              <div className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-purple-500">
+                {character.reference_urls?.[0] ? (
+                  <img
+                    src={character.reference_urls[0]}
+                    alt="Referencia"
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                ) : isLoading ? (
+                  <Loader className="w-8 h-8 text-purple-600 animate-spin" />
+                ) : (
+                  <div className="text-center p-4">
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">
+                      Arrastra una imagen o haz clic para seleccionar
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Miniatura generada
+            </label>
+            <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+              {character.thumbnailUrl ? (
+                <img
+                  src={character.thumbnailUrl}
+                  alt="Miniatura"
+                  className="w-full h-full object-cover rounded-lg"
+                />
               ) : (
-                <div className="text-center">
-                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <div className="text-center p-4">
                   <p className="text-sm text-gray-500">
-                    Arrastra una imagen o haz clic para seleccionar
+                    La miniatura se generará automáticamente
                   </p>
                 </div>
               )}
@@ -184,29 +258,37 @@ const CharacterForm: React.FC = () => {
         )}
 
         <div className="flex gap-4">
-          <Button
+          <button
             type="submit"
-            disabled={isLoading}
-            className="flex-1"
+            disabled={isLoading || isRedirecting}
+            className={`flex-1 py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 ${
+              isLoading || isRedirecting
+                ? 'bg-purple-400 cursor-not-allowed'
+                : 'bg-purple-600 hover:bg-purple-700'
+            }`}
           >
             {isLoading ? (
               <>
                 <Loader className="w-4 h-4 animate-spin" />
                 <span>Guardando...</span>
               </>
+            ) : isRedirecting ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                <span>Redirigiendo...</span>
+              </>
             ) : (
               <span>Guardar personaje</span>
             )}
-          </Button>
+          </button>
 
-          <Button
+          <button
             type="button"
-            variant="outline"
             onClick={() => navigate('/nuevo-cuento/personajes')}
-            className="flex-1"
+            className="flex-1 py-3 px-4 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50"
           >
             Cancelar
-          </Button>
+          </button>
         </div>
       </form>
     </div>
