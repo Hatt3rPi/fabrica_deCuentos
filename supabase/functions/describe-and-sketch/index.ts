@@ -89,10 +89,8 @@ Deno.serve(async (req) => {
     .replace('${name}', sanitizedName)
     .replace('${sanitizedAge}', sanitizedAge)
     .replace(
-      '${sanitizedNotes}',
-      sanitizedNotes && sanitizedNotes.trim()
-        ? sanitizedNotes
-        : 'sin información'
+      /\$\{sanitizedNotes\s*\|\|\s*'sin información'\}/g,
+      notesForPrompt
     );
     console.log('[describe-and-sketch] [Generación de imagen] [IN] ', imagePrompt);
 
