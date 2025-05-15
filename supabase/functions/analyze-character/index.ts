@@ -90,10 +90,22 @@ Deno.serve(async (req) => {
       throw new Error('No image URL provided');
     }
 
+    // Get the analysis prompt from environment variable
+    const analysisPrompt = Deno.env.get('PROMPT_DESCRIPCION_PERSONAJE');
+    if (!analysisPrompt) {
+      throw new Error('Error de configuración: Falta el prompt de análisis de personaje');
+    }
+
     console.log('[analyze-character] Attempting to fetch image:', imageUrl);
 
     // Convert the image URL to base64
     const base64Image = await fetchImageAsBase64(imageUrl);
+
+    // Replace placeholders in the prompt
+    const prompt = analysisPrompt
+      .replace('{{name}}', name || '')
+      .replace('{{age}}', age || '')
+      .replace('{{notes}}', sanitizedNotes || '');
 
     const requestBody = {
       model: "gpt-4-turbo-preview",
@@ -103,34 +115,7 @@ Deno.serve(async (req) => {
           content: [
             {
               type: "text",
-              text: `Analiza cuidadosamente la(s) imágen(es) proporcionada(s) y, si existe, considera también la descripción ingresada por el usuario. Cuando dispongas de ambos elementos (imágenes y descripción del usuario), asigna un peso de 0.6 a la descripción del usuario y 0.4 a la descripción que extraigas únicamente observando las imágenes. Si sólo cuentas con las imágenes, realiza la descripción basándote exclusivamente en ellas.
-
-    Describe detalladamente al personaje, cubriendo estos aspectos específicos:
-
-    Apariencia física (color y tipo de cabello, color de ojos, contextura, tono de piel, altura aproximada, edad aparente).
-
-    Vestimenta (tipo, colores, detalles distintivos, accesorios).
-
-    Expresión facial (estado de ánimo aparente, gestos notorios).
-
-    Postura (posición corporal, lenguaje corporal evidente).
-
-    Cualquier característica distintiva o notable (elementos particulares como objetos especiales, rasgos únicos visibles).
-
-    No inventes ni supongas información que no esté claramente visible en las imágenes o proporcionada explícitamente en la descripción del usuario.
-
-    Entrega la descripción estructurada en dos idiomas: español latino e inglés, dentro de un arreglo claramente etiquetado para facilitar la selección posterior del idioma requerido, siguiendo este formato:
-
-    {
-    "es": "[Descripción en español latino]",
-    "en": "[Description in English]"
-    }
-
-    Asegúrate de mantener coherencia y precisión en ambas versiones del texto.
-
-    Antecedentes del usuario dados por el usuario:
-    Edad del personaje: ${age || 'no especificada'}
-    Notas del usuario: ${sanitizedNotes || 'sin información'}\n\n    Responde exclusivamente en formato JSON válido siguiendo el formato indicado.`
+              text: prompt
             },
             {
               type: "image_url",
