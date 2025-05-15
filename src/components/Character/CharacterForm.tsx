@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
@@ -140,12 +140,7 @@ const CharacterForm: React.FC = () => {
         throw new Error(errorData.error || 'Error al analizar el personaje');
       }
 
-      const data = await response.json();
-      if (!data || !data.description) {
-        throw new Error('No se recibió una descripción válida del personaje');
-      }
-
-      return data;
+      return await response.json();
     } catch (error) {
       if (attempt < MAX_RETRIES) {
         const backoffTime = Math.min(1000 * Math.pow(2, attempt), 8000);
@@ -157,6 +152,7 @@ const CharacterForm: React.FC = () => {
   };
 
   const generateThumbnail = async () => {
+    // Validar campos requeridos
     if (!formData.name.trim() || !formData.age.trim()) {
       setFieldErrors({
         name: !formData.name.trim() ? "El nombre es obligatorio" : undefined,
@@ -165,6 +161,7 @@ const CharacterForm: React.FC = () => {
       return;
     }
 
+    // Validar que exista al menos descripción o imagen
     if (!formData.description.es && !formData.reference_urls[0]) {
       setFieldErrors({
         description: "Se requiere una descripción o una imagen",
@@ -179,12 +176,14 @@ const CharacterForm: React.FC = () => {
     setRetryCount(0);
 
     try {
+      // Paso 1: Analizar y generar descripción con reintentos
       const descriptionData = await callAnalyzeCharacter();
       
       if (!descriptionData || !descriptionData.description) {
         throw new Error('No se pudo generar la descripción del personaje');
       }
 
+      // Actualizar descripción
       setFormData(prev => ({
         ...prev,
         description: {
@@ -196,6 +195,7 @@ const CharacterForm: React.FC = () => {
       setIsAnalyzing(false);
       setIsGeneratingThumbnail(true);
 
+      // Paso 2: Generar miniatura
       const thumbnailResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
         method: 'POST',
         headers: {
