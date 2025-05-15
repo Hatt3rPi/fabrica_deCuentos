@@ -90,21 +90,30 @@ Deno.serve(async (req) => {
         /\$\{sanitizedNotes\s*\|\|\s*'sin información'\}/g,
         notesForPrompt
       );
-
     if (imageBase64) {
       imagePrompt += `\n\nReferencia de la imagen: ${imageBase64}`;
     }
     console.log('[describe-and-sketch] [Generación de imagen] [IN] ', imagePrompt);
 
-    // 5) Descarga la imagen de referencia y crea un File
+    // 5) Descarga la imagen de referencia y crea un File con MIME correcto
     const refRes = await fetch(imageBase64!);
     if (!refRes.ok) {
       throw new Error(`No se pudo descargar la imagen de referencia: ${refRes.status}`);
     }
     const refBuf = await refRes.arrayBuffer();
-    const contentType = refRes.headers.get("content-type") || "image/png";
-    const extension   = contentType.split("/")[1] || "png";
-    const refFile = new File([refBuf], `reference.${extension}`, { type: contentType });
+
+    // Inferimos la extensión y el MIME type
+    const urlPath = new URL(imageBase64!).pathname;
+    const ext = urlPath.split('.').pop()!.toLowerCase();
+    const mimeMap: Record<string,string> = {
+      jpg:  'image/jpeg',
+      jpeg: 'image/jpeg',
+      png:  'image/png',
+      webp: 'image/webp'
+    };
+    const mimeType = mimeMap[ext] || 'image/png';
+
+    const refFile = new File([refBuf], `reference.${ext}`, { type: mimeType });
 
     // 6) Llama al endpoint de edits para gpt-image-1
     const openai = new OpenAI({ apiKey: openaiKey });
@@ -127,6 +136,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ thumbnailUrl: thumbUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+
   } catch (error: any) {
     console.error('Error in describe-and-sketch:', error);
     return new Response(JSON.stringify({
