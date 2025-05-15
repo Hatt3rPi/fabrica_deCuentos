@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import { Upload, Loader, AlertCircle } from 'lucide-react';
+import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCharacterStore } from '../../stores/characterStore';
 
@@ -9,12 +9,15 @@ const CharacterForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { supabase } = useAuth();
-  const { addCharacter, updateCharacter, characters } = useCharacterStore();
+  const { addCharacter, updateCharacter } = useCharacterStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [fieldsReadOnly, setFieldsReadOnly] = useState(false);
+  const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     age?: string;
@@ -51,6 +54,9 @@ const CharacterForm: React.FC = () => {
               reference_urls: data.reference_urls || [],
               thumbnailUrl: data.thumbnail_url,
             });
+            if (data.thumbnail_url) {
+              setThumbnailGenerated(true);
+            }
           }
         } catch (err) {
           console.error('Error loading character:', err);
@@ -69,12 +75,13 @@ const CharacterForm: React.FC = () => {
       'image/*': ['.jpeg', '.jpg', '.png', '.webp']
     },
     maxSize: 5 * 1024 * 1024,
+    disabled: fieldsReadOnly,
     onDrop: async (acceptedFiles) => {
       if (acceptedFiles.length === 0) return;
 
       setIsLoading(true);
       setError(null);
-      setFieldErrors(prev => ({ ...prev, image: undefined, description: undefined }));
+      setFieldErrors(prev => ({ ...prev, image: undefined }));
 
       try {
         const file = acceptedFiles[0];
@@ -96,8 +103,6 @@ const CharacterForm: React.FC = () => {
           ...prev,
           reference_urls: [...(prev.reference_urls || []), publicUrl]
         }));
-
-        await generateThumbnail();
       } catch (err) {
         console.error('Error uploading image:', err);
         setError('Error al subir la imagen');
@@ -108,25 +113,30 @@ const CharacterForm: React.FC = () => {
   });
 
   const generateThumbnail = async () => {
-    setIsGeneratingThumbnail(true);
-    setUploadError(null);
-    
+    // Validar campos requeridos
+    if (!formData.name.trim() || !formData.age.trim()) {
+      setFieldErrors({
+        name: !formData.name.trim() ? "El nombre es obligatorio" : undefined,
+        age: !formData.age.trim() ? "La edad es obligatoria" : undefined,
+      });
+      return;
+    }
+
+    // Validar que exista al menos descripción o imagen
+    if (!formData.description.es && !formData.reference_urls[0]) {
+      setFieldErrors({
+        description: "Se requiere una descripción o una imagen",
+        image: "Se requiere una descripción o una imagen"
+      });
+      return;
+    }
+
+    setFieldsReadOnly(true);
+    setIsAnalyzing(true);
+
     try {
-      // Verificar si tenemos descripción o imagen antes de continuar
-      if (!formData.description.es && !formData.reference_urls[0]) {
-        setFieldErrors(prev => ({
-          ...prev,
-          description: !formData.description.es ? "Se requiere una descripción o una imagen" : undefined,
-          image: !formData.reference_urls[0] ? "Se requiere una descripción o una imagen" : undefined
-        }));
-        return;
-      }
-      
-      // Si tenemos imagen pero no descripción, usar una descripción genérica
-      const descriptionToUse = formData.description.es || 
-        `Personaje llamado ${formData.name} de ${formData.age} años`;
-      
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
+      // Paso 1: Analizar y generar descripción
+      const descriptionResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -135,73 +145,75 @@ const CharacterForm: React.FC = () => {
         body: JSON.stringify({
           name: formData.name,
           age: formData.age,
-          description: descriptionToUse,
+          description: formData.description.es,
+          imageUrl: formData.reference_urls[0] || null
+        })
+      });
+
+      if (!descriptionResponse.ok) {
+        throw new Error('Error al analizar el personaje');
+      }
+
+      const descriptionData = await descriptionResponse.json();
+      
+      // Actualizar descripción
+      setFormData(prev => ({
+        ...prev,
+        description: {
+          es: descriptionData.description,
+          en: ''
+        }
+      }));
+
+      setIsAnalyzing(false);
+      setIsGeneratingThumbnail(true);
+
+      // Paso 2: Generar miniatura
+      const thumbnailResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          age: formData.age,
+          description: descriptionData.description,
           referenceImage: formData.reference_urls[0] || null
         })
       });
-      
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
+
+      if (!thumbnailResponse.ok) {
+        throw new Error('Error al generar la miniatura');
       }
-      
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      setFormData(prev => ({ 
-        ...prev, 
-        thumbnailUrl: data.thumbnailUrl,
-        description: data.description || prev.description 
+
+      const thumbnailData = await thumbnailResponse.json();
+
+      setFormData(prev => ({
+        ...prev,
+        thumbnailUrl: thumbnailData.thumbnailUrl
       }));
-      
+
+      setThumbnailGenerated(true);
+
     } catch (error) {
-      console.error("Error generating thumbnail:", error);
-      setUploadError(`Error al generar la miniatura: ${error.message}`);
+      console.error("Error in thumbnail generation:", error);
+      setError(error.message);
     } finally {
+      setIsAnalyzing(false);
       setIsGeneratingThumbnail(false);
+      setFieldsReadOnly(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validar campos
-    let errors: typeof fieldErrors = {};
-    let isValid = true;
-    
-    if (!formData.name) {
-      errors.name = "El nombre es obligatorio";
-      isValid = false;
+    if (!thumbnailGenerated) {
+      setError('Debes generar una miniatura antes de guardar el personaje');
+      return;
     }
-    
-    if (!formData.age) {
-      errors.age = "La edad es obligatoria";
-      isValid = false;
-    }
-    
-    // Validar que al menos esté presente la descripción o la imagen
-    if (!formData.description.es && !formData.reference_urls[0]) {
-      errors.description = "Se requiere una descripción o una imagen";
-      errors.image = "Se requiere una descripción o una imagen";
-      isValid = false;
-    }
-    
-    setFieldErrors(errors);
-    
-    if (!isValid) return;
-    
-    // Generar miniatura si no existe una
-    if (!formData.thumbnailUrl) {
-      try {
-        await generateThumbnail();
-      } catch (error) {
-        // El error ya se maneja dentro de generateThumbnail
-        return;
-      }
-    }
-    
+
     try {
       setIsLoading(true);
       
@@ -245,9 +257,10 @@ const CharacterForm: React.FC = () => {
                 setFieldErrors(prev => ({ ...prev, name: undefined }));
               }
             }}
+            disabled={fieldsReadOnly}
             className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
               fieldErrors.name ? 'border-red-500' : 'border-gray-300'
-            }`}
+            } ${fieldsReadOnly ? 'bg-gray-100' : ''}`}
             placeholder="Nombre del personaje"
           />
           {fieldErrors.name && (
@@ -268,9 +281,10 @@ const CharacterForm: React.FC = () => {
                 setFieldErrors(prev => ({ ...prev, age: undefined }));
               }
             }}
+            disabled={fieldsReadOnly}
             className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
               fieldErrors.age ? 'border-red-500' : 'border-gray-300'
-            }`}
+            } ${fieldsReadOnly ? 'bg-gray-100' : ''}`}
             placeholder="Edad del personaje"
           />
           {fieldErrors.age && (
@@ -293,9 +307,10 @@ const CharacterForm: React.FC = () => {
                 setFieldErrors(prev => ({ ...prev, description: undefined }));
               }
             }}
+            disabled={fieldsReadOnly}
             className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
               fieldErrors.description ? 'border-red-500' : 'border-gray-300'
-            }`}
+            } ${fieldsReadOnly ? 'bg-gray-100' : ''}`}
             rows={3}
             placeholder="Describe al personaje..."
           />
@@ -311,9 +326,9 @@ const CharacterForm: React.FC = () => {
             </label>
             <div {...getRootProps()}>
               <input {...getInputProps()} />
-              <div className={`w-full aspect-square border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:border-purple-500 ${
-                fieldErrors.image ? 'border-red-500' : 'border-gray-300'
-              }`}>
+              <div className={`w-full aspect-square border-2 border-dashed rounded-lg flex items-center justify-center ${
+                fieldsReadOnly ? 'cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:border-purple-500'
+              } ${fieldErrors.image ? 'border-red-500' : 'border-gray-300'}`}>
                 {formData.reference_urls[0] ? (
                   <img
                     src={formData.reference_urls[0]}
@@ -348,12 +363,20 @@ const CharacterForm: React.FC = () => {
                   alt="Miniatura"
                   className="w-full h-full object-cover rounded-lg"
                 />
+              ) : isAnalyzing ? (
+                <div className="text-center">
+                  <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-purple-600">Analizando tu personaje...</p>
+                </div>
               ) : isGeneratingThumbnail ? (
-                <Loader className="w-8 h-8 text-purple-600 animate-spin" />
+                <div className="text-center">
+                  <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-purple-600">Dibujando un nuevo héroe...</p>
+                </div>
               ) : (
                 <div className="text-center p-4">
                   <p className="text-sm text-gray-500">
-                    La miniatura se generará automáticamente
+                    Usa el botón "Generar miniatura" cuando estés listo
                   </p>
                 </div>
               )}
@@ -369,29 +392,54 @@ const CharacterForm: React.FC = () => {
         )}
 
         <div className="flex gap-4">
-          <button
-            type="submit"
-            disabled={isLoading || isRedirecting}
-            className={`flex-1 py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 ${
-              isLoading || isRedirecting
-                ? 'bg-purple-400 cursor-not-allowed'
-                : 'bg-purple-600 hover:bg-purple-700'
-            }`}
-          >
-            {isLoading ? (
-              <>
-                <Loader className="w-4 h-4 animate-spin" />
-                <span>Guardando...</span>
-              </>
-            ) : isRedirecting ? (
-              <>
-                <Loader className="w-4 h-4 animate-spin" />
-                <span>Redirigiendo...</span>
-              </>
-            ) : (
-              <span>Guardar personaje</span>
-            )}
-          </button>
+          {!thumbnailGenerated ? (
+            <button
+              type="button"
+              onClick={generateThumbnail}
+              disabled={isAnalyzing || isGeneratingThumbnail || fieldsReadOnly}
+              className={`flex-1 py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 ${
+                isAnalyzing || isGeneratingThumbnail || fieldsReadOnly
+                  ? 'bg-purple-400 cursor-not-allowed'
+                  : 'bg-purple-600 hover:bg-purple-700'
+              }`}
+            >
+              {isAnalyzing || isGeneratingThumbnail ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span>{isAnalyzing ? 'Analizando...' : 'Generando...'}</span>
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4" />
+                  <span>Generar miniatura</span>
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={isLoading || isRedirecting}
+              className={`flex-1 py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 ${
+                isLoading || isRedirecting
+                  ? 'bg-purple-400 cursor-not-allowed'
+                  : 'bg-purple-600 hover:bg-purple-700'
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span>Guardando...</span>
+                </>
+              ) : isRedirecting ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span>Redirigiendo...</span>
+                </>
+              ) : (
+                <span>Guardar personaje</span>
+              )}
+            </button>
+          )}
 
           <button
             type="button"
