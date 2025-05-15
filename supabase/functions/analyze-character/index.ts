@@ -39,9 +39,22 @@ async function fetchImageAsBase64(imageUrl: string): Promise<string> {
     if (isSupabaseStorage) {
       // Extract the bucket and file path from the URL
       const url = new URL(imageUrl);
-      const pathParts = url.pathname.split('/');
-      const bucketName = pathParts[2]; // storage/v1/object/public/bucket-name/path
-      const filePath = pathParts.slice(4).join('/');
+      const pathSegments = url.pathname.split('/');
+      
+      // Find the bucket name after 'storage/v1/object/public/'
+      const publicIndex = pathSegments.indexOf('public');
+      if (publicIndex === -1) {
+        throw new Error('Invalid Supabase storage URL format');
+      }
+      
+      const bucketName = pathSegments[publicIndex + 1];
+      const filePath = pathSegments.slice(publicIndex + 2).join('/');
+
+      if (!bucketName || !filePath) {
+        throw new Error('Could not extract bucket name or file path from URL');
+      }
+
+      console.log(`[analyze-character] Fetching from bucket: ${bucketName}, path: ${filePath}`);
 
       // Download file directly from Supabase storage
       const { data, error } = await supabaseAdmin
@@ -50,6 +63,7 @@ async function fetchImageAsBase64(imageUrl: string): Promise<string> {
         .download(filePath);
 
       if (error) {
+        console.error('Supabase storage error:', error);
         throw new Error(`Failed to download from Supabase storage: ${error.message}`);
       }
 
@@ -74,7 +88,7 @@ async function fetchImageAsBase64(imageUrl: string): Promise<string> {
     }
   } catch (error) {
     console.error('Error fetching image:', error);
-    throw new Error(`Failed to fetch and convert image: ${error.message}`);
+    throw error;
   }
 }
 
