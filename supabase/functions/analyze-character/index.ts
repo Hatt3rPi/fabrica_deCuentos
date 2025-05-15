@@ -18,22 +18,6 @@ const handleOpenAIError = (error: any) => {
   };
 };
 
-async function fetchImageAsBase64(imageUrl: string): Promise<string> {
-  try {
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-    }
-    const arrayBuffer = await response.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    return `data:${contentType};base64,${base64}`;
-  } catch (error) {
-    console.error('Error fetching image:', error);
-    throw new Error('Failed to fetch and convert image');
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -41,16 +25,9 @@ Deno.serve(async (req) => {
 
   try {
     const { imageUrl, name, age, description: sanitizedNotes } = await req.json();
-    
-    if (!imageUrl) {
-      throw new Error('No image URL provided');
-    }
-
-    // Convert the image URL to base64
-    const base64Image = await fetchImageAsBase64(imageUrl);
 
     const requestBody = {
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4-vision-preview",
       messages: [
         {
           role: "user",
@@ -88,9 +65,7 @@ Deno.serve(async (req) => {
             },
             {
               type: "image_url",
-              image_url: {
-                url: base64Image
-              }
+              image_url: imageUrl
             }
           ]
         }
