@@ -104,19 +104,25 @@ Deno.serve(async (req) => {
     El fondo debe ser blanco o neutro, ya que la imagen será utilizada como miniatura o como parte de un kit de identidad.
     texto adicional: ${sanitizedNotes || 'sin información'}`;
 
-    const imageResponse = await openai.images.generate({
+    const imageGenerationParams = {
       model: "gpt-image-1",
       prompt: imagePrompt,
       size: "1024x1024",
       n: 1,
       referenced_image_ids: imageBase64 ? [imageBase64] : undefined,
-      response_format: "url",
-    }).catch((error) => {
+      response_format: "url"
+    };
+
+    console.log('[describe-and-sketch] [Generación de imagen] [IN]', JSON.stringify(imageGenerationParams, null, 2));
+
+    const imageResponse = await openai.images.generate(imageGenerationParams).catch((error) => {
       if (error.status === 429) {
         throw new Error('Demasiadas solicitudes a OpenAI. Por favor, intenta de nuevo en unos momentos.');
       }
       throw new Error(`Error al generar la imagen: ${error.message}`);
     });
+
+    console.log('[describe-and-sketch] [Generación de imagen] [OUT]', JSON.stringify(imageResponse, null, 2));
 
     if (!imageResponse.data?.[0]?.url) {
       throw new Error('No se pudo generar la imagen del personaje');
@@ -177,18 +183,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get character description
-    const description = await openai.chat.completions.create({
+    const descriptionParams = {
       model: "gpt-4-turbo",
       messages,
       max_tokens: 1000,
       response_format: { type: "json_object" }
-    }).catch((error) => {
+    };
+
+    console.log('[describe-and-sketch] [Análisis de personaje] [IN]', JSON.stringify(descriptionParams, null, 2));
+
+    // Get character description
+    const description = await openai.chat.completions.create(descriptionParams).catch((error) => {
       if (error.status === 429) {
         throw new Error('Demasiadas solicitudes a OpenAI. Por favor, intenta de nuevo en unos momentos.');
       }
       throw new Error(`Error al analizar el personaje: ${error.message}`);
     });
+
+    console.log('[describe-and-sketch] [Análisis de personaje] [OUT]', JSON.stringify(description, null, 2));
 
     if (!description.choices?.[0]?.message?.content) {
       throw new Error('No se pudo generar la descripción del personaje');
