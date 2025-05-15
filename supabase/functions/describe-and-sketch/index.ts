@@ -106,12 +106,11 @@ Deno.serve(async (req) => {
 
     // Usa el endpoint edits
     const imageResponse = await openai.images.edit({
-      model:           "gpt-image-1",
-      image:           refFile,
-      prompt:          imagePrompt,
-      size:            "1024x1024",
-      n:               1,
-      response_format: "url"
+     model:  "gpt-image-1",
+     image:  refFile,
+     prompt: imagePrompt,
+     size:   "1024x1024",
+     n:      1
     }).catch(err => {
       if (err.status === 429) throw new Error('Demasiadas solicitudes a OpenAI');
       throw new Error(`Error al editar la imagen: ${err.message}`);
