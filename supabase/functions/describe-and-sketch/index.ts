@@ -56,19 +56,20 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // 1) Obtiene la clave y el prompt
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) throw new Error('Falta la clave de API de OpenAI');
-
     const characterPrompt = Deno.env.get('PROMPT_CREAR_MINIATURA_PERSONAJE');
     if (!characterPrompt) throw new Error('Falta el prompt de generación de personaje');
 
+    // 2) Parseo y validación del payload
     const rawPayload = await req.json().catch(() => {
       throw new Error('Payload JSON inválido');
     });
     console.log('[describe-and-sketch] [INIT] rawPayload =', rawPayload);
-
     const { imageBase64, userNotes, name, age } = validatePayload(rawPayload);
 
+    // 3) Sanitización de textos
     const sanitizedName  = sanitizeText(name);
     const sanitizedAge   = sanitizeText(age);
     const sanitizedNotes = sanitizeText(userNotes);
@@ -80,10 +81,8 @@ Deno.serve(async (req) => {
       throw new Error('Formato de imagen inválido');
     }
 
-    const openai = new OpenAI({ apiKey: openaiKey });
+    // 4) Construye el prompt para la miniatura
     const notesForPrompt = sanitizedNotes.trim() || 'sin información';
-
-    // Generación de miniatura
     let imagePrompt = characterPrompt
       .replace(/\$\{name\}/g, sanitizedName)
       .replace(/\$\{sanitizedAge\}/g, sanitizedAge)
@@ -91,42 +90,44 @@ Deno.serve(async (req) => {
         /\$\{sanitizedNotes\s*\|\|\s*'sin información'\}/g,
         notesForPrompt
       );
+
     if (imageBase64) {
       imagePrompt += `\n\nReferencia de la imagen: ${imageBase64}`;
     }
     console.log('[describe-and-sketch] [Generación de imagen] [IN] ', imagePrompt);
 
-    // Descarga la imagen de referencia y crea un File para edits
+    // 5) Descarga la imagen de referencia y crea un File
     const refRes = await fetch(imageBase64!);
     if (!refRes.ok) {
       throw new Error(`No se pudo descargar la imagen de referencia: ${refRes.status}`);
     }
     const refBuf = await refRes.arrayBuffer();
-    const refFile = new File([refBuf], "reference.png", { type: "image/png" });
+    const contentType = refRes.headers.get("content-type") || "image/png";
+    const extension   = contentType.split("/")[1] || "png";
+    const refFile = new File([refBuf], `reference.${extension}`, { type: contentType });
 
-    // Usa el endpoint edits
+    // 6) Llama al endpoint de edits para gpt-image-1
+    const openai = new OpenAI({ apiKey: openaiKey });
     const imageResponse = await openai.images.edit({
-     model:  "gpt-image-1",
-     image:  refFile,
-     prompt: imagePrompt,
-     size:   "1024x1024",
-     n:      1
+      model:  "gpt-image-1",
+      image:  refFile,
+      prompt: imagePrompt,
+      size:   "1024x1024",
+      n:      1
     }).catch(err => {
       if (err.status === 429) throw new Error('Demasiadas solicitudes a OpenAI');
       throw new Error(`Error al editar la imagen: ${err.message}`);
     });
 
+    // 7) Responde con la URL de la miniatura generada
     const thumbUrl = imageResponse.data?.[0]?.url;
     console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbUrl);
     if (!thumbUrl) throw new Error('No se pudo generar la imagen del personaje');
 
-    return new Response(JSON.stringify({
-      thumbnailUrl: thumbUrl
-    }), {
+    return new Response(JSON.stringify({ thumbnailUrl: thumbUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
-  }
-  catch (error: any) {
+  } catch (error: any) {
     console.error('Error in describe-and-sketch:', error);
     return new Response(JSON.stringify({
       error: error.message || 'Error al generar la miniatura'
