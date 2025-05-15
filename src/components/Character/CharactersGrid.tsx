@@ -103,13 +103,15 @@ const CharactersGrid: React.FC = () => {
         )}
 
         {characters.length === 0 && (
-          <motion.p
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="col-span-full text-center text-gray-600"
+            className="col-span-full"
           >
-            Aún no has creado personajes
-          </motion.p>
+            <p className="text-center text-gray-600 mb-4">
+              Aún no has creado personajes
+            </p>
+          </motion.div>
         )}
       </div>
     </div>

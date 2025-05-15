@@ -34,7 +34,7 @@ function AppContent() {
           <Header />
           <main className="flex-grow p-4 md:p-6 lg:p-8">
             <Routes>
-              <Route path="/" element={<MyStories />} />
+              <Route path="/" element={user ? <Navigate to="/home" replace /> : <LoginForm />} />
               <Route
                 path="/wizard/:storyId"
                 element={
@@ -64,6 +64,14 @@ function AppContent() {
                 element={
                   <PrivateRoute>
                     <CharacterForm />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/home"
+                element={
+                  <PrivateRoute>
+                    <MyStories />
                   </PrivateRoute>
                 }
               />

@@ -50,12 +50,12 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
 
   const handleCreateCharacter = () => {
     onClose();
-    navigate('/wizard/characters');
+    navigate('/nuevo-cuento/personaje/nuevo');
   };
 
   const handleEditCharacter = (characterId: string) => {
     onClose();
-    navigate(`/wizard/characters/${characterId}`);
+    navigate(`/nuevo-cuento/personaje/${characterId}/editar`);
   };
 
   const handleDeleteCharacter = async (characterId: string) => {

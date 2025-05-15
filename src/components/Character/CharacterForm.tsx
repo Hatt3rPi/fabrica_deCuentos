@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -7,18 +7,58 @@ import { useCharacterStore } from '../../stores/characterStore';
 
 const CharacterForm: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const { supabase } = useAuth();
-  const { addCharacter } = useCharacterStore();
+  const { addCharacter, updateCharacter, characters } = useCharacterStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    age?: string;
+    description?: string;
+    image?: string;
+  }>({});
   const [character, setCharacter] = useState({
+    id: '',
+    user_id: '',
     name: '',
     age: '',
     description: { es: '', en: '' },
     reference_urls: [] as string[],
     thumbnailUrl: null as string | null,
+    images: [] as string[],
   });
+  
+  const isEditMode = Boolean(id);
+  
+  // Load character data when in edit mode
+  useEffect(() => {
+    if (isEditMode && id) {
+      const loadCharacter = async () => {
+        setIsLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from('characters')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+          if (error) throw error;
+          if (data) {
+            setCharacter(data);
+          }
+        } catch (err) {
+          console.error('Error loading character:', err);
+          setError('Error al cargar el personaje');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadCharacter();
+    }
+  }, [id]);
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
@@ -30,6 +70,8 @@ const CharacterForm: React.FC = () => {
 
       setIsLoading(true);
       setError(null);
+      // Clear any image field errors
+      setFieldErrors(prev => ({ ...prev, image: undefined, description: undefined }));
 
       try {
         const file = acceptedFiles[0];
@@ -95,15 +137,20 @@ const CharacterForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    let fieldValidationErrors: {
+      name?: string;
+      age?: string;
+      description?: string;
+      image?: string;
+    } = {};
 
+    // Validation
     if (!character.name?.trim()) {
-      setError('El nombre es obligatorio');
-      return;
+      fieldValidationErrors.name = 'El nombre es obligatorio';
     }
 
     if (!character.age?.trim()) {
-      setError('La edad es obligatoria');
-      return;
+      fieldValidationErrors.age = 'La edad es obligatoria';
     }
 
     const description = typeof character.description === 'object' 
@@ -111,35 +158,71 @@ const CharacterForm: React.FC = () => {
       : character.description;
 
     if (!description?.trim() && (!character.reference_urls || character.reference_urls.length === 0)) {
-      setError('Debes proporcionar una descripción o una imagen');
+      fieldValidationErrors.description = 'Debes proporcionar una descripción o una imagen';
+      fieldValidationErrors.image = 'Debes proporcionar una descripción o una imagen';
+    }
+
+    // Check if there are validation errors
+    if (Object.keys(fieldValidationErrors).length > 0) {
+      setFieldErrors(fieldValidationErrors);
+      setError('Por favor corrige los errores antes de continuar');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase
-        .from('characters')
-        .insert([{
-          ...character,
-          thumbnail_url: character.thumbnailUrl
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
+      let data;
       
-      if (data) {
-        addCharacter(data);
-        setIsRedirecting(true);
+      if (isEditMode) {
+        // Update existing character
+        const { data: updatedData, error } = await supabase
+          .from('characters')
+          .update({
+            name: character.name,
+            age: character.age,
+            description: character.description,
+            reference_urls: character.reference_urls,
+            thumbnailUrl: character.thumbnailUrl,
+            images: character.images
+          })
+          .eq('id', character.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        data = updatedData;
         
-        // Wait 2 seconds before redirecting
-        setTimeout(() => {
-          navigate('/nuevo-cuento/personajes');
-        }, 2000);
+        if (data) {
+          updateCharacter(character.id, data);
+        }
+      } else {
+        // Create new character
+        const { data: newData, error } = await supabase
+          .from('characters')
+          .insert([{
+            ...character,
+            user_id: (await supabase.auth.getUser()).data.user?.id
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        data = newData;
+        
+        if (data) {
+          addCharacter(data);
+        }
       }
+      
+      setIsRedirecting(true);
+      
+      // Wait 1 second before redirecting
+      setTimeout(() => {
+        navigate('/nuevo-cuento/personajes');
+      }, 1000);
     } catch (err) {
-      setError('Error al guardar el personaje');
+      setError(`Error al ${isEditMode ? 'actualizar' : 'guardar'} el personaje`);
       console.error(err);
       setIsLoading(false);
     }
@@ -148,7 +231,7 @@ const CharacterForm: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold text-purple-800 mb-8">
-        Personaje de tu Historia
+        {isEditMode ? 'Editar Personaje' : 'Personaje de tu Historia'}
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -159,10 +242,20 @@ const CharacterForm: React.FC = () => {
           <input
             type="text"
             value={character.name}
-            onChange={(e) => setCharacter({ ...character, name: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            onChange={(e) => {
+              setCharacter({ ...character, name: e.target.value });
+              if (e.target.value.trim()) {
+                setFieldErrors(prev => ({ ...prev, name: undefined }));
+              }
+            }}
+            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+              fieldErrors.name ? 'border-red-500' : 'border-gray-300'
+            }`}
             placeholder="Nombre del personaje"
           />
+          {fieldErrors.name && (
+            <p className="mt-1 text-xs text-red-500">{fieldErrors.name}</p>
+          )}
         </div>
 
         <div>
@@ -172,10 +265,20 @@ const CharacterForm: React.FC = () => {
           <input
             type="text"
             value={character.age}
-            onChange={(e) => setCharacter({ ...character, age: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            onChange={(e) => {
+              setCharacter({ ...character, age: e.target.value });
+              if (e.target.value.trim()) {
+                setFieldErrors(prev => ({ ...prev, age: undefined }));
+              }
+            }}
+            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+              fieldErrors.age ? 'border-red-500' : 'border-gray-300'
+            }`}
             placeholder="Edad del personaje"
           />
+          {fieldErrors.age && (
+            <p className="mt-1 text-xs text-red-500">{fieldErrors.age}</p>
+          )}
         </div>
 
         <div>
@@ -188,16 +291,24 @@ const CharacterForm: React.FC = () => {
                 ? character.description.es
                 : character.description
             }
-            onChange={(e) =>
+            onChange={(e) => {
               setCharacter({
                 ...character,
                 description: { es: e.target.value, en: '' }
-              })
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              });
+              if (e.target.value.trim()) {
+                setFieldErrors(prev => ({ ...prev, description: undefined }));
+              }
+            }}
+            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+              fieldErrors.description ? 'border-red-500' : 'border-gray-300'
+            }`}
             rows={3}
             placeholder="Describe al personaje..."
           />
+          {fieldErrors.description && (
+            <p className="mt-1 text-xs text-red-500">{fieldErrors.description}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-6">
@@ -207,7 +318,9 @@ const CharacterForm: React.FC = () => {
             </label>
             <div {...getRootProps()}>
               <input {...getInputProps()} />
-              <div className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-purple-500">
+              <div className={`w-full aspect-square border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:border-purple-500 ${
+                fieldErrors.image ? 'border-red-500' : 'border-gray-300'
+              }`}>
                 {character.reference_urls?.[0] ? (
                   <img
                     src={character.reference_urls[0]}
@@ -218,14 +331,17 @@ const CharacterForm: React.FC = () => {
                   <Loader className="w-8 h-8 text-purple-600 animate-spin" />
                 ) : (
                   <div className="text-center p-4">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">
+                    <Upload className={`w-8 h-8 mx-auto mb-2 ${fieldErrors.image ? 'text-red-400' : 'text-gray-400'}`} />
+                    <p className={`text-sm ${fieldErrors.image ? 'text-red-500' : 'text-gray-500'}`}>
                       Arrastra una imagen o haz clic para seleccionar
                     </p>
                   </div>
                 )}
               </div>
             </div>
+            {fieldErrors.image && !character.reference_urls?.[0] && (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.image}</p>
+            )}
           </div>
 
           <div>
