@@ -126,12 +126,17 @@ const CharacterForm: React.FC = () => {
       const descriptionToUse = formData.description.es || 
         `Personaje llamado ${formData.name} de ${formData.age} años`;
       
-      const response = await fetch('/api/generate-thumbnail', {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
+          name: formData.name,
+          age: formData.age,
           description: descriptionToUse,
-          imageUrl: formData.reference_urls[0] || null
+          referenceImage: formData.reference_urls[0] || null
         })
       });
       
@@ -140,7 +145,16 @@ const CharacterForm: React.FC = () => {
       }
       
       const data = await response.json();
-      setFormData(prev => ({ ...prev, thumbnailUrl: data.thumbnailUrl }));
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        thumbnailUrl: data.thumbnailUrl,
+        description: data.description || prev.description 
+      }));
       
     } catch (error) {
       console.error("Error generating thumbnail:", error);
