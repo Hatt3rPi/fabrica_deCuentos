@@ -49,6 +49,10 @@ const CharactersGrid: React.FC = () => {
     }
   };
 
+  const handleAddCharacter = () => {
+    navigate('/nuevo-cuento/personaje/nuevo');
+  };
+
   return (
     <div className="space-y-8">
       <div className="text-center">
@@ -78,7 +82,7 @@ const CharactersGrid: React.FC = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            onClick={() => navigate('/nuevo-cuento/personaje/nuevo')}
+            onClick={handleAddCharacter}
             className="h-full min-h-[400px] border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-colors"
             aria-label="Añadir nuevo personaje"
           >
