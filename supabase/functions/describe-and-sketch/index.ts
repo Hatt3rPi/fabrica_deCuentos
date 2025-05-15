@@ -64,9 +64,8 @@ Deno.serve(async (req) => {
     if (!openaiKey) throw new Error('Falta la clave de API de OpenAI');
 
     const characterPrompt   = Deno.env.get('PROMPT_CREAR_MINIATURA_PERSONAJE');
-    const descriptionPrompt = Deno.env.get('PROMPT_DESCRIPCION_PERSONAJE');
     if (!characterPrompt)   throw new Error('Falta el prompt de generación de personaje');
-    if (!descriptionPrompt) throw new Error('Falta el prompt de descripción de personaje');
+
 
     const rawPayload = await req.json().catch(() => {
       throw new Error('Payload JSON inválido');
@@ -74,7 +73,13 @@ Deno.serve(async (req) => {
     console.log('[describe-and-sketch] [INIT] rawPayload =', rawPayload);
 
     const { imageBase64, userNotes, name, age } = validatePayload(rawPayload);
-
+    // Además de imageBase64, esperar que el frontend pase la descripción ya generada:
+    const { description: existingDescription } = rawPayload;
+    if (!existingDescription) {
+      throw new Error('Falta la descripción generada previamente');
+    }
+    // Ya no hacemos sanitize aquí, asumimos que analyze-character guardó un objeto {es,en} limpio:
+    const { es: descEs } = existingDescription;
     const sanitizedName  = sanitizeText(name);
     const sanitizedAge   = sanitizeText(age);
     const sanitizedNotes = sanitizeText(userNotes);
