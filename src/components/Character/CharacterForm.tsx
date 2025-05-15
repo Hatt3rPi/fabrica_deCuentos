@@ -200,7 +200,7 @@ const CharacterForm: React.FC = () => {
         body: JSON.stringify({
           name: formData.name,
           age: formData.age,
-          description: descriptionData.description.es,
+          description: descriptionData.description.es,   // <-- aquí envío { es, en }
           referenceImage: formData.reference_urls[0] || null
         })
       });
