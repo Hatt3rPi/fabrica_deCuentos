@@ -44,15 +44,12 @@ function validatePayload(payload: any) {
       : payload.referenceImage != null
         ? String(payload.referenceImage)
         : null,
-    userNotes: String(
-      payload.userNotes ??
-      payload.description ??
-      ''
-    ),
-    name: String(payload.name || ''),
-    age: String(payload.age || '')
+    userNotes: String(payload.userNotes || ''),   // ← solo de userNotes
+    name:      String(payload.name || ''),
+    age:       String(payload.age || '')
   };
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
