@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { useAuth } from '../../../context/AuthContext';
-import { Upload, RefreshCw, Trash2, Plus, Loader, AlertCircle } from 'lucide-react';
+import { Upload, RefreshCw, Trash2, Plus, Loader, AlertCircle, Info } from 'lucide-react';
 import { Character } from '../../../types';
 import Button from '../../UI/Button';
+import { useCharacterStore } from '../../../stores/characterStore';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
+const DEBOUNCE_DELAY = 500; // 500ms debounce delay
 
 const CharactersStep: React.FC = () => {
   const { characters, setCharacters } = useWizard();
@@ -18,13 +20,8 @@ const CharactersStep: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const getDescription = (description: string | { es: string; en: string }) => {
-    if (typeof description === 'object' && description.es) {
-      return description.es;
-    }
-    return description || '';
-  };
+  const { setCharacters: setStoreCharacters } = useCharacterStore();
+  const updateTimeoutRef = useRef<number>();
 
   useEffect(() => {
     if (user) {
@@ -32,27 +29,59 @@ const CharactersStep: React.FC = () => {
     }
   }, [user]);
 
+
+  useEffect(() => {
+    // Cleanup timeout on unmount
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
+
+
   const loadUserCharacters = async () => {
     try {
       const { data, error } = await supabase
         .from('characters')
         .select('*')
+        .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       if (data) {
-        setCharacters(data.map(char => ({
+        const processedCharacters = data.map(char => ({
           ...char,
-          images: char.images || [],
+          images: char.reference_urls || [],
           thumbnailUrl: char.thumbnail_url
-        })));
+        }));
+        setCharacters(processedCharacters);
+        setStoreCharacters(processedCharacters);
       }
     } catch (error) {
       console.error('Error loading characters:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const uploadImageToStorage = async (file: File, characterId: string): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${characterId}/${Date.now()}.${fileExt}`;
+    const filePath = fileName;
+
+    const { error: uploadError, data } = await supabase.storage
+      .from('reference-images')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('reference-images')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
   };
 
   const handleFileUpload = async (characterId: string, files: FileList | null) => {
@@ -77,21 +106,31 @@ const CharactersStep: React.FC = () => {
     setIsUploading(true);
 
     try {
+
+      const publicUrl = await uploadImageToStorage(file, characterId);
+
       const character = characters.find(c => c.id === characterId);
       if (!character) return;
 
       const updatedCharacter = {
         ...character,
-        images: [...(character.images || []), file]
+
+        reference_urls: [...(character.reference_urls || []), publicUrl]
+
       };
 
-      await updateCharacter(characterId, { images: updatedCharacter.images });
+      await updateCharacter(characterId, { reference_urls: updatedCharacter.reference_urls });
     } catch (error) {
       console.error('Error uploading image:', error);
       setUploadError('Error al subir la imagen');
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const canGenerateThumbnail = (character: Character): boolean => {
+    const description = typeof character.description === 'object' ? character.description.es : character.description;
+    return !!(description && description.trim() !== '') || !!(character.reference_urls && character.reference_urls.length > 0);
   };
 
   const generateThumbnail = async (characterId: string, retryCount = 0) => {
@@ -102,13 +141,12 @@ const CharactersStep: React.FC = () => {
       return;
     }
 
-    const description = getDescription(character.description);
-    if (!description && (!character.images || character.images.length === 0)) {
-      console.error('Missing required data:', { 
-        characterId, 
-        hasDescription: !!description, 
-        hasImages: character.images?.length > 0 
-      });
+
+    const description = typeof character.description === 'object' ? character.description.es : character.description;
+    
+    // Enhanced validation with early return and specific error message
+    if (!canGenerateThumbnail(character)) {
+
       setUploadError('Se requiere una descripción o una imagen del personaje');
       return;
     }
@@ -117,43 +155,23 @@ const CharactersStep: React.FC = () => {
     setUploadError(null);
 
     try {
-      console.log('Starting thumbnail generation:', {
-        characterId,
-        name: character.name,
-        age: character.age,
-        descriptionLength: description?.length,
-        imageCount: character.images?.length
-      });
 
-      const formData = new FormData();
-      
-      // Ensure we have a valid image file
-      if (character.images?.[0] instanceof File) {
-        const image = character.images[0];
-        console.log('Image details:', {
-          name: image.name,
-          type: image.type,
-          size: image.size
-        });
-        formData.append('image', image, image.name);
-      } else {
-        throw new Error('No se encontró una imagen válida');
-      }
+      const payload = {
+        description: description || '',
+        name: character.name || '',
+        age: character.age || '',
+        referenceImage: character.reference_urls?.[0] || null
+      };
 
-      // Ensure all text fields are strings
-      formData.append('name', character.name?.toString() || '');
-      formData.append('age', character.age?.toString() || '');
-      formData.append('description', description?.toString() || '');
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`;
-      console.log('Calling Edge Function:', apiUrl);
-
-      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: formData,
+
+        body: JSON.stringify(payload)
+
       });
 
       const data = await response.json();
@@ -176,14 +194,20 @@ const CharactersStep: React.FC = () => {
       }
 
       await updateCharacter(characterId, {
-        thumbnailUrl: data.thumbnailUrl,
+        thumbnail_url: data.thumbnailUrl,
         description: data.description || character.description
       });
 
-      console.log('Thumbnail generation successful:', {
-        characterId,
-        thumbnailUrl: data.thumbnailUrl?.substring(0, 50) + '...'
-      });
+
+      // Update global store
+      const updatedCharacters = characters.map(c => 
+        c.id === characterId 
+          ? { ...c, thumbnailUrl: data.thumbnailUrl, description: data.description || c.description }
+          : c
+      );
+      setStoreCharacters(updatedCharacters);
+
+
     } catch (error) {
       console.error('Error generating thumbnail:', {
         characterId,
@@ -192,16 +216,11 @@ const CharactersStep: React.FC = () => {
         maxRetries: MAX_RETRIES
       });
 
-      // Generic retry logic for any error
+
       if (retryCount < MAX_RETRIES) {
-        const delay = RETRY_DELAY * Math.pow(2, retryCount);
-        console.log('Scheduling retry:', {
-          characterId,
-          retryCount: retryCount + 1,
-          delay
-        });
-        setUploadError(`Error al generar la miniatura. Reintentando en ${delay/1000} segundos...`);
-        setTimeout(() => generateThumbnail(characterId, retryCount + 1), delay);
+        setTimeout(() => generateThumbnail(characterId, retryCount + 1), RETRY_DELAY * Math.pow(2, retryCount));
+        setUploadError('Error al generar. Reintentando...');
+
         return;
       }
 
@@ -211,31 +230,63 @@ const CharactersStep: React.FC = () => {
     }
   };
 
-  const addCharacter = () => {
+  const addCharacter = async () => {
     if (characters.length < 3) {
-      const newCharacter = {
-        id: Date.now().toString(),
-        user_id: user?.id || '',
-        name: '',
-        age: '',
-        description: '',
-        images: [],
-        thumbnailUrl: null
-      };
-      setCharacters([...characters, newCharacter]);
+      try {
+        const { data, error } = await supabase
+          .from('characters')
+          .insert({
+            user_id: user?.id,
+            name: '',
+            age: '',
+            description: { es: '', en: '' },
+            reference_urls: [],
+            thumbnail_url: null
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const newCharacter = {
+          ...data,
+          images: [],
+          thumbnailUrl: null
+        };
+
+        setCharacters([...characters, newCharacter]);
+        setStoreCharacters([...characters, newCharacter]);
+      } catch (error) {
+        console.error('Error creating character:', error);
+      }
     }
   };
 
   const removeCharacter = async (id: string) => {
     if (characters.length > 1) {
       try {
-        if (id.length === 36) {
-          await supabase
-            .from('characters')
-            .delete()
-            .eq('id', id);
+        // Delete images from storage
+        const character = characters.find(c => c.id === id);
+        if (character?.reference_urls?.length) {
+          for (const url of character.reference_urls) {
+            const path = url.split('/').pop();
+            if (path) {
+              await supabase.storage
+                .from('reference-images')
+                .remove([`${id}/${path}`]);
+            }
+          }
         }
-        setCharacters(characters.filter((c) => c.id !== id));
+
+        // Delete record from database
+        await supabase
+          .from('characters')
+          .delete()
+          .eq('id', id);
+
+        const updatedCharacters = characters.filter((c) => c.id !== id);
+        setCharacters(updatedCharacters);
+        setStoreCharacters(updatedCharacters);
       } catch (error) {
         console.error('Error removing character:', error);
       }
@@ -243,234 +294,243 @@ const CharactersStep: React.FC = () => {
   };
 
   const updateCharacter = async (id: string, updates: Partial<Character>) => {
+    // Clear any existing timeout
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+
+    // Update local state immediately for smooth UI
     const updatedCharacters = characters.map((character) =>
       character.id === id ? { ...character, ...updates } : character
     );
     setCharacters(updatedCharacters);
 
-    if (id.length === 36) {
+    // Debounce the database update
+    updateTimeoutRef.current = setTimeout(async () => {
       try {
+        const character = characters.find(c => c.id === id);
+        if (!character) return;
+
+        // Handle description update
+        let finalUpdates = { ...updates };
+        if ('description' in updates) {
+          const currentDescription = typeof character.description === 'object' 
+            ? character.description 
+            : { es: character.description, en: '' };
+          
+          finalUpdates.description = {
+            ...currentDescription,
+            es: updates.description as string
+          };
+        }
+
         const { error } = await supabase
           .from('characters')
           .update({
-            ...updates,
-            thumbnail_url: updates.thumbnailUrl,
+            ...finalUpdates,
             updated_at: new Date().toISOString(),
           })
           .eq('id', id);
 
         if (error) throw error;
+        setStoreCharacters(updatedCharacters);
       } catch (error) {
         console.error('Error updating character:', error);
+        // Revert local state on error
+        setCharacters(characters);
+        setStoreCharacters(characters);
       }
-    } else if (updates.name && updates.description) {
-      try {
-        const { data, error } = await supabase
-          .from('characters')
-          .insert({
-            name: updates.name,
-            age: updates.age,
-            description: updates.description,
-            user_id: user?.id,
-            images: updates.images || [],
-            thumbnail_url: updates.thumbnailUrl
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        if (data) {
-          setCharacters(characters.map(char =>
-            char.id === id ? { ...char, id: data.id } : char
-          ));
-        }
-      } catch (error) {
-        console.error('Error creating character:', error);
-      }
-    }
+    }, DEBOUNCE_DELAY);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader className="w-8 h-8 text-purple-600 animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-purple-800 mb-2">Creación de personaje</h2>
+        <h2 className="text-2xl font-bold text-purple-800 mb-2">
+          Personajes de tu Historia
+        </h2>
         <p className="text-gray-600">
-          Describe tus personajes y nosotros les daremos vida
+          Crea hasta 3 personajes para tu cuento
         </p>
       </div>
 
-      {uploadError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <p>{uploadError}</p>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {characters.map((character) => (
+          <div
+            key={character.id}
+            className="bg-white rounded-lg shadow-md overflow-hidden"
+          >
+            {/* Character thumbnail */}
+            <div className="aspect-square relative bg-gray-100">
+              {character.thumbnailUrl ? (
+                <img
+                  src={character.thumbnailUrl}
+                  alt={character.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center p-4">
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">
+                      Sube una foto o describe al personaje
+                    </p>
+                  </div>
+                </div>
+              )}
 
-      <div className="space-y-8">
-        {characters.map((character, index) => (
-          <div key={character.id} className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-purple-700">Personaje {index + 1}</h3>
-              {characters.length > 1 && (
-                <button
-                  onClick={() => removeCharacter(character.id)}
-                  className="text-red-500 hover:text-red-700"
-                  aria-label="Eliminar personaje"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+              {/* Loading overlay */}
+              {isGenerating === character.id && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <Loader className="w-8 h-8 animate-spin mx-auto mb-2" />
+                    <p className="text-sm">Generando miniatura...</p>
+                  </div>
+                </div>
               )}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor={`name-${character.id}`} className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre del personaje
-                  </label>
-                  <input
-                    type="text"
-                    id={`name-${character.id}`}
-                    value={character.name}
-                    onChange={(e) => updateCharacter(character.id, { name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Ej. Luna, el gato mágico"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor={`age-${character.id}`} className="block text-sm font-medium text-gray-700 mb-1">
-                    Edad
-                  </label>
-                  <input
-                    type="text"
-                    id={`age-${character.id}`}
-                    value={character.age}
-                    onChange={(e) => updateCharacter(character.id, { age: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Ej. 8 años"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor={`description-${character.id}`} className="block text-sm font-medium text-gray-700 mb-1">
-                    Descripción detallada
-                  </label>
-                  <textarea
-                    id={`description-${character.id}`}
-                    value={getDescription(character.description)}
-                    onChange={(e) => updateCharacter(character.id, { description: e.target.value })}
-                    rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Describe cómo es el personaje, su personalidad, apariencia..."
-                  />
-                </div>
-
-                <div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept=".jpg,.jpeg,.png,.webp"
-                    onChange={(e) => handleFileUpload(character.id, e.target.files)}
-                  />
-                  
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="w-full"
-                  >
-                    {isUploading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        <span>Subiendo imagen...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        <span>Subir imagen de referencia</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {character.images?.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {character.images.map((image, idx) => (
-                      <div key={idx} className="aspect-square rounded-lg overflow-hidden">
-                        <img
-                          src={URL.createObjectURL(image)}
-                          alt={`Referencia ${idx + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
+            {/* Character form */}
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  value={character.name}
+                  onChange={(e) =>
+                    updateCharacter(character.id, { name: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Nombre del personaje"
+                />
               </div>
 
-              <div className="space-y-4">
-                {character.thumbnailUrl ? (
-                  <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                    <img
-                      src={character.thumbnailUrl}
-                      alt={character.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="aspect-square rounded-lg bg-gray-100 flex items-center justify-center">
-                    <p className="text-gray-500 text-center px-4">
-                      Sube una imagen o describe tu personaje para generar una vista previa
-                    </p>
-                  </div>
-                )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Edad
+                </label>
+                <input
+                  type="text"
+                  value={character.age}
+                  onChange={(e) =>
+                    updateCharacter(character.id, { age: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Edad del personaje"
+                />
+              </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Descripción
+                </label>
+                <textarea
+                  value={
+                    typeof character.description === 'object'
+                      ? character.description.es
+                      : character.description
+                  }
+                  onChange={(e) =>
+                    updateCharacter(character.id, { description: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  rows={3}
+                  placeholder="Describe al personaje..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Imágenes de referencia
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {character.reference_urls?.map((url, index) => (
+                    <div
+                      key={index}
+                      className="w-16 h-16 relative rounded overflow-hidden"
+                    >
+                      <img
+                        src={url}
+                        alt={`Referencia ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                  {(!character.reference_urls ||
+                    character.reference_urls.length < 3) && (
+                    <label className="w-16 h-16 flex items-center justify-center border-2 border-dashed border-gray-300 rounded cursor-pointer hover:border-purple-500">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(character.id, e.target.files)
+                        }
+                      />
+                      <Plus className="w-6 h-6 text-gray-400" />
+                    </label>
+                  )}
+                </div>
+
+              </div>
+
+              <div className="flex gap-2">
                 <Button
                   onClick={() => generateThumbnail(character.id)}
-                  disabled={
-                    (!character.description && (!character.images || character.images.length === 0)) || 
-                    isGenerating === character.id
-                  }
-                  className="w-full"
+                  disabled={isGenerating === character.id || !canGenerateThumbnail(character)}
+                  className="flex-1"
                 >
                   {isGenerating === character.id ? (
                     <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader className="w-4 h-4 animate-spin" />
                       <span>Generando...</span>
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      <span>Generar miniatura</span>
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Generar</span>
                     </>
                   )}
                 </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => removeCharacter(character.id)}
+                  disabled={characters.length <= 1}
+                  className="flex-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Eliminar</span>
+                </Button>
               </div>
+
+              {!canGenerateThumbnail(character) && (
+                <div className="flex items-start gap-2 text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <p>Añade una descripción o una imagen para generar la miniatura</p>
+                </div>
+              )}
             </div>
           </div>
         ))}
-      </div>
 
-      {characters.length < 3 && (
-        <div className="flex justify-center">
+        {characters.length < 3 && (
           <button
             onClick={addCharacter}
-            className="py-2 px-4 border border-purple-300 rounded-full text-purple-700 flex items-center gap-2 hover:bg-purple-50"
+            className="h-full min-h-[400px] border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-colors"
           >
-            <Plus className="w-5 h-5" />
-            <span>Añadir personaje</span>
+            <Plus className="w-12 h-12" />
+            <span className="text-lg">Añadir personaje</span>
           </button>
+        )}
+      </div>
+
+      {uploadError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-600">{uploadError}</p>
         </div>
       )}
     </div>

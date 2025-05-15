@@ -8,6 +8,8 @@ import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import LoginForm from './components/Auth/LoginForm';
 import MyStories from './pages/MyStories';
+import CharacterForm from './components/Character/CharacterForm';
+import CharactersGrid from './components/Character/CharactersGrid';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -32,12 +34,44 @@ function AppContent() {
           <Header />
           <main className="flex-grow p-4 md:p-6 lg:p-8">
             <Routes>
-              <Route path="/" element={<MyStories />} />
+              <Route path="/" element={user ? <Navigate to="/home" replace /> : <LoginForm />} />
               <Route
                 path="/wizard/:storyId"
                 element={
                   <PrivateRoute>
                     <Wizard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/nuevo-cuento/personajes"
+                element={
+                  <PrivateRoute>
+                    <CharactersGrid />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/nuevo-cuento/personaje/nuevo"
+                element={
+                  <PrivateRoute>
+                    <CharacterForm />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/nuevo-cuento/personaje/:id/editar"
+                element={
+                  <PrivateRoute>
+                    <CharacterForm />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/home"
+                element={
+                  <PrivateRoute>
+                    <MyStories />
                   </PrivateRoute>
                 }
               />

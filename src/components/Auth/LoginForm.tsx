@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LogIn, KeyRound, Mail, AlertCircle, Loader, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
@@ -8,6 +9,7 @@ const passwordSchema = z.string().min(6, 'La contraseña debe tener al menos 6 c
 const tokenSchema = z.string().length(8, 'El código debe tener 8 caracteres');
 
 const LoginForm: React.FC = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -57,9 +59,10 @@ const LoginForm: React.FC = () => {
     setIsLoading(true);
     try {
       await signIn(email, password);
+      // After successful login, navigate to home page
+      navigate('/home');
     } catch (err) {
       setError('Error al iniciar sesión. Por favor, verifica tus credenciales.');
-    } finally {
       setIsLoading(false);
     }
   };
