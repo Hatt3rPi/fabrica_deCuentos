@@ -5,6 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const handleOpenAIError = (error: any) => {
+  if (error.response?.status === 429) {
+    return {
+      status: 429,
+      message: 'Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.'
+    };
+  }
+  return {
+    status: 500,
+    message: error.message || 'Error al analizar el personaje'
+  };
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -83,7 +96,14 @@ Deno.serve(async (req) => {
     console.log('[analyze-character] [Análisis de imagen] [OUT]', JSON.stringify(responseData, null, 2));
 
     if (!response.ok) {
-      throw new Error(responseData.error?.message || 'Failed to analyze image');
+      const error = handleOpenAIError({ response, message: responseData.error?.message });
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        {
+          status: error.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     if (!responseData.choices?.[0]?.message?.content) {
@@ -101,12 +121,12 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in analyze-character function:', error);
     
-    let errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    const errorResponse = handleOpenAIError(error);
     
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: errorResponse.message }),
       {
-        status: 500,
+        status: errorResponse.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     );

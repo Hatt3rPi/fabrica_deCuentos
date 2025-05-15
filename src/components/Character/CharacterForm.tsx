@@ -18,6 +18,8 @@ const CharacterForm: React.FC = () => {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [fieldsReadOnly, setFieldsReadOnly] = useState(false);
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     age?: string;
@@ -33,6 +35,8 @@ const CharacterForm: React.FC = () => {
   });
   
   const isEditMode = Boolean(id);
+
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   
   useEffect(() => {
     if (isEditMode && id) {
@@ -112,6 +116,40 @@ const CharacterForm: React.FC = () => {
     }
   });
 
+  const callAnalyzeCharacter = async (attempt = 0): Promise<any> => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          age: formData.age,
+          description: formData.description.es,
+          imageUrl: formData.reference_urls[0] || null
+        })
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.');
+        }
+        throw new Error('Error al analizar el personaje');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (attempt < MAX_RETRIES) {
+        const backoffTime = Math.min(1000 * Math.pow(2, attempt), 8000);
+        await sleep(backoffTime);
+        return callAnalyzeCharacter(attempt + 1);
+      }
+      throw error;
+    }
+  };
+
   const generateThumbnail = async () => {
     // Validar campos requeridos
     if (!formData.name.trim() || !formData.age.trim()) {
@@ -133,28 +171,12 @@ const CharacterForm: React.FC = () => {
 
     setFieldsReadOnly(true);
     setIsAnalyzing(true);
+    setError(null);
+    setRetryCount(0);
 
     try {
-      // Paso 1: Analizar y generar descripción
-      const descriptionResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          age: formData.age,
-          description: formData.description.es,
-          imageUrl: formData.reference_urls[0] || null
-        })
-      });
-
-      if (!descriptionResponse.ok) {
-        throw new Error('Error al analizar el personaje');
-      }
-
-      const descriptionData = await descriptionResponse.json();
+      // Paso 1: Analizar y generar descripción con reintentos
+      const descriptionData = await callAnalyzeCharacter();
       
       // Actualizar descripción
       setFormData(prev => ({
@@ -184,6 +206,9 @@ const CharacterForm: React.FC = () => {
       });
 
       if (!thumbnailResponse.ok) {
+        if (thumbnailResponse.status === 429) {
+          throw new Error('Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.');
+        }
         throw new Error('Error al generar la miniatura');
       }
 
@@ -198,7 +223,7 @@ const CharacterForm: React.FC = () => {
 
     } catch (error) {
       console.error("Error in thumbnail generation:", error);
-      setError(error.message);
+      setError(error.message || 'Error al procesar el personaje. Por favor, intenta de nuevo.');
     } finally {
       setIsAnalyzing(false);
       setIsGeneratingThumbnail(false);
@@ -366,7 +391,9 @@ const CharacterForm: React.FC = () => {
               ) : isAnalyzing ? (
                 <div className="text-center">
                   <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-purple-600">Analizando tu personaje...</p>
+                  <p className="text-sm text-purple-600">
+                    {retryCount > 0 ? `Reintentando análisis (${retryCount}/${MAX_RETRIES})...` : 'Analizando tu personaje...'}
+                  </p>
                 </div>
               ) : isGeneratingThumbnail ? (
                 <div className="text-center">
