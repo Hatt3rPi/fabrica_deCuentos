@@ -32,7 +32,6 @@ const CharacterForm: React.FC = () => {
   
   const isEditMode = Boolean(id);
   
-  // Load character data when in edit mode
   useEffect(() => {
     if (isEditMode && id) {
       const loadCharacter = async () => {
@@ -70,7 +69,6 @@ const CharacterForm: React.FC = () => {
 
       setIsLoading(true);
       setError(null);
-      // Clear any image field errors
       setFieldErrors(prev => ({ ...prev, image: undefined, description: undefined }));
 
       try {
@@ -94,11 +92,10 @@ const CharacterForm: React.FC = () => {
           reference_urls: [...(prev.reference_urls || []), publicUrl]
         }));
 
-        // Generate thumbnail after upload
         await generateThumbnail(publicUrl);
       } catch (err) {
+        console.error('Error uploading image:', err);
         setError('Error al subir la imagen');
-        console.error(err);
       } finally {
         setIsLoading(false);
       }
@@ -107,30 +104,55 @@ const CharacterForm: React.FC = () => {
 
   const generateThumbnail = async (imageUrl: string) => {
     try {
+      const description = typeof character.description === 'object' 
+        ? character.description.es 
+        : typeof character.description === 'string'
+          ? character.description.trim()
+          : '';
+
+      const payload = {
+        name: character.name.trim(),
+        age: character.age.trim(),
+        description,
+        referenceImage: imageUrl
+      };
+
+      console.log('Sending payload to describe-and-sketch:', payload);
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          name: character.name,
-          age: character.age,
-          description: typeof character.description === 'object' ? character.description.es : character.description,
-          referenceImage: imageUrl
-        })
+        body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error('Error generando miniatura');
-      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Error de red' }));
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (!data.thumbnailUrl) {
+        throw new Error('No se pudo generar la miniatura');
+      }
+
       setCharacter(prev => ({
         ...prev,
-        thumbnailUrl: data.thumbnailUrl
+        thumbnailUrl: data.thumbnailUrl,
+        description: data.description || prev.description
       }));
+
     } catch (err) {
-      setError('Error al generar la miniatura');
-      console.error(err);
+      console.error('Error generating thumbnail:', err);
+      setError(err instanceof Error ? err.message : 'Error al generar la miniatura');
+      throw err;
     }
   };
 
@@ -144,7 +166,12 @@ const CharacterForm: React.FC = () => {
       image?: string;
     } = {};
 
-    // Validation
+    const description = typeof character.description === 'object' 
+      ? character.description.es 
+      : typeof character.description === 'string' 
+        ? character.description.trim() 
+        : '';
+
     if (!character.name?.trim()) {
       fieldValidationErrors.name = 'El nombre es obligatorio';
     }
@@ -153,18 +180,11 @@ const CharacterForm: React.FC = () => {
       fieldValidationErrors.age = 'La edad es obligatoria';
     }
 
-    const description = typeof character.description === 'object' 
-      ? character.description.es 
-      : typeof character.description === 'string' 
-        ? character.description.trim() 
-        : '';
-
     if (!description?.trim() && (!character.reference_urls || character.reference_urls.length === 0)) {
       fieldValidationErrors.description = 'Debes proporcionar una descripción o una imagen';
       fieldValidationErrors.image = 'Debes proporcionar una descripción o una imagen';
     }
 
-    // Check if there are validation errors
     if (Object.keys(fieldValidationErrors).length > 0) {
       setFieldErrors(fieldValidationErrors);
       setError('Por favor corrige los errores antes de continuar');
@@ -177,7 +197,6 @@ const CharacterForm: React.FC = () => {
       let data;
       
       if (isEditMode) {
-        // Update existing character
         const { data: updatedData, error } = await supabase
           .from('characters')
           .update({
@@ -199,7 +218,6 @@ const CharacterForm: React.FC = () => {
           updateCharacter(character.id, data);
         }
       } else {
-        // Create new character
         const { data: newData, error } = await supabase
           .from('characters')
           .insert([{
@@ -232,10 +250,6 @@ const CharacterForm: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-purple-800 mb-8">
-        {isEditMode ? 'Editar Personaje' : 'Personaje de tu Historia'}
-      </h2>
-
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
