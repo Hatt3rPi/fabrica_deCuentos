@@ -136,7 +136,8 @@ const CharacterForm: React.FC = () => {
         if (response.status === 429) {
           throw new Error('Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.');
         }
-        throw new Error('Error al analizar el personaje');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Error al analizar el personaje');
       }
 
       return await response.json();
@@ -178,12 +179,16 @@ const CharacterForm: React.FC = () => {
       // Paso 1: Analizar y generar descripción con reintentos
       const descriptionData = await callAnalyzeCharacter();
       
+      if (!descriptionData || !descriptionData.description) {
+        throw new Error('No se pudo generar la descripción del personaje');
+      }
+
       // Actualizar descripción
       setFormData(prev => ({
         ...prev,
         description: {
-          es: descriptionData.description.es,
-          en: descriptionData.description.en
+          es: descriptionData.description.es || prev.description.es,
+          en: descriptionData.description.en || prev.description.en
         }
       }));
 
@@ -198,21 +203,29 @@ const CharacterForm: React.FC = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          name: formData.name,
-          age: formData.age,
-          description: descriptionData.description,   // <-- aquí envío { es, en }
+          name: formData.name.trim(),
+          age: formData.age.trim(),
+          description: {
+            es: descriptionData.description.es || formData.description.es,
+            en: descriptionData.description.en || formData.description.en
+          },
           referenceImage: formData.reference_urls[0] || null
         })
       });
 
       if (!thumbnailResponse.ok) {
+        const errorData = await thumbnailResponse.json().catch(() => ({}));
         if (thumbnailResponse.status === 429) {
           throw new Error('Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.');
         }
-        throw new Error('Error al generar la miniatura');
+        throw new Error(errorData.error || 'Error al generar la miniatura. Por favor, verifica los datos e intenta de nuevo.');
       }
 
       const thumbnailData = await thumbnailResponse.json();
+
+      if (!thumbnailData || !thumbnailData.thumbnailUrl) {
+        throw new Error('No se recibió una URL válida para la miniatura');
+      }
 
       setFormData(prev => ({
         ...prev,
