@@ -11,7 +11,9 @@ const CharacterForm: React.FC = () => {
   const { supabase } = useAuth();
   const { addCharacter, updateCharacter, characters } = useCharacterStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
@@ -19,15 +21,12 @@ const CharacterForm: React.FC = () => {
     description?: string;
     image?: string;
   }>({});
-  const [character, setCharacter] = useState({
-    id: '',
-    user_id: '',
+  const [formData, setFormData] = useState({
     name: '',
     age: '',
     description: { es: '', en: '' },
     reference_urls: [] as string[],
     thumbnailUrl: null as string | null,
-    images: [] as string[],
   });
   
   const isEditMode = Boolean(id);
@@ -45,7 +44,13 @@ const CharacterForm: React.FC = () => {
 
           if (error) throw error;
           if (data) {
-            setCharacter(data);
+            setFormData({
+              name: data.name,
+              age: data.age,
+              description: data.description,
+              reference_urls: data.reference_urls || [],
+              thumbnailUrl: data.thumbnail_url,
+            });
           }
         } catch (err) {
           console.error('Error loading character:', err);
@@ -87,12 +92,12 @@ const CharacterForm: React.FC = () => {
           .from('reference-images')
           .getPublicUrl(filePath);
 
-        setCharacter(prev => ({
+        setFormData(prev => ({
           ...prev,
           reference_urls: [...(prev.reference_urls || []), publicUrl]
         }));
 
-        await generateThumbnail(publicUrl);
+        await generateThumbnail();
       } catch (err) {
         console.error('Error uploading image:', err);
         setError('Error al subir la imagen');
@@ -108,17 +113,17 @@ const CharacterForm: React.FC = () => {
     
     try {
       // Verificar si tenemos descripción o imagen antes de continuar
-      if (!formData.description && !previewUrl) {
+      if (!formData.description.es && !formData.reference_urls[0]) {
         setFieldErrors(prev => ({
           ...prev,
-          description: !formData.description ? "Se requiere una descripción o una imagen" : "",
-          image: !previewUrl ? "Se requiere una descripción o una imagen" : ""
+          description: !formData.description.es ? "Se requiere una descripción o una imagen" : undefined,
+          image: !formData.reference_urls[0] ? "Se requiere una descripción o una imagen" : undefined
         }));
-        throw new Error("Se requiere una descripción o una imagen");
+        return;
       }
       
       // Si tenemos imagen pero no descripción, usar una descripción genérica
-      const descriptionToUse = formData.description || 
+      const descriptionToUse = formData.description.es || 
         `Personaje llamado ${formData.name} de ${formData.age} años`;
       
       const response = await fetch('/api/generate-thumbnail', {
@@ -126,7 +131,7 @@ const CharacterForm: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           description: descriptionToUse,
-          imageData: previewUrl || null
+          imageUrl: formData.reference_urls[0] || null
         })
       });
       
@@ -135,20 +140,21 @@ const CharacterForm: React.FC = () => {
       }
       
       const data = await response.json();
-      setFormData(prev => ({ ...prev, thumbnail: data.thumbnailUrl }));
+      setFormData(prev => ({ ...prev, thumbnailUrl: data.thumbnailUrl }));
       
     } catch (error) {
-      console.error("Error uploading image:", error);
+      console.error("Error generating thumbnail:", error);
       setUploadError(`Error al generar la miniatura: ${error.message}`);
     } finally {
       setIsGeneratingThumbnail(false);
     }
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validar campos
-    let errors: FieldErrors = {};
+    let errors: typeof fieldErrors = {};
     let isValid = true;
     
     if (!formData.name) {
@@ -156,13 +162,13 @@ const CharacterForm: React.FC = () => {
       isValid = false;
     }
     
-    if (!formData.age || formData.age <= 0) {
-      errors.age = "La edad debe ser un número positivo";
+    if (!formData.age) {
+      errors.age = "La edad es obligatoria";
       isValid = false;
     }
     
     // Validar que al menos esté presente la descripción o la imagen
-    if (!formData.description && !previewUrl) {
+    if (!formData.description.es && !formData.reference_urls[0]) {
       errors.description = "Se requiere una descripción o una imagen";
       errors.image = "Se requiere una descripción o una imagen";
       isValid = false;
@@ -173,7 +179,7 @@ const CharacterForm: React.FC = () => {
     if (!isValid) return;
     
     // Generar miniatura si no existe una
-    if (!formData.thumbnail) {
+    if (!formData.thumbnailUrl) {
       try {
         await generateThumbnail();
       } catch (error) {
@@ -182,28 +188,33 @@ const CharacterForm: React.FC = () => {
       }
     }
     
-    // Continuar con guardar el personaje...
-    if (isEditing && currentCharacter) {
-      // Actualizar el personaje existente
-      const updatedCharacter = {
-        ...currentCharacter,
-        ...formData,
-        image: previewUrl || currentCharacter.image
+    try {
+      setIsLoading(true);
+      
+      const characterData = {
+        name: formData.name,
+        age: formData.age,
+        description: formData.description,
+        reference_urls: formData.reference_urls,
+        thumbnail_url: formData.thumbnailUrl,
       };
-      updateCharacter(updatedCharacter);
-    } else {
-      // Crear un nuevo personaje
-      const newCharacter = {
-        ...formData,
-        id: Date.now().toString(),
-        image: previewUrl || ""
-      };
-      addCharacter(newCharacter);
+
+      if (isEditMode) {
+        await updateCharacter(id, characterData);
+      } else {
+        await addCharacter(characterData);
+      }
+
+      setIsRedirecting(true);
+      navigate('/nuevo-cuento/personajes');
+    } catch (err) {
+      console.error('Error saving character:', err);
+      setError('Error al guardar el personaje');
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Navegar de vuelta a la lista de personajes
-    navigate("/personajes");
   };
+
   return (
     <div className="max-w-2xl mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -213,9 +224,9 @@ const CharacterForm: React.FC = () => {
           </label>
           <input
             type="text"
-            value={character.name}
+            value={formData.name}
             onChange={(e) => {
-              setCharacter({ ...character, name: e.target.value });
+              setFormData({ ...formData, name: e.target.value });
               if (e.target.value.trim()) {
                 setFieldErrors(prev => ({ ...prev, name: undefined }));
               }
@@ -236,9 +247,9 @@ const CharacterForm: React.FC = () => {
           </label>
           <input
             type="text"
-            value={character.age}
+            value={formData.age}
             onChange={(e) => {
-              setCharacter({ ...character, age: e.target.value });
+              setFormData({ ...formData, age: e.target.value });
               if (e.target.value.trim()) {
                 setFieldErrors(prev => ({ ...prev, age: undefined }));
               }
@@ -258,14 +269,10 @@ const CharacterForm: React.FC = () => {
             Descripción
           </label>
           <textarea
-            value={
-              typeof character.description === 'object'
-                ? character.description.es
-                : character.description
-            }
+            value={formData.description.es}
             onChange={(e) => {
-              setCharacter({
-                ...character,
+              setFormData({
+                ...formData,
                 description: { es: e.target.value, en: '' }
               });
               if (e.target.value.trim()) {
@@ -293,9 +300,9 @@ const CharacterForm: React.FC = () => {
               <div className={`w-full aspect-square border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:border-purple-500 ${
                 fieldErrors.image ? 'border-red-500' : 'border-gray-300'
               }`}>
-                {character.reference_urls?.[0] ? (
+                {formData.reference_urls[0] ? (
                   <img
-                    src={character.reference_urls[0]}
+                    src={formData.reference_urls[0]}
                     alt="Referencia"
                     className="w-full h-full object-cover rounded-lg"
                   />
@@ -311,7 +318,7 @@ const CharacterForm: React.FC = () => {
                 )}
               </div>
             </div>
-            {fieldErrors.image && !character.reference_urls?.[0] && (
+            {fieldErrors.image && !formData.reference_urls[0] && (
               <p className="mt-1 text-xs text-red-500">{fieldErrors.image}</p>
             )}
           </div>
@@ -321,12 +328,14 @@ const CharacterForm: React.FC = () => {
               Miniatura generada
             </label>
             <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-              {character.thumbnailUrl ? (
+              {formData.thumbnailUrl ? (
                 <img
-                  src={character.thumbnailUrl}
+                  src={formData.thumbnailUrl}
                   alt="Miniatura"
                   className="w-full h-full object-cover rounded-lg"
                 />
+              ) : isGeneratingThumbnail ? (
+                <Loader className="w-8 h-8 text-purple-600 animate-spin" />
               ) : (
                 <div className="text-center p-4">
                   <p className="text-sm text-gray-500">
@@ -338,10 +347,10 @@ const CharacterForm: React.FC = () => {
           </div>
         </div>
 
-        {error && (
+        {(error || uploadError) && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm text-red-600">{error || uploadError}</p>
           </div>
         )}
 
