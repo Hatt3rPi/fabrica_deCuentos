@@ -72,6 +72,11 @@ Deno.serve(async (req) => {
     const { imageBase64, userNotes, name, age } = validatePayload(rawPayload);
     // la descripción generada:
     const existingDescription = rawPayload.description;
+    // Solo sanitizamos userNotes (las notas manuales)
+    const sanitizedNotes = sanitizeText(userNotes);
+    // Y seguimos usando existingDescription.es para la descripción generada
+    const descEs = existingDescription?.es;
+
     if (!existingDescription) {
       throw new Error('Falta la descripción generada previamente');
     }
