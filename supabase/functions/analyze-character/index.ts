@@ -1,3 +1,5 @@
+import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -14,7 +16,30 @@ Deno.serve(async (req) => {
       throw new Error('No image data or URL provided');
     }
 
-    console.log('Sending request to OpenAI API...');
+    const requestBody = {
+      model: "gpt-4-turbo",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Please analyze this image and provide a JSON response with the following structure: { description: string }. Observe carefully and describe what you see in detail."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageUrl || image
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 1500,
+      response_format: { type: "json_object" }
+    };
+
+    console.log('[analyze-character] [Análisis de imagen] [IN]', JSON.stringify(requestBody, null, 2));
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -22,32 +47,11 @@ Deno.serve(async (req) => {
         "Authorization": `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: "gpt-4-turbo",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Please analyze this image and provide a JSON response with the following structure: { description: string }. Observe carefully and describe what you see in detail."
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl || image
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 1500,
-        response_format: { type: "json_object" }
-      })
+      body: JSON.stringify(requestBody)
     });
 
     const responseData = await response.json();
-    console.log('OpenAI API Response:', JSON.stringify(responseData, null, 2));
+    console.log('[analyze-character] [Análisis de imagen] [OUT]', JSON.stringify(responseData, null, 2));
 
     if (!response.ok) {
       throw new Error(responseData.error?.message || 'Failed to analyze image');
@@ -58,7 +62,6 @@ Deno.serve(async (req) => {
     }
 
     const description = JSON.parse(responseData.choices[0].message.content).description;
-    console.log('Extracted description:', description);
 
     return new Response(
       JSON.stringify({ description }),
