@@ -84,7 +84,7 @@ Deno.serve(async (req)=>{
     }
     console.log(`[${FILE}] [INIT] Attempting to fetch image: ${imageUrl}`);
     const base64Image = await fetchImageAsBase64(imageUrl);
-    const prompt = analysisPrompt.replace('{{name}}', name || '').replace('{{age}}', age?.toString() || '').replace('{{notes}}', sanitizedNotes || '');
+    const prompt = analysisPrompt.replace('{{name}}', name || '').replace('{{sanitizedAge}}', age?.toString() || '').replace('{{sanitizedNotes}}', sanitizedNotes || '');
     const requestBody = {
       model: "gpt-4-turbo",
       messages: [
