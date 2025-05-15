@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
   try {
     const payload = await req.json();
-    console.log('Received payload:', JSON.stringify(payload, null, 2));
+    console.log('[describe-and-sketch] [Paso: Inicio] [IN] Received payload:', JSON.stringify(payload, null, 2));
 
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY'),
@@ -27,19 +27,23 @@ Deno.serve(async (req) => {
     El fondo debe ser blanco o neutro, ya que la imagen será utilizada como miniatura o como parte de un kit de identidad.
     texto adicional: ${payload.description || 'sin información'}`;
 
-    console.log('Image generation prompt:', imagePrompt);
-    console.log('Reference image URL:', payload.referenceImage || 'No reference image provided');
+    console.log('[describe-and-sketch] [Paso: Generación de imagen] [OUT] Image generation prompt:', imagePrompt);
+    console.log('[describe-and-sketch] [Paso: Generación de imagen] [OUT] Reference image URL:', payload.referenceImage || 'No reference image provided');
 
-    const imageResponse = await openai.images.generate({
+    const openaiPayload = {
       model: "gpt-image-1",
       prompt: imagePrompt,
       size: "1024x1024",
       n: 1,
       referenced_image_ids: payload.referenceImage ? [payload.referenceImage] : undefined,
       response_format: "url",
-    });
+    };
 
-    console.log('OpenAI image generation response:', JSON.stringify(imageResponse.data, null, 2));
+    console.log('[describe-and-sketch] [Paso: Generación de imagen] [OUT] OpenAI Request:', JSON.stringify(openaiPayload, null, 2));
+
+    const imageResponse = await openai.images.generate(openaiPayload);
+
+    console.log('[describe-and-sketch] [Paso: Generación de imagen] [IN] OpenAI Response:', JSON.stringify(imageResponse.data, null, 2));
 
     if (!imageResponse.data?.[0]?.url) {
       throw new Error('No se pudo generar la imagen del personaje');
@@ -53,7 +57,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in describe-and-sketch:', error);
+    console.error('[describe-and-sketch] [Error] Error in describe-and-sketch:', error);
     
     return new Response(
       JSON.stringify({ 
