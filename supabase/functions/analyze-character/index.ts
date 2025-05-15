@@ -20,7 +20,33 @@ const handleOpenAIError = (error: any) => {
 
 async function fetchImageAsBase64(imageUrl: string): Promise<string> {
   try {
-    // Create Supabase client to access storage
+    // For external URLs, use fetch directly
+    if (!imageUrl.includes(Deno.env.get('SUPABASE_URL') ?? '')) {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      return `data:${contentType};base64,${base64}`;
+    }
+
+    // For Supabase URLs, extract bucket and path
+    const url = new URL(imageUrl);
+    const pathParts = url.pathname.split('/');
+    const publicIndex = pathParts.indexOf('public');
+    
+    if (publicIndex === -1 || publicIndex + 2 >= pathParts.length) {
+      throw new Error('Invalid Supabase storage URL format');
+    }
+
+    const bucketName = pathParts[publicIndex + 1];
+    const filePath = pathParts.slice(publicIndex + 2).join('/');
+
+    console.log(`[analyze-character] Fetching from bucket: ${bucketName}, path: ${filePath}`);
+
+    // Create Supabase client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -32,60 +58,25 @@ async function fetchImageAsBase64(imageUrl: string): Promise<string> {
       }
     );
 
-    // Check if the URL is from Supabase storage
-    const isSupabaseStorage = imageUrl.includes(Deno.env.get('SUPABASE_URL') ?? '');
+    // Download file
+    const { data, error } = await supabaseAdmin
+      .storage
+      .from(bucketName)
+      .download(filePath);
 
-    let response;
-    if (isSupabaseStorage) {
-      // Extract the bucket and file path from the URL
-      const url = new URL(imageUrl);
-      const pathSegments = url.pathname.split('/');
-      
-      // Find the bucket name after 'storage/v1/object/public/'
-      const publicIndex = pathSegments.indexOf('public');
-      if (publicIndex === -1) {
-        throw new Error('Invalid Supabase storage URL format');
-      }
-      
-      const bucketName = pathSegments[publicIndex + 1];
-      const filePath = pathSegments.slice(publicIndex + 2).join('/');
-
-      if (!bucketName || !filePath) {
-        throw new Error('Could not extract bucket name or file path from URL');
-      }
-
-      console.log(`[analyze-character] Fetching from bucket: ${bucketName}, path: ${filePath}`);
-
-      // Download file directly from Supabase storage
-      const { data, error } = await supabaseAdmin
-        .storage
-        .from(bucketName)
-        .download(filePath);
-
-      if (error) {
-        console.error('Supabase storage error:', error);
-        throw new Error(`Failed to download from Supabase storage: ${error.message}`);
-      }
-
-      if (!data) {
-        throw new Error('No data received from Supabase storage');
-      }
-
-      // Convert blob to base64
-      const buffer = await data.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-      return `data:${data.type};base64,${base64}`;
-    } else {
-      // For external URLs, use fetch
-      response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-      }
-      const arrayBuffer = await response.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      const contentType = response.headers.get('content-type') || 'image/jpeg';
-      return `data:${contentType};base64,${base64}`;
+    if (error) {
+      console.error('Supabase storage error:', error);
+      throw new Error(`Failed to download from Supabase storage: ${error.message}`);
     }
+
+    if (!data) {
+      throw new Error('No data received from Supabase storage');
+    }
+
+    // Convert blob to base64
+    const buffer = await data.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    return `data:${data.type};base64,${base64}`;
   } catch (error) {
     console.error('Error fetching image:', error);
     throw error;
