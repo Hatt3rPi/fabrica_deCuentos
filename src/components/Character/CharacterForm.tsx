@@ -102,152 +102,108 @@ const CharacterForm: React.FC = () => {
     }
   });
 
-  const generateThumbnail = async (imageUrl: string) => {
+  const generateThumbnail = async () => {
+    setIsGeneratingThumbnail(true);
+    setUploadError(null);
+    
     try {
-      const description = typeof character.description === 'object' 
-        ? character.description.es 
-        : typeof character.description === 'string'
-          ? character.description.trim()
-          : '';
-
-      const payload = {
-        name: character.name.trim(),
-        age: character.age.trim(),
-        description,
-        referenceImage: imageUrl
-      };
-
-      console.log('Sending payload to describe-and-sketch:', payload);
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Error de red' }));
-        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+      // Verificar si tenemos descripción o imagen antes de continuar
+      if (!formData.description && !previewUrl) {
+        setFieldErrors(prev => ({
+          ...prev,
+          description: !formData.description ? "Se requiere una descripción o una imagen" : "",
+          image: !previewUrl ? "Se requiere una descripción o una imagen" : ""
+        }));
+        throw new Error("Se requiere una descripción o una imagen");
       }
-
-      const data = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      // Si tenemos imagen pero no descripción, usar una descripción genérica
+      const descriptionToUse = formData.description || 
+        `Personaje llamado ${formData.name} de ${formData.age} años`;
+      
+      const response = await fetch('/api/generate-thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: descriptionToUse,
+          imageData: previewUrl || null
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
       }
-
-      if (!data.thumbnailUrl) {
-        throw new Error('No se pudo generar la miniatura');
-      }
-
-      setCharacter(prev => ({
-        ...prev,
-        thumbnailUrl: data.thumbnailUrl,
-        description: data.description || prev.description
-      }));
-
-    } catch (err) {
-      console.error('Error generating thumbnail:', err);
-      setError(err instanceof Error ? err.message : 'Error al generar la miniatura');
-      throw err;
+      
+      const data = await response.json();
+      setFormData(prev => ({ ...prev, thumbnail: data.thumbnailUrl }));
+      
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      setUploadError(`Error al generar la miniatura: ${error.message}`);
+    } finally {
+      setIsGeneratingThumbnail(false);
     }
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    let fieldValidationErrors: {
-      name?: string;
-      age?: string;
-      description?: string;
-      image?: string;
-    } = {};
-
-    const description = typeof character.description === 'object' 
-      ? character.description.es 
-      : typeof character.description === 'string' 
-        ? character.description.trim() 
-        : '';
-
-    if (!character.name?.trim()) {
-      fieldValidationErrors.name = 'El nombre es obligatorio';
+    
+    // Validar campos
+    let errors: FieldErrors = {};
+    let isValid = true;
+    
+    if (!formData.name) {
+      errors.name = "El nombre es obligatorio";
+      isValid = false;
     }
-
-    if (!character.age?.trim()) {
-      fieldValidationErrors.age = 'La edad es obligatoria';
+    
+    if (!formData.age || formData.age <= 0) {
+      errors.age = "La edad debe ser un número positivo";
+      isValid = false;
     }
-
-    if (!description?.trim() && (!character.reference_urls || character.reference_urls.length === 0)) {
-      fieldValidationErrors.description = 'Debes proporcionar una descripción o una imagen';
-      fieldValidationErrors.image = 'Debes proporcionar una descripción o una imagen';
+    
+    // Validar que al menos esté presente la descripción o la imagen
+    if (!formData.description && !previewUrl) {
+      errors.description = "Se requiere una descripción o una imagen";
+      errors.image = "Se requiere una descripción o una imagen";
+      isValid = false;
     }
-
-    if (Object.keys(fieldValidationErrors).length > 0) {
-      setFieldErrors(fieldValidationErrors);
-      setError('Por favor corrige los errores antes de continuar');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      let data;
-      
-      if (isEditMode) {
-        const { data: updatedData, error } = await supabase
-          .from('characters')
-          .update({
-            name: character.name,
-            age: character.age,
-            description: character.description,
-            reference_urls: character.reference_urls,
-            thumbnailUrl: character.thumbnailUrl,
-            images: character.images
-          })
-          .eq('id', character.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-        data = updatedData;
-        
-        if (data) {
-          updateCharacter(character.id, data);
-        }
-      } else {
-        const { data: newData, error } = await supabase
-          .from('characters')
-          .insert([{
-            ...character,
-            user_id: (await supabase.auth.getUser()).data.user?.id
-          }])
-          .select()
-          .single();
-
-        if (error) throw error;
-        data = newData;
-        
-        if (data) {
-          addCharacter(data);
-        }
+    
+    setFieldErrors(errors);
+    
+    if (!isValid) return;
+    
+    // Generar miniatura si no existe una
+    if (!formData.thumbnail) {
+      try {
+        await generateThumbnail();
+      } catch (error) {
+        // El error ya se maneja dentro de generateThumbnail
+        return;
       }
-      
-      setIsRedirecting(true);
-      
-      // Wait 2 seconds before redirecting
-      setTimeout(() => {
-        navigate('/nuevo-cuento/personajes');
-      }, 2000);
-    } catch (err) {
-      setError(`Error al ${isEditMode ? 'actualizar' : 'guardar'} el personaje`);
-      console.error(err);
-      setIsLoading(false);
     }
+    
+    // Continuar con guardar el personaje...
+    if (isEditing && currentCharacter) {
+      // Actualizar el personaje existente
+      const updatedCharacter = {
+        ...currentCharacter,
+        ...formData,
+        image: previewUrl || currentCharacter.image
+      };
+      updateCharacter(updatedCharacter);
+    } else {
+      // Crear un nuevo personaje
+      const newCharacter = {
+        ...formData,
+        id: Date.now().toString(),
+        image: previewUrl || ""
+      };
+      addCharacter(newCharacter);
+    }
+    
+    // Navegar de vuelta a la lista de personajes
+    navigate("/personajes");
   };
-
   return (
     <div className="max-w-2xl mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
