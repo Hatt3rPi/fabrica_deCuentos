@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -7,10 +7,9 @@ import { useCharacterStore } from '../../stores/characterStore';
 import Button from '../UI/Button';
 
 const CharacterForm: React.FC = () => {
-  const { id } = useParams();
   const navigate = useNavigate();
   const { supabase } = useAuth();
-  const { addCharacter, updateCharacter, characters } = useCharacterStore();
+  const { addCharacter } = useCharacterStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [character, setCharacter] = useState({
@@ -19,15 +18,6 @@ const CharacterForm: React.FC = () => {
     description: { es: '', en: '' },
     reference_urls: [] as string[],
   });
-
-  useEffect(() => {
-    if (id) {
-      const existingCharacter = characters.find(c => c.id === id);
-      if (existingCharacter) {
-        setCharacter(existingCharacter);
-      }
-    }
-  }, [id, characters]);
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
@@ -73,10 +63,6 @@ const CharacterForm: React.FC = () => {
     e.preventDefault();
     setError(null);
 
-    const description = typeof character.description === 'object' 
-      ? character.description.es 
-      : character.description;
-
     if (!character.name?.trim()) {
       setError('El nombre es obligatorio');
       return;
@@ -87,32 +73,27 @@ const CharacterForm: React.FC = () => {
       return;
     }
 
+    const description = typeof character.description === 'object' 
+      ? character.description.es 
+      : character.description;
+
     if (!description?.trim() && (!character.reference_urls || character.reference_urls.length === 0)) {
       setError('Debes proporcionar una descripción o una imagen');
       return;
     }
 
     try {
-      if (id) {
-        const { error } = await supabase
-          .from('characters')
-          .update(character)
-          .eq('id', id);
+      const { data, error } = await supabase
+        .from('characters')
+        .insert([character])
+        .select()
+        .single();
 
-        if (error) throw error;
-        updateCharacter(id, character);
-      } else {
-        const { data, error } = await supabase
-          .from('characters')
-          .insert([character])
-          .select()
-          .single();
-
-        if (error) throw error;
-        if (data) addCharacter(data);
+      if (error) throw error;
+      if (data) {
+        addCharacter(data);
+        navigate('/nuevo-cuento/personajes');
       }
-
-      navigate('/nuevo-cuento/personajes');
     } catch (err) {
       setError('Error al guardar el personaje');
       console.error(err);
@@ -121,8 +102,8 @@ const CharacterForm: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-purple-800 mb-8 text-center">
-        {id ? 'Editar personaje' : 'Crear nuevo personaje'}
+      <h2 className="text-2xl font-bold text-purple-800 mb-8">
+        Personaje de tu Historia
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -136,7 +117,6 @@ const CharacterForm: React.FC = () => {
             onChange={(e) => setCharacter({ ...character, name: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Nombre del personaje"
-            aria-required="true"
           />
         </div>
 
@@ -150,7 +130,6 @@ const CharacterForm: React.FC = () => {
             onChange={(e) => setCharacter({ ...character, age: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Edad del personaje"
-            aria-required="true"
           />
         </div>
 
@@ -178,39 +157,27 @@ const CharacterForm: React.FC = () => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Imágenes de referencia
+            Imagen de referencia
           </label>
-          <div className="flex flex-wrap gap-2">
-            {character.reference_urls?.map((url, index) => (
-              <div
-                key={index}
-                className="w-16 h-16 relative rounded overflow-hidden"
-              >
-                <img
-                  src={url}
-                  alt={`Referencia ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
-            {(!character.reference_urls || character.reference_urls.length < 3) && (
-              <div
-                {...getRootProps()}
-                className="w-16 h-16 flex items-center justify-center border-2 border-dashed border-gray-300 rounded cursor-pointer hover:border-purple-500"
-              >
-                <input {...getInputProps()} />
-                {isLoading ? (
-                  <Loader className="w-6 h-6 text-purple-600 animate-spin" />
-                ) : (
-                  <Upload className="w-6 h-6 text-gray-400" />
-                )}
-              </div>
-            )}
+          <div {...getRootProps()} className="mt-2">
+            <input {...getInputProps()} />
+            <div className="w-full h-40 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-purple-500">
+              {isLoading ? (
+                <Loader className="w-8 h-8 text-purple-600 animate-spin" />
+              ) : (
+                <div className="text-center">
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">
+                    Arrastra una imagen o haz clic para seleccionar
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2" role="alert">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-red-600">{error}</p>
           </div>
