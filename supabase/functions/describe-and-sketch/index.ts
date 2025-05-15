@@ -56,24 +56,23 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1) Obtiene la clave y el prompt
+    // 1) Config y prompts
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) throw new Error('Falta la clave de API de OpenAI');
     const characterPrompt = Deno.env.get('PROMPT_CREAR_MINIATURA_PERSONAJE');
     if (!characterPrompt) throw new Error('Falta el prompt de generación de personaje');
 
-    // 2) Parseo y validación del payload
+    // 2) Payload
     const rawPayload = await req.json().catch(() => {
       throw new Error('Payload JSON inválido');
     });
     console.log('[describe-and-sketch] [INIT] rawPayload =', rawPayload);
     const { imageBase64, userNotes, name, age } = validatePayload(rawPayload);
 
-    // 3) Sanitización de textos
+    // 3) Sanitización
     const sanitizedName  = sanitizeText(name);
     const sanitizedAge   = sanitizeText(age);
     const sanitizedNotes = sanitizeText(userNotes);
-
     if (!sanitizedNotes && !imageBase64) {
       throw new Error('Se requiere una descripción o una imagen');
     }
@@ -81,7 +80,7 @@ Deno.serve(async (req) => {
       throw new Error('Formato de imagen inválido');
     }
 
-    // 4) Construye el prompt para la miniatura
+    // 4) Construir prompt
     const notesForPrompt = sanitizedNotes.trim() || 'sin información';
     let imagePrompt = characterPrompt
       .replace(/\$\{name\}/g, sanitizedName)
@@ -95,14 +94,12 @@ Deno.serve(async (req) => {
     }
     console.log('[describe-and-sketch] [Generación de imagen] [IN] ', imagePrompt);
 
-    // 5) Descarga la imagen de referencia y crea un File con MIME correcto
+    // 5) Descargar referencia y preparar Blob con MIME correcto
     const refRes = await fetch(imageBase64!);
     if (!refRes.ok) {
       throw new Error(`No se pudo descargar la imagen de referencia: ${refRes.status}`);
     }
     const refBuf = await refRes.arrayBuffer();
-
-    // Inferimos la extensión y el MIME type
     const urlPath = new URL(imageBase64!).pathname;
     const ext = urlPath.split('.').pop()!.toLowerCase();
     const mimeMap: Record<string,string> = {
@@ -112,28 +109,38 @@ Deno.serve(async (req) => {
       webp: 'image/webp'
     };
     const mimeType = mimeMap[ext] || 'image/png';
+    const refBlob = new Blob([refBuf], { type: mimeType });
 
-    const refFile = new File([refBuf], `reference.${ext}`, { type: mimeType });
+    // 6) Enviar a /v1/images/edits vía fetch + FormData
+    const formData = new FormData();
+    formData.append('model', 'gpt-image-1');
+    formData.append('prompt', imagePrompt);
+    formData.append('size', '1024x1024');
+    formData.append('n', '1');
+    formData.append('image', refBlob, `reference.${ext}`);
 
-    // 6) Llama al endpoint de edits para gpt-image-1
-    const openai = new OpenAI({ apiKey: openaiKey });
-    const imageResponse = await openai.images.edit({
-      model:  "gpt-image-1",
-      image:  refFile,
-      prompt: imagePrompt,
-      size:   "1024x1024",
-      n:      1
-    }).catch(err => {
-      if (err.status === 429) throw new Error('Demasiadas solicitudes a OpenAI');
-      throw new Error(`Error al editar la imagen: ${err.message}`);
+    const editRes = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+      },
+      body: formData
     });
+    const editData = await editRes.json();
+    if (!editRes.ok) {
+      const msg = editData.error?.message || editRes.statusText;
+      throw new Error(`Error al editar la imagen: ${msg}`);
+    }
 
-    // 7) Responde con la URL de la miniatura generada
-    const thumbUrl = imageResponse.data?.[0]?.url;
-    console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbUrl);
-    if (!thumbUrl) throw new Error('No se pudo generar la imagen del personaje');
+    // 7) GPT-image-1 siempre devuelve b64_json
+    const b64 = editData.data?.[0]?.b64_json;
+    if (!b64) {
+      throw new Error('No se generó la imagen editada');
+    }
+    const thumbnailUrl = `data:${mimeType};base64,${b64}`;
+    console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbnailUrl);
 
-    return new Response(JSON.stringify({ thumbnailUrl: thumbUrl }), {
+    return new Response(JSON.stringify({ thumbnailUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
