@@ -95,9 +95,9 @@ Deno.serve(async (req) => {
 
     // Generación de miniatura
     const imagePrompt = characterPrompt
-      .replace('{{name}}', sanitizedName)
-      .replace('{{sanitizedAge}}',  sanitizedAge)
-      .replace('{{sanitizedNotes}}', sanitizedNotes);
+      .replace('${name}', sanitizedName)
+      .replace('${sanitizedAge}',  sanitizedAge)
+      .replace('${sanitizedNotes}', sanitizedNotes);
 
     console.log('[describe-and-sketch] [Generación de imagen] [IN] ', imagePrompt);
 
