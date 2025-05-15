@@ -24,7 +24,13 @@ Deno.serve(async (req) => {
           content: [
             {
               type: "text",
-              text: "Please analyze this image and provide a JSON response with the following structure: { description: string }. Observe carefully and describe what you see in detail."
+              text: `Convierte a la persona presente en la(s) imagen(es) adjunta(s) en un personaje de cuento infantil.
+    El personaje debe mantener la apariencia visual consistente con la persona real: considera su edad, color de piel, tipo de cabello, rasgos faciales y complexión.
+    Usa colores suaves, expresiones dulces y formas redondeadas para que el personaje transmita ternura y se integre bien en un cuento infantil.
+    Si hay más de una imagen, intégralas para obtener una descripción consolidada del personaje.
+    Si se incluye un texto adicional, úsalo para complementar la interpretación: puedes tomar inspiración de su personalidad, profesión, gustos, emociones o rol en el cuento.
+    El fondo debe ser blanco o neutro, ya que la imagen será utilizada como miniatura o como parte de un kit de identidad.
+    texto adicional: ${sanitizedNotes || 'sin información'}`;
             },
             {
               type: "image_url",
