@@ -20,17 +20,61 @@ const handleOpenAIError = (error: any) => {
 
 async function fetchImageAsBase64(imageUrl: string): Promise<string> {
   try {
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+    // Create Supabase client to access storage
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
+
+    // Check if the URL is from Supabase storage
+    const isSupabaseStorage = imageUrl.includes(Deno.env.get('SUPABASE_URL') ?? '');
+
+    let response;
+    if (isSupabaseStorage) {
+      // Extract the bucket and file path from the URL
+      const url = new URL(imageUrl);
+      const pathParts = url.pathname.split('/');
+      const bucketName = pathParts[2]; // storage/v1/object/public/bucket-name/path
+      const filePath = pathParts.slice(4).join('/');
+
+      // Download file directly from Supabase storage
+      const { data, error } = await supabaseAdmin
+        .storage
+        .from(bucketName)
+        .download(filePath);
+
+      if (error) {
+        throw new Error(`Failed to download from Supabase storage: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error('No data received from Supabase storage');
+      }
+
+      // Convert blob to base64
+      const buffer = await data.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+      return `data:${data.type};base64,${base64}`;
+    } else {
+      // For external URLs, use fetch
+      response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      return `data:${contentType};base64,${base64}`;
     }
-    const arrayBuffer = await response.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    return `data:${contentType};base64,${base64}`;
   } catch (error) {
     console.error('Error fetching image:', error);
-    throw new Error('Failed to fetch and convert image');
+    throw new Error(`Failed to fetch and convert image: ${error.message}`);
   }
 }
 
@@ -45,6 +89,8 @@ Deno.serve(async (req) => {
     if (!imageUrl) {
       throw new Error('No image URL provided');
     }
+
+    console.log('[analyze-character] Attempting to fetch image:', imageUrl);
 
     // Convert the image URL to base64
     const base64Image = await fetchImageAsBase64(imageUrl);
