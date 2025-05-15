@@ -29,6 +29,7 @@ const CharactersStep: React.FC = () => {
     }
   }, [user]);
 
+
   useEffect(() => {
     // Cleanup timeout on unmount
     return () => {
@@ -37,6 +38,7 @@ const CharactersStep: React.FC = () => {
       }
     };
   }, []);
+
 
   const loadUserCharacters = async () => {
     try {
@@ -104,13 +106,17 @@ const CharactersStep: React.FC = () => {
     setIsUploading(true);
 
     try {
+
       const publicUrl = await uploadImageToStorage(file, characterId);
+
       const character = characters.find(c => c.id === characterId);
       if (!character) return;
 
       const updatedCharacter = {
         ...character,
+
         reference_urls: [...(character.reference_urls || []), publicUrl]
+
       };
 
       await updateCharacter(characterId, { reference_urls: updatedCharacter.reference_urls });
@@ -130,14 +136,17 @@ const CharactersStep: React.FC = () => {
   const generateThumbnail = async (characterId: string, retryCount = 0) => {
     const character = characters.find(c => c.id === characterId);
     if (!character) {
+      console.error('Character not found:', characterId);
       setUploadError('No se encontró el personaje');
       return;
     }
+
 
     const description = typeof character.description === 'object' ? character.description.es : character.description;
     
     // Enhanced validation with early return and specific error message
     if (!canGenerateThumbnail(character)) {
+
       setUploadError('Se requiere una descripción o una imagen del personaje');
       return;
     }
@@ -146,6 +155,7 @@ const CharactersStep: React.FC = () => {
     setUploadError(null);
 
     try {
+
       const payload = {
         description: description || '',
         name: character.name || '',
@@ -154,23 +164,29 @@ const CharactersStep: React.FC = () => {
       };
 
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
+
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
         },
+
         body: JSON.stringify(payload)
+
+      });
+
+      const data = await response.json();
+      console.log('Edge Function response:', {
+        status: response.status,
+        ok: response.ok,
+        data
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Error de red' }));
-        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
+        // Handle specific error codes
+        if (data.code === 'WORKER_LIMIT') {
+          throw new Error('El servicio está temporalmente sobrecargado. Por favor, espera unos minutos y vuelve a intentarlo.');
+        }
+        throw new Error(data.error || 'Error al generar la miniatura');
       }
 
       if (!data.thumbnailUrl) {
@@ -182,6 +198,7 @@ const CharactersStep: React.FC = () => {
         description: data.description || character.description
       });
 
+
       // Update global store
       const updatedCharacters = characters.map(c => 
         c.id === characterId 
@@ -190,16 +207,24 @@ const CharactersStep: React.FC = () => {
       );
       setStoreCharacters(updatedCharacters);
 
+
     } catch (error) {
-      console.error('Error generating thumbnail:', error);
+      console.error('Error generating thumbnail:', {
+        characterId,
+        error,
+        retryCount,
+        maxRetries: MAX_RETRIES
+      });
+
 
       if (retryCount < MAX_RETRIES) {
         setTimeout(() => generateThumbnail(characterId, retryCount + 1), RETRY_DELAY * Math.pow(2, retryCount));
         setUploadError('Error al generar. Reintentando...');
+
         return;
       }
 
-      setUploadError(error.message || 'Error al generar la miniatura');
+      setUploadError(error.message || 'Error al generar la miniatura. Por favor, inténtalo de nuevo más tarde.');
     } finally {
       setIsGenerating(null);
     }
@@ -448,6 +473,7 @@ const CharactersStep: React.FC = () => {
                     </label>
                   )}
                 </div>
+
               </div>
 
               <div className="flex gap-2">

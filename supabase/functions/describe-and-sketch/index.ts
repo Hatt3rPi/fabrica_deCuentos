@@ -51,11 +51,13 @@ function validatePayload(payload: any) {
 }
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+
     // 1) Config y prompts
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) throw new Error('Falta la clave de API de OpenAI');
