@@ -83,6 +83,7 @@ Deno.serve(async (req) => {
     }
 
     const openai = new OpenAI({ apiKey: openaiKey });
+    const notesForPrompt = sanitizedNotes.trim() || 'sin información';
 
     // Generación de miniatura
     const imagePrompt = characterPrompt
