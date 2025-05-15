@@ -77,16 +77,16 @@ const CharacterForm: React.FC = () => {
         const file = acceptedFiles[0];
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `reference-images/${fileName}`;
+        const filePath = `${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('characters')
+          .from('reference-images')
           .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
-          .from('characters')
+          .from('reference-images')
           .getPublicUrl(filePath);
 
         setCharacter(prev => ({
@@ -155,7 +155,9 @@ const CharacterForm: React.FC = () => {
 
     const description = typeof character.description === 'object' 
       ? character.description.es 
-      : character.description;
+      : typeof character.description === 'string' 
+        ? character.description.trim() 
+        : '';
 
     if (!description?.trim() && (!character.reference_urls || character.reference_urls.length === 0)) {
       fieldValidationErrors.description = 'Debes proporcionar una descripción o una imagen';
@@ -217,10 +219,10 @@ const CharacterForm: React.FC = () => {
       
       setIsRedirecting(true);
       
-      // Wait 1 second before redirecting
+      // Wait 2 seconds before redirecting
       setTimeout(() => {
         navigate('/nuevo-cuento/personajes');
-      }, 1000);
+      }, 2000);
     } catch (err) {
       setError(`Error al ${isEditMode ? 'actualizar' : 'guardar'} el personaje`);
       console.error(err);
