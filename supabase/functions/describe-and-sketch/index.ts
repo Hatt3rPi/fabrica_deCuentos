@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
     }
 
     const descriptionParams = {
-      model: "gpt-4-turbo",
+      model: "gpt-4-turbo-preview",
       messages,
       max_tokens: 1000,
       response_format: { type: "json_object" }
