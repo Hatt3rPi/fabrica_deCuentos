@@ -160,7 +160,7 @@ const Sidebar: React.FC = () => {
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center gap-3">
           <BookOpen className="w-8 h-8 text-purple-600" />
-          <span className="font-semibold text-gray-900">Fábrica</span>
+          <span className="font-semibold text-gray-900">CuenterIA</span>
         </div>
       </div>
 

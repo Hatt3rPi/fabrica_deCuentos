@@ -354,7 +354,7 @@ const LoginForm: React.FC = () => {
           <LogIn className="w-12 h-12 text-purple-600" />
         </div>
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">
-          {isRecovering ? 'Recuperar contraseña' : 'Fábrica de Cuentos'}
+          {isRecovering ? 'Recuperar contraseña' : 'La CuenterIA'}
         </h2>
         
         {isRecovering ? renderRecoveryForm() : renderLoginForm()}
