@@ -70,8 +70,8 @@ const CharactersStep: React.FC = () => {
 
   const uploadImageToStorage = async (file: File, characterId: string): Promise<string> => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user?.id}/${characterId}/reference-images/${Date.now()}.${fileExt}`;
-    const filePath = fileName;
+    const fileName = `reference-images/${Date.now()}.${fileExt}`;
+    const filePath = `${user?.id}/${characterId}/${fileName}`;
 
     const { error: uploadError, data } = await supabase.storage
       .from('storage')
