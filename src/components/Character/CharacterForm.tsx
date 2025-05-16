@@ -40,9 +40,11 @@ const CharacterForm: React.FC = () => {
   const isEditMode = Boolean(id);
 
   const uploadImageToStorage = async (file: File, characterId: string): Promise<string> => {
+    if (!user) throw new Error('User not authenticated');
+
     const fileExt = file.name.split('.').pop();
-    const fileName = `${characterId}/${Date.now()}.${fileExt}`;
-    const filePath = fileName;
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `reference-images/${user.id}/${characterId}/${fileName}`;
 
     const { error: uploadError, data } = await supabase.storage
       .from('storage')
@@ -59,7 +61,6 @@ const CharacterForm: React.FC = () => {
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Initialize autosave
   const { recoverFromBackup } = useAutosave({
     characters: [{ ...formData, id: id || crypto.randomUUID() }],
     meta: {
@@ -75,7 +76,6 @@ const CharacterForm: React.FC = () => {
     spreads: []
   }, id || '');
 
-  // Handle form field changes with autosave
   const handleFieldChange = (field: string, value: any) => {
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
@@ -85,7 +85,6 @@ const CharacterForm: React.FC = () => {
     });
   };
 
-  // Recovery logic
   useEffect(() => {
     const recoverState = async () => {
       if (id) {
@@ -150,19 +149,8 @@ const CharacterForm: React.FC = () => {
 
       try {
         const file = acceptedFiles[0];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('storage')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('storage')
-          .getPublicUrl(filePath);
+        const characterId = id || crypto.randomUUID();
+        const publicUrl = await uploadImageToStorage(file, characterId);
 
         setFormData(prev => ({
           ...prev,
@@ -213,7 +201,8 @@ const CharacterForm: React.FC = () => {
   };
 
   const generateThumbnail = async () => {
-    // Validar campos requeridos
+    if (!user) throw new Error('User not authenticated');
+    
     if (!formData.name.trim() || !formData.age.trim()) {
       setFieldErrors({
         name: !formData.name.trim() ? "El nombre es obligatorio" : undefined,
@@ -222,7 +211,6 @@ const CharacterForm: React.FC = () => {
       return;
     }
 
-    // Validar que exista al menos descripción o imagen
     if (!formData.description.es && !formData.reference_urls[0]) {
       setFieldErrors({
         description: "Se requiere una descripción o una imagen",
@@ -237,14 +225,12 @@ const CharacterForm: React.FC = () => {
     setRetryCount(0);
 
     try {
-      // Paso 1: Analizar y generar descripción con reintentos
       const descriptionData = await callAnalyzeCharacter();
       
       if (!descriptionData || !descriptionData.description) {
         throw new Error('No se pudo generar la descripción del personaje');
       }
 
-      // Actualizar descripción
       setFormData(prev => ({
         ...prev,
         description: {
@@ -256,7 +242,6 @@ const CharacterForm: React.FC = () => {
       setIsAnalyzing(false);
       setIsGeneratingThumbnail(true);
 
-      // Paso 2: Generar miniatura
       const thumbnailResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
         method: 'POST',
         headers: {
@@ -288,9 +273,23 @@ const CharacterForm: React.FC = () => {
         throw new Error('No se recibió una URL válida para la miniatura');
       }
 
+      const thumbnailPath = `thumbnails/${user.id}/${id || crypto.randomUUID()}.png`;
+      const response = await fetch(thumbnailData.thumbnailUrl);
+      const blob = await response.blob();
+      
+      const { error: uploadError } = await supabase.storage
+        .from('storage')
+        .upload(thumbnailPath, blob);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('storage')
+        .getPublicUrl(thumbnailPath);
+
       setFormData(prev => ({
         ...prev,
-        thumbnailUrl: thumbnailData.thumbnailUrl
+        thumbnailUrl: publicUrl
       }));
 
       setThumbnailGenerated(true);
