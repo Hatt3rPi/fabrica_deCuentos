@@ -1,4 +1,4 @@
-# 📚 Fábrica de Cuentos
+# 📚 La CuenterIA
 
 Plataforma web interactiva para crear cuentos infantiles personalizados con ilustraciones generadas mediante inteligencia artificial.
 
@@ -60,7 +60,7 @@ npm run dev
 ## 📝 Uso
 
 1. Inicia sesión con las credenciales de prueba:
-   - Email: demo@fabrica.com
+   - Email: demo@lacuenteria.com
    - Contraseña: demo123
 
 2. Sigue el asistente paso a paso:
@@ -92,4 +92,4 @@ Las contribuciones son bienvenidas. Por favor, abre un issue primero para discut
 
 ## ✨ Créditos
 
-Desarrollado con ❤️ por el equipo de Fábrica de Cuentos
+Desarrollado con ❤️ por el equipo de La CuenterIA

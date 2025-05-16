@@ -17,7 +17,7 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-2">
           <BookOpen className="w-8 h-8 text-purple-600" />
           <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
-            Fábrica de Cuentos
+            La CuenterIA
           </h1>
         </div>
 
