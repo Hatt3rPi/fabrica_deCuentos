@@ -11,28 +11,36 @@ const isValidUUID = (uuid: string) => {
   return uuidRegex.test(uuid);
 };
 
-export const useAutosave = (state: WizardState, storyId: string) => {
-  const { supabase } = useAuth();
+export const useAutosave = (state: WizardState, storyId: string | null) => {
+  const { supabase, user } = useAuth();
   const timeoutRef = useRef<number>();
   const retryCountRef = useRef(0);
 
   useEffect(() => {
+    // Skip if no user is logged in
+    if (!user) return;
+
     const save = async () => {
-      if (!storyId || !isValidUUID(storyId)) {
-        console.log('No valid storyId provided, skipping autosave');
+      // Generate a new storyId if none exists
+      const currentStoryId = storyId || crypto.randomUUID();
+      
+      if (!isValidUUID(currentStoryId)) {
+        console.error('Invalid storyId format');
         return;
       }
 
       try {
         // Save to localStorage first as backup
-        localStorage.setItem(`story_draft_${storyId}`, JSON.stringify(state));
+        localStorage.setItem(`story_draft_${currentStoryId}`, JSON.stringify(state));
 
         // Save to Supabase with retry logic
         const saveToSupabase = async (attempt: number = 0): Promise<void> => {
           try {
             const { error } = await supabase
               .from('stories')
-              .update({
+              .upsert({
+                id: currentStoryId,
+                user_id: user.id,
                 title: state.meta.title,
                 target_age: state.meta.targetAge,
                 literary_style: state.meta.literaryStyle,
@@ -41,7 +49,7 @@ export const useAutosave = (state: WizardState, storyId: string) => {
                 updated_at: new Date().toISOString(),
                 status: 'draft'
               })
-              .eq('id', storyId);
+              .select();
 
             if (error) throw error;
 
@@ -49,12 +57,12 @@ export const useAutosave = (state: WizardState, storyId: string) => {
             retryCountRef.current = 0;
             
             // Clear localStorage backup after successful save
-            localStorage.removeItem(`story_draft_${storyId}_backup`);
+            localStorage.removeItem(`story_draft_${currentStoryId}_backup`);
           } catch (error) {
             if (attempt < MAX_RETRIES) {
               // Save to localStorage backup before retrying
               localStorage.setItem(
-                `story_draft_${storyId}_backup`,
+                `story_draft_${currentStoryId}_backup`,
                 JSON.stringify({ state, timestamp: Date.now() })
               );
               
@@ -78,7 +86,7 @@ export const useAutosave = (state: WizardState, storyId: string) => {
         
         // Save to localStorage as emergency backup
         localStorage.setItem(
-          `story_draft_${storyId}_emergency`,
+          `story_draft_${currentStoryId}_emergency`,
           JSON.stringify({ state, timestamp: Date.now(), error })
         );
       }
@@ -91,12 +99,12 @@ export const useAutosave = (state: WizardState, storyId: string) => {
     return () => {
       clearTimeout(timeoutRef.current);
     };
-  }, [state, storyId, supabase]);
+  }, [state, storyId, supabase, user]);
 
   // Expose recovery method
-  const recoverFromBackup = async () => {
-    const backup = localStorage.getItem(`story_draft_${storyId}_backup`);
-    const emergency = localStorage.getItem(`story_draft_${storyId}_emergency`);
+  const recoverFromBackup = async (id: string) => {
+    const backup = localStorage.getItem(`story_draft_${id}_backup`);
+    const emergency = localStorage.getItem(`story_draft_${id}_emergency`);
     
     if (backup) {
       const { state: backupState } = JSON.parse(backup);
