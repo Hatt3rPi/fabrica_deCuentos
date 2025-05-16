@@ -17,11 +17,9 @@ export const useAutosave = (state: WizardState, storyId: string | null) => {
   const retryCountRef = useRef(0);
 
   useEffect(() => {
-    // Skip if no user is logged in
     if (!user) return;
 
     const save = async () => {
-      // Generate a new storyId if none exists
       const currentStoryId = storyId || crypto.randomUUID();
       
       if (!isValidUUID(currentStoryId)) {
@@ -33,62 +31,71 @@ export const useAutosave = (state: WizardState, storyId: string | null) => {
         // Save to localStorage first as backup
         localStorage.setItem(`story_draft_${currentStoryId}`, JSON.stringify(state));
 
-        // Save to Supabase with retry logic
-        const saveToSupabase = async (attempt: number = 0): Promise<void> => {
-          try {
-            const { error } = await supabase
-              .from('stories')
-              .upsert({
-                id: currentStoryId,
-                user_id: user.id,
-                title: state.meta.title,
-                target_age: state.meta.targetAge,
-                literary_style: state.meta.literaryStyle,
-                central_message: state.meta.centralMessage,
-                additional_details: state.meta.additionalDetails,
-                updated_at: new Date().toISOString(),
-                status: 'draft'
-              })
-              .select();
+        // Save characters to characters table
+        if (state.characters.length > 0) {
+          for (const character of state.characters) {
+            const characterData = {
+              id: character.id,
+              user_id: user.id,
+              name: character.name,
+              age: character.age,
+              description: character.description,
+              reference_urls: character.reference_urls || [],
+              thumbnail_url: character.thumbnailUrl,
+              updated_at: new Date().toISOString()
+            };
 
-            if (error) throw error;
+            const { error: characterError } = await supabase
+              .from('characters')
+              .upsert(characterData)
+              .eq('id', character.id);
 
-            // Reset retry count on successful save
-            retryCountRef.current = 0;
-            
-            // Clear localStorage backup after successful save
-            localStorage.removeItem(`story_draft_${currentStoryId}_backup`);
-          } catch (error) {
-            if (attempt < MAX_RETRIES) {
-              // Save to localStorage backup before retrying
-              localStorage.setItem(
-                `story_draft_${currentStoryId}_backup`,
-                JSON.stringify({ state, timestamp: Date.now() })
-              );
-              
-              // Increment retry count
-              retryCountRef.current = attempt + 1;
-              
-              // Exponential backoff
-              await new Promise(resolve => 
-                setTimeout(resolve, RETRY_DELAY * Math.pow(2, attempt))
-              );
-              
-              return saveToSupabase(attempt + 1);
-            }
-            throw error;
+            if (characterError) throw characterError;
           }
-        };
+        }
 
-        await saveToSupabase();
-      } catch (error) {
-        console.error('Error autosaving:', error);
+        // Save story metadata
+        const { error: storyError } = await supabase
+          .from('stories')
+          .upsert({
+            id: currentStoryId,
+            user_id: user.id,
+            title: state.meta.title,
+            target_age: state.meta.targetAge,
+            literary_style: state.meta.literaryStyle,
+            central_message: state.meta.centralMessage,
+            additional_details: state.meta.additionalDetails,
+            updated_at: new Date().toISOString(),
+            status: 'draft'
+          })
+          .select();
+
+        if (storyError) throw storyError;
+
+        // Reset retry count on successful save
+        retryCountRef.current = 0;
         
-        // Save to localStorage as emergency backup
-        localStorage.setItem(
-          `story_draft_${currentStoryId}_emergency`,
-          JSON.stringify({ state, timestamp: Date.now(), error })
-        );
+        // Clear localStorage backup after successful save
+        localStorage.removeItem(`story_draft_${currentStoryId}_backup`);
+      } catch (error) {
+        if (retryCountRef.current < MAX_RETRIES) {
+          // Save to localStorage backup before retrying
+          localStorage.setItem(
+            `story_draft_${currentStoryId}_backup`,
+            JSON.stringify({ state, timestamp: Date.now() })
+          );
+          
+          // Increment retry count
+          retryCountRef.current += 1;
+          
+          // Exponential backoff
+          await new Promise(resolve => 
+            setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCountRef.current - 1))
+          );
+          
+          return save();
+        }
+        throw error;
       }
     };
 

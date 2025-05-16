@@ -165,39 +165,9 @@ const CharacterForm: React.FC = () => {
     }
   });
 
-  const callAnalyzeCharacter = async (attempt = 0): Promise<any> => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          age: formData.age,
-          description: formData.description.es,
-          imageUrl: formData.reference_urls[0] || null
-        })
-      });
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          throw new Error('Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.');
-        }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Error al analizar el personaje');
-      }
-
-      return await response.json();
-    } catch (error) {
-      if (attempt < MAX_RETRIES) {
-        const backoffTime = Math.min(1000 * Math.pow(2, attempt), 8000);
-        await sleep(backoffTime);
-        return callAnalyzeCharacter(attempt + 1);
-      }
-      throw error;
-    }
+  const canGenerateThumbnail = (character: Character): boolean => {
+    const description = typeof character.description === 'object' ? character.description.es : character.description;
+    return !!(description && description.trim() !== '') || !!(character.reference_urls && character.reference_urls.length > 0);
   };
 
   const generateThumbnail = async () => {
@@ -312,10 +282,16 @@ const CharacterForm: React.FC = () => {
       return;
     }
 
+    if (!user) {
+      setError('Debes iniciar sesión para guardar el personaje');
+      return;
+    }
+
     try {
       setIsLoading(true);
       
       const characterData = {
+        user_id: user.id,
         name: formData.name,
         age: formData.age,
         description: formData.description,
@@ -323,10 +299,26 @@ const CharacterForm: React.FC = () => {
         thumbnail_url: formData.thumbnailUrl,
       };
 
-      if (isEditMode) {
+      if (isEditMode && id) {
+        const { error } = await supabase
+          .from('characters')
+          .update(characterData)
+          .eq('id', id);
+
+        if (error) throw error;
+        
         await updateCharacter(id, characterData);
       } else {
-        await addCharacter(characterData);
+        const { data, error } = await supabase
+          .from('characters')
+          .insert(characterData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          await addCharacter(data);
+        }
       }
 
       setIsRedirecting(true);
