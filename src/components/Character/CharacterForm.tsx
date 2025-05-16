@@ -155,13 +155,13 @@ const CharacterForm: React.FC = () => {
         const filePath = `${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('reference-images')
+          .from('storage')
           .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
-          .from('reference-images')
+          .from('storage')
           .getPublicUrl(filePath);
 
         setFormData(prev => ({
