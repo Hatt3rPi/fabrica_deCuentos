@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
@@ -21,6 +21,8 @@ const CharacterForm: React.FC = () => {
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000;
+  const DEBOUNCE_DELAY = 500;
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     age?: string;
