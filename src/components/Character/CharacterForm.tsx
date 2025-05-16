@@ -4,11 +4,12 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCharacterStore } from '../../stores/characterStore';
+import { Character } from '../../types';
 
 const CharacterForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const { addCharacter, updateCharacter } = useCharacterStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -26,12 +27,12 @@ const CharacterForm: React.FC = () => {
     description?: string;
     image?: string;
   }>({});
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Character>({
     name: '',
     age: '',
     description: { es: '', en: '' },
     reference_urls: [] as string[],
-    thumbnailUrl: null as string | null,
+    thumbnail_url: null as string | null,
   });
   
   const isEditMode = Boolean(id);
@@ -56,7 +57,7 @@ const CharacterForm: React.FC = () => {
               age: data.age,
               description: data.description,
               reference_urls: data.reference_urls || [],
-              thumbnailUrl: data.thumbnail_url,
+              thumbnail_url: data.thumbnail_url,
             });
             if (data.thumbnail_url) {
               setThumbnailGenerated(true);
@@ -90,17 +91,17 @@ const CharacterForm: React.FC = () => {
       try {
         const file = acceptedFiles[0];
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
+        const fileName = `${user?.id}/${id}/reference-images/${Date.now()}.${fileExt}`;
         const filePath = `${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('reference-images')
+          .from('storage')
           .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
-          .from('reference-images')
+          .from('storage')
           .getPublicUrl(filePath);
 
         setFormData(prev => ({
@@ -229,7 +230,7 @@ const CharacterForm: React.FC = () => {
 
       setFormData(prev => ({
         ...prev,
-        thumbnailUrl: thumbnailData.thumbnailUrl
+        thumbnail_url: thumbnailData.thumbnailUrl
       }));
 
       setThumbnailGenerated(true);
@@ -260,7 +261,7 @@ const CharacterForm: React.FC = () => {
         age: formData.age,
         description: formData.description,
         reference_urls: formData.reference_urls,
-        thumbnail_url: formData.thumbnailUrl,
+        thumbnail_url: formData.thumbnail_url,
       };
 
       if (isEditMode) {
@@ -395,9 +396,9 @@ const CharacterForm: React.FC = () => {
               Miniatura generada
             </label>
             <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-              {formData.thumbnailUrl ? (
+              {formData.thumbnail_url ? (
                 <img
-                  src={formData.thumbnailUrl}
+                  src={formData.thumbnail_url}
                   alt="Miniatura"
                   className="w-full h-full object-cover rounded-lg"
                 />

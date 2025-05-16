@@ -11,7 +11,8 @@ export interface Character {
   age: string;
   images: string[];
   thumbnailUrl: string | null;
-  reference_urls?: string[];
+  reference_urls: string[];
+  thumbnail_url: string | null;
   created_at?: string;
   updated_at?: string;
 }

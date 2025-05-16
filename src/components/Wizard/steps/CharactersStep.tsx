@@ -5,6 +5,8 @@ import { Upload, RefreshCw, Trash2, Plus, Loader, AlertCircle, Info } from 'luci
 import { Character } from '../../../types';
 import Button from '../../UI/Button';
 import { useCharacterStore } from '../../../stores/characterStore';
+import { supabase } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js/dist/main/lib/types';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -14,7 +16,7 @@ const DEBOUNCE_DELAY = 500; // 500ms debounce delay
 
 const CharactersStep: React.FC = () => {
   const { characters, setCharacters } = useWizard();
-  const { supabase, user } = useAuth();
+  const { supabase, user }: { supabase: supabase.SupabaseClient, user: User | null } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -68,17 +70,17 @@ const CharactersStep: React.FC = () => {
 
   const uploadImageToStorage = async (file: File, characterId: string): Promise<string> => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${characterId}/${Date.now()}.${fileExt}`;
+    const fileName = `${user?.id}/${characterId}/reference-images/${Date.now()}.${fileExt}`;
     const filePath = fileName;
 
     const { error: uploadError, data } = await supabase.storage
-      .from('reference-images')
+      .from('storage')
       .upload(filePath, file);
 
     if (uploadError) throw uploadError;
 
     const { data: { publicUrl } } = supabase.storage
-      .from('reference-images')
+      .from('storage')
       .getPublicUrl(filePath);
 
     return publicUrl;
@@ -115,11 +117,11 @@ const CharactersStep: React.FC = () => {
       const updatedCharacter = {
         ...character,
 
-        reference_urls: [...(character.reference_urls || []), publicUrl]
+        reference_urls: [...character.reference_urls, publicUrl]
 
       };
 
-      await updateCharacter(characterId, { reference_urls: updatedCharacter.reference_urls });
+      await updateCharacter(characterId, { reference_urls: updatedCharacter.reference_urls || [] });
     } catch (error) {
       console.error('Error uploading image:', error);
       setUploadError('Error al subir la imagen');
@@ -160,7 +162,7 @@ const CharactersStep: React.FC = () => {
         description: description || '',
         name: character.name || '',
         age: character.age || '',
-        referenceImage: character.reference_urls?.[0] || null
+        reference_urls: character.reference_urls?.[0] || null
       };
 
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
@@ -194,7 +196,7 @@ const CharactersStep: React.FC = () => {
       }
 
       await updateCharacter(characterId, {
-        thumbnail_url: data.thumbnailUrl,
+        thumbnailUrl: data.thumbnailUrl,
         description: data.description || character.description
       });
 
