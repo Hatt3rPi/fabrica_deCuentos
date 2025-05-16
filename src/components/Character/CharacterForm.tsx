@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCharacterStore } from '../../stores/characterStore';
+import { useAutosave } from '../../hooks/useAutosave';
 
 const CharacterForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const { addCharacter, updateCharacter } = useCharacterStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -19,6 +20,8 @@ const CharacterForm: React.FC = () => {
   const [fieldsReadOnly, setFieldsReadOnly] = useState(false);
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const lastSaveTimeRef = useRef<number>(Date.now());
+  const unsavedChangesRef = useRef(false);
   const MAX_RETRIES = 3;
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
@@ -37,6 +40,46 @@ const CharacterForm: React.FC = () => {
   const isEditMode = Boolean(id);
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Initialize autosave
+  const { recoverFromBackup } = useAutosave({
+    characters: [{ ...formData, id: id || crypto.randomUUID() }],
+    meta: {
+      status: 'draft',
+      title: formData.name || 'Nuevo personaje',
+      targetAge: '',
+      literaryStyle: '',
+      centralMessage: '',
+      additionalDetails: '',
+      synopsis: ''
+    },
+    styles: [],
+    spreads: []
+  }, id || '');
+
+  // Handle form field changes with autosave
+  const handleFieldChange = (field: string, value: any) => {
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      unsavedChangesRef.current = true;
+      lastSaveTimeRef.current = Date.now();
+      return newData;
+    });
+  };
+
+  // Recovery logic
+  useEffect(() => {
+    const recoverState = async () => {
+      if (id) {
+        const backupState = await recoverFromBackup();
+        if (backupState?.characters?.[0]) {
+          setFormData(backupState.characters[0]);
+        }
+      }
+    };
+
+    recoverState();
+  }, [id]);
   
   useEffect(() => {
     if (isEditMode && id) {
