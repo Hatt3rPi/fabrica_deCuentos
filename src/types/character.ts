@@ -12,6 +12,9 @@ export interface Character {
   images: string[];
   thumbnailUrl: string | null;
   reference_urls?: string[];
+  frontal_view_url?: string | null;
+  side_view_url?: string | null;
+  back_view_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }
