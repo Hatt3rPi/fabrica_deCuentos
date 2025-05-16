@@ -39,6 +39,24 @@ const CharacterForm: React.FC = () => {
   
   const isEditMode = Boolean(id);
 
+  const uploadImageToStorage = async (file: File, characterId: string): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${characterId}/${Date.now()}.${fileExt}`;
+    const filePath = fileName;
+
+    const { error: uploadError, data } = await supabase.storage
+      .from('storage')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('storage')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // Initialize autosave
