@@ -78,7 +78,7 @@ function AppContent() {
             </Routes>
           </main>
           <footer className="py-4 text-center text-purple-600 text-sm">
-            <p>Fábrica de Sueños © {new Date().getFullYear()}</p>
+            <p>Customware © {new Date().getFullYear()}</p>
           </footer>
         </div>
       </div>
