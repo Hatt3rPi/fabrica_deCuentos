@@ -11,18 +11,36 @@ const isValidUUID = (uuid: string) => {
   return uuidRegex.test(uuid);
 };
 
-export const useAutosave = (state: WizardState, storyId: string | null) => {
+export const useAutosave = (state: WizardState, initialStoryId: string | null) => {
   const { supabase, user } = useAuth();
   const timeoutRef = useRef<number>();
   const retryCountRef = useRef(0);
+  const storyIdRef = useRef<string | null>(null);
+
+  // Initialize storyId on mount
+  useEffect(() => {
+    if (!storyIdRef.current) {
+      // Try to recover from localStorage first
+      const savedId = localStorage.getItem('current_story_draft_id');
+      if (savedId && isValidUUID(savedId)) {
+        storyIdRef.current = savedId;
+      } else if (initialStoryId && isValidUUID(initialStoryId)) {
+        storyIdRef.current = initialStoryId;
+        localStorage.setItem('current_story_draft_id', initialStoryId);
+      } else {
+        const newId = crypto.randomUUID();
+        storyIdRef.current = newId;
+        localStorage.setItem('current_story_draft_id', newId);
+      }
+    }
+  }, [initialStoryId]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !storyIdRef.current) return;
 
     const save = async () => {
-      const currentStoryId = storyId || crypto.randomUUID();
-      
-      if (!isValidUUID(currentStoryId)) {
+      const currentStoryId = storyIdRef.current;
+      if (!currentStoryId || !isValidUUID(currentStoryId)) {
         console.error('Invalid storyId format');
         return;
       }
@@ -106,7 +124,14 @@ export const useAutosave = (state: WizardState, storyId: string | null) => {
     return () => {
       clearTimeout(timeoutRef.current);
     };
-  }, [state, storyId, supabase, user]);
+  }, [state, supabase, user]);
+
+  // Cleanup storyId on unmount
+  useEffect(() => {
+    return () => {
+      localStorage.removeItem('current_story_draft_id');
+    };
+  }, []);
 
   // Expose recovery method
   const recoverFromBackup = async (id: string) => {
@@ -126,5 +151,8 @@ export const useAutosave = (state: WizardState, storyId: string | null) => {
     return null;
   };
 
-  return { recoverFromBackup };
+  return { 
+    recoverFromBackup,
+    currentStoryId: storyIdRef.current 
+  };
 };
