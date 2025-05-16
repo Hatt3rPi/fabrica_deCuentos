@@ -4,7 +4,8 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCharacterStore } from '../../stores/characterStore';
-import { useAutosave } from '../../hooks/useAutosave';
+import { useCharacterAutosave } from '../../hooks/useCharacterAutosave';
+import { Character } from '../../types';
 
 const CharacterForm: React.FC = () => {
   const navigate = useNavigate();
@@ -20,22 +21,21 @@ const CharacterForm: React.FC = () => {
   const [fieldsReadOnly, setFieldsReadOnly] = useState(false);
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const lastSaveTimeRef = useRef<number>(Date.now());
-  const unsavedChangesRef = useRef(false);
-  const MAX_RETRIES = 3;
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     age?: string;
     description?: string;
     image?: string;
   }>({});
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<Character>>({
     name: '',
     age: '',
     description: { es: '', en: '' },
-    reference_urls: [] as string[],
-    thumbnailUrl: null as string | null,
+    reference_urls: [],
+    thumbnailUrl: null,
   });
+
+  const { currentCharacterId, recoverFromBackup } = useCharacterAutosave(formData, id);
   
   const isEditMode = Boolean(id);
 
@@ -60,30 +60,6 @@ const CharacterForm: React.FC = () => {
   };
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const { recoverFromBackup } = useAutosave({
-    characters: [{ ...formData, id: id || crypto.randomUUID() }],
-    meta: {
-      status: 'draft',
-      title: formData.name || 'Nuevo personaje',
-      targetAge: '',
-      literaryStyle: '',
-      centralMessage: '',
-      additionalDetails: '',
-      synopsis: ''
-    },
-    styles: [],
-    spreads: []
-  }, id || '');
-
-  const handleFieldChange = (field: string, value: any) => {
-    setFormData(prev => {
-      const newData = { ...prev, [field]: value };
-      unsavedChangesRef.current = true;
-      lastSaveTimeRef.current = Date.now();
-      return newData;
-    });
-  };
 
   useEffect(() => {
     const recoverState = async () => {
@@ -173,15 +149,15 @@ const CharacterForm: React.FC = () => {
   const generateThumbnail = async () => {
     if (!user) throw new Error('User not authenticated');
     
-    if (!formData.name.trim() || !formData.age.trim()) {
+    if (!formData.name?.trim() || !formData.age?.trim()) {
       setFieldErrors({
-        name: !formData.name.trim() ? "El nombre es obligatorio" : undefined,
-        age: !formData.age.trim() ? "La edad es obligatoria" : undefined,
+        name: !formData.name?.trim() ? "El nombre es obligatorio" : undefined,
+        age: !formData.age?.trim() ? "La edad es obligatoria" : undefined,
       });
       return;
     }
 
-    if (!formData.description.es && !formData.reference_urls[0]) {
+    if (!formData.description?.es && !formData.reference_urls?.[0]) {
       setFieldErrors({
         description: "Se requiere una descripción o una imagen",
         image: "Se requiere una descripción o una imagen"
@@ -204,8 +180,8 @@ const CharacterForm: React.FC = () => {
       setFormData(prev => ({
         ...prev,
         description: {
-          es: descriptionData.description.es || prev.description.es,
-          en: descriptionData.description.en || prev.description.en
+          es: descriptionData.description.es || prev.description?.es || '',
+          en: descriptionData.description.en || prev.description?.en || ''
         }
       }));
 
@@ -219,13 +195,13 @@ const CharacterForm: React.FC = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          name: formData.name.trim(),
-          age: formData.age.trim(),
+          name: formData.name?.trim(),
+          age: formData.age?.trim(),
           description: {
-            es: descriptionData.description.es || formData.description.es,
-            en: descriptionData.description.en || formData.description.en
+            es: descriptionData.description.es || formData.description?.es,
+            en: descriptionData.description.en || formData.description?.en
           },
-          referenceImage: formData.reference_urls[0] || null
+          referenceImage: formData.reference_urls?.[0] || null
         })
       });
 
@@ -243,7 +219,7 @@ const CharacterForm: React.FC = () => {
         throw new Error('No se recibió una URL válida para la miniatura');
       }
 
-      const thumbnailPath = `thumbnails/${user.id}/${id || crypto.randomUUID()}.png`;
+      const thumbnailPath = `thumbnails/${user.id}/${currentCharacterId}.png`;
       const response = await fetch(thumbnailData.thumbnailUrl);
       const blob = await response.blob();
       
@@ -291,6 +267,7 @@ const CharacterForm: React.FC = () => {
       setIsLoading(true);
       
       const characterData = {
+        id: currentCharacterId,
         user_id: user.id,
         name: formData.name,
         age: formData.age,
@@ -299,27 +276,12 @@ const CharacterForm: React.FC = () => {
         thumbnail_url: formData.thumbnailUrl,
       };
 
-      if (isEditMode && id) {
-        const { error } = await supabase
-          .from('characters')
-          .update(characterData)
-          .eq('id', id);
+      const { error } = await supabase
+        .from('characters')
+        .upsert(characterData)
+        .eq('id', currentCharacterId);
 
-        if (error) throw error;
-        
-        await updateCharacter(id, characterData);
-      } else {
-        const { data, error } = await supabase
-          .from('characters')
-          .insert(characterData)
-          .select()
-          .single();
-
-        if (error) throw error;
-        if (data) {
-          await addCharacter(data);
-        }
-      }
+      if (error) throw error;
 
       setIsRedirecting(true);
       navigate('/nuevo-cuento/personajes');
@@ -387,7 +349,7 @@ const CharacterForm: React.FC = () => {
             Descripción
           </label>
           <textarea
-            value={formData.description.es}
+            value={formData.description?.es}
             onChange={(e) => {
               setFormData({
                 ...formData,
@@ -419,7 +381,7 @@ const CharacterForm: React.FC = () => {
               <div className={`w-full aspect-square border-2 border-dashed rounded-lg flex items-center justify-center ${
                 fieldsReadOnly ? 'cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:border-purple-500'
               } ${fieldErrors.image ? 'border-red-500' : 'border-gray-300'}`}>
-                {formData.reference_urls[0] ? (
+                {formData.reference_urls?.[0] ? (
                   <img
                     src={formData.reference_urls[0]}
                     alt="Referencia"
@@ -437,7 +399,7 @@ const CharacterForm: React.FC = () => {
                 )}
               </div>
             </div>
-            {fieldErrors.image && !formData.reference_urls[0] && (
+            {fieldErrors.image && !formData.reference_urls?.[0] && (
               <p className="mt-1 text-xs text-red-500">{fieldErrors.image}</p>
             )}
           </div>
@@ -457,7 +419,7 @@ const CharacterForm: React.FC = () => {
                 <div className="text-center">
                   <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
                   <p className="text-sm text-purple-600">
-                    {retryCount > 0 ? `Reintentando análisis (${retryCount}/${MAX_RETRIES})...` : 'Analizando tu personaje...'}
+                    {retryCount > 0 ? `Reintentando análisis (${retryCount}/3)...` : 'Analizando tu personaje...'}
                   </p>
                 </div>
               ) : isGeneratingThumbnail ? (
