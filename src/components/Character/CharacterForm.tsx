@@ -93,12 +93,12 @@ const CharacterForm: React.FC = () => {
       try {
         const file = acceptedFiles[0];
         const fileExt = file.name.split('.').pop();
-        const fileName = `reference-images/${Date.now()}.${fileExt}`;
-        const filePath = `${user?.id}/${id}/${fileName}`;
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${user?.id}/${id}/reference-images/${fileName}`;
 
         const { error: uploadError, data } = await supabase.storage
           .from('storage')
-          .upload(fileName, file);
+          .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
