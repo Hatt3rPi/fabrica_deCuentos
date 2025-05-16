@@ -91,18 +91,17 @@ const CharacterForm: React.FC = () => {
       try {
         const file = acceptedFiles[0];
         const fileExt = file.name.split('.').pop();
-        const fileName = `${user?.id}/${id}/reference-images/${Date.now()}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const fileName = `${user?.id}/reference-images/${Date.now()}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError, data } = await supabase.storage
           .from('storage')
-          .upload(filePath, file);
+          .upload(fileName, file);
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
           .from('storage')
-          .getPublicUrl(filePath);
+          .getPublicUrl(fileName);
 
         setFormData(prev => ({
           ...prev,
@@ -153,7 +152,6 @@ const CharacterForm: React.FC = () => {
   };
 
   const generateThumbnail = async () => {
-    // Validar campos requeridos
     if (!formData.name.trim() || !formData.age.trim()) {
       setFieldErrors({
         name: !formData.name.trim() ? "El nombre es obligatorio" : undefined,
@@ -162,7 +160,6 @@ const CharacterForm: React.FC = () => {
       return;
     }
 
-    // Validar que exista al menos descripción o imagen
     if (!formData.description.es && !formData.reference_urls[0]) {
       setFieldErrors({
         description: "Se requiere una descripción o una imagen",
@@ -177,14 +174,12 @@ const CharacterForm: React.FC = () => {
     setRetryCount(0);
 
     try {
-      // Paso 1: Analizar y generar descripción con reintentos
       const descriptionData = await callAnalyzeCharacter();
       
       if (!descriptionData || !descriptionData.description) {
         throw new Error('No se pudo generar la descripción del personaje');
       }
 
-      // Actualizar descripción
       setFormData(prev => ({
         ...prev,
         description: {
@@ -196,7 +191,6 @@ const CharacterForm: React.FC = () => {
       setIsAnalyzing(false);
       setIsGeneratingThumbnail(true);
 
-      // Paso 2: Generar miniatura
       const thumbnailResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
         method: 'POST',
         headers: {
