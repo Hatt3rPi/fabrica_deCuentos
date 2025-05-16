@@ -25,10 +25,10 @@ Deno.serve(async (req) => {
     await resend.emails.send({
       from: 'no-reply@fabrica.com',
       to: email,
-      subject: 'Recuperación de contraseña - Fábrica de Cuentos',
+      subject: 'Recuperación de contraseña - La CuenterIA',
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #7C3AED; text-align: center;">Fábrica de Cuentos</h1>
+          <h1 style="color: #7C3AED; text-align: center;">La CuenterIA</h1>
           <p>Has solicitado restablecer tu contraseña. Utiliza el siguiente código para continuar:</p>
           <div style="background-color: #F3F4F6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
             <code style="font-size: 24px; letter-spacing: 4px;">${token}</code>
