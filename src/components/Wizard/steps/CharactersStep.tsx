@@ -124,3 +124,5 @@ const CharactersStep: React.FC = () => {
     </div>
   );
 };
+
+export default CharactersStep
