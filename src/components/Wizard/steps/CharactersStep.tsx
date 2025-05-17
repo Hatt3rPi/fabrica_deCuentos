@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Loader, AlertCircle, Info } from 'lucide-react';
+import { Plus, Loader, AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { Character } from '../../../types';
 import CharacterCard from '../../Character/CharacterCard';
+import Button from '../../UI/Button';
+import StepIndicator from '../StepIndicator';
 
 const CharactersStep: React.FC = () => {
   const navigate = useNavigate();
   const { storyId } = useParams();
-  const { supabase, user } = useAuth();
+  const { supabase } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +67,10 @@ const CharactersStep: React.FC = () => {
     }
   };
 
+  const handleNext = () => {
+    navigate(`/wizard/${storyId}/story`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -75,6 +81,8 @@ const CharactersStep: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      <StepIndicator />
+
       <div className="text-center">
         <h2 className="text-2xl font-bold text-purple-800 mb-2">
           Personajes de tu Historia
@@ -121,8 +129,27 @@ const CharactersStep: React.FC = () => {
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
+
+      <div className="flex justify-between gap-4 mt-8">
+        <Button
+          variant="outline"
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Anterior</span>
+        </Button>
+
+        <Button
+          onClick={handleNext}
+          className="flex items-center gap-2"
+        >
+          <span>Siguiente</span>
+          <ArrowRight className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 };
 
-export default CharactersStep
+export default CharactersStep;

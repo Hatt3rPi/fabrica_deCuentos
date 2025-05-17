@@ -16,6 +16,7 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [currentStoryId, setCurrentStoryId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,9 +49,29 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
     );
   };
 
-  const handleCreateCharacter = () => {
-    onClose();
-    navigate('/nuevo-cuento/personaje/nuevo');
+  const handleCreateCharacter = async () => {
+    try {
+      // Create new story draft if none exists
+      if (!currentStoryId) {
+        const { data: story, error: storyError } = await supabase
+          .from('stories')
+          .insert({
+            user_id: user?.id,
+            status: 'draft',
+            title: 'Nuevo cuento'
+          })
+          .select()
+          .single();
+
+        if (storyError) throw storyError;
+        setCurrentStoryId(story.id);
+      }
+
+      onClose();
+      navigate(`/wizard/${currentStoryId}/characters/new`);
+    } catch (error) {
+      console.error('Error creating story:', error);
+    }
   };
 
   const handleEditCharacter = (characterId: string) => {

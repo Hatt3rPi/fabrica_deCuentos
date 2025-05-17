@@ -17,7 +17,6 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ character }) => {
   const { supabase, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
@@ -313,7 +312,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ character }) => {
 
             <Button
               variant="outline"
-              onClick={() => navigate(`/wizard/${storyId}`)}
+              onClick={() => navigate(-1)}
               className="flex-1"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -326,4 +325,4 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ character }) => {
   );
 };
 
-export default CharacterForm
+export default CharacterForm;
