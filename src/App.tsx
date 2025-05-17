@@ -44,26 +44,18 @@ function AppContent() {
                 }
               />
               <Route
-                path="/nuevo-cuento/personajes"
+                path="/wizard/:storyId/characters/new"
+                element={
+                  <PrivateRoute>
+                    <CharacterForm />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/wizard/:storyId/characters"
                 element={
                   <PrivateRoute>
                     <CharactersGrid />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/nuevo-cuento/personaje/nuevo"
-                element={
-                  <PrivateRoute>
-                    <CharacterForm />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/nuevo-cuento/personaje/:id/editar"
-                element={
-                  <PrivateRoute>
-                    <CharacterForm />
                   </PrivateRoute>
                 }
               />
