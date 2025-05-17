@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle, Wand2, ArrowLeft } from 'lucide-react';
@@ -17,9 +17,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ character }) => {
   const { supabase, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
   const [formData, setFormData] = useState<Partial<Character>>({
     name: '',
@@ -71,6 +69,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ character }) => {
 
       if (relationError) throw relationError;
 
+      // Navigate back to characters grid
       navigate(`/wizard/${storyId}`);
     } catch (err) {
       console.error('Error saving character:', err);
@@ -313,11 +312,11 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ character }) => {
 
             <Button
               variant="outline"
-              onClick={() => navigate(`/wizard/${storyId}`)}
+              onClick={() => navigate(-1)}
               className="flex-1"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Volver</span>
+              <span>Anterior</span>
             </Button>
           </div>
         </form>
@@ -326,4 +325,4 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ character }) => {
   );
 };
 
-export default CharacterForm
+export default CharacterForm;
