@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Loader, AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Plus, Loader, AlertCircle, Info } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { Character } from '../../../types';
 import CharacterCard from '../../Character/CharacterCard';
-import StepIndicator from '../StepIndicator';
-import Button from '../../UI/Button';
 
 const CharactersStep: React.FC = () => {
   const navigate = useNavigate();
   const { storyId } = useParams();
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +75,6 @@ const CharactersStep: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <StepIndicator />
-
       <div className="text-center">
         <h2 className="text-2xl font-bold text-purple-800 mb-2">
           Personajes de tu Historia
@@ -97,32 +93,12 @@ const CharactersStep: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-white rounded-lg shadow-md p-4"
             >
-              <div className="flex items-center gap-4">
-                <img
-                  src={character.thumbnailUrl || 'https://via.placeholder.com/100'}
-                  alt={character.name}
-                  className="w-24 h-24 object-cover rounded-lg"
-                />
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold">{character.name}</h3>
-                  <p className="text-sm text-gray-600">{character.age} años</p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {typeof character.description === 'object'
-                      ? character.description.es
-                      : character.description}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDeleteCharacter(character.id)}
-                  >
-                    Eliminar
-                  </Button>
-                </div>
-              </div>
+              <CharacterCard
+                character={character}
+                onEdit={() => navigate(`/wizard/${storyId}/characters/${character.id}/edit`)}
+                onDelete={() => handleDeleteCharacter(character.id)}
+              />
             </motion.div>
           ))}
         </AnimatePresence>
@@ -145,25 +121,8 @@ const CharactersStep: React.FC = () => {
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
-
-      <div className="flex justify-between pt-6 border-t border-gray-200">
-        <Button
-          variant="outline"
-          onClick={() => navigate(-1)}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Anterior</span>
-        </Button>
-
-        <Button
-          onClick={() => navigate(`/wizard/${storyId}/story`)}
-        >
-          <span>Siguiente</span>
-          <ArrowRight className="w-4 h-4" />
-        </Button>
-      </div>
     </div>
   );
 };
 
-export default CharactersStep;
+export default CharactersStep
