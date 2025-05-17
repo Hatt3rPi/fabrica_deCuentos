@@ -325,3 +325,5 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ character }) => {
     </div>
   );
 };
+
+export default CharacterForm
