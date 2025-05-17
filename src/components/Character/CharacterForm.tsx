@@ -61,6 +61,40 @@ const CharacterForm: React.FC = () => {
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+  const callAnalyzeCharacter = async (attempt = 0): Promise<any> => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          age: formData.age,
+          description: formData.description.es,
+          imageUrl: formData.reference_urls[0] || null
+        })
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.');
+        }
+        throw new Error('Error al analizar el personaje');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (attempt < 3) {
+        const backoffTime = Math.min(1000 * Math.pow(2, attempt), 8000);
+        await sleep(backoffTime);
+        return callAnalyzeCharacter(attempt + 1);
+      }
+      throw error;
+    }
+  };
+
   useEffect(() => {
     const recoverState = async () => {
       if (id) {
