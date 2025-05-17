@@ -23,7 +23,13 @@ const CharactersGrid: React.FC = () => {
         return;
       }
 
-      setCharacters(data || []);
+      // Transform the data to match the Character type
+      const transformedCharacters = data?.map(char => ({
+        ...char,
+        thumbnailUrl: char.thumbnail_url // Use the generated thumbnail
+      })) || [];
+
+      setCharacters(transformedCharacters);
     };
 
     loadCharacters();
