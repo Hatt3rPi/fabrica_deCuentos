@@ -5,10 +5,6 @@ import { Plus, X, Loader, Trash2, Edit } from 'lucide-react';
 import { Character } from '../../types';
 import Button from '../UI/Button';
 
-const DEFAULT_TARGET_AGE = '6-8';
-const DEFAULT_LITERARY_STYLE = 'narrativo';
-const DEFAULT_CENTRAL_MESSAGE = 'amistad';
-
 interface ModalPersonajesProps {
   isOpen: boolean;
   onClose: () => void;
@@ -19,7 +15,7 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,35 +40,6 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
     }
   };
 
-  const handleCreateNew = async () => {
-    if (!user) return;
-    setIsCreating(true);
-
-    try {
-      const { data: story, error } = await supabase
-        .from('stories')
-        .insert({
-          user_id: user.id,
-          status: 'draft',
-          title: 'Nuevo cuento',
-          target_age: DEFAULT_TARGET_AGE,
-          literary_style: DEFAULT_LITERARY_STYLE,
-          central_message: DEFAULT_CENTRAL_MESSAGE
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      onClose();
-      navigate(`/wizard/${story.id}/characters/new`);
-    } catch (error) {
-      console.error('Error creating story:', error);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
   const toggleCharacter = (characterId: string) => {
     setSelectedCharacters(prev =>
       prev.includes(characterId)
@@ -81,25 +48,71 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
     );
   };
 
+  const handleCreateCharacter = () => {
+    onClose();
+    navigate('/nuevo-cuento/personaje/nuevo');
+  };
+
+  const handleEditCharacter = (characterId: string) => {
+    onClose();
+    navigate(`/nuevo-cuento/personaje/${characterId}/editar`);
+  };
+
+  const handleDeleteCharacter = async (characterId: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este personaje?')) return;
+
+    setIsDeleting(characterId);
+    try {
+      // Delete character images from storage
+      const character = characters.find(c => c.id === characterId);
+      if (character?.reference_urls?.length) {
+        for (const url of character.reference_urls) {
+          const path = url.split('/').pop();
+          if (path) {
+            await supabase.storage
+              .from('characters')
+              .remove([`reference-images/${characterId}/${path}`]);
+          }
+        }
+      }
+
+      // Delete character from database
+      const { error } = await supabase
+        .from('characters')
+        .delete()
+        .eq('id', characterId);
+
+      if (error) throw error;
+
+      // Update local state
+      setCharacters(prev => prev.filter(c => c.id !== characterId));
+      setSelectedCharacters(prev => prev.filter(id => id !== characterId));
+    } catch (error) {
+      console.error('Error deleting character:', error);
+      alert('Error al eliminar el personaje');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
   const handleContinue = async () => {
     if (selectedCharacters.length === 0) return;
 
     try {
+      // Create new story draft
       const { data: story, error: storyError } = await supabase
         .from('stories')
         .insert({
           user_id: user?.id,
           status: 'draft',
-          title: 'Nuevo cuento',
-          target_age: DEFAULT_TARGET_AGE,
-          literary_style: DEFAULT_LITERARY_STYLE,
-          central_message: DEFAULT_CENTRAL_MESSAGE
+          title: 'Nuevo cuento'
         })
         .select()
         .single();
 
       if (storyError) throw storyError;
 
+      // Link selected characters to story
       const { error: linkError } = await supabase
         .from('story_characters')
         .insert(
@@ -161,6 +174,27 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
                       className="w-full h-full object-cover"
                     />
                   </div>
+                  
+                  {/* Character actions */}
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEditCharacter(character.id)}
+                      className="p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
+                    >
+                      <Edit className="w-4 h-4 text-purple-600" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCharacter(character.id)}
+                      disabled={isDeleting === character.id}
+                      className="p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
+                    >
+                      {isDeleting === character.id ? (
+                        <Loader className="w-4 h-4 text-red-600 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      )}
+                    </button>
+                  </div>
 
                   {selectedCharacters.includes(character.id) && (
                     <div className="absolute inset-0 bg-purple-600 bg-opacity-20 flex items-center justify-center">
@@ -175,21 +209,11 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
                 </div>
               ))}
               <button
-                onClick={handleCreateNew}
-                disabled={isCreating}
-                className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleCreateCharacter}
+                className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-colors"
               >
-                {isCreating ? (
-                  <>
-                    <Loader className="w-8 h-8 animate-spin" />
-                    <span className="text-sm">Creando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-8 h-8" />
-                    <span className="text-sm">Crear nuevo</span>
-                  </>
-                )}
+                <Plus className="w-8 h-8" />
+                <span className="text-sm">Crear nuevo</span>
               </button>
             </div>
           )}
