@@ -5,8 +5,6 @@ import { Plus, X, Loader, Trash2, Edit } from 'lucide-react';
 import { Character } from '../../types';
 import Button from '../UI/Button';
 
-const DEFAULT_TARGET_AGE = '6-8';
-
 interface ModalPersonajesProps {
   isOpen: boolean;
   onClose: () => void;
@@ -50,29 +48,9 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
     );
   };
 
-  const handleCreateCharacter = async () => {
-    try {
-      // Create new story with required fields
-      const { data: story, error: storyError } = await supabase
-        .from('stories')
-        .insert({
-          user_id: user?.id,
-          status: 'draft',
-          title: 'Nuevo cuento',
-          target_age: DEFAULT_TARGET_AGE,
-          literary_style: '',
-          central_message: ''
-        })
-        .select()
-        .single();
-
-      if (storyError) throw storyError;
-
-      onClose();
-      navigate(`/wizard/${story.id}/characters/new`);
-    } catch (error) {
-      console.error('Error creating story:', error);
-    }
+  const handleCreateCharacter = () => {
+    onClose();
+    navigate('/nuevo-cuento/personaje/nuevo');
   };
 
   const handleEditCharacter = (characterId: string) => {
@@ -121,16 +99,13 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
     if (selectedCharacters.length === 0) return;
 
     try {
-      // Create new story with required fields
+      // Create new story draft
       const { data: story, error: storyError } = await supabase
         .from('stories')
         .insert({
           user_id: user?.id,
           status: 'draft',
-          title: 'Nuevo cuento',
-          target_age: DEFAULT_TARGET_AGE,
-          literary_style: '',
-          central_message: ''
+          title: 'Nuevo cuento'
         })
         .select()
         .single();
