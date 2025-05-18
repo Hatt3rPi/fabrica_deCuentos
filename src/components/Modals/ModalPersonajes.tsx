@@ -168,11 +168,17 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
                     onClick={() => toggleCharacter(character.id)}
                     className="aspect-square rounded-lg overflow-hidden"
                   >
-                    <img
-                      src={character.thumbnailUrl || 'https://images.pexels.com/photos/1314550/pexels-photo-1314550.jpeg'}
-                      alt={character.name}
-                      className="w-full h-full object-cover"
-                    />
+                    {character.thumbnail_url ? (
+                      <img
+                        src={character.thumbnail_url}
+                        alt={character.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                        <span className="text-gray-400">Sin imagen</span>
+                      </div>
+                    )}
                   </div>
                   
                   {/* Character actions */}
