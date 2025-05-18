@@ -300,23 +300,6 @@ const CharacterForm: React.FC = () => {
     try {
       setIsLoading(true);
       
-      // Crear una nueva story con todos los campos NOT NULL
-      const { data: story, error: storyError } = await supabase
-        .from('stories')
-        .insert({
-          user_id: user.id,
-          status: 'draft',
-          title: 'Nuevo cuento',
-          target_age: 'infantil',
-          literary_style: 'cuento',
-          central_message: 'amistad'
-        })
-        .select()
-        .single();
-
-      if (storyError) throw storyError;
-
-      // Crear el personaje
       const characterData = {
         id: currentCharacterId,
         user_id: user.id,
@@ -327,25 +310,15 @@ const CharacterForm: React.FC = () => {
         thumbnail_url: formData.thumbnailUrl,
       };
 
-      const { error: characterError } = await supabase
+      const { error } = await supabase
         .from('characters')
         .upsert(characterData)
         .eq('id', currentCharacterId);
 
-      if (characterError) throw characterError;
-
-      // Crear la relación entre story y personaje
-      const { error: storyCharacterError } = await supabase
-        .from('story_characters')
-        .insert({
-          story_id: story.id,
-          character_id: currentCharacterId
-        });
-
-      if (storyCharacterError) throw storyCharacterError;
+      if (error) throw error;
 
       setIsRedirecting(true);
-      navigate(`/wizard/${story.id}`);
+      navigate('/nuevo-cuento/personajes');
     } catch (err) {
       console.error('Error saving character:', err);
       setError('Error al guardar el personaje');
