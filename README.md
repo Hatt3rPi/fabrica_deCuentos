@@ -164,13 +164,13 @@ graph TD
     J --> L[Github: Eliminar rama]
     
     style A fill:#f9f,stroke:#333,stroke-width:2px
-    style B fill:#bbf,stroke:#333,stroke-width:2px
+    style B fill:#bfb,stroke:#333,stroke-width:2px
     style C fill:#bfb,stroke:#333,stroke-width:2px
     style D fill:#bbf,stroke:#333,stroke-width:2px
     style E fill:#bbf,stroke:#333,stroke-width:2px
     style F fill:#bbf,stroke:#333,stroke-width:2px
     style G fill:#bfb,stroke:#333,stroke-width:2px
-    style H fill:#bbf,stroke:#333,stroke-width:2px
+    style H fill:#bfb,stroke:#333,stroke-width:2px
     style I fill:#bfb,stroke:#333,stroke-width:2px
     style J fill:#bbf,stroke:#333,stroke-width:2px
     style K fill:#bfb,stroke:#333,stroke-width:2px
