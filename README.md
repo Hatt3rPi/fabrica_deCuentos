@@ -2,6 +2,20 @@
 
 Plataforma web interactiva para crear cuentos infantiles personalizados con ilustraciones generadas mediante inteligencia artificial.
 
+## 📋 Índice
+
+- [🌟 Características](#-características)
+- [🚀 Tecnologías](#-tecnologías)
+- [🛠️ Instalación](#-instalación)
+- [📝 Uso](#-uso)
+- [📖 Estructura del Proyecto](#-estructura-del-proyecto)
+- [🛠️ Componentes Principales](#-componentes-principales)
+- [📊 Flujo de Usuario](#-flujo-de-usuario)
+- [🔧 Contextos](#-contextos)
+- [🤝 Contribución](#-contribución)
+- [📄 Licencia](#-licencia)
+- [✨ Créditos](#-créditos)
+
 ## 🌟 Características
 
 - **Creación de Personajes**
@@ -29,10 +43,15 @@ Plataforma web interactiva para crear cuentos infantiles personalizados con ilus
 ## 🚀 Tecnologías
 
 - **Frontend**
-  - React + TypeScript
-  - Tailwind CSS
-  - Supabase Auth
-  - Lucide Icons
+  - React 18 + TypeScript
+  - Vite como bundler
+  - Tailwind CSS para estilos
+  - Lucide Icons para iconografía
+  - React Router DOM para navegación
+
+- **Backend**
+  - Supabase para autenticación y base de datos
+  - API de IA para generación de imágenes
 
 ## 🛠️ Instalación
 
@@ -75,12 +94,52 @@ npm run dev
 src/
 ├── components/         # Componentes React
 │   ├── Auth/          # Componentes de autenticación
+│   ├── Character/     # Componentes de personajes
 │   ├── Layout/        # Componentes de estructura
 │   └── Wizard/        # Asistente paso a paso
 ├── context/           # Contextos de React
+├── pages/             # Páginas principales
 ├── types/             # Definiciones TypeScript
 └── main.tsx          # Punto de entrada
 ```
+
+## 🛠️ Componentes Principales
+
+### Componentes de Personajes
+- `CharactersGrid`: Muestra y gestiona la lista de personajes
+- `CharacterForm`: Formulario para crear y editar personajes
+- `CharacterCard`: Tarjeta individual de personaje
+
+### Componentes de Layout
+- `Header`: Barra de navegación superior
+- `Sidebar`: Menú lateral de navegación
+
+## 📊 Flujo de Usuario
+
+1. **Autenticación**
+   - Inicio de sesión
+   - Registro
+   - Gestión de sesión
+
+2. **Creación de Personajes**
+   - Seleccionar número de personajes
+   - Definir características
+   - Generar y personalizar imágenes
+
+3. **Diseño de Historia**
+   - Definir tema y estilo
+   - Estructurar el cuento
+   - Personalizar mensajes
+
+4. **Visualización y Exportación**
+   - Previsualización tipo libro
+   - Ajustes finales
+   - Exportación a PDF
+
+## 🔧 Contextos
+
+- `AuthContext`: Manejo de autenticación
+- `WizardContext`: Estado y control del asistente
 
 ## 🤝 Contribución
 
