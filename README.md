@@ -151,4 +151,4 @@ Las contribuciones son bienvenidas. Por favor, abre un issue primero para discut
 
 ## ✨ Créditos
 
-Desarrollado con ❤️ por el equipo de La CuenterIA
+Desarrollado con ❤️ por el equipo de Customware
