@@ -6,7 +6,7 @@ Este documento define la metodología de trabajo que utilizaremos para organizar
 graph TD
     A[Linear: Backlog] --> B[Linear: Todo]
     B --> C[Linear: In Progress]
-    C --> D[Github: Crear rama "feature/bug/improvement {username}/{issue-title}"]
+    C --> D[Github: Crear rama "feature/bug/improvement username/issue-title"]
     D --> E[Github: Desarrollo]
     E --> F[Github: Crear Pull Request]
     F --> G[Linear: In Review]
