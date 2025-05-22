@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import notificationService from '../services/notificationService';
 import { 
-  Notification, 
   NotificationType, 
   NotificationPriority,
   NotificationFilterOptions,
   NotificationGroup
 } from '../types/notification';
+import type { Notification } from '../types/notification';
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -228,4 +228,3 @@ export const useNotifications = () => {
     requestNotificationPermission
   };
 };
-

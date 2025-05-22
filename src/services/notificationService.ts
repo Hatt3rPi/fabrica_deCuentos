@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { 
-  BrowserNotification,
   NotificationType, 
   NotificationPriority,
-  NotificationFilterOptions,
-  Notification
+  NotificationFilterOptions
 } from '../types/notification';
+// Rename the imported interface to avoid conflict with browser's Notification API
+import type { Notification as AppNotification } from '../types/notification';
 import { v4 as uuidv4 } from 'uuid';
 
 // Supabase client initialization would typically be imported from a central location
@@ -15,7 +15,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 class NotificationService {
   private static instance: NotificationService;
-  private notificationListeners: ((notification: Notification) => void)[] = [];
+  private notificationListeners: ((notification: AppNotification) => void)[] = [];
 
   private constructor() {
     // Initialize service worker registration
@@ -47,7 +47,7 @@ class NotificationService {
     }
   }
 
-  private handleNotificationClick(notification: Notification) {
+  private handleNotificationClick(notification: AppNotification) {
     // Handle notification click based on notification type
     console.log('Notification clicked:', notification);
     // Implement navigation or action based on notification type and data
@@ -74,7 +74,7 @@ class NotificationService {
   public async getNotifications(
     userId: string, 
     options: NotificationFilterOptions = {}
-  ): Promise<Notification[]> {
+  ): Promise<AppNotification[]> {
     let query = supabase
       .from('notifications')
       .select('*')
@@ -109,7 +109,7 @@ class NotificationService {
       return [];
     }
 
-    return data as Notification[];
+    return data as AppNotification[];
   }
 
   public async getUnreadCount(userId: string): Promise<number> {
@@ -172,8 +172,8 @@ class NotificationService {
     priority: NotificationPriority = NotificationPriority.MEDIUM,
     data?: Record<string, any>,
     actions?: any[]
-  ): Promise<Notification | null> {
-    const notification: Notification = {
+  ): Promise<AppNotification | null> {
+    const notification: AppNotification = {
       id: uuidv4(),
       userId,
       type,
@@ -204,7 +204,7 @@ class NotificationService {
     return notification;
   }
 
-  private async sendBrowserNotification(notification: Notification) {
+  private async sendBrowserNotification(notification: AppNotification) {
     if (Notification.permission === 'granted') {
       const browserNotification = new Notification(notification.title, {
         body: notification.message,
@@ -223,7 +223,7 @@ class NotificationService {
     }
   }
 
-  private getNotificationUrl(notification: Notification): string {
+  private getNotificationUrl(notification: AppNotification): string {
     // Determine URL based on notification type and data
     switch (notification.type) {
       case NotificationType.CHARACTER_GENERATION_COMPLETE:
@@ -239,15 +239,15 @@ class NotificationService {
     }
   }
 
-  public addNotificationListener(listener: (notification: Notification) => void) {
+  public addNotificationListener(listener: (notification: AppNotification) => void) {
     this.notificationListeners.push(listener);
   }
 
-  public removeNotificationListener(listener: (notification: Notification) => void) {
+  public removeNotificationListener(listener: (notification: AppNotification) => void) {
     this.notificationListeners = this.notificationListeners.filter(l => l !== listener);
   }
 
-  private notifyListeners(notification: Notification) {
+  private notifyListeners(notification: AppNotification) {
     this.notificationListeners.forEach(listener => {
       try {
         listener(notification);
@@ -258,7 +258,7 @@ class NotificationService {
   }
 
   // Method to subscribe to real-time notifications
-  public subscribeToRealtimeNotifications(userId: string, callback: (notification: Notification) => void) {
+  public subscribeToRealtimeNotifications(userId: string, callback: (notification: AppNotification) => void) {
     const subscription = supabase
       .channel(`notifications:${userId}`)
       .on('postgres_changes', {
@@ -267,7 +267,7 @@ class NotificationService {
         table: 'notifications',
         filter: `userId=eq.${userId}`,
       }, (payload) => {
-        callback(payload.new as Notification);
+        callback(payload.new as AppNotification);
       })
       .subscribe();
 
