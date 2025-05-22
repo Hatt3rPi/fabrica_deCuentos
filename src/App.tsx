@@ -11,6 +11,7 @@ import MyStories from './pages/MyStories';
 import CharacterForm from './components/Character/CharacterForm';
 import CharactersGrid from './components/Character/CharactersGrid';
 import NotificationBell from './components/Notifications/NotificationBell';
+import ToastContainer from './components/UI/ToastContainer';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -83,6 +84,7 @@ function AppContent() {
           </footer>
         </div>
       </div>
+      <ToastContainer />
     </WizardProvider>
   );
 }
