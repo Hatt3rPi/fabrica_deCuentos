@@ -6,7 +6,7 @@ trigger: always_on
 
 ---
 
-## 📁 Estructura de almacenamiento
+## 📁 Estructura de almacenamiento. asegúrate de cumplirlo
 
 - Todos los issues deben guardarse como archivos `.md` dentro de la carpeta `.issues`.
 - Formato de nombre del archivo: `{timestamp} {Categoría} {Nombre}.md`  
@@ -53,9 +53,9 @@ trigger: always_on
 
 ## 📄 Template estandarizado para Issues
 
-Épica:
-Categoría:
-Notas para devs:
+Épica: [Identifica a que épica pertenece]
+Categoría: [Identifica la categoría a la que pertenece]
+Notas para devs: [En caso de existir notas adicionales para devs. incluirlas acá. por ejemplo tablas, bases de datos, etc..]
 
 Archivos afectados:
 [Identifica los archivos afectados analizando el workspace completo, rutas absolutas o relativas dentro del repo. En caso que se deban generar archivos indica '(nuevo)'. Prioriza el código actual sobre archivos inventados.]
@@ -132,4 +132,3 @@ EXTRAS:
 ---
 
 Este archivo define las reglas base y el formato que debe seguir el agente para generar issues limpios, claros y alineados a las necesidades del equipo de desarrollo.
-
