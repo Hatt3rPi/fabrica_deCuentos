@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { WizardState } from '../types';
 
@@ -16,27 +16,45 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
   const timeoutRef = useRef<number>();
   const retryCountRef = useRef(0);
   const storyIdRef = useRef<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize storyId on mount
+  // Initialize storyId on mount - only once
   useEffect(() => {
-    if (!storyIdRef.current) {
-      // Try to recover from localStorage first
-      const savedId = localStorage.getItem('current_story_draft_id');
-      if (savedId && isValidUUID(savedId)) {
-        storyIdRef.current = savedId;
-      } else if (initialStoryId && isValidUUID(initialStoryId)) {
+    if (!isInitialized) {
+      console.log('useAutosave - Inicializando ID de historia');
+      
+      // Primero, intentamos usar el ID proporcionado en la URL (initialStoryId)
+      if (initialStoryId && isValidUUID(initialStoryId)) {
+        console.log(`ID de historia desde URL: ${initialStoryId}`);
         storyIdRef.current = initialStoryId;
         localStorage.setItem('current_story_draft_id', initialStoryId);
-      } else {
-        const newId = crypto.randomUUID();
-        storyIdRef.current = newId;
-        localStorage.setItem('current_story_draft_id', newId);
+        setIsInitialized(true);
+        return;
       }
+      
+      // Si no hay ID en la URL, intentamos recuperar del localStorage
+      const savedId = localStorage.getItem('current_story_draft_id');
+      console.log(`ID guardado en localStorage: ${savedId}`);
+      
+      if (savedId && isValidUUID(savedId)) {
+        storyIdRef.current = savedId;
+        setIsInitialized(true);
+        return;
+      }
+      
+      // Solo si no hay ID en la URL ni en localStorage, generamos uno nuevo
+      const newId = crypto.randomUUID();
+      console.log(`Generando nuevo ID de historia: ${newId}`);
+      storyIdRef.current = newId;
+      localStorage.setItem('current_story_draft_id', newId);
+      setIsInitialized(true);
     }
-  }, [initialStoryId]);
+    
+    console.log(`ID de historia actual: ${storyIdRef.current}`);
+  }, [initialStoryId, isInitialized]);
 
   useEffect(() => {
-    if (!user || !storyIdRef.current) return;
+    if (!user || !storyIdRef.current || !isInitialized) return;
 
     const save = async () => {
       const currentStoryId = storyIdRef.current;
@@ -78,10 +96,10 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
           .upsert({
             id: currentStoryId,
             user_id: user.id,
-            title: state.meta.title,
+            title: state.meta.title || 'Nuevo cuento',
             target_age: state.meta.targetAge,
             literary_style: state.meta.literaryStyle,
-            central_message: state.meta.centralMessage,
+            central_message: state.meta.centralMessage || 'Pendiente', // Valor por defecto para evitar error de not-null constraint
             additional_details: state.meta.additionalDetails,
             updated_at: new Date().toISOString(),
             status: 'draft'
@@ -96,6 +114,8 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
         // Clear localStorage backup after successful save
         localStorage.removeItem(`story_draft_${currentStoryId}_backup`);
       } catch (error) {
+        console.error('Error saving story:', error);
+        
         if (retryCountRef.current < MAX_RETRIES) {
           // Save to localStorage backup before retrying
           localStorage.setItem(
@@ -124,12 +144,14 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
     return () => {
       clearTimeout(timeoutRef.current);
     };
-  }, [state, supabase, user]);
+  }, [state, supabase, user, isInitialized]);
 
-  // Cleanup storyId on unmount
+  // Cleanup on unmount - but don't remove the storyId from localStorage
+  // to maintain persistence between page navigations
   useEffect(() => {
     return () => {
-      localStorage.removeItem('current_story_draft_id');
+      // No eliminamos el ID al desmontar para mantener la persistencia
+      // localStorage.removeItem('current_story_draft_id');
     };
   }, []);
 

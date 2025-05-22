@@ -78,6 +78,14 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [generatedPages, setGeneratedPages] = useState<GeneratedPage[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
+  // Aseguramos que el storyId se guarde en localStorage para que useAutosave lo utilice
+  useEffect(() => {
+    if (storyId && user) {
+      localStorage.setItem('current_story_draft_id', storyId);
+    }
+  }, [storyId, user]);
+
+  // Usamos el hook de autosave después de guardar el ID en localStorage
   useAutosave(state, storyId || '');
 
   useEffect(() => {

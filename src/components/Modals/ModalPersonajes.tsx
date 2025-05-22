@@ -105,7 +105,8 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
         .insert({
           user_id: user?.id,
           status: 'draft',
-          title: 'Nuevo cuento'
+          title: 'Nuevo cuento',
+          central_message: 'Pendiente'
         })
         .select()
         .single();
@@ -123,6 +124,9 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
         );
 
       if (linkError) throw linkError;
+
+      // Guardamos el ID en localStorage para que useAutosave lo utilice
+      localStorage.setItem('current_story_draft_id', story.id);
 
       onClose();
       navigate(`/wizard/${story.id}`);
