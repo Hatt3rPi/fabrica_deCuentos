@@ -14,6 +14,8 @@ export interface Character {
   updated_at?: string;
 }
 
+export * from './profile';
+
 // Tipos para la configuración del sistema
 export interface SystemSettings {
   image_generation: ImageGenerationSettings;
