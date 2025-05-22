@@ -116,8 +116,8 @@ class NotificationService {
     let query = supabase
       .from('notifications')
       .select('*')
-      .eq('userId', userId)
-      .order('createdAt', { ascending: false });
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
     // Apply filters
     if (options.type && options.type.length > 0) {
@@ -129,11 +129,11 @@ class NotificationService {
     }
 
     if (options.dateFrom) {
-      query = query.gte('createdAt', options.dateFrom.toISOString());
+      query = query.gte('created_at', options.dateFrom.toISOString());
     }
 
     if (options.dateTo) {
-      query = query.lte('createdAt', options.dateTo.toISOString());
+      query = query.lte('created_at', options.dateTo.toISOString());
     }
 
     if (options.priority && options.priority.length > 0) {
@@ -147,7 +147,20 @@ class NotificationService {
       return [];
     }
 
-    return data as AppNotification[];
+    // Mapear los resultados para convertir snake_case a camelCase
+    return data.map((item: any) => ({
+      id: item.id,
+      userId: item.user_id,
+      type: item.type,
+      title: item.title,
+      message: item.message,
+      data: item.data,
+      priority: item.priority,
+      read: item.read,
+      createdAt: new Date(item.created_at),
+      expiresAt: item.expires_at ? new Date(item.expires_at) : undefined,
+      actions: item.actions
+    }));
   }
 
   public async getUnreadCount(userId: string): Promise<number> {
@@ -160,7 +173,7 @@ class NotificationService {
     const { count, error } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
-      .eq('userId', userId)
+      .eq('user_id', userId)
       .eq('read', false);
 
     if (error) {
@@ -196,7 +209,7 @@ class NotificationService {
     const { error } = await supabase
       .from('notifications')
       .update({ read: true })
-      .eq('userId', userId)
+      .eq('user_id', userId)
       .eq('read', false);
 
     return !error;
@@ -267,10 +280,25 @@ class NotificationService {
       return notification;
     }
 
+    // Convertir a formato snake_case para la base de datos
+    const dbNotification = {
+      id: notification.id,
+      user_id: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      data: notification.data,
+      priority: notification.priority,
+      read: notification.read,
+      created_at: notification.createdAt.toISOString(),
+      expires_at: notification.expiresAt ? notification.expiresAt.toISOString() : null,
+      actions: notification.actions
+    };
+
     // Also save to database if available
     const { error } = await supabase
       .from('notifications')
-      .insert(notification);
+      .insert(dbNotification);
 
     if (error) {
       console.error('Error creating notification in database:', error);
@@ -351,9 +379,23 @@ class NotificationService {
         event: 'INSERT',
         schema: 'public',
         table: 'notifications',
-        filter: `userId=eq.${userId}`,
+        filter: `user_id=eq.${userId}`,
       }, (payload) => {
-        callback(payload.new as AppNotification);
+        // Convertir de snake_case a camelCase
+        const notification: AppNotification = {
+          id: payload.new.id,
+          userId: payload.new.user_id,
+          type: payload.new.type,
+          title: payload.new.title,
+          message: payload.new.message,
+          data: payload.new.data,
+          priority: payload.new.priority,
+          read: payload.new.read,
+          createdAt: new Date(payload.new.created_at),
+          expiresAt: payload.new.expires_at ? new Date(payload.new.expires_at) : undefined,
+          actions: payload.new.actions
+        };
+        callback(notification);
       })
       .subscribe();
 
@@ -373,8 +415,8 @@ class NotificationService {
     const { error } = await supabase
       .from('user_preferences')
       .upsert({
-        userId,
-        notificationPreferences: preferences,
+        user_id: userId,
+        notification_preferences: preferences,
       });
 
     return !error;
@@ -389,8 +431,8 @@ class NotificationService {
 
     const { data, error } = await supabase
       .from('user_preferences')
-      .select('notificationPreferences')
-      .eq('userId', userId)
+      .select('notification_preferences')
+      .eq('user_id', userId)
       .single();
 
     if (error) {
@@ -398,7 +440,7 @@ class NotificationService {
       return null;
     }
 
-    return data?.notificationPreferences;
+    return data?.notification_preferences;
   }
 }
 
