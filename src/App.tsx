@@ -10,6 +10,8 @@ import LoginForm from './components/Auth/LoginForm';
 import MyStories from './pages/MyStories';
 import CharacterForm from './components/Character/CharacterForm';
 import CharactersGrid from './components/Character/CharactersGrid';
+import NotificationBell from './components/Notifications/NotificationBell';
+import ToastContainer from './components/UI/ToastContainer';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -82,11 +84,32 @@ function AppContent() {
           </footer>
         </div>
       </div>
+      <ToastContainer />
     </WizardProvider>
   );
 }
 
+// Registrar el service worker para las notificaciones
+const registerServiceWorker = () => {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('Service Worker registrado con éxito:', registration.scope);
+        })
+        .catch(error => {
+          console.log('Error al registrar el Service Worker:', error);
+        });
+    });
+  }
+};
+
 function App() {
+  // Registrar el service worker al cargar la aplicación
+  React.useEffect(() => {
+    registerServiceWorker();
+  }, []);
+
   return (
     <Router>
       <AuthProvider>

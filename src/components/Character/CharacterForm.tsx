@@ -5,6 +5,8 @@ import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCharacterStore } from '../../stores/characterStore';
 import { useCharacterAutosave } from '../../hooks/useCharacterAutosave';
+import { useNotifications } from '../../hooks/useNotifications';
+import { NotificationType, NotificationPriority } from '../../types/notification';
 import { Character } from '../../types';
 
 const CharacterForm: React.FC = () => {
@@ -12,6 +14,7 @@ const CharacterForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { supabase, user } = useAuth();
   const { addCharacter, updateCharacter } = useCharacterStore();
+  const { createNotification } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
@@ -274,9 +277,26 @@ const CharacterForm: React.FC = () => {
 
       setThumbnailGenerated(true);
 
+      // Mostrar notificación cuando se genera la miniatura con éxito
+      createNotification(
+        NotificationType.CHARACTER_GENERATION_COMPLETE,
+        '¡Miniatura generada!',
+        `La miniatura para ${formData.name} ha sido generada con éxito. Ahora puedes guardar el personaje.`,
+        NotificationPriority.MEDIUM,
+        { characterId: currentCharacterId }
+      );
+
     } catch (error) {
       console.error("Error in thumbnail generation:", error);
       setError(error.message || 'Error al procesar el personaje. Por favor, intenta de nuevo.');
+      
+      // Notificación de error
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error al generar miniatura',
+        `Hubo un problema al generar la miniatura para ${formData.name}. Por favor, intenta de nuevo.`,
+        NotificationPriority.HIGH
+      );
     } finally {
       setIsAnalyzing(false);
       setIsGeneratingThumbnail(false);
@@ -316,6 +336,25 @@ const CharacterForm: React.FC = () => {
         .eq('id', currentCharacterId);
 
       if (error) throw error;
+
+      // Mostrar notificación de éxito
+      if (isEditMode) {
+        createNotification(
+          NotificationType.CHARACTER_GENERATION_COMPLETE,
+          '¡Personaje actualizado!',
+          `El personaje ${formData.name} ha sido actualizado con éxito.`,
+          NotificationPriority.MEDIUM,
+          { characterId: currentCharacterId }
+        );
+      } else {
+        createNotification(
+          NotificationType.CHARACTER_GENERATION_COMPLETE,
+          '¡Personaje creado!',
+          `El personaje ${formData.name} ha sido creado con éxito.`,
+          NotificationPriority.HIGH,
+          { characterId: currentCharacterId }
+        );
+      }
 
       setIsRedirecting(true);
       navigate('/nuevo-cuento/personajes');
