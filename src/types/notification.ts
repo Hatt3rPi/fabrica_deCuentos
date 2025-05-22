@@ -65,3 +65,5 @@ export interface NotificationFilterOptions {
   priority?: NotificationPriority[];
 }
 
+// Re-export the browser's Notification API type
+export type { Notification as BrowserNotification } from './browser';

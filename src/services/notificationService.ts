@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { 
-  Notification, 
+  BrowserNotification,
   NotificationType, 
   NotificationPriority,
-  NotificationFilterOptions
+  NotificationFilterOptions,
+  Notification
 } from '../types/notification';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -305,4 +306,3 @@ class NotificationService {
 }
 
 export default NotificationService.getInstance();
-
