@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from '../Notifications/NotificationBell';
 
 const Header: React.FC = () => {
   const { user } = useAuth();
@@ -21,9 +22,10 @@ const Header: React.FC = () => {
           </h1>
         </div>
 
-        {/* User info - Hidden on mobile */}
-        <div className="hidden md:flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-500">
+        {/* User info and notifications */}
+        <div className="flex items-center gap-4">
+          <NotificationBell />
+          <span className="hidden md:inline text-sm font-medium text-gray-500">
             {user?.email}
           </span>
         </div>
