@@ -13,27 +13,44 @@ const isValidUUID = (uuid: string) => {
 
 export const useAutosave = (state: WizardState, initialStoryId: string | null) => {
   const { supabase, user } = useAuth();
-  const timeoutRef = useRef<number>();
+  const timeoutRef = useRef<NodeJS.Timeout>();
   const retryCountRef = useRef(0);
   const storyIdRef = useRef<string | null>(null);
 
-  // Initialize storyId on mount
+  // Initialize storyId on mount - Solo se ejecuta una vez al montar
   useEffect(() => {
-    if (!storyIdRef.current) {
-      // Try to recover from localStorage first
+    console.group('useAutosave - Inicializando ID de historia');
+    
+    // 1. Prioridad al ID inicial si es válido
+    if (initialStoryId && isValidUUID(initialStoryId)) {
+      console.log('Usando ID de historia de las props:', initialStoryId);
+      storyIdRef.current = initialStoryId;
+      localStorage.setItem('current_story_draft_id', initialStoryId);
+    } 
+    // 2. Si no hay ID inicial, intentar recuperar de localStorage
+    else {
       const savedId = localStorage.getItem('current_story_draft_id');
+      console.log('ID guardado en localStorage:', savedId);
+      
       if (savedId && isValidUUID(savedId)) {
+        console.log('Usando ID guardado de localStorage');
         storyIdRef.current = savedId;
-      } else if (initialStoryId && isValidUUID(initialStoryId)) {
-        storyIdRef.current = initialStoryId;
-        localStorage.setItem('current_story_draft_id', initialStoryId);
-      } else {
+      } 
+      // 3. Último recurso: generar un nuevo ID
+      else {
         const newId = crypto.randomUUID();
+        console.log('Generando nuevo ID de historia:', newId);
         storyIdRef.current = newId;
         localStorage.setItem('current_story_draft_id', newId);
       }
     }
-  }, [initialStoryId]);
+    
+    console.log('ID de historia actual:', storyIdRef.current);
+    console.groupEnd();
+    
+    // Este efecto solo debe ejecutarse una vez al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!user || !storyIdRef.current) return;
@@ -58,7 +75,7 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
               name: character.name,
               age: character.age,
               description: character.description,
-              reference_urls: character.reference_urls || [],
+              reference_urls: character.images || [],
               thumbnail_url: character.thumbnailUrl,
               updated_at: new Date().toISOString()
             };

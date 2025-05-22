@@ -105,7 +105,9 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
         .insert({
           user_id: user?.id,
           status: 'draft',
-          title: 'Nuevo cuento'
+          title: 'Nuevo cuento',
+          target_age: '3-5', // Valor predeterminado para target_age
+          literary_style: 'narrativo' // Valor predeterminado para literary_style
         })
         .select()
         .single();
