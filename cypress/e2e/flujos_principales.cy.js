@@ -32,11 +32,20 @@ describe('Flujos principales de La CuenterIA', () => {
     // Iniciar sesión usando el comando personalizado
     cy.login(this.testData.user.email, this.testData.user.password);
     
-    // Hacer clic en "+ Nuevo cuento"
-    cy.contains('+ Nuevo cuento').click();
+    // Verificar que el botón "+ Nuevo cuento" existe y es visible
+    cy.contains('+ Nuevo cuento')
+      .should('be.visible')
+      .and('not.be.disabled')
+      .click({ force: true });
     
-    // Seleccionar "+ Crear nuevo"
-    cy.contains('+ Crear nuevo').click();
+    // Verificar que el modal se ha abierto
+    cy.get('[role="dialog"]', { timeout: 10000 }).should('be.visible');
+    
+    // Verificar que el botón "+ Crear nuevo" existe y es visible
+    cy.contains('+ Crear nuevo')
+      .should('be.visible')
+      .and('not.be.disabled')
+      .click({ force: true });
     
     // Completar el formulario del personaje
     cy.get('input[placeholder="Nombre del personaje"]').type(this.testData.character.name);
