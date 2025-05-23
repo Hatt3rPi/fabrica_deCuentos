@@ -61,6 +61,15 @@ Cypress.Commands.add('cleanupTestData', () => {
   // Nota: Esta implementación dependerá de cómo se accede a la API o BD
   // Por ahora, es un placeholder
   cy.log('Limpiando datos de prueba...');
+  
+  // Ejemplo de implementación futura:
+  // cy.request({
+  //   method: 'DELETE',
+  //   url: '/api/test-data',
+  //   headers: {
+  //     Authorization: `Bearer ${Cypress.env('API_TOKEN')}`
+  //   }
+  // });
 });
 
 // -- Comando para verificar campos obligatorios --
