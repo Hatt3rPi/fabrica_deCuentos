@@ -22,7 +22,7 @@ Cypress.Commands.add('login', (email, password) => {
 });
 
 // -- Comando para crear un nuevo personaje --
-Cypress.Commands.add('createCharacter', (name, age, description, imagePath) => {
+Cypress.Commands.add('createCharacter', (name, age, description, imagePath = 'cypress/fixtures/test-avatar.png') => {
   // Navegar a la página de creación de personaje
   cy.contains('+ Nuevo cuento').click();
   cy.contains('+ Crear nuevo').click();
@@ -61,6 +61,15 @@ Cypress.Commands.add('cleanupTestData', () => {
   // Nota: Esta implementación dependerá de cómo se accede a la API o BD
   // Por ahora, es un placeholder
   cy.log('Limpiando datos de prueba...');
+  
+  // Ejemplo de implementación futura:
+  // cy.request({
+  //   method: 'DELETE',
+  //   url: '/api/test-data',
+  //   headers: {
+  //     Authorization: `Bearer ${Cypress.env('API_TOKEN')}`
+  //   }
+  // });
 });
 
 // -- Comando para verificar campos obligatorios --
@@ -86,4 +95,3 @@ Cypress.Commands.add('checkRequiredFields', () => {
       }
     });
 });
-

@@ -4,9 +4,9 @@
     "password": "test123"
   },
   "character": {
-    "name": "PersonajePrueba",
+    "name": "Sheldon el tester",
     "age": "5 años",
-    "description": "Descripción de prueba"
+    "description": "Joven genio que se encarga de probar la aplicación"
   }
 }
 

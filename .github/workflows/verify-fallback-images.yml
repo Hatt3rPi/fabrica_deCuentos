@@ -11,21 +11,17 @@ on:
 jobs:
   verify-images:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick webp
-      
       - name: Verify fallback images
         run: |
           chmod +x scripts/verify_fallback_images.sh
           ./scripts/verify_fallback_images.sh
-      
       - name: Check image dimensions
         run: |
           for img in supabase/storage/fallback-images/*.webp; do
@@ -38,7 +34,6 @@ jobs:
               echo "$img: $dimensions ✓"
             fi
           done
-      
       - name: Check image size
         run: |
           for img in supabase/storage/fallback-images/*.webp; do
@@ -51,7 +46,6 @@ jobs:
               echo "$img: ${size}KB ✓"
             fi
           done
-      
       - name: Check image format
         run: |
           for img in supabase/storage/fallback-images/*.webp; do

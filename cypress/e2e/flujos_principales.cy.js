@@ -99,4 +99,3 @@ describe('Flujos principales de La CuenterIA', () => {
     cy.url().should('include', '/home');
   });
 });
-
