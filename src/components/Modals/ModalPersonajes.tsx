@@ -105,7 +105,8 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
         .insert({
           user_id: user?.id,
           status: 'draft',
-          title: 'Nuevo cuento'
+          title: 'Nuevo cuento',
+          central_message: 'Pendiente' // Valor por defecto para evitar error de not-null constraint
         })
         .select()
         .single();
