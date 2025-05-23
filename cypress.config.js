@@ -1,6 +1,6 @@
-const { defineConfig } = require("cypress");
+import { defineConfig } from 'cypress';
 
-module.exports = defineConfig({
+export default defineConfig({
   e2e: {
     baseUrl: process.env.CI ? 'http://localhost:4173' : 'http://localhost:5173',
     setupNodeEvents(on, config) {
