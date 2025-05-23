@@ -22,7 +22,7 @@ Cypress.Commands.add('login', (email, password) => {
 });
 
 // -- Comando para crear un nuevo personaje --
-Cypress.Commands.add('createCharacter', (name, age, description, imagePath) => {
+Cypress.Commands.add('createCharacter', (name, age, description, imagePath = 'cypress/fixtures/test-avatar.png') => {
   // Navegar a la página de creación de personaje
   cy.contains('+ Nuevo cuento').click();
   cy.contains('+ Crear nuevo').click();
@@ -95,4 +95,3 @@ Cypress.Commands.add('checkRequiredFields', () => {
       }
     });
 });
-
