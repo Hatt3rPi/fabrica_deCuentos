@@ -1,0 +1,19 @@
+# Ignorar archivos temporales
+*_temp.*
+*_tmp.*
+
+# Ignorar archivos de respaldo
+*.bak
+*.backup
+
+# Ignorar archivos de prueba
+*_test.*
+*_prueba.*
+
+# No ignorar los archivos principales
+!acuarela-digital.webp
+!dibujado-a-mano.webp
+!recortes-de-papel.webp
+!kawaii.webp
+!README.md
+

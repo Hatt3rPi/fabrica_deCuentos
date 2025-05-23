@@ -12,6 +12,7 @@ Plataforma web interactiva para crear cuentos infantiles personalizados con ilus
 - [🛠️ Componentes Principales](#-componentes-principales)
 - [📊 Flujo de Usuario](#-flujo-de-usuario)
 - [🔧 Contextos](#-contextos)
+- [🖼️ Imágenes de Respaldo](#-imágenes-de-respaldo)
 - [🤝 Contribución](#-contribución)
 - [📄 Licencia](#-licencia)
 - [✨ Créditos](#-créditos)
@@ -140,6 +141,17 @@ src/
 
 - `AuthContext`: Manejo de autenticación
 - `WizardContext`: Estado y control del asistente
+
+## 🖼️ Imágenes de Respaldo
+
+El proyecto utiliza imágenes genéricas de respaldo para cada estilo visual cuando falla la generación de variantes personalizadas:
+
+- **Acuarela Digital**: `supabase/storage/fallback-images/acuarela-digital.webp`
+- **Dibujado a mano**: `supabase/storage/fallback-images/dibujado-a-mano.webp`
+- **Recortes de papel**: `supabase/storage/fallback-images/recortes-de-papel.webp`
+- **Kawaii**: `supabase/storage/fallback-images/kawaii.webp`
+
+Estas imágenes se encuentran en Supabase Storage en la carpeta `fallback-images/`. Para más detalles sobre cómo generar y utilizar estas imágenes, consulta la [guía de imágenes de respaldo](docs/fallback_images_guide.md).
 
 ## 🤝 Contribución
 

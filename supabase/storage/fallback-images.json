@@ -1,0 +1,24 @@
+{
+  "name": "fallback-images",
+  "owner": "service_role",
+  "public": false,
+  "file_size_limit": 524288,
+  "allowed_mime_types": ["image/webp", "image/png"],
+  "cors_rules": [
+    {
+      "origin": "*",
+      "methods": ["GET"],
+      "headers": ["*"],
+      "max_age_seconds": 86400
+    }
+  ],
+  "policies": [
+    {
+      "name": "public_read",
+      "definition": "true",
+      "operation": "SELECT",
+      "execution": "BEFORE"
+    }
+  ]
+}
+
