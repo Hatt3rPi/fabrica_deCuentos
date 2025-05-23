@@ -22,6 +22,7 @@ function AppContent() {
   const { user } = useAuth();
 
   if (!user) {
+    
     return <LoginForm />;
   }
 
