@@ -1,0 +1,12 @@
+{
+  "user": {
+    "email": "tester@lacuenteria.cl",
+    "password": "test123"
+  },
+  "character": {
+    "name": "PersonajePrueba",
+    "age": "5 años",
+    "description": "Descripción de prueba"
+  }
+}
+
