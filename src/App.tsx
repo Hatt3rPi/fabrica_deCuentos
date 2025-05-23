@@ -12,6 +12,8 @@ import CharacterForm from './components/Character/CharacterForm';
 import CharactersGrid from './components/Character/CharactersGrid';
 import NotificationBell from './components/Notifications/NotificationBell';
 import ToastContainer from './components/UI/ToastContainer';
+import ProfileSettings from './pages/ProfileSettings';
+import { useProfileStore } from './stores/profileStore';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -78,6 +80,14 @@ function AppContent() {
                   </PrivateRoute>
                 }
               />
+              <Route
+                path="/perfil"
+                element={
+                  <PrivateRoute>
+                    <ProfileSettings />
+                  </PrivateRoute>
+                }
+              />
             </Routes>
           </main>
           <footer className="py-4 text-center text-purple-600 text-sm">
@@ -109,6 +119,15 @@ function App() {
   // Registrar el service worker al cargar la aplicación
   React.useEffect(() => {
     registerServiceWorker();
+  }, []);
+  
+  React.useEffect(() => {
+    const profileStore = useProfileStore.getState();
+    if (profileStore.profile?.theme_preference === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, []);
 
   return (
