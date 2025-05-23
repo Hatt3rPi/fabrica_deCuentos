@@ -44,7 +44,7 @@ describe('Flujos principales de La CuenterIA', () => {
     cy.get('textarea[placeholder="Describe al personaje..."]').type(this.testData.character.description);
     
     // Subir una imagen de prueba
-    cy.get('input[type="file"]').selectFile('cypress/fixtures/test-avatar.png', { force: true });
+    cy.get('input[type="file"]').selectFile('cypress/fixtures/Sheldon-the-best1.webp', { force: true });
     
     // Verificar que la imagen se ha cargado
     cy.get('img[alt="Referencia"]').should('be.visible');

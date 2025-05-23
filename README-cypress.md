@@ -43,7 +43,7 @@ Las pruebas E2E están organizadas de la siguiente manera:
 - `cypress/e2e/flujos_principales.cy.js`: Contiene las pruebas para los flujos principales de la aplicación
 - `cypress/support/commands.js`: Contiene comandos personalizados para acciones comunes
 - `cypress/fixtures/test-data.json`: Contiene datos de prueba como credenciales y datos de personajes
-- `cypress/fixtures/test-avatar.png`: Imagen de prueba para la creación de personajes
+- `cypress/fixtures/Sheldon-the-best1.webp`: Imagen de prueba para la creación de personajes
 
 ## Comandos personalizados
 
