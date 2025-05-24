@@ -1,6 +1,6 @@
 # Eliminación de Historias de Prueba
 
-Esta Edge Function se encarga de eliminar todas las historias de un usuario de prueba y sus datos relacionados. Está diseñada para ser utilizada durante las pruebas automatizadas con Cypress.
+Esta Edge Function se encarga de eliminar todas las historias de un usuario de prueba y sus datos relacionados, incluyendo imágenes almacenadas. Está diseñada para ser utilizada durante las pruebas automatizadas con Cypress.
 
 ## Configuración
 
@@ -41,6 +41,7 @@ Content-Type: application/json
 {
   "success": true,
   "deletedStories": 5,
+  "deletedImages": 12,
   "userId": "usuario-uuid"
 }
 ```
@@ -77,7 +78,21 @@ La función ahora elimina completamente una historia y todos sus datos relaciona
    - Elimina relaciones en `story_characters`
    - Elimina personajes huérfanos (no utilizados en otras historias)
    - Elimina la historia en sí
-3. Todo se ejecuta dentro de una transacción atómica para garantizar la integridad de los datos
+   - Devuelve URLs de imágenes e IDs de personajes para limpieza de almacenamiento
+3. Elimina las imágenes asociadas a las historias y personajes de los buckets de almacenamiento:
+   - Procesa las URLs de imágenes para extraer bucket y ruta
+   - Elimina archivos de imágenes de personajes en varios buckets
+   - Limpia carpetas de usuario en todos los buckets configurados
+4. Todo se ejecuta dentro de una transacción atómica para garantizar la integridad de los datos
+
+## Buckets de almacenamiento limpiados
+
+La función limpia imágenes y archivos de los siguientes buckets:
+
+- `storage` - Bucket general de almacenamiento
+- `reference-images` - Imágenes de referencia de personajes
+- `character-images` - Imágenes de personajes
+- `fabricacuentos` - Bucket principal de la aplicación
 
 ## Consideraciones de seguridad
 
