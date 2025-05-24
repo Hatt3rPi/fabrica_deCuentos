@@ -67,29 +67,52 @@ export const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log(`[${new Date().toISOString()}] Usuario encontrado: ${targetUser.id}`)
-    console.log(`[${new Date().toISOString()}] Eliminando historias...`)
+    console.log(`[${new Date().toISOString()}] Buscando historias del usuario...`)
 
-    // 2. Eliminar historias del usuario
+    // 2. Obtener las historias del usuario para eliminarlas
     const { data: stories, error: storiesError } = await supabaseAdmin
       .from('stories')
-      .delete()
+      .select('id')
       .eq('user_id', targetUser.id)
-      .select()
 
     if (storiesError) {
-      console.error('Error al eliminar historias:', storiesError)
-      throw new Error('Error al eliminar las historias')
+      console.error('Error al buscar historias:', storiesError)
+      throw new Error('Error al buscar las historias')
     }
 
-    const deletedCount = stories?.length || 0
-    console.log(`[${new Date().toISOString()}] Se eliminaron ${deletedCount} historias`)
+    const storyCount = stories?.length || 0
+    console.log(`[${new Date().toISOString()}] Encontradas ${storyCount} historias para eliminar`)
 
-    // 3. Aquí podrías agregar la eliminación de otros datos relacionados
+    // 3. Eliminar cada historia usando la función RPC delete_full_story
+    if (storyCount > 0) {
+      console.log(`[${new Date().toISOString()}] Iniciando eliminación de historias y datos relacionados...`)
+      
+      // Usar Promise.all para procesar todas las eliminaciones en paralelo
+      const deletePromises = stories.map(async (story) => {
+        try {
+          const { error } = await supabaseAdmin.rpc('delete_full_story', { story_id: story.id })
+          if (error) {
+            console.error(`Error al eliminar historia ${story.id}:`, error)
+            throw error
+          }
+          console.log(`[${new Date().toISOString()}] Historia ${story.id} eliminada correctamente`)
+          return true
+        } catch (err) {
+          console.error(`Error al eliminar historia ${story.id}:`, err)
+          return false
+        }
+      })
+
+      // Esperar a que todas las eliminaciones se completen
+      await Promise.all(deletePromises)
+    }
+
+    console.log(`[${new Date().toISOString()}] Se eliminaron ${storyCount} historias y sus datos relacionados`)
 
     // Respuesta exitosa
     return createSuccessResponse({
       success: true,
-      deletedStories: deletedCount,
+      deletedStories: storyCount,
       userId: targetUser.id
     })
 

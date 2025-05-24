@@ -12,7 +12,7 @@ describe('Prueba de Edge Function', function() {
     
     // Ejecutar la limpieza usando la Edge Function
     cy.log(`Limpiando historias para: ${testUserEmail}`);
-    cy.cleanupTestStories(testUserEmail, { useBackup: true }).then((result) => {
+    cy.cleanupTestStories(testUserEmail).then((result) => {
       // Mostrar información detallada del resultado
       cy.log(`Resultado de la limpieza: ${JSON.stringify(result, null, 2)}`);
       
