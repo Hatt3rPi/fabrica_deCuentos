@@ -84,27 +84,28 @@ const deleteTestStories = async (userId) => {
       return { rowCount: 0 };
     }
 
-    // Aquí podrías agregar lógica para eliminar registros relacionados
-    // en otras tablas (ej: personajes, ilustraciones, etc.)
-    
-    // Eliminar las historias
-    const { data, error, count } = await supabase
-      .from('stories')
-      .delete()
-      .eq('user_id', userId)
-      .select('*', { count: 'exact', head: false });
-
-    if (error) {
-      return handleSupabaseError('deleteStories', error);
+    // Eliminar cada historia usando la función RPC delete_full_story
+    let successCount = 0;
+    for (const story of stories) {
+      try {
+        const { error } = await supabase.rpc('delete_full_story', { story_id: story.id });
+        if (error) {
+          console.error(`Error al eliminar historia ${story.id}:`, error);
+        } else {
+          successCount++;
+          console.log(`Historia ${story.id} eliminada correctamente`);
+        }
+      } catch (err) {
+        console.error(`Error al eliminar historia ${story.id}:`, err);
+      }
     }
 
-    const rowCount = count || (data ? data.length : 0);
-    console.log(`✅ Se eliminaron ${rowCount} historias de prueba para el usuario ${userId}`);
+    console.log(`✅ Se eliminaron ${successCount} historias de prueba para el usuario ${userId}`);
     
     return { 
-      rowCount,
+      rowCount: successCount,
       userId,
-      deletedStories: data || []
+      deletedStories: stories.length
     };
   } catch (error) {
     console.error('❌ Error en deleteTestStories:', error);
