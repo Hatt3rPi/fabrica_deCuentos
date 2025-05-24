@@ -298,18 +298,33 @@ const checkSupabaseConnection = async () => {
       .single();
     
     if (error) {
-      // Si falla el RPC, intentamos una consulta simple a la tabla de usuarios
-      const { data: users, error: usersError } = await supabase
-        .from('auth.users')  // Especificar el esquema auth
-        .select('count')
-        .limit(1);
-      
-      if (usersError) throw usersError;
-      
-      return { 
-        success: true, 
-        message: 'Conexión exitosa (usando consulta de respaldo)' 
-      };
+      // Si falla el RPC, intentamos usar la API de administración para verificar usuarios
+      try {
+        // Usar la API de administración de Supabase Auth
+        const { data: users, error: usersError } = await supabase.auth.admin
+          .listUsers({ page: 1, perPage: 1 });
+          
+        if (usersError) throw usersError;
+        
+        return { 
+          success: true, 
+          message: 'Conexión exitosa (usando API de administración)' 
+        };
+      } catch (authError) {
+        console.warn('⚠️  Intentando con la API de administración...');
+        // Si la API de administración falla, intentamos con una tabla que sabemos que existe
+        const { data: stories, error: storiesError } = await supabase
+          .from('stories')  // Tabla en el esquema public
+          .select('count')
+          .limit(1);
+          
+        if (storiesError) throw storiesError;
+        
+        return { 
+          success: true, 
+          message: 'Conexión exitosa (usando tabla stories)' 
+        };
+      }
     }
     
     return { 
