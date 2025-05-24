@@ -73,7 +73,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
       </button>
 
       {isOpen && (
-        <div className="fixed left-0 top-[calc(var(--header-height,4rem))] mt-0 w-80 sm:w-96 z-50 notification-panel-container">
+        <div className="fixed left-0 top-[calc(var(--header-height,4rem))] mt-0 w-80 sm:w-96 z-50 notification-panel-container" data-testid="notification-panel">
           <NotificationCenter onClose={() => setIsOpen(false)} />
         </div>
       )}
@@ -82,4 +82,3 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
 };
 
 export default NotificationBell;
-

@@ -173,7 +173,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-h-[80vh] flex flex-col max-w-[calc(100vw-2rem)]">
+    <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-h-[80vh] flex flex-col max-w-[calc(100vw-2rem)]" data-testid="notification-center">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-lg font-semibold text-gray-800">Notificaciones</h2>

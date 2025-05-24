@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Menu, X, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import NotificationBell from '../Notifications/NotificationBell';
+import { Link } from 'react-router-dom';
 
 const Header: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -13,27 +15,30 @@ const Header: React.FC = () => {
 
   // Set header height CSS variable for notification positioning
   useEffect(() => {
-    const header = document.querySelector('header');
-    if (header) {
-      const height = header.offsetHeight;
-      document.documentElement.style.setProperty('--header-height', `${height}px`);
-    }
-
-    // Update on resize
-    const handleResize = () => {
-      const header = document.querySelector('header');
-      if (header) {
-        const height = header.offsetHeight;
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        const height = headerRef.current.offsetHeight;
         document.documentElement.style.setProperty('--header-height', `${height}px`);
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    // Initial update
+    updateHeaderHeight();
+
+    // Update on resize
+    window.addEventListener('resize', updateHeaderHeight);
+    
+    // Force an update after a short delay to ensure all elements are rendered
+    const timeoutId = setTimeout(updateHeaderHeight, 100);
+
+    return () => {
+      window.removeEventListener('resize', updateHeaderHeight);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   return (
-    <header className="bg-white shadow-md py-4 px-4 md:px-6 dark:bg-gray-800 dark:text-white">
+    <header ref={headerRef} className="bg-white shadow-md py-4 px-4 md:px-6 dark:bg-gray-800 dark:text-white">
       <div className="flex items-center justify-between">
         {/* Mobile menu button - Only visible on mobile */}
         <button 

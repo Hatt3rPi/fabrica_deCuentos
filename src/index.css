@@ -23,6 +23,9 @@
 
 .notification-panel-container {
   animation: slideDown 0.3s ease-out;
+  /* Ensure the panel is visible in tests */
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 @keyframes slideDown {
@@ -42,4 +45,9 @@
     width: calc(100vw - 2rem) !important;
     margin-left: 1rem;
   }
+}
+
+/* Set a default header height for tests */
+:root {
+  --header-height: 4rem;
 }
