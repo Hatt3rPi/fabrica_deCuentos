@@ -1,6 +1,6 @@
 # Eliminación de Historias de Prueba
 
-Esta Edge Function se encarga de eliminar todas las historias de un usuario de prueba. Está diseñada para ser utilizada durante las pruebas automatizadas con Cypress.
+Esta Edge Function se encarga de eliminar todas las historias de un usuario de prueba y sus datos relacionados. Está diseñada para ser utilizada durante las pruebas automatizadas con Cypress.
 
 ## Configuración
 
@@ -66,9 +66,23 @@ afterEach(() => {
 });
 ```
 
+## Funcionamiento
+
+La función ahora elimina completamente una historia y todos sus datos relacionados:
+
+1. Busca todas las historias del usuario especificado
+2. Para cada historia, utiliza la función RPC `delete_full_story` que:
+   - Elimina registros en `story_pages`
+   - Elimina registros en `story_designs`
+   - Elimina relaciones en `story_characters`
+   - Elimina personajes huérfanos (no utilizados en otras historias)
+   - Elimina la historia en sí
+3. Todo se ejecuta dentro de una transacción atómica para garantizar la integridad de los datos
+
 ## Consideraciones de seguridad
 
 - La función solo debe estar disponible en entornos de desarrollo y pruebas
 - Utiliza autenticación por token para prevenir accesos no autorizados
 - Registra todas las operaciones realizadas para facilitar la depuración
 - No exponga la `CLEANUP_API_KEY` en el código del cliente
+- Las operaciones de eliminación se realizan con el rol de servicio que tiene permisos elevados
