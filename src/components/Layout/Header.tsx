@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Menu, X, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import NotificationBell from '../Notifications/NotificationBell';
@@ -10,6 +10,27 @@ const Header: React.FC = () => {
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
+
+  // Set header height CSS variable for notification positioning
+  useEffect(() => {
+    const header = document.querySelector('header');
+    if (header) {
+      const height = header.offsetHeight;
+      document.documentElement.style.setProperty('--header-height', `${height}px`);
+    }
+
+    // Update on resize
+    const handleResize = () => {
+      const header = document.querySelector('header');
+      if (header) {
+        const height = header.offsetHeight;
+        document.documentElement.style.setProperty('--header-height', `${height}px`);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <header className="bg-white shadow-md py-4 px-4 md:px-6 dark:bg-gray-800 dark:text-white">
