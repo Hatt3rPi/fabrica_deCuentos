@@ -28,6 +28,8 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.VITE_SUPABASE_SERVICE_ROLE_KEY }}
+          CLEANUP_API_KEY: ${{ secrets.CLEANUP_API_KEY }}
       - name: Cypress run
         uses: cypress-io/github-action@v5
         with:
@@ -36,9 +38,14 @@ jobs:
           wait-on: 'http://localhost:4173'
           browser: chrome
           record: false
+          command-timeout: 10000
+          default-command-timeout: 10000
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.VITE_SUPABASE_SERVICE_ROLE_KEY }}
+          CLEANUP_API_KEY: ${{ secrets.CLEANUP_API_KEY }}
+          TEST_USER_EMAIL: 'tester@lacuenteria.cl'
       - name: Upload screenshots
         if: failure()
         uses: actions/upload-artifact@v4
@@ -46,7 +53,6 @@ jobs:
           name: cypress-screenshots
           path: cypress/screenshots
       - name: Upload videos
-
         if: always()
         uses: actions/upload-artifact@v4
         with:
