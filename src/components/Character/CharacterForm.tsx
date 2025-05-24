@@ -184,21 +184,13 @@ const CharacterForm: React.FC = () => {
   };
 
   const generateThumbnail = async () => {
-    if (!user) throw new Error('User not authenticated');
-    
-    if (!formData.name?.trim() || !formData.age?.trim()) {
-      setFieldErrors({
-        name: !formData.name?.trim() ? "El nombre es obligatorio" : undefined,
-        age: !formData.age?.trim() ? "La edad es obligatoria" : undefined,
-      });
-      return;
-    }
-
-    if (!formData.description?.es && !formData.reference_urls?.[0]) {
-      setFieldErrors({
-        description: "Se requiere una descripción o una imagen",
-        image: "Se requiere una descripción o una imagen"
-      });
+    if (!user) {
+      createNotification(
+        NotificationType.SYSTEM_ERROR,
+        'Error de autenticación',
+        'Debes iniciar sesión para generar una miniatura',
+        NotificationPriority.HIGH
+      );
       return;
     }
 
@@ -287,36 +279,34 @@ const CharacterForm: React.FC = () => {
       const blob = await response.blob();
       
       const { error: uploadError } = await supabase.storage
-        .from('storage')
-        .upload(thumbnailPath, blob);
+        .from('characters')
+        .upload(thumbnailPath, blob, {
+          contentType: 'image/png',
+          upsert: true
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw new Error(`Error al subir la miniatura: ${uploadError.message}`);
+      }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('storage')
+        .from('characters')
         .getPublicUrl(thumbnailPath);
 
       setFormData(prev => ({
         ...prev,
-        thumbnailUrl: publicUrl
+        thumbnail_url: publicUrl
       }));
 
-      setThumbnailGenerated(true);
-
-      // Mostrar notificación cuando se genera la miniatura con éxito
       createNotification(
-        NotificationType.CHARACTER_GENERATION_COMPLETE,
-        '¡Miniatura generada!',
-        `La miniatura para ${formData.name} ha sido generada con éxito. Ahora puedes guardar el personaje.`,
-        NotificationPriority.MEDIUM,
-        { characterId: currentCharacterId }
+        NotificationType.SYSTEM_SUCCESS,
+        'Miniatura generada',
+        `Se ha generado la miniatura para ${formData.name}`,
+        NotificationPriority.NORMAL
       );
-
     } catch (error) {
-      console.error("Error in thumbnail generation:", error);
-      setError(error.message || 'Error al procesar el personaje. Por favor, intenta de nuevo.');
-      
-      // Notificación de error
+      console.error('Error generating thumbnail:', error);
+      setError(error.message || 'Error desconocido al generar la miniatura');
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Error al generar miniatura',
@@ -506,17 +496,17 @@ const CharacterForm: React.FC = () => {
               Miniatura generada
             </label>
             <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-              {formData.thumbnailUrl ? (
+              {formData.thumbnail_url ? (
                 <img
-                  src={formData.thumbnailUrl}
+                  src={formData.thumbnail_url}
                   alt="Miniatura"
                   className="w-full h-full object-cover rounded-lg"
                 />
-              ) : isAnalyzing && isGeneratingThumbnail ? (
+              ) : isGeneratingThumbnail ? (
                 <div className="text-center">
                   <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
                   <p className="text-sm text-purple-600">
-                    Generando personaje...
+                    Generando miniatura...
                   </p>
                 </div>
               ) : isAnalyzing ? (
@@ -525,11 +515,6 @@ const CharacterForm: React.FC = () => {
                   <p className="text-sm text-purple-600">
                     {retryCount > 0 ? `Reintentando análisis (${retryCount}/3)...` : 'Analizando tu personaje...'}
                   </p>
-                </div>
-              ) : isGeneratingThumbnail ? (
-                <div className="text-center">
-                  <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-purple-600">Dibujando un nuevo héroe...</p>
                 </div>
               ) : (
                 <div className="text-center p-4">
