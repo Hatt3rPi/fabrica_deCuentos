@@ -253,7 +253,8 @@ async function cleanupUserFolders(supabase, userId: string): Promise<number> {
       }
       
       // También intentar eliminar archivos en subcarpetas
-      await cleanupFolderRecursive(supabase, bucket, userId, deletedCount);
+      const folderDeletedCount = await cleanupFolderRecursive(supabase, bucket, userId, 0);
+      deletedCount += folderDeletedCount;
       
     } catch (err) {
       // Ignorar errores de carpetas que no existen
