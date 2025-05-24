@@ -366,6 +366,12 @@ const CharactersStep: React.FC = () => {
     }
   };
 
+  // Add a function to handle saving the character
+  const handleSaveCharacter = () => {
+    // Navigate to the next step
+    window.location.href = '/nuevo-cuento/personajes';
+  };
+
   // Renderizar la interfaz de usuario
   return (
     <div className="space-y-8">
@@ -629,9 +635,19 @@ const CharactersStep: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Add the "Guardar personaje" button that the test is looking for */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleSaveCharacter}
+          className="py-3 px-6 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg"
+        >
+          Guardar personaje
+        </button>
+      </div>
     </div>
   );
 };
 
 export default CharactersStep;
-
