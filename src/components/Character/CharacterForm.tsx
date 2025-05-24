@@ -203,61 +203,87 @@ const CharacterForm: React.FC = () => {
     }
 
     setFieldsReadOnly(true);
-    setIsAnalyzing(true);
     setError(null);
     setRetryCount(0);
 
+    // Iniciar ambos procesos en paralelo
+    setIsAnalyzing(true);
+    setIsGeneratingThumbnail(true);
+
     try {
-      const descriptionData = await callAnalyzeCharacter();
-      
-      if (!descriptionData || !descriptionData.description) {
-        throw new Error('No se pudo generar la descripción del personaje');
-      }
+      // Ejecutar ambas llamadas API en paralelo
+      const [descriptionPromise, thumbnailPromise] = await Promise.all([
+        // Llamada a analyze-character (solo si hay descripción o imagen)
+        (async () => {
+          try {
+            if (formData.description?.es || formData.reference_urls?.[0]) {
+              const response = await callAnalyzeCharacter();
+              if (response && response.description) {
+                return response;
+              }
+            }
+            return null;
+          } catch (error) {
+            console.error("Error in description generation:", error);
+            return null;
+          } finally {
+            setIsAnalyzing(false);
+          }
+        })(),
+        
+        // Llamada a describe-and-sketch (para generar la miniatura)
+        (async () => {
+          try {
+            const thumbnailResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                name: formData.name?.trim(),
+                age: formData.age?.trim(),
+                description: formData.description,
+                referenceImage: formData.reference_urls?.[0] || null
+              })
+            });
 
-      setFormData(prev => ({
-        ...prev,
-        description: {
-          es: descriptionData.description.es || prev.description?.es || '',
-          en: descriptionData.description.en || prev.description?.en || ''
-        }
-      }));
+            if (!thumbnailResponse.ok) {
+              const errorData = await thumbnailResponse.json().catch(() => ({}));
+              if (thumbnailResponse.status === 429) {
+                throw new Error('Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.');
+              }
+              throw new Error(errorData.error || 'Error al generar la miniatura. Por favor, verifica los datos e intenta de nuevo.');
+            }
 
-      setIsAnalyzing(false);
-      setIsGeneratingThumbnail(true);
+            return await thumbnailResponse.json();
+          } catch (error) {
+            console.error("Error in thumbnail generation:", error);
+            throw error;
+          } finally {
+            setIsGeneratingThumbnail(false);
+          }
+        })()
+      ]);
 
-      const thumbnailResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: formData.name?.trim(),
-          age: formData.age?.trim(),
+      // Procesar los resultados de la descripción (si existe)
+      if (descriptionPromise && descriptionPromise.description) {
+        setFormData(prev => ({
+          ...prev,
           description: {
-            es: descriptionData.description.es || formData.description?.es,
-            en: descriptionData.description.en || formData.description?.en
-          },
-          referenceImage: formData.reference_urls?.[0] || null
-        })
-      });
-
-      if (!thumbnailResponse.ok) {
-        const errorData = await thumbnailResponse.json().catch(() => ({}));
-        if (thumbnailResponse.status === 429) {
-          throw new Error('Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.');
-        }
-        throw new Error(errorData.error || 'Error al generar la miniatura. Por favor, verifica los datos e intenta de nuevo.');
+            es: descriptionPromise.description.es || prev.description?.es || '',
+            en: descriptionPromise.description.en || prev.description?.en || ''
+          }
+        }));
       }
 
-      const thumbnailData = await thumbnailResponse.json();
-
-      if (!thumbnailData || !thumbnailData.thumbnailUrl) {
+      // Procesar los resultados de la miniatura
+      if (!thumbnailPromise || !thumbnailPromise.thumbnailUrl) {
         throw new Error('No se recibió una URL válida para la miniatura');
       }
 
       const thumbnailPath = `thumbnails/${user.id}/${currentCharacterId}.png`;
-      const response = await fetch(thumbnailData.thumbnailUrl);
+      const response = await fetch(thumbnailPromise.thumbnailUrl);
       const blob = await response.blob();
       
       const { error: uploadError } = await supabase.storage
@@ -294,12 +320,10 @@ const CharacterForm: React.FC = () => {
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Error al generar miniatura',
-        `Hubo un problema al generar la miniatura para ${formData.name}. Por favor, intenta de nuevo.`,
+        error.message || 'Ocurrió un error al generar la miniatura. Por favor, intenta de nuevo.',
         NotificationPriority.HIGH
       );
     } finally {
-      setIsAnalyzing(false);
-      setIsGeneratingThumbnail(false);
       setFieldsReadOnly(false);
     }
   };
@@ -488,6 +512,13 @@ const CharacterForm: React.FC = () => {
                   alt="Miniatura"
                   className="w-full h-full object-cover rounded-lg"
                 />
+              ) : isAnalyzing && isGeneratingThumbnail ? (
+                <div className="text-center">
+                  <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-purple-600">
+                    Generando personaje...
+                  </p>
+                </div>
               ) : isAnalyzing ? (
                 <div className="text-center">
                   <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
