@@ -16,7 +16,7 @@ describe('2. Apertura del modal de personajes', function() {
     // Iniciar sesión
     cy.login(this.testData.user.email, this.testData.user.password);
     
-    // Verificar que estamos en la página correcta
+    // Verificar que estamos en la página de inicio
     cy.url().should('include', '/home');
     
     // Usar el comando personalizado para abrir el modal

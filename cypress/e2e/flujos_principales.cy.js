@@ -111,25 +111,25 @@ describe('Orquestador de Flujos Principales', function() {
   });
 
   // Pruebas desactivadas temporalmente
-  /*
-  it('4. Validación de Campos Obligatorios', function() {
+  it.skip('4. Validación de Campos Obligatorios', function() {
     cy.exec('npx cypress run --spec "cypress/e2e/flows/4_validacion_campos.cy.js"', {
       timeout: 60000,
       failOnNonZeroExit: false
     }).then((result) => {
-      cy.log(`Resultado de la prueba de validación: ${result.stdout}`);
+      cy.log(`Resultado de la validación de campos: ${result.stdout}`);
+      // Verificar que la ejecución fue exitosa
       expect(result.code).to.equal(0);
     });
   });
 
-  it('5. Las pruebas son independientes', function() {
+  it.skip('5. Independencia de Pruebas', function() {
     cy.exec('npx cypress run --spec "cypress/e2e/flows/5_independencia_pruebas.cy.js"', {
       timeout: 60000,
       failOnNonZeroExit: false
     }).then((result) => {
       cy.log(`Resultado de la prueba de independencia: ${result.stdout}`);
+      // Verificar que la ejecución fue exitosa
       expect(result.code).to.equal(0);
     });
   });
-  */
 });

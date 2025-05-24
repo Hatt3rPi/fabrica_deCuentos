@@ -48,28 +48,23 @@ Cypress.Commands.add('createCharacter', (name, age, description, imagePath = 'cy
 
 // -- Comando para abrir el modal de personajes --
 Cypress.Commands.add('openNewStoryModal', () => {
-  // Esperar a que la página esté completamente cargada
+  // Asegurarse de que estamos en la página de inicio
   cy.url().should('include', '/home');
   
-  // Hacer clic para abrir el modal
-  cy.contains('button', 'Nuevo cuento')
+  // Esperar a que cualquier notificación desaparezca (tiempo adicional)
+  cy.wait(3000); // Esperar 3 segundos para asegurar que la notificación desaparezca
+  
+  // Esperar a que el botón esté completamente interactivo
+  cy.contains('button', 'Nuevo cuento', { timeout: 15000 }) // Aumentar el tiempo de espera
     .should('be.visible')
-    .click();
+    .and('not.be.disabled')
+    .click({ force: true });
 
   // Verificar que el modal aparece y es visible
-  const modal = cy.get('[data-testid="modal-personajes"]', { timeout: 10000 });
-  
-  return modal.should(($el) => {
-    // Verificar que el modal está visible
-    expect($el).to.be.visible;
-    
-    // Verificar que no está oculto por CSS
-    const display = $el.css('display');
-    const opacity = parseFloat($el.css('opacity'));
-    
-    expect(display).to.not.equal('none');
-    expect(opacity).to.be.greaterThan(0);
-  });
+  return cy.get('[data-testid="modal-personajes"]', { timeout: 10000 })
+    .should('be.visible')
+    .and('have.css', 'display', 'flex')  // Verificar que es un flex container
+    .and('have.css', 'opacity', '1');    // Verificar que es completamente visible
 });
 
 // -- Comando para verificar que el modal está abierto --

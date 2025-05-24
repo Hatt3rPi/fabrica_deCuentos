@@ -16,7 +16,7 @@ describe('3. Creación de Nuevo Personaje', function() {
     // Usar el comando login personalizado
     cy.login(this.testData.user.email, this.testData.user.password);
     
-    // Verificar que estamos en la página correcta
+    // Verificar que estamos en la página de inicio
     cy.url().should('include', '/home');
     
     // Abrir el modal de personajes
