@@ -73,7 +73,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 z-50">
+        <div className="fixed left-0 top-[calc(var(--header-height,4rem))] mt-0 w-80 sm:w-96 z-50 notification-panel-container" data-testid="notification-panel">
           <NotificationCenter onClose={() => setIsOpen(false)} />
         </div>
       )}
@@ -82,25 +82,3 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
 };
 
 export default NotificationBell;
-
-// Add this to your global CSS or in a style tag
-const styles = `
-@keyframes bellRing {
-  0% { transform: rotate(0); }
-  10% { transform: rotate(10deg); }
-  20% { transform: rotate(-10deg); }
-  30% { transform: rotate(8deg); }
-  40% { transform: rotate(-8deg); }
-  50% { transform: rotate(6deg); }
-  60% { transform: rotate(-6deg); }
-  70% { transform: rotate(4deg); }
-  80% { transform: rotate(-4deg); }
-  90% { transform: rotate(2deg); }
-  100% { transform: rotate(0); }
-}
-
-.animate-bell {
-  animation: bellRing 1s ease-in-out;
-}
-`;
-
