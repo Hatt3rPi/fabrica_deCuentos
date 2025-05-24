@@ -1,0 +1,8 @@
+{
+  "name": "delete-test-stories",
+  "version": "1.0.0",
+  "description": "Elimina todas las historias de un usuario de prueba",
+  "main": "index.ts",
+  "author": "La CuenterIA Team",
+  "license": "MIT"
+}
