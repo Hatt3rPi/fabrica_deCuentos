@@ -1,5 +1,5 @@
 # 📚 La CuenterIA
-123
+
 Plataforma web interactiva para crear cuentos infantiles personalizados con ilustraciones generadas mediante inteligencia artificial.
 
 ## 📋 Índice
@@ -9,7 +9,8 @@ Plataforma web interactiva para crear cuentos infantiles personalizados con ilus
 - [🛠️ Instalación](#-instalación)
 - [📝 Uso](#-uso)
 - [📖 Estructura del Proyecto](#-estructura-del-proyecto)
-- [🛠️ Componentes Principales](#-componentes-principales)
+- [🔧️ Componentes Principales](#-componentes-principales)
+- [🚨 Pruebas Automatizadas con Cypress](#-pruebas-automatizadas-con-cypress)
 - [📊 Flujo de Usuario](#-flujo-de-usuario)
 - [🔧 Contextos](#-contextos)
 - [🖼️ Imágenes de Respaldo](#-imágenes-de-respaldo)
@@ -53,6 +54,10 @@ Plataforma web interactiva para crear cuentos infantiles personalizados con ilus
 - **Backend**
   - Supabase para autenticación y base de datos
   - API de IA para generación de imágenes
+  
+- **Testing**
+  - Cypress para pruebas E2E
+  - GitHub Actions para CI/CD
 
 ## 🛠️ Instalación
 
@@ -114,6 +119,67 @@ src/
 ### Componentes de Layout
 - `Header`: Barra de navegación superior
 - `Sidebar`: Menú lateral de navegación
+
+## 🚨 Pruebas Automatizadas con Cypress
+
+El proyecto utiliza Cypress para pruebas end-to-end que verifican los flujos principales de la aplicación.
+
+### 📊 Estructura de pruebas
+
+```
+cypress/
+├── e2e/                  # Pruebas end-to-end
+│   ├── flujos_principales.cy.js  # Orquestador de todos los flujos
+│   └── flows/               # Pruebas individuales por flujo
+│       ├── 1_login.cy.js
+│       ├── 2_modal_personajes.cy.js
+│       ├── 3_creacion_personaje.cy.js
+│       ├── 4_validacion_campos.cy.js
+│       └── 5_independencia_pruebas.cy.js
+├── fixtures/              # Datos de prueba
+├── support/              # Comandos personalizados y utilidades
+└── videos/               # Grabaciones de las ejecuciones
+```
+
+### 💯 Flujos probados
+
+1. **Login**: Autenticación de usuario
+2. **Modal de personajes**: Apertura del modal desde la página de inicio
+3. **Creación de personaje**: Flujo completo de creación con validación de miniatura
+4. **Validación de campos**: Verificación de campos obligatorios
+5. **Independencia**: Verificación de que las pruebas no interfieren entre sí
+
+### ⚙️ Configuración
+
+Para ejecutar las pruebas, se requieren las siguientes variables de entorno:
+
+```
+VITE_SUPABASE_URL=tu-url-de-supabase
+VITE_SUPABASE_ANON_KEY=tu-anon-key
+VITE_SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
+CLEANUP_API_KEY=tu-cleanup-api-key
+TEST_USER_EMAIL=email-de-prueba
+```
+
+### 💻 Comandos
+
+```bash
+# Ejecutar todas las pruebas en modo headless
+npx cypress run
+
+# Ejecutar un flujo específico
+npx cypress run --spec "cypress/e2e/flows/3_creacion_personaje.cy.js"
+
+# Abrir Cypress en modo interactivo
+npx cypress open
+```
+
+### ⚠️ Consideraciones para desarrolladores
+
+- **Selectores**: Mantener los atributos `data-testid` y otros selectores utilizados en las pruebas.
+- **Tiempos de espera**: Algunos procesos como la generación de miniaturas pueden ser lentos (hasta 10 minutos).
+- **Limpieza de datos**: Las pruebas utilizan una función Edge de Supabase para limpiar datos de prueba.
+- **CI/CD**: Las pruebas se ejecutan automáticamente en GitHub Actions para cada PR.
 
 ## 📊 Flujo de Usuario
 
@@ -257,6 +323,9 @@ graph TD
 - Pull Requests claras: qué se hizo, por qué, y cómo probarlo.
 - Eliminar ramas después del merge.
 - Si el issue no se ejecutará, mover a **Canceled**.
+- **Ejecutar las pruebas de Cypress** antes de crear un PR.
+- Mantener los selectores y atributos utilizados en las pruebas.
+- Documentar cambios que afecten a las pruebas automatizadas.
 
 ### ❓ Preguntas Frecuentes
 

@@ -1,110 +1,140 @@
 /// <reference types="cypress" />
 
-describe('Flujos principales de La CuenterIA', () => {
-  beforeEach(() => {
+/**
+ * Orquestador de Flujos Principales de La CuenterIA
+ * 
+ * Este archivo actúa como orquestador de todos los flujos de prueba principales.
+ * En lugar de contener las pruebas directamente, ejecuta cada archivo de prueba
+ * individual en secuencia, asegurando que se ejecuten en el orden correcto y
+ * con un entorno limpio al inicio.
+ * 
+ * Estructura de pruebas:
+ * 1. Limpieza de datos (edge_function_test.cy.js)
+ * 2. Flujos individuales (en carpeta /flows):
+ *    - 1_login.cy.js
+ *    - 2_modal_personajes.cy.js
+ *    - 3_creacion_personaje.cy.js
+ *    - 4_validacion_campos.cy.js
+ *    - 5_independencia_pruebas.cy.js
+ */
+describe('Orquestador de Flujos Principales', function() {
+  // Configuración antes de todas las pruebas
+  before(function() {
+    // Cargar los datos de prueba desde el archivo de fixture
+    cy.fixture('test-data.json').then((data) => {
+      this.testData = data;
+      // Configurar el email del usuario de prueba en las variables de entorno
+      if (this.testData.user && this.testData.user.email) {
+        Cypress.env('TEST_USER_EMAIL', this.testData.user.email);
+      }
+      
+      // Limpiar datos antes de todas las pruebas
+      const testUserEmail = Cypress.env('TEST_USER_EMAIL') || 'test@example.com';
+      cy.log(`Limpiando historias de prueba para: ${testUserEmail}`);
+      
+      // Usar la Edge Function para limpiar historias (con respaldo)
+      cy.cleanupTestStories(testUserEmail, { useBackup: true }).then((result) => {
+        if (result.usingBackup) {
+          cy.log('Se usó el método de respaldo para limpiar los datos');
+        }
+        
+        if (result && result.deletedStories > 0) {
+          cy.log(`Historias de prueba limpiadas: ${result.deletedStories} eliminadas`);
+        } else {
+          cy.log('No se encontraron historias para limpiar');
+        }
+      });
+    });
+  });
+  
+  beforeEach(function() {
     // Cargar datos de prueba
     cy.fixture('test-data.json').as('testData');
   });
 
+  /**
+   * Ejecuta la prueba de limpieza de datos
+   * Esta prueba debe ejecutarse primero para asegurar un entorno limpio
+   */
+  it('0. Limpieza de datos inicial', function() {
+    // Ejecutar la prueba de limpieza de datos usando la Edge Function
+    cy.exec('npx cypress run --spec "cypress/e2e/edge_function_test.cy.js"', {
+      timeout: 60000,
+      failOnNonZeroExit: false
+    }).then((result) => {
+      cy.log(`Resultado de la limpieza inicial: ${result.stdout}`);
+      // Verificar que la ejecución fue exitosa
+      expect(result.code).to.be.oneOf([0, 1]); // Permitimos código 1 por si hay pruebas que fallan pero la limpieza se realizó
+    });
+  });
+
+  /**
+   * Ejecuta la prueba de login
+   */
   it('1. Login Exitoso', function() {
-    // Visitar la página de login
-    cy.visit('/');
-    
-    // Verificar que estamos en la página de login
-    cy.contains('h2', 'La CuenterIA').should('be.visible');
-    
-    // Ingresar credenciales
-    cy.get('input[id="email"]').type(this.testData.user.email);
-    cy.get('input[id="password"]').type(this.testData.user.password);
-    
-    // Hacer clic en el botón de iniciar sesión
-    cy.contains('button', 'Iniciar sesión').click();
-    
-    // Verificar redirección a la página de inicio
-    cy.url().should('include', '/home');
-    
-    // Verificar que se muestra el mensaje de bienvenida (header con el logo)
-    cy.get('header').should('be.visible');
-    cy.get('header').find('h1').should('contain', 'La CuenterIA');
+    cy.exec('npx cypress run --spec "cypress/e2e/flows/1_login.cy.js"', {
+      timeout: 60000,
+      failOnNonZeroExit: false
+    }).then((result) => {
+      cy.log(`Resultado de la prueba de login: ${result.stdout}`);
+      // Verificar que la ejecución fue exitosa
+      expect(result.code).to.equal(0);
+    });
   });
 
-  it('2. Creación de Nuevo Cuento', function() {
-    // Iniciar sesión usando el comando personalizado
-    cy.login(this.testData.user.email, this.testData.user.password);
-    
-    // Verificar que el botón "+ Nuevo cuento" existe y es visible
-    cy.contains('+ Nuevo cuento')
-      .should('be.visible')
-      .and('not.be.disabled')
-      .click({ force: true });
-    
-    // Verificar que el modal se ha abierto
-    cy.get('[role="dialog"]', { timeout: 10000 }).should('be.visible');
-    
-    // Verificar que el botón "+ Crear nuevo" existe y es visible
-    cy.contains('+ Crear nuevo')
-      .should('be.visible')
-      .and('not.be.disabled')
-      .click({ force: true });
-    
-    // Completar el formulario del personaje
-    cy.get('input[placeholder="Nombre del personaje"]').type(this.testData.character.name);
-    cy.get('input[placeholder="Edad del personaje"]').type(this.testData.character.age);
-    cy.get('textarea[placeholder="Describe al personaje..."]').type(this.testData.character.description);
-    
-    // Subir una imagen de prueba
-    cy.get('input[type="file"]').selectFile('cypress/fixtures/test-avatar.png', { force: true });
-    
-    // Verificar que la imagen se ha cargado
-    cy.get('img[alt="Referencia"]').should('be.visible');
-    
-    // Hacer clic en "Generar miniatura"
-    cy.contains('button', 'Generar miniatura').click();
-    
-    // Esperar a que se genere la miniatura (esto puede tardar)
-    cy.get('img[alt="Miniatura"]', { timeout: 30000 }).should('be.visible');
-    
-    // Hacer clic en "Guardar personaje"
-    cy.contains('button', 'Guardar personaje').click();
-    
-    // Verificar que se ha redirigido a la pantalla de diseño de historia
-    cy.url().should('include', '/nuevo-cuento/personajes');
-    
-    // Verificar que el personaje se ha guardado correctamente
-    cy.contains(this.testData.character.name).should('be.visible');
+  /**
+   * Ejecuta la prueba de apertura del modal de personajes
+   */
+  it('2. Apertura del modal de personajes', function() {
+    cy.exec('npx cypress run --spec "cypress/e2e/flows/2_modal_personajes.cy.js"', {
+      timeout: 60000,
+      failOnNonZeroExit: false
+    }).then((result) => {
+      cy.log(`Resultado de la prueba del modal: ${result.stdout}`);
+      // Verificar que la ejecución fue exitosa
+      expect(result.code).to.equal(0);
+    });
   });
 
-  it('3. Validación de Campos Obligatorios', function() {
-    // Iniciar sesión usando el comando personalizado
-    cy.login(this.testData.user.email, this.testData.user.password);
-    
-    // Navegar a la creación de personaje
-    cy.contains('+ Nuevo cuento').click();
-    cy.contains('+ Crear nuevo').click();
-    
-    // Intentar avanzar sin completar los campos obligatorios
-    cy.contains('button', 'Generar miniatura').click();
-    
-    // Verificar que se muestran mensajes de error
-    cy.contains('El nombre es obligatorio').should('be.visible');
-    cy.contains('La edad es obligatoria').should('be.visible');
-    
-    // Verificar que el botón "Generar miniatura" está deshabilitado o no funciona
-    cy.contains('button', 'Generar miniatura').should('be.disabled')
-      .then(($btn) => {
-        if (!$btn.prop('disabled')) {
-          // Si el botón no está deshabilitado, verificar que no funciona
-          cy.wrap($btn).click();
-          cy.get('img[alt="Miniatura"]').should('not.exist');
-        }
-      });
+  /**
+   * Ejecuta la prueba de creación de personaje
+   */
+  it('3. Creación de Nuevo Personaje', function() {
+    cy.exec('npx cypress run --spec "cypress/e2e/flows/3_creacion_personaje.cy.js"', {
+      timeout: 120000, // Esta prueba puede tardar más tiempo por la generación de la miniatura
+      failOnNonZeroExit: false
+    }).then((result) => {
+      cy.log(`Resultado de la prueba de creación de personaje: ${result.stdout}`);
+      // Verificar que la ejecución fue exitosa
+      expect(result.code).to.equal(0);
+    });
   });
 
-  // Prueba adicional para verificar la independencia de las pruebas
-  it('4. Las pruebas son independientes', function() {
-    // Esta prueba verifica que podemos ejecutar el flujo de login nuevamente
-    // sin depender del estado de las pruebas anteriores
-    cy.login(this.testData.user.email, this.testData.user.password);
-    cy.url().should('include', '/home');
+  /**
+   * Ejecuta la prueba de validación de campos
+   */
+  it('4. Validación de Campos Obligatorios', function() {
+    cy.exec('npx cypress run --spec "cypress/e2e/flows/4_validacion_campos.cy.js"', {
+      timeout: 60000,
+      failOnNonZeroExit: false
+    }).then((result) => {
+      cy.log(`Resultado de la prueba de validación: ${result.stdout}`);
+      // Verificar que la ejecución fue exitosa
+      expect(result.code).to.equal(0);
+    });
+  });
+
+  /**
+   * Ejecuta la prueba de independencia
+   */
+  it('5. Las pruebas son independientes', function() {
+    cy.exec('npx cypress run --spec "cypress/e2e/flows/5_independencia_pruebas.cy.js"', {
+      timeout: 60000,
+      failOnNonZeroExit: false
+    }).then((result) => {
+      cy.log(`Resultado de la prueba de independencia: ${result.stdout}`);
+      // Verificar que la ejecución fue exitosa
+      expect(result.code).to.equal(0);
+    });
   });
 });

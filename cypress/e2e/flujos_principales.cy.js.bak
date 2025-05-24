@@ -1,0 +1,466 @@
+/// <reference types="cypress" />
+
+describe('Flujos principales de La CuenterIA', function() {
+  // Datos de prueba
+  // Configuración antes de todas las pruebas
+  before(function() {
+    // Cargar los datos de prueba desde el archivo de fixture
+    cy.fixture('test-data.json').then((data) => {
+      this.testData = data;
+      // Configurar el email del usuario de prueba en las variables de entorno
+      if (this.testData.user && this.testData.user.email) {
+        Cypress.env('TEST_USER_EMAIL', this.testData.user.email);
+      }
+      
+      // Limpiar datos antes de todas las pruebas
+      const testUserEmail = Cypress.env('TEST_USER_EMAIL') || 'test@example.com';
+      cy.log(`Limpiando historias de prueba para: ${testUserEmail}`);
+      
+      // Usar la Edge Function para limpiar historias (con respaldo)
+      cy.cleanupTestStories(testUserEmail, { useBackup: true }).then((result) => {
+        if (result.usingBackup) {
+          cy.log('Se usó el método de respaldo para limpiar los datos');
+        }
+        
+        if (result && result.deletedStories > 0) {
+          cy.log(`Historias de prueba limpiadas: ${result.deletedStories} eliminadas`);
+        } else {
+          cy.log('No se encontraron historias para limpiar');
+        }
+      });
+    });
+  });
+  
+  // Limpiar datos después de cada prueba
+  afterEach(function() {
+    const testUserEmail = Cypress.env('TEST_USER_EMAIL') || 'test@example.com';
+    cy.log(`Limpieza después de la prueba para: ${testUserEmail}`);
+    
+    // Usar la Edge Function para limpiar historias (con respaldo)
+    cy.cleanupTestStories(testUserEmail, { useBackup: true }).then((result) => {
+      if (result.usingBackup) {
+        cy.log('Se usó el método de respaldo para limpiar los datos');
+      }
+      
+      if (result && result.deletedStories > 0) {
+        cy.log(`Se limpiaron ${result.deletedStories} historias de prueba`);
+      }
+    });
+  });
+  
+  // Limpieza final después de todas las pruebas
+  after(function() {
+    const testUserEmail = Cypress.env('TEST_USER_EMAIL') || 'test@example.com';
+    cy.log(`Limpieza final para: ${testUserEmail}`);
+    
+    // Usar la Edge Function para limpiar historias (con respaldo)
+    cy.cleanupTestStories(testUserEmail, { useBackup: true }).then((result) => {
+      if (result.usingBackup) {
+        cy.log('Se usó el método de respaldo para limpiar los datos');
+      }
+      
+      if (result && result.deletedStories > 0) {
+        cy.log(`Limpieza final completada: ${result.deletedStories} historias eliminadas`);
+      } else {
+        cy.log('No había historias para limpiar');
+      }
+    });
+  });
+
+  beforeEach(function() {
+    // Cargar datos de prueba
+    cy.fixture('test-data.json').as('testData');
+  });
+
+  it('1. Login Exitoso', function() {
+    // Visitar la página de login
+    cy.visit('/');
+    
+    // Verificar que estamos en la página de login
+    cy.contains('h2', 'La CuenterIA').should('be.visible');
+    
+    // Ingresar credenciales
+    cy.get('input[id="email"]').type(this.testData.user.email);
+    cy.get('input[id="password"]').type(this.testData.user.password);
+    
+    // Hacer clic en el botón de iniciar sesión
+    cy.contains('button', 'Iniciar sesión').click();
+    
+    // Verificar redirección a la página de inicio
+    cy.url().should('include', '/home');
+    
+    // Verificar que se muestra el mensaje de bienvenida (header con el logo)
+    cy.get('header').should('be.visible');
+    cy.get('header').find('h1').should('contain', 'La CuenterIA');
+  });
+
+  it('2. Apertura del modal de personajes', function() {
+    // Iniciar sesión
+    cy.login(this.testData.user.email, this.testData.user.password);
+    
+    // Verificar que estamos en la página correcta
+    cy.url().should('include', '/home');
+    
+    // Usar el comando personalizado para abrir el modal
+    cy.openNewStoryModal();
+    
+    // Verificar que el botón interno "Crear nuevo personaje" está disponible
+    cy.createNewCharacterFromModal();
+  });
+
+  it('3. Creación de Nuevo Personaje', function() {
+    // Usar el comando login personalizado
+    cy.login(this.testData.user.email, this.testData.user.password);
+    
+    // Navegar directamente al formulario de creación
+    cy.visit('/nuevo-cuento/personaje/nuevo');
+    
+    // Esperar a que la página esté completamente cargada
+    cy.url().should('include', '/nuevo-cuento/personaje/nuevo');
+    
+    // Función para esperar a que un elemento sea visible e interactuable
+    const waitForElement = function(selector, timeout = 15000) {
+      cy.log(`Esperando por el elemento: ${selector}`);
+      return cy.get(selector, { timeout })
+        .should('be.visible')
+        .should('not.be.disabled')
+        .should(($el) => {
+          // Verificar que el elemento esté en el viewport y sea interactuable
+          const isInViewport = ($el[0].getBoundingClientRect().top >= 0) &&
+                             ($el[0].getBoundingClientRect().bottom <= window.innerHeight);
+          expect(isInViewport).to.be.true;
+        });
+    };
+    
+    // Función para completar un campo de manera segura teniendo en cuenta el autoguardado
+    const safeType = function(selector, text) {
+      // Si no hay texto, no hacer nada
+      if (!text && text !== 0) {
+        cy.log(`No se proporcionó texto para el campo ${selector}`);
+        return cy.wrap(null);
+      }
+      
+      // Tomar una captura de pantalla antes de interactuar con el campo
+      cy.screenshot(`antes-de-escribir-${selector.replace(/[^a-z0-9]/gi, '-')}`);
+      
+      // Función para obtener el campo de entrada
+      const getField = function() {
+        // Intentar varios selectores comunes si el selector principal falla
+        const selectors = [
+          selector,
+          `input${selector}`,
+          `input[placeholder*="${selector}"]`,
+          `input[name*="${selector}"]`,
+          `[data-testid*="${selector}"]`,
+          `#${selector}`,
+          `.${selector}`
+        ];
+        
+        // Probar cada selector hasta encontrar uno que funcione
+        let found = false;
+        selectors.forEach((sel, index) => {
+          if (!found) {
+            cy.get('body').then(($body) => {
+              if ($body.find(sel).length > 0) {
+                found = true;
+                selector = sel;
+                cy.log(`Selector encontrado: ${sel}`);
+              }
+            });
+          }
+        });
+        
+        return cy.get(selector, { timeout: 20000 });
+      };
+      
+      // Asegurarse de que el campo es visible y está listo
+      waitForElement(selector);
+      
+      // Tomar una captura de pantalla después de encontrar el campo
+      cy.screenshot(`campo-encontrado-${selector.replace(/[^a-z0-9]/gi, '-')}`);
+      
+      // Limpiar el campo si es necesario
+      cy.then(() => {
+        getField().then(($el) => {
+          const currentValue = $el.val() || '';
+          if (currentValue !== '') {
+            // Usar {force: true} para limpiar el campo incluso si está deshabilitado
+            cy.wrap($el).clear({ force: true });
+            // Esperar a que termine el autoguardado después de limpiar
+            cy.waitForAutosave();
+          }
+        });
+      });
+      
+      // Escribir el texto si se proporciona
+      if (text && text.length > 0) {
+        // Usar una función para escribir el texto en lotes pequeños
+        const writeInBatches = function(remainingText, attempt = 0, maxAttempts = 5) {
+          if (attempt >= maxAttempts) {
+            cy.log(`⚠️ Se alcanzó el número máximo de intentos (${maxAttempts}) para escribir en ${selector}`);
+            return cy.wrap(null);
+          }
+          
+          const batchSize = 10; // Escribir 10 caracteres a la vez
+          const currentBatch = remainingText.substring(0, batchSize);
+          const nextBatch = remainingText.substring(batchSize);
+          
+          if (currentBatch.length === 0) {
+            return cy.wrap(null); // Hemos terminado
+          }
+          
+          // Obtener el campo y escribir el lote actual
+          return getField().type(currentBatch, { delay: 50 })
+            .then(() => {
+              // Esperar un momento para que el autoguardado procese
+              return cy.wait(100);
+            })
+            .then(() => {
+              // Continuar con el siguiente lote si hay más texto
+              if (nextBatch.length > 0) {
+                return writeInBatches(nextBatch, attempt, maxAttempts);
+              }
+              return cy.wrap(null);
+            })
+            .catch((error) => {
+              cy.log(`Error al escribir en ${selector}: ${error.message}. Reintentando...`);
+              cy.wait(500); // Esperar un poco más antes de reintentar
+              return writeInBatches(remainingText, attempt + 1, maxAttempts);
+            });
+        };
+        
+        // Iniciar el proceso de escritura por lotes
+        cy.log(`Escribiendo en ${selector}: ${text}`);
+        writeInBatches(text);
+        
+        // Verificar que el valor final es el esperado
+        getField().should(($el) => {
+          const currentValue = $el.val() || '';
+          expect(currentValue).to.include(text);
+        });
+        
+        // Tomar una captura de pantalla después de escribir
+        cy.screenshot(`despues-de-escribir-${selector.replace(/[^a-z0-9]/gi, '-')}`);
+      } else {
+        // Si no se proporciona texto, asegurarse de que el campo esté vacío
+        getField().should('have.value', '');
+      }
+    };
+    
+    // Completar el formulario con esperas entre campos
+    safeType('input[placeholder="Nombre del personaje"]', this.testData.character.name);
+    safeType('input[placeholder="Edad del personaje"]', this.testData.character.age);
+    safeType('textarea[placeholder="Describe al personaje..."]', this.testData.character.description);
+    
+    // Subir imagen de prueba
+    cy.get('input[type="file"]', { timeout: 15000 })
+      .should('exist')
+      .selectFile('cypress/fixtures/test-avatar.png', { force: true });
+    
+    // Verificar que la imagen se cargó
+    cy.get('img[alt="Referencia"]', { timeout: 20000 })
+      .should('be.visible')
+      .and('have.attr', 'src')
+      .and('not.include', 'data:');
+    
+    // Hacer clic en el botón de generar miniatura
+    cy.contains('button', 'Generar miniatura')
+      .should('be.visible')
+      .and('not.be.disabled')
+      .click();
+    
+    // Esperar a que se genere la miniatura
+    cy.get('img[alt="Miniatura"]', { timeout: 30000 })
+      .should('be.visible')
+      .and('have.attr', 'src')
+      .and('not.include', 'data:');
+    
+    // Hacer clic en el botón de guardar
+    cy.contains('button', 'Guardar personaje')
+      .should('be.visible')
+      .and('not.be.disabled')
+      .click();
+    
+    // Verificar redirección
+    cy.url({ timeout: 15000 })
+      .should('include', '/nuevo-cuento/personajes');
+    
+    // Verificar que el personaje se ha creado
+    cy.contains(this.testData.character.name, { timeout: 15000 })
+      .should('be.visible');
+  });
+
+  it('4. Validación de Campos Obligatorios', function() {
+    // Iniciar sesión usando el comando personalizado
+    cy.login(this.testData.user.email, this.testData.user.password);
+    
+    // Navegar directamente al formulario de creación
+    cy.visit('/nuevo-cuento/personaje/nuevo');
+    
+    // Esperar a que la página esté completamente cargada
+    cy.url().should('include', '/nuevo-cuento/personaje/nuevo');
+    
+    // Esperar a que el formulario esté listo
+    cy.get('form', { timeout: 15000 }).should('be.visible');
+    
+    // Verificar que los campos obligatorios están presentes
+    const nameField = 'input[placeholder="Nombre del personaje"]';
+    const ageField = 'input[placeholder="Edad del personaje"]';
+    
+    // Verificar que los campos están visibles
+    cy.get(nameField).should('be.visible');
+    cy.get(ageField).should('be.visible');
+    
+    // Función auxiliar para verificar el botón de generación
+    const checkGenerateButton = function(shouldBeDisabled = true) {
+      let buttonFound = false;
+      'Crear',
+      'Guardar',
+      'Siguiente'
+    ];
+    
+    cy.log(`Verificando botón de generación (${shouldBeDisabled ? 'debe estar deshabilitado' : 'debe estar habilitado'})`);
+    
+    // Tomar captura de pantalla antes de verificar el botón
+    cy.screenshot('antes-de-verificar-boton');
+    
+    return cy.wrap(null).then(() => {
+      // 1. Buscar por texto exacto o parcial
+      possibleButtonTexts.forEach(buttonText => {
+        if (!buttonFound) {
+          // Usar cy.wrap(null) para evitar errores si no se encuentra el botón
+          cy.wrap(null).then(() => {
+            return cy.get('button', { timeout: 1000, log: false })
+              .filter(`:contains("${buttonText}")`)
+              .then(($buttons) => {
+                if ($buttons.length > 0 && !buttonFound) {
+                  buttonFound = true;
+                  const button = cy.wrap($buttons.first());
+                  
+                  // Tomar captura de pantalla del botón encontrado
+                  cy.screenshot(`boton-encontrado-${buttonText.toLowerCase().replace(/\s+/g, '-')}`);
+                  
+                  // Verificar estado del botón
+                  if (shouldBeDisabled) {
+                    button.should('be.disabled');
+                  } else {
+                    button.should('not.be.disabled');
+                  }
+                  
+                  cy.log(`Botón encontrado: "${buttonText}"`);
+                }
+              });
+          }).then(null, () => {
+            // Ignorar errores si no se encuentra el botón
+            cy.log(`No se encontró botón con texto: "${buttonText}"`);
+          });
+        }
+      });
+      
+      // 2. Si no se encontró por texto, buscar por atributos comunes
+      if (!buttonFound) {
+        const buttonSelectors = [
+          'button[type="submit"]',
+          'button.primary',
+          'button.btn-primary',
+          'button:contains("Generar")',
+          'button:contains("Guardar")',
+          'button:contains("Siguiente")'
+        ];
+        
+        buttonSelectors.forEach(selector => {
+          if (!buttonFound) {
+            // Usar cy.wrap para manejar errores correctamente
+            cy.wrap(null).then(() => {
+              return cy.get(selector, { timeout: 1000 })
+                .then(($buttons) => {
+                  if ($buttons.length > 0 && !buttonFound) {
+                    buttonFound = true;
+                    const button = cy.wrap($buttons.first());
+                    
+                    // Tomar captura de pantalla del botón encontrado
+                    cy.screenshot(`boton-por-selector-${selector.replace(/[^a-z0-9]/gi, '-')}`);
+                    
+                    // Verificar estado del botón
+                    if (shouldBeDisabled) {
+                      button.should('be.disabled');
+                    } else {
+                      button.should('not.be.disabled');
+                    }
+                    
+                    cy.log(`Botón encontrado por selector: "${selector}"`);
+                  }
+                });
+            }).then(null, () => {
+              // Ignorar errores si no se encuentra el botón
+              cy.log(`No se encontró botón con selector: "${selector}"`);
+            });
+          }
+        });
+      }
+      
+      // Si aún no se encontró el botón, registrar información de depuración
+      if (!buttonFound) {
+        cy.screenshot('no-se-encontro-boton-generacion');
+        
+        // Listar todos los botones visibles en la página de forma segura
+        cy.wrap(null).then(() => {
+          return cy.get('button:visible', { timeout: 1000, log: false }).then(($buttons) => {
+            if ($buttons.length > 0) {
+              $buttons.each((index, btn) => {
+                const $btn = Cypress.$(btn);
+                const btnText = $btn.text().trim();
+                const btnId = $btn.attr('id') || 'sin-id';
+                const btnClass = $btn.attr('class') || 'sin-clase';
+                cy.log(`Botón ${index + 1}: "${btnText}" (ID: ${btnId}, Clases: ${btnClass})`);
+              });
+            } else {
+              cy.log('No se encontraron botones visibles en la página');
+            }
+          });
+        }).then(null, () => {
+          cy.log('Error al buscar botones en la página');
+        });
+      }
+      
+      return cy.wrap(buttonFound);
+    });
+  };
+    // Verificar que el botón está deshabilitado inicialmente
+    checkGenerateButton(true);
+    
+    // Verificar que se muestran mensajes de error para los campos obligatorios
+    cy.contains(/El nombre (es obligatorio|no puede estar vacío)/i).should('be.visible');
+    cy.contains(/(La edad es obligatoria|La edad no puede estar vacía)/i).should('be.visible');
+    
+    // Verificar que no se ha generado ninguna miniatura
+    cy.get('img[alt="Miniatura"]').should('not.exist');
+    
+    // Probar llenando solo el nombre
+    safeType(nameField, 'Personaje de prueba');
+    
+    // El botón debería seguir deshabilitado
+    checkGenerateButton(true);
+    
+    // Limpiar el nombre y probar solo con la edad
+    safeType(nameField, '');
+    safeType(ageField, '10');
+    
+    // El botón debería seguir deshabilitado
+    checkGenerateButton(true);
+    
+    // Limpiar todo
+    safeType(ageField, '');
+    
+    // Verificar que seguimos en la misma página
+    cy.url().should('include', '/nuevo-cuento/personaje/nuevo');
+  });
+
+  // Prueba adicional para verificar la independencia de las pruebas
+  it('5. Las pruebas son independientes', function() {
+    // Esta prueba verifica que podemos ejecutar el flujo de login nuevamente
+    // sin depender del estado de las pruebas anteriores
+    cy.login(this.testData.user.email, this.testData.user.password);
+    cy.url().should('include', '/home');
+  });
+});
