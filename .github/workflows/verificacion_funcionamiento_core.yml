@@ -30,7 +30,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.VITE_SUPABASE_SERVICE_ROLE_KEY }}
           CLEANUP_API_KEY: ${{ secrets.CLEANUP_API_KEY }}
-      - name: Cypress run
+      - name: === PRUEBAS DE CONTROL ===
         uses: cypress-io/github-action@v5
         with:
           build: npm run build

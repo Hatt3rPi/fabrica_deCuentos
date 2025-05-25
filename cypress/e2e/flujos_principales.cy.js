@@ -72,7 +72,7 @@ describe('Orquestador de Flujos Principales', function() {
    * Ejecuta la prueba de login
    */
   it('1. Login Exitoso', function() {
-    cy.exec('npx cypress run --spec "cypress/e2e/flows/1_login.cy.js"', {
+    cy.exec('npx cypress run --spec "cypress/e2e/flows/1_login.cy.js" --key 0f1d8399-decf-47f2-ba29-b6be3a0485f6', {
       timeout: 60000,
       failOnNonZeroExit: false
     }).then((result) => {
@@ -86,7 +86,7 @@ describe('Orquestador de Flujos Principales', function() {
    * Ejecuta la prueba de apertura del modal de personajes
    */
   it('2. Apertura del modal de personajes', function() {
-    cy.exec('npx cypress run --spec "cypress/e2e/flows/2_modal_personajes.cy.js"', {
+    cy.exec('npx cypress run --spec "cypress/e2e/flows/2_modal_personajes.cy.js" --key 0f1d8399-decf-47f2-ba29-b6be3a0485f6', {
       timeout: 60000,
       failOnNonZeroExit: false
     }).then((result) => {
@@ -100,34 +100,11 @@ describe('Orquestador de Flujos Principales', function() {
    * Ejecuta la prueba de creación de personaje
    */
   it('3. Creación de Nuevo Personaje', function() {
-    cy.exec('npx cypress run --spec "cypress/e2e/flows/3_creacion_personaje.cy.js"', {
+    cy.exec('npx cypress run --spec "cypress/e2e/flows/3_creacion_personaje.cy.js" --key 0f1d8399-decf-47f2-ba29-b6be3a0485f6', {
       timeout: 120000, // Esta prueba puede tardar más tiempo por la generación de la miniatura
       failOnNonZeroExit: false
     }).then((result) => {
       cy.log(`Resultado de la prueba de creación de personaje: ${result.stdout}`);
-      // Verificar que la ejecución fue exitosa
-      expect(result.code).to.equal(0);
-    });
-  });
-
-  // Pruebas desactivadas temporalmente
-  it.skip('4. Validación de Campos Obligatorios', function() {
-    cy.exec('npx cypress run --spec "cypress/e2e/flows/4_validacion_campos.cy.js"', {
-      timeout: 60000,
-      failOnNonZeroExit: false
-    }).then((result) => {
-      cy.log(`Resultado de la validación de campos: ${result.stdout}`);
-      // Verificar que la ejecución fue exitosa
-      expect(result.code).to.equal(0);
-    });
-  });
-
-  it.skip('5. Independencia de Pruebas', function() {
-    cy.exec('npx cypress run --spec "cypress/e2e/flows/5_independencia_pruebas.cy.js"', {
-      timeout: 60000,
-      failOnNonZeroExit: false
-    }).then((result) => {
-      cy.log(`Resultado de la prueba de independencia: ${result.stdout}`);
       // Verificar que la ejecución fue exitosa
       expect(result.code).to.equal(0);
     });
