@@ -159,22 +159,8 @@ Cypress.Commands.add('waitForAutosave', () => {
   // cy.get('[data-status="saved"]').should('exist');
 });
 
-// -- Comando para limpiar las historias de prueba de un usuario por su ID --
-Cypress.Commands.add('cleanupTestStories', (userId = 'f0f2ff5b-826a-4d43-aa21-8094e1cf584e') => {
-  cy.log(`Iniciando limpieza de historias para el usuario ID: ${userId}`);
-  
-  // Usar el comando task para ejecutar la limpieza en Node.js
-  return cy.task('deleteTestStories', { userId })
-    .then((result) => {
-      const count = result?.rowCount || 0;
-      cy.log(`✅ Se eliminaron ${count} historias de prueba para el usuario ${userId}`);
-      return result;
-    })
-    .catch((error) => {
-      cy.log('❌ Error al limpiar historias de prueba:', error.message);
-      throw error;
-    });
-});
+// -- Comando para limpiar las historias de prueba de un usuario por su email --
+// Implementación obsoleta eliminada - Usar la implementación completa más abajo
 
 // -- Comando para eliminar todos los datos de prueba de un usuario por su email --
 Cypress.Commands.add('cleanupAllTestData', (email) => {
@@ -275,23 +261,29 @@ Cypress.Commands.add('checkRequiredFields', () => {
 
 /**
  * Elimina todas las historias de prueba de un usuario usando la Edge Function
- * @param {string} email - Email del usuario cuyas historias se eliminarán
+ * @param {string} email - Email del usuario cuyas historias se eliminarán (ej: 'tester@lacuenteria.cl')
  * @param {Object} options - Opciones adicionales
  * @param {boolean} options.useBackup - Si es true, usará cleanupAllTestData como respaldo si la Edge Function falla
  * @returns {Cypress.Chainable} - Cadena de comandos de Cypress con la respuesta
  */
-Cypress.Commands.add('cleanupTestStories', (email, options = {}) => {
+Cypress.Commands.add('cleanupTestStories', (email = 'tester@lacuenteria.cl', options = {}) => {
   const apiKey = Cypress.env('CLEANUP_API_KEY');
   const supabaseUrl = Cypress.env('VITE_SUPABASE_URL');
   const functionUrl = `${supabaseUrl}/functions/v1/delete-test-stories`;
   const useBackup = options.useBackup !== false; // Por defecto, usar respaldo si no se especifica lo contrario
 
   if (!email) {
-    cy.log('⚠️ No se proporcionó un email para limpiar historias');
-    return cy.wrap({ success: false, deletedStories: 0, error: 'Email no proporcionado' });
+    const errorMsg = '⚠️ No se proporcionó un email para limpiar historias';
+    cy.log(errorMsg);
+    return cy.wrap({ 
+      success: false, 
+      deletedStories: 0, 
+      error: errorMsg,
+      timestamp: new Date().toISOString()
+    });
   }
 
-  cy.log(`🧹 Eliminando historias de prueba para: ${email}`);
+  cy.log(`🧹 [${new Date().toISOString()}] Iniciando limpieza para: ${email}`);
 
   // Verificar si tenemos las variables necesarias para la Edge Function
   if (!apiKey || !supabaseUrl) {
@@ -326,8 +318,8 @@ Cypress.Commands.add('cleanupTestStories', (email, options = {}) => {
     
     // Si hay error en la Edge Function y tenemos habilitado el respaldo
     if (response.status >= 400 && useBackup) {
-      const errorMsg = response.body?.error || 'Error desconocido';
-      cy.log(`⚠️ Error en Edge Function: ${errorMsg}. Usando método de respaldo...`);
+      const errorMsg = response.body?.error || `Error HTTP ${response.status}`;
+      cy.log(`⚠️ [${new Date().toISOString()}] Error en Edge Function: ${errorMsg}. Usando método de respaldo...`);
       
       return cy.cleanupAllTestData(email).then(result => {
         return cy.wrap({
