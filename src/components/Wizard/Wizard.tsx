@@ -1,49 +1,36 @@
-import React, { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useWizard } from '../../context/WizardContext';
-import CharactersStep from './steps/CharactersStep';
-import StoryStep from './steps/StoryStep';
-import DesignStep from './steps/DesignStep';
-import PreviewStep from './steps/PreviewStep';
-import ExportStep from './steps/ExportStep';
+import React from 'react';
+import { Outlet, useParams, useLocation } from 'react-router-dom';
+import { WizardStep } from '../../context/WizardContext';
 import WizardNav from './WizardNav';
 import StepIndicator from './StepIndicator';
 
 const Wizard: React.FC = () => {
-  const { currentStep, setCurrentStep } = useWizard();
-  const { storyId } = useParams();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!storyId) {
-      navigate('/');
-    }
-  }, [storyId, navigate]);
-
-  const renderStep = () => {
-    switch (currentStep) {
-      case 'characters':
-        return <CharactersStep />;
-      case 'story':
-        return <StoryStep />;
-      case 'design':
-        return <DesignStep />;
-      case 'preview':
-        return <PreviewStep />;
-      case 'export':
-        return <ExportStep />;
-      default:
-        return <CharactersStep />;
+  const { storyId } = useParams<{ storyId: string }>();
+  const location = useLocation();
+  
+  const getCurrentStep = (): WizardStep => {
+    const path = location.pathname.split('/').pop();
+    switch (path) {
+      case 'personajes': return 'characters';
+      case 'historia': return 'story';
+      case 'diseno': return 'design';
+      case 'vista-previa': return 'preview';
+      case 'exportacion': return 'export';
+      default: return 'characters';
     }
   };
 
+  if (!storyId) {
+    return <div>Error: No story ID provided</div>;
+  }
+
   return (
     <div className="w-full max-w-5xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 mb-8">
-      <StepIndicator />
+      <StepIndicator currentStep={getCurrentStep()} />
       <div className="p-6">
-        {renderStep()}
+        <Outlet />
       </div>
-      <WizardNav />
+      <WizardNav currentStep={getCurrentStep()} />
     </div>
   );
 };

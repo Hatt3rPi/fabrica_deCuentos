@@ -1,26 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useCharacterStore } from '../../stores/characterStore';
-import { useCharacterAutosave } from '../../hooks/useCharacterAutosave';
-import { useNotifications } from '../../hooks/useNotifications';
-import { NotificationType, NotificationPriority } from '../../types/notification';
 import { Character } from '../../types';
 
-const CharacterForm: React.FC = () => {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+interface CharacterFormProps {
+  characterId: string | null;
+  storyId: string;
+  onSave: (character: Character) => void;
+}
+
+const CharacterForm: React.FC<CharacterFormProps> = ({ characterId, storyId, onSave }) => {
   const { supabase, user } = useAuth();
-  const { addCharacter, updateCharacter } = useCharacterStore();
-  const { createNotification } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const [fieldsReadOnly, setFieldsReadOnly] = useState(false);
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -35,12 +30,10 @@ const CharacterForm: React.FC = () => {
     age: '',
     description: { es: '', en: '' },
     reference_urls: [],
-    thumbnailUrl: null,
+    thumbnail_url: null,
   });
-
-  const { currentCharacterId, recoverFromBackup } = useCharacterAutosave(formData, id);
   
-  const isEditMode = Boolean(id);
+  const isEditMode = Boolean(characterId);
 
   const uploadImageToStorage = async (file: File, characterId: string): Promise<string> => {
     if (!user) throw new Error('User not authenticated');
@@ -99,32 +92,20 @@ const CharacterForm: React.FC = () => {
   };
 
   useEffect(() => {
-    const recoverState = async () => {
-      if (id) {
-        const backupState = await recoverFromBackup();
-        if (backupState?.characters?.[0]) {
-          setFormData(backupState.characters[0]);
-        }
-      }
-    };
-
-    recoverState();
-  }, [id]);
-  
-  useEffect(() => {
-    if (isEditMode && id) {
+    if (isEditMode && characterId) {
       const loadCharacter = async () => {
         setIsLoading(true);
         try {
           const { data, error } = await supabase
             .from('characters')
             .select('*')
-            .eq('id', id)
+            .eq('id', characterId)
             .single();
 
           if (error) throw error;
           if (data) {
             setFormData({
+              id: data.id,
               name: data.name,
               age: data.age,
               description: data.description,
@@ -145,7 +126,7 @@ const CharacterForm: React.FC = () => {
 
       loadCharacter();
     }
-  }, [id]);
+  }, [characterId, isEditMode, supabase]);
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: {
@@ -162,8 +143,8 @@ const CharacterForm: React.FC = () => {
 
       try {
         const file = acceptedFiles[0];
-        const characterId = id || crypto.randomUUID();
-        const publicUrl = await uploadImageToStorage(file, characterId);
+        const charId = characterId || crypto.randomUUID();
+        const publicUrl = await uploadImageToStorage(file, charId);
 
         setFormData(prev => ({
           ...prev,
@@ -185,12 +166,7 @@ const CharacterForm: React.FC = () => {
 
   const generateThumbnail = async () => {
     if (!user) {
-      createNotification(
-        NotificationType.SYSTEM_ERROR,
-        'Error de autenticación',
-        'Debes iniciar sesión para generar una miniatura',
-        NotificationPriority.HIGH
-      );
+      setError('Debes iniciar sesión para generar una miniatura');
       return;
     }
 
@@ -274,7 +250,8 @@ const CharacterForm: React.FC = () => {
         throw new Error('No se recibió una URL válida para la miniatura');
       }
 
-      const thumbnailPath = `thumbnails/${user.id}/${currentCharacterId}.png`;
+      const charId = characterId || crypto.randomUUID();
+      const thumbnailPath = `thumbnails/${user.id}/${charId}.png`;
       const response = await fetch(thumbnailPromise.thumbnailUrl);
       const blob = await response.blob();
       
@@ -300,22 +277,9 @@ const CharacterForm: React.FC = () => {
       
       // Marcar que la miniatura ha sido generada exitosamente
       setThumbnailGenerated(true);
-
-      createNotification(
-        NotificationType.SYSTEM_SUCCESS,
-        'Miniatura generada',
-        `Se ha generado la miniatura para ${formData.name}`,
-        NotificationPriority.NORMAL
-      );
     } catch (error) {
       console.error('Error generating thumbnail:', error);
       setError(error.message || 'Error desconocido al generar la miniatura');
-      createNotification(
-        NotificationType.SYSTEM_UPDATE,
-        'Error al generar miniatura',
-        error.message || 'Ocurrió un error al generar la miniatura. Por favor, intenta de nuevo.',
-        NotificationPriority.HIGH
-      );
     } finally {
       setFieldsReadOnly(false);
     }
@@ -337,8 +301,10 @@ const CharacterForm: React.FC = () => {
     try {
       setIsLoading(true);
       
+      const charId = characterId || crypto.randomUUID();
+      
       const characterData = {
-        id: currentCharacterId,
+        id: charId,
         user_id: user.id,
         name: formData.name,
         age: formData.age,
@@ -349,32 +315,11 @@ const CharacterForm: React.FC = () => {
 
       const { error } = await supabase
         .from('characters')
-        .upsert(characterData)
-        .eq('id', currentCharacterId);
+        .upsert(characterData);
 
       if (error) throw error;
 
-      // Mostrar notificación de éxito
-      if (isEditMode) {
-        createNotification(
-          NotificationType.CHARACTER_GENERATION_COMPLETE,
-          '¡Personaje actualizado!',
-          `El personaje ${formData.name} ha sido actualizado con éxito.`,
-          NotificationPriority.MEDIUM,
-          { characterId: currentCharacterId }
-        );
-      } else {
-        createNotification(
-          NotificationType.CHARACTER_GENERATION_COMPLETE,
-          '¡Personaje creado!',
-          `El personaje ${formData.name} ha sido creado con éxito.`,
-          NotificationPriority.HIGH,
-          { characterId: currentCharacterId }
-        );
-      }
-
-      setIsRedirecting(true);
-      navigate('/nuevo-cuento/personajes');
+      onSave(characterData as Character);
     } catch (err) {
       console.error('Error saving character:', err);
       setError('Error al guardar el personaje');
@@ -589,7 +534,7 @@ const CharacterForm: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => navigate('/nuevo-cuento/personajes')}
+            onClick={() => onSave(formData as Character)}
             className="flex-1 py-3 px-4 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50"
           >
             Cancelar

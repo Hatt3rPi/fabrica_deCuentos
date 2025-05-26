@@ -39,8 +39,23 @@ const MyStories: React.FC = () => {
     }
   };
 
-  const handleNewStory = () => {
-    setIsModalOpen(true);
+  const handleNewStory = async () => {
+    try {
+      const { data: story, error } = await supabase
+        .from('stories')
+        .insert({
+          user_id: user?.id,
+          status: 'draft',
+          title: 'Nuevo cuento'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      navigate(`/wizard/${story.id}/personajes`);
+    } catch (error) {
+      console.error('Error creating story:', error);
+    }
   };
 
   const handleContinueStory = (storyId: string) => {

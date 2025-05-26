@@ -1,9 +1,46 @@
 import React from 'react';
-import { useWizard } from '../../context/WizardContext';
+import { useNavigate, useParams } from 'react-router-dom';
+import { WizardStep } from '../../context/WizardContext';
 import { ArrowLeft, ArrowRight, Download } from 'lucide-react';
 
-const WizardNav: React.FC = () => {
-  const { currentStep, prevStep, nextStep, canProceed, isGenerating } = useWizard();
+interface WizardNavProps {
+  currentStep: WizardStep;
+}
+
+const WizardNav: React.FC<WizardNavProps> = ({ currentStep }) => {
+  const navigate = useNavigate();
+  const { storyId } = useParams<{ storyId: string }>();
+  const isGenerating = false; // TODO: Get this from context if needed
+
+  const stepToUrl = {
+    'characters': 'personajes',
+    'story': 'historia',
+    'design': 'diseno',
+    'preview': 'vista-previa',
+    'export': 'exportacion'
+  };
+
+  const stepOrder = ['characters', 'story', 'design', 'preview', 'export'];
+
+  const prevStep = () => {
+    const currentIndex = stepOrder.indexOf(currentStep);
+    if (currentIndex > 0) {
+      const prevStepName = stepOrder[currentIndex - 1];
+      navigate(`/wizard/${storyId}/${stepToUrl[prevStepName as keyof typeof stepToUrl]}`);
+    }
+  };
+
+  const nextStep = () => {
+    const currentIndex = stepOrder.indexOf(currentStep);
+    if (currentIndex < stepOrder.length - 1) {
+      const nextStepName = stepOrder[currentIndex + 1];
+      navigate(`/wizard/${storyId}/${stepToUrl[nextStepName as keyof typeof stepToUrl]}`);
+    }
+  };
+
+  const canProceed = () => {
+    return true;
+  };
 
   const handleNextClick = () => {
     if (canProceed()) {

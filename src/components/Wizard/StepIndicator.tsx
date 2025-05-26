@@ -1,9 +1,12 @@
 import React from 'react';
-import { useWizard, WizardStep } from '../../context/WizardContext';
+import { WizardStep } from '../../context/WizardContext';
 import { UserRound, BookText, Palette, FileText } from 'lucide-react';
 
-const StepIndicator: React.FC = () => {
-  const { currentStep } = useWizard();
+interface StepIndicatorProps {
+  currentStep: WizardStep;
+}
+
+const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
 
   const steps: { id: WizardStep; label: string; icon: React.ReactElement }[] = [
     { id: 'characters', label: 'Personajes', icon: <UserRound className="w-5 h-5" /> },

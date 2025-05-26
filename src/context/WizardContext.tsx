@@ -128,14 +128,30 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const nextStep = () => {
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1]);
+      const nextStepName = steps[currentIndex + 1];
+      const urlMap: Record<WizardStep, string> = {
+        'characters': 'personajes',
+        'story': 'historia',
+        'design': 'diseno',
+        'preview': 'vista-previa',
+        'export': 'exportacion'
+      };
+      navigate(`/wizard/${storyId}/${urlMap[nextStepName]}`);
     }
   };
 
   const prevStep = () => {
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1]);
+      const prevStepName = steps[currentIndex - 1];
+      const urlMap: Record<WizardStep, string> = {
+        'characters': 'personajes',
+        'story': 'historia',
+        'design': 'diseno',
+        'preview': 'vista-previa',
+        'export': 'exportacion'
+      };
+      navigate(`/wizard/${storyId}/${urlMap[prevStepName]}`);
     }
   };
 
@@ -167,7 +183,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             : typeof c.description === 'string' 
               ? c.description.trim() 
               : '';
-          return name !== '' && description !== '' && c.thumbnailUrl !== null;
+          return name !== '' && description !== '' && c.thumbnail_url !== null;
         });
       case 'story':
         return (
