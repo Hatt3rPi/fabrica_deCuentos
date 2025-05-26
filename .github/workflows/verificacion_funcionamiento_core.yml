@@ -1,4 +1,4 @@
-name: E2E Tests
+name: Verificación funcionamiento CORE
 
 on:
   push:
