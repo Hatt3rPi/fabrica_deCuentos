@@ -128,8 +128,13 @@ Cypress.Commands.add('createNewCharacterFromModal', () => {
             .should('not.be.disabled')
             .click({ force: true });
           
-          // Verificar que la navegación ocurrió
-          cy.url({ timeout: 10000 }).should('include', '/nuevo-cuento/personaje/nuevo');
+          // Verificar que el formulario de personaje está visible en el modal
+          cy.get('[data-testid="modal-personajes"]')
+            .should('be.visible')
+            .within(() => {
+              cy.get('input[placeholder="Nombre del personaje"]', { timeout: 15000 })
+                .should('be.visible');
+            });
         } else {
           // Intentar con el siguiente texto posible
           tryClickButton(index + 1);
