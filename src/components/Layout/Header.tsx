@@ -12,6 +12,10 @@ const Header: React.FC = () => {
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
+  
+  const handleLogoClick = () => {
+    window.location.reload();
+  };
 
   // Set header height CSS variable for notification positioning
   useEffect(() => {
@@ -53,8 +57,14 @@ const Header: React.FC = () => {
         </button>
 
         {/* Logo and title */}
-        <div className="flex items-center gap-2">
-          <BookOpen className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+        <div 
+          className="flex items-center gap-2 cursor-pointer hover:opacity-90 transition-all duration-200"
+          onClick={handleLogoClick}
+          role="button"
+          aria-label="Reload page"
+          tabIndex={0}
+        >
+          <BookOpen className="w-8 h-8 text-purple-600 dark:text-purple-400 transition-transform duration-200 hover:rotate-12" />
           <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
             La CuenterIA
           </h1>
