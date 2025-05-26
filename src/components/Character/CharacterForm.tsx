@@ -537,7 +537,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ characterId, storyId, onS
             onClick={() => onSave(formData as Character)}
             className="flex-1 py-3 px-4 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50"
           >
-            Cancelar
+            {isLoading ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </form>
