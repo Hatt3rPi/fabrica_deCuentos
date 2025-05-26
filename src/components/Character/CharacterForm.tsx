@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
@@ -8,6 +8,7 @@ import { useCharacterAutosave } from '../../hooks/useCharacterAutosave';
 import { useNotifications } from '../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../types/notification';
 import { Character } from '../../types';
+import { useBeforeUnload } from '../../hooks/useBeforeUnload';
 
 const CharacterForm: React.FC = () => {
   const navigate = useNavigate();
@@ -320,6 +321,112 @@ const CharacterForm: React.FC = () => {
       setFieldsReadOnly(false);
     }
   };
+
+  // Referencia para controlar si el formulario tiene cambios sin guardar
+  const hasUnsavedChanges = useRef(false);
+
+  // Función para guardar el estado del formulario en localStorage
+  const saveFormStateToLocalStorage = useCallback(() => {
+    if (!user) return;
+    
+    const formState = {
+      name: formData.name,
+      age: formData.age,
+      description: formData.description,
+      reference_urls: formData.reference_urls,
+      thumbnailUrl: formData.thumbnailUrl,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    localStorage.setItem(`character_form_state_${currentCharacterId}`, JSON.stringify(formState));
+    hasUnsavedChanges.current = true;
+  }, [formData, currentCharacterId, user]);
+
+  // Advertir al usuario antes de cerrar la pestaña si hay cambios sin guardar
+  useBeforeUnload(
+    useCallback((event) => {
+      if (hasUnsavedChanges.current) {
+        event.preventDefault();
+        return (event.returnValue = '¿Estás seguro de que quieres salir? Los cambios no guardados se perderán.');
+      }
+    }, [])
+  );
+
+  // Guardar el estado del formulario cuando cambia
+  useEffect(() => {
+    if (formData.name || formData.age || formData.description?.es || formData.reference_urls?.length) {
+      saveFormStateToLocalStorage();
+    }
+  }, [formData, saveFormStateToLocalStorage]);
+
+  // Recuperar el estado del formulario al cargar
+  useEffect(() => {
+    const loadFormState = () => {
+      if (!currentCharacterId || !user) return;
+      
+      const savedState = localStorage.getItem(`character_form_state_${currentCharacterId}`);
+      if (savedState) {
+        try {
+          const parsedState = JSON.parse(savedState);
+          // Solo restaurar si los datos tienen menos de 24 horas
+          const lastUpdated = new Date(parsedState.lastUpdated);
+          const now = new Date();
+          const hoursDiff = (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
+          
+          if (hoursDiff < 24) {
+            setFormData(prevState => ({
+              ...prevState,
+              name: parsedState.name || prevState.name,
+              age: parsedState.age || prevState.age,
+              description: parsedState.description || prevState.description,
+              reference_urls: parsedState.reference_urls || prevState.reference_urls,
+              thumbnailUrl: parsedState.thumbnailUrl || prevState.thumbnailUrl
+            }));
+          }
+        } catch (error) {
+          console.error('Error parsing saved form state:', error);
+        }
+      }
+    };
+
+    loadFormState();
+  }, [currentCharacterId, user]);
+
+  // Sincronizar el estado del formulario entre pestañas
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key?.includes(`character_form_state_${currentCharacterId}`)) {
+        try {
+          if (event.newValue) {
+            const parsedState = JSON.parse(event.newValue);
+            setFormData(prevState => ({
+              ...prevState,
+              name: parsedState.name || prevState.name,
+              age: parsedState.age || prevState.age,
+              description: parsedState.description || prevState.description,
+              reference_urls: parsedState.reference_urls || prevState.reference_urls,
+              thumbnailUrl: parsedState.thumbnailUrl || prevState.thumbnailUrl
+            }));
+          }
+        } catch (error) {
+          console.error('Error handling storage event:', error);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [currentCharacterId]);
+
+  // Limpiar el estado guardado después de guardar exitosamente
+  const clearSavedFormState = useCallback(() => {
+    if (currentCharacterId) {
+      localStorage.removeItem(`character_form_state_${currentCharacterId}`);
+      hasUnsavedChanges.current = false;
+    }
+  }, [currentCharacterId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -14,17 +14,26 @@ import NotificationBell from './components/Notifications/NotificationBell';
 import ToastContainer from './components/UI/ToastContainer';
 import ProfileSettings from './pages/ProfileSettings';
 import { useProfileStore } from './stores/profileStore';
+import LoadingScreen from './components/UI/LoadingScreen';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+  
   return user ? <>{children}</> : <Navigate to="/" replace />;
 }
 
 function AppContent() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   if (!user) {
-    
     return <LoginForm />;
   }
 
@@ -128,6 +137,20 @@ function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+  }, []);
+
+  // Manejar eventos de almacenamiento para sincronizar sesiones entre pestañas
+  React.useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key?.includes('lacuenteria-auth')) {
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   return (
