@@ -279,7 +279,7 @@ const CharacterForm: React.FC = () => {
       const blob = await response.blob();
       
       const { error: uploadError } = await supabase.storage
-        .from('characters')
+        .from('storage')
         .upload(thumbnailPath, blob, {
           contentType: 'image/png',
           upsert: true
@@ -290,13 +290,16 @@ const CharacterForm: React.FC = () => {
       }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('characters')
+        .from('storage')
         .getPublicUrl(thumbnailPath);
 
       setFormData(prev => ({
         ...prev,
         thumbnail_url: publicUrl
       }));
+      
+      // Marcar que la miniatura ha sido generada exitosamente
+      setThumbnailGenerated(true);
 
       createNotification(
         NotificationType.SYSTEM_SUCCESS,
@@ -341,7 +344,7 @@ const CharacterForm: React.FC = () => {
         age: formData.age,
         description: formData.description,
         reference_urls: formData.reference_urls,
-        thumbnail_url: formData.thumbnailUrl,
+        thumbnail_url: formData.thumbnail_url,
       };
 
       const { error } = await supabase
