@@ -184,87 +184,110 @@ const CharacterForm: React.FC = () => {
   };
 
   const generateThumbnail = async () => {
-    if (!user) throw new Error('User not authenticated');
-    
-    if (!formData.name?.trim() || !formData.age?.trim()) {
-      setFieldErrors({
-        name: !formData.name?.trim() ? "El nombre es obligatorio" : undefined,
-        age: !formData.age?.trim() ? "La edad es obligatoria" : undefined,
-      });
-      return;
-    }
-
-    if (!formData.description?.es && !formData.reference_urls?.[0]) {
-      setFieldErrors({
-        description: "Se requiere una descripción o una imagen",
-        image: "Se requiere una descripción o una imagen"
-      });
+    if (!user) {
+      createNotification(
+        NotificationType.SYSTEM_ERROR,
+        'Error de autenticación',
+        'Debes iniciar sesión para generar una miniatura',
+        NotificationPriority.HIGH
+      );
       return;
     }
 
     setFieldsReadOnly(true);
-    setIsAnalyzing(true);
     setError(null);
     setRetryCount(0);
 
+    // Iniciar ambos procesos en paralelo
+    setIsAnalyzing(true);
+    setIsGeneratingThumbnail(true);
+
     try {
-      const descriptionData = await callAnalyzeCharacter();
-      
-      if (!descriptionData || !descriptionData.description) {
-        throw new Error('No se pudo generar la descripción del personaje');
-      }
+      // Ejecutar ambas llamadas API en paralelo
+      const [descriptionPromise, thumbnailPromise] = await Promise.all([
+        // Llamada a analyze-character (solo si hay descripción o imagen)
+        (async () => {
+          try {
+            if (formData.description?.es || formData.reference_urls?.[0]) {
+              const response = await callAnalyzeCharacter();
+              if (response && response.description) {
+                return response;
+              }
+            }
+            return null;
+          } catch (error) {
+            console.error("Error in description generation:", error);
+            return null;
+          } finally {
+            setIsAnalyzing(false);
+          }
+        })(),
+        
+        // Llamada a describe-and-sketch (para generar la miniatura)
+        (async () => {
+          try {
+            const thumbnailResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                name: formData.name?.trim(),
+                age: formData.age?.trim(),
+                description: formData.description,
+                referenceImage: formData.reference_urls?.[0] || null
+              })
+            });
 
-      setFormData(prev => ({
-        ...prev,
-        description: {
-          es: descriptionData.description.es || prev.description?.es || '',
-          en: descriptionData.description.en || prev.description?.en || ''
-        }
-      }));
+            if (!thumbnailResponse.ok) {
+              const errorData = await thumbnailResponse.json().catch(() => ({}));
+              if (thumbnailResponse.status === 429) {
+                throw new Error('Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.');
+              }
+              throw new Error(errorData.error || 'Error al generar la miniatura. Por favor, verifica los datos e intenta de nuevo.');
+            }
 
-      setIsAnalyzing(false);
-      setIsGeneratingThumbnail(true);
+            return await thumbnailResponse.json();
+          } catch (error) {
+            console.error("Error in thumbnail generation:", error);
+            throw error;
+          } finally {
+            setIsGeneratingThumbnail(false);
+          }
+        })()
+      ]);
 
-      const thumbnailResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: formData.name?.trim(),
-          age: formData.age?.trim(),
+      // Procesar los resultados de la descripción (si existe)
+      if (descriptionPromise && descriptionPromise.description) {
+        setFormData(prev => ({
+          ...prev,
           description: {
-            es: descriptionData.description.es || formData.description?.es,
-            en: descriptionData.description.en || formData.description?.en
-          },
-          referenceImage: formData.reference_urls?.[0] || null
-        })
-      });
-
-      if (!thumbnailResponse.ok) {
-        const errorData = await thumbnailResponse.json().catch(() => ({}));
-        if (thumbnailResponse.status === 429) {
-          throw new Error('Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.');
-        }
-        throw new Error(errorData.error || 'Error al generar la miniatura. Por favor, verifica los datos e intenta de nuevo.');
+            es: descriptionPromise.description.es || prev.description?.es || '',
+            en: descriptionPromise.description.en || prev.description?.en || ''
+          }
+        }));
       }
 
-      const thumbnailData = await thumbnailResponse.json();
-
-      if (!thumbnailData || !thumbnailData.thumbnailUrl) {
+      // Procesar los resultados de la miniatura
+      if (!thumbnailPromise || !thumbnailPromise.thumbnailUrl) {
         throw new Error('No se recibió una URL válida para la miniatura');
       }
 
       const thumbnailPath = `thumbnails/${user.id}/${currentCharacterId}.png`;
-      const response = await fetch(thumbnailData.thumbnailUrl);
+      const response = await fetch(thumbnailPromise.thumbnailUrl);
       const blob = await response.blob();
       
       const { error: uploadError } = await supabase.storage
         .from('storage')
-        .upload(thumbnailPath, blob);
+        .upload(thumbnailPath, blob, {
+          contentType: 'image/png',
+          upsert: true
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw new Error(`Error al subir la miniatura: ${uploadError.message}`);
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('storage')
@@ -272,34 +295,28 @@ const CharacterForm: React.FC = () => {
 
       setFormData(prev => ({
         ...prev,
-        thumbnailUrl: publicUrl
+        thumbnail_url: publicUrl
       }));
-
+      
+      // Marcar que la miniatura ha sido generada exitosamente
       setThumbnailGenerated(true);
 
-      // Mostrar notificación cuando se genera la miniatura con éxito
       createNotification(
-        NotificationType.CHARACTER_GENERATION_COMPLETE,
-        '¡Miniatura generada!',
-        `La miniatura para ${formData.name} ha sido generada con éxito. Ahora puedes guardar el personaje.`,
-        NotificationPriority.MEDIUM,
-        { characterId: currentCharacterId }
+        NotificationType.SYSTEM_SUCCESS,
+        'Miniatura generada',
+        `Se ha generado la miniatura para ${formData.name}`,
+        NotificationPriority.NORMAL
       );
-
     } catch (error) {
-      console.error("Error in thumbnail generation:", error);
-      setError(error.message || 'Error al procesar el personaje. Por favor, intenta de nuevo.');
-      
-      // Notificación de error
+      console.error('Error generating thumbnail:', error);
+      setError(error.message || 'Error desconocido al generar la miniatura');
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Error al generar miniatura',
-        `Hubo un problema al generar la miniatura para ${formData.name}. Por favor, intenta de nuevo.`,
+        error.message || 'Ocurrió un error al generar la miniatura. Por favor, intenta de nuevo.',
         NotificationPriority.HIGH
       );
     } finally {
-      setIsAnalyzing(false);
-      setIsGeneratingThumbnail(false);
       setFieldsReadOnly(false);
     }
   };
@@ -327,7 +344,7 @@ const CharacterForm: React.FC = () => {
         age: formData.age,
         description: formData.description,
         reference_urls: formData.reference_urls,
-        thumbnail_url: formData.thumbnailUrl,
+        thumbnail_url: formData.thumbnail_url,
       };
 
       const { error } = await supabase
@@ -482,23 +499,25 @@ const CharacterForm: React.FC = () => {
               Miniatura generada
             </label>
             <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-              {formData.thumbnailUrl ? (
+              {formData.thumbnail_url ? (
                 <img
-                  src={formData.thumbnailUrl}
+                  src={formData.thumbnail_url}
                   alt="Miniatura"
                   className="w-full h-full object-cover rounded-lg"
                 />
+              ) : isGeneratingThumbnail ? (
+                <div className="text-center">
+                  <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-purple-600">
+                    Generando miniatura...
+                  </p>
+                </div>
               ) : isAnalyzing ? (
                 <div className="text-center">
                   <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
                   <p className="text-sm text-purple-600">
                     {retryCount > 0 ? `Reintentando análisis (${retryCount}/3)...` : 'Analizando tu personaje...'}
                   </p>
-                </div>
-              ) : isGeneratingThumbnail ? (
-                <div className="text-center">
-                  <Loader className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-purple-600">Dibujando un nuevo héroe...</p>
                 </div>
               ) : (
                 <div className="text-center p-4">
