@@ -49,11 +49,14 @@ const CharacterForm: React.FC = () => {
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `reference-images/${user.id}/${characterId}/${fileName}`;
 
-    const { error: uploadError, data } = await supabase.storage
+    const { error: storageError, data } = await supabase.storage
       .from('storage')
       .upload(filePath, file);
 
-    if (uploadError) throw uploadError;
+    if (storageError) {
+      setUploadError(storageError.message);
+      throw storageError;
+    }
 
     const { data: { publicUrl } } = supabase.storage
       .from('storage')
@@ -260,11 +263,14 @@ const CharacterForm: React.FC = () => {
       const response = await fetch(thumbnailData.thumbnailUrl);
       const blob = await response.blob();
       
-      const { error: uploadError } = await supabase.storage
+      const { error: thumbnailError } = await supabase.storage
         .from('storage')
         .upload(thumbnailPath, blob);
 
-      if (uploadError) throw uploadError;
+      if (thumbnailError) {
+        setUploadError(thumbnailError.message);
+        throw thumbnailError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('storage')

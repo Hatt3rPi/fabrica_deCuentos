@@ -71,11 +71,14 @@ const CharactersStep: React.FC = () => {
     const fileName = `${characterId}/${Date.now()}.${fileExt}`;
     const filePath = fileName;
 
-    const { error: uploadError, data } = await supabase.storage
+    const { error: storageError, data } = await supabase.storage
       .from('reference-images')
       .upload(filePath, file);
 
-    if (uploadError) throw uploadError;
+    if (storageError) {
+      setUploadError(storageError.message);
+      throw storageError;
+    }
 
     const { data: { publicUrl } } = supabase.storage
       .from('reference-images')
