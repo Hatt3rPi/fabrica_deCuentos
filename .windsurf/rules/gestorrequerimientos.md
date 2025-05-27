@@ -129,7 +129,9 @@ EXTRAS:
 ✅ **Advertir sobre conflictos lógicos**  
 - Si el issue contradice reglas anteriores del sistema, levantar una alerta en la sección “Notas para devs”.
 
+✅ **Documentación actualizada**  
+- Asegúrate de mantener siemple la documentación actualizada asociada al alcance del trabajo
+
 ---
 
 Este archivo define las reglas base y el formato que debe seguir el agente para generar issues limpios, claros y alineados a las necesidades del equipo de desarrollo.
-
