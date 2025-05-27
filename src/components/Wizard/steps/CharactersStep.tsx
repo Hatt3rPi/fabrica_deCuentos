@@ -7,7 +7,7 @@ import { Character } from '../../../types';
 import CharacterCard from '../../Character/CharacterCard';
 import Modal from '../../UI/Modal';
 import CharacterForm from '../../Character/CharacterForm';
-import { useWizard } from '../../../context/WizardContext'; // Added useWizard import
+// Removed duplicate import { useWizard } from '../../../context/WizardContext';
 
 const CharactersStep: React.FC = () => {
   const { characters: wizardCharactersGlobal, setCharacters: setWizardCharacters, setStepStatus, currentStep } = useWizard(); // Destructure setStepStatus and currentStep
