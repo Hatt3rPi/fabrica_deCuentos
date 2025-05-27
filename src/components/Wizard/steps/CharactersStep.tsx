@@ -1,347 +1,180 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useWizard } from '../../../context/WizardContext';
 import { useAuth } from '../../../context/AuthContext';
-import { Upload, RefreshCw, Trash2, Plus, Loader, AlertCircle, Info } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Character } from '../../../types';
-import Button from '../../UI/Button';
-import { useCharacterStore } from '../../../stores/characterStore';
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
-const DEBOUNCE_DELAY = 500; // 500ms debounce delay
+import CharacterCard from '../../Character/CharacterCard';
+import Modal from '../../UI/Modal';
+import CharacterForm from '../../Character/CharacterForm';
+import { useWizard } from '../../../context/WizardContext'; // Added useWizard import
 
 const CharactersStep: React.FC = () => {
-  const { characters, setCharacters } = useWizard();
-  const { supabase, user } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isGenerating, setIsGenerating] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { setCharacters: setStoreCharacters } = useCharacterStore();
-  const updateTimeoutRef = useRef<number>();
+  const { characters: wizardCharactersGlobal, setCharacters: setWizardCharacters, setStepStatus, currentStep } = useWizard(); // Destructure setStepStatus and currentStep
+  const { supabase } = useAuth();
+  const { storyId } = useParams<{ storyId: string }>();
 
+  const [characters, setCharacters] = useState<Character[]>([]); // This is the local list of characters for this story
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingCharacterId, setEditingCharacterId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // useEffect for validation logic
   useEffect(() => {
-    if (user) {
-      loadUserCharacters();
-    }
-  }, [user]);
-
-
-  useEffect(() => {
-    // Cleanup timeout on unmount
-    return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
+    if (characters) { // Check if characters array is available
+      let isStepValid = false;
+      if (characters.length > 0) {
+        isStepValid = characters.some(char => {
+          const hasName = char.name && char.name.trim() !== '';
+          
+          let hasDescription = false;
+          if (typeof char.description === 'string') {
+            hasDescription = char.description.trim() !== '';
+          } else if (char.description && typeof char.description.es === 'string') {
+            hasDescription = char.description.es.trim() !== '';
+          }
+          
+          // Assuming the field is thumbnail_url based on previous Character type usage
+          const hasImage = char.thumbnail_url && char.thumbnail_url.trim() !== ''; 
+          
+          return hasName && hasDescription && hasImage;
+        });
       }
-    };
-  }, []);
+      // Ensure setStepStatus is called with the current step index from context
+      // currentStep should be the index (e.g., 0, 1, 2...)
+      if (typeof currentStep === 'number') { // currentStep might be string if using slugs, ensure it's number
+        setStepStatus(currentStep, isStepValid);
+      } else {
+        // If currentStep is a slug (e.g. 'personajes'), WizardContext needs to handle mapping this slug to an index
+        // For now, assuming currentStep from useWizard() is the step *name* or *slug* if not an index
+        // This part depends on how WizardContext and WizardNav are implemented.
+        // Let's assume WizardContext's setStepStatus can handle a string key for the step.
+        setStepStatus('personajes', isStepValid); // Using 'personajes' as key for this step
+      }
+    }
+  }, [characters, currentStep, setStepStatus]);
 
 
-  const loadUserCharacters = async () => {
+  const loadCharacters = async (currentStoryId: string) => {
+    setIsLoading(true);
+    setError(null);
     try {
-      const { data, error } = await supabase
-        .from('characters')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
+      const { data, error: fetchError } = await supabase
+        .from('story_characters')
+        .select('character_id, characters(*)')
+        .eq('story_id', currentStoryId);
 
-      if (error) throw error;
+      if (fetchError) {
+        console.error('Error loading characters for story:', fetchError);
+        setError(`Error al cargar personajes: ${fetchError.message}`);
+        return;
+      }
 
       if (data) {
-        const processedCharacters = data.map(char => ({
-          ...char,
-          images: char.reference_urls || [],
-          thumbnailUrl: char.thumbnail_url
-        }));
-        setCharacters(processedCharacters);
-        setStoreCharacters(processedCharacters);
+        const fetchedCharacters = data.map((item: any) => item.characters as Character).filter(Boolean);
+        setCharacters(fetchedCharacters); // Update local state
+        setWizardCharacters(fetchedCharacters); // Update global wizard context if needed for other components
       }
-    } catch (error) {
-      console.error('Error loading characters:', error);
+    } catch (err: any) {
+      console.error('Error processing characters:', err);
+      setError(`Error inesperado al procesar personajes: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const uploadImageToStorage = async (file: File, characterId: string): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${characterId}/${Date.now()}.${fileExt}`;
-    const filePath = fileName;
-
-    const { error: uploadError, data } = await supabase.storage
-      .from('reference-images')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('reference-images')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
-  };
-
-  const handleFileUpload = async (characterId: string, files: FileList | null) => {
-    if (!files || files.length === 0) {
-      setUploadError('Necesitamos al menos una foto del personaje');
-      return;
-    }
-
-    const file = files[0];
-    setUploadError(null);
-
-    if (file.size > MAX_FILE_SIZE) {
-      setUploadError('Imagen demasiado grande, sube una de hasta 5 MB');
-      return;
-    }
-
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setUploadError('Formato no soportado, usa JPG o PNG');
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-
-      const publicUrl = await uploadImageToStorage(file, characterId);
-
-      const character = characters.find(c => c.id === characterId);
-      if (!character) return;
-
-      const updatedCharacter = {
-        ...character,
-
-        reference_urls: [...(character.reference_urls || []), publicUrl]
-
-      };
-
-      await updateCharacter(characterId, { reference_urls: updatedCharacter.reference_urls });
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      setUploadError('Error al subir la imagen');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const canGenerateThumbnail = (character: Character): boolean => {
-    const description = typeof character.description === 'object' ? character.description.es : character.description;
-    return !!(description && description.trim() !== '') || !!(character.reference_urls && character.reference_urls.length > 0);
-  };
-
-  const generateThumbnail = async (characterId: string, retryCount = 0) => {
-    const character = characters.find(c => c.id === characterId);
-    if (!character) {
-      console.error('Character not found:', characterId);
-      setUploadError('No se encontró el personaje');
-      return;
-    }
-
-
-    const description = typeof character.description === 'object' ? character.description.es : character.description;
-    
-    // Enhanced validation with early return and specific error message
-    if (!canGenerateThumbnail(character)) {
-
-      setUploadError('Se requiere una descripción o una imagen del personaje');
-      return;
-    }
-
-    setIsGenerating(characterId);
-    setUploadError(null);
-
-    try {
-
-      const payload = {
-        description: description || '',
-        name: character.name || '',
-        age: character.age || '',
-        referenceImage: character.reference_urls?.[0] || null
-      };
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
-
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-
-        body: JSON.stringify(payload)
-
-      });
-
-      const data = await response.json();
-      console.log('Edge Function response:', {
-        status: response.status,
-        ok: response.ok,
-        data
-      });
-
-      if (!response.ok) {
-        // Handle specific error codes
-        if (data.code === 'WORKER_LIMIT') {
-          throw new Error('El servicio está temporalmente sobrecargado. Por favor, espera unos minutos y vuelve a intentarlo.');
-        }
-        throw new Error(data.error || 'Error al generar la miniatura');
+  useEffect(() => {
+    if (storyId && supabase && storyId !== 'new') { // Do not load for 'new' storyId
+      loadCharacters(storyId);
+    } else if (storyId === 'new') {
+      setCharacters([]); // Reset characters for new story
+      setWizardCharacters([]); // Reset global characters
+      // Also, update step status for 'new' story if needed (likely invalid until a character is made for a *saved* story)
+      if (typeof currentStep === 'number') {
+        setStepStatus(currentStep, false);
+      } else {
+        setStepStatus('personajes', false);
       }
+    }
+  }, [storyId, supabase, setWizardCharacters, currentStep, setStepStatus]); // Added dependencies
 
-      if (!data.thumbnailUrl) {
-        throw new Error('No se pudo generar la miniatura');
-      }
+  const handleAdd = () => {
+    setEditingCharacterId(null);
+    setIsFormOpen(true);
+  };
 
-      await updateCharacter(characterId, {
-        thumbnail_url: data.thumbnailUrl,
-        description: data.description || character.description
-      });
+  const handleEdit = (id: string) => {
+    setEditingCharacterId(id);
+    setIsFormOpen(true);
+  };
 
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingCharacterId(null);
+    // Optionally, reload characters if a save happened
+    if (storyId) {
+        loadCharacters(storyId); // Refresh characters after closing form
+    }
+  };
 
-      // Update global store
-      const updatedCharacters = characters.map(c => 
-        c.id === characterId 
-          ? { ...c, thumbnailUrl: data.thumbnailUrl, description: data.description || c.description }
-          : c
-      );
-      setStoreCharacters(updatedCharacters);
-
-
-    } catch (error) {
-      console.error('Error generating thumbnail:', {
-        characterId,
-        error,
-        retryCount,
-        maxRetries: MAX_RETRIES
-      });
-
-
-      if (retryCount < MAX_RETRIES) {
-        setTimeout(() => generateThumbnail(characterId, retryCount + 1), RETRY_DELAY * Math.pow(2, retryCount));
-        setUploadError('Error al generar. Reintentando...');
-
+  const handleSaveCharacter = async (savedCharFromForm: Character) => {
+    if (!storyId || !supabase) {
+        setError("Error: No se pudo guardar el personaje. Faltan datos de historia o conexión.");
         return;
-      }
-
-      setUploadError(error.message || 'Error al generar la miniatura. Por favor, inténtalo de nuevo más tarde.');
-    } finally {
-      setIsGenerating(null);
     }
-  };
 
-  const addCharacter = async () => {
-    if (characters.length < 3) {
-      try {
-        const { data, error } = await supabase
-          .from('characters')
-          .insert({
-            user_id: user?.id,
-            name: '',
-            age: '',
-            description: { es: '', en: '' },
-            reference_urls: [],
-            thumbnail_url: null
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        const newCharacter = {
-          ...data,
-          images: [],
-          thumbnailUrl: null
-        };
-
-        setCharacters([...characters, newCharacter]);
-        setStoreCharacters([...characters, newCharacter]);
-      } catch (error) {
-        console.error('Error creating character:', error);
-      }
-    }
-  };
-
-  const removeCharacter = async (id: string) => {
-    if (characters.length > 1) {
-      try {
-        // Delete images from storage
-        const character = characters.find(c => c.id === id);
-        if (character?.reference_urls?.length) {
-          for (const url of character.reference_urls) {
-            const path = url.split('/').pop();
-            if (path) {
-              await supabase.storage
-                .from('reference-images')
-                .remove([`${id}/${path}`]);
-            }
-          }
+    try {
+      if (!editingCharacterId) { // Create Mode
+        // CharacterForm should have created the character. Now link it to the story.
+        if (!savedCharFromForm || !savedCharFromForm.id) {
+          setError("Error: El formulario no devolvió un ID de personaje válido.");
+          return;
         }
+        const { error: insertError } = await supabase
+          .from('story_characters')
+          .insert({ story_id: storyId, character_id: savedCharFromForm.id });
 
-        // Delete record from database
-        await supabase
-          .from('characters')
-          .delete()
-          .eq('id', id);
-
-        const updatedCharacters = characters.filter((c) => c.id !== id);
-        setCharacters(updatedCharacters);
-        setStoreCharacters(updatedCharacters);
-      } catch (error) {
-        console.error('Error removing character:', error);
-      }
-    }
-  };
-
-  const updateCharacter = async (id: string, updates: Partial<Character>) => {
-    // Clear any existing timeout
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-
-    // Update local state immediately for smooth UI
-    const updatedCharacters = characters.map((character) =>
-      character.id === id ? { ...character, ...updates } : character
-    );
-    setCharacters(updatedCharacters);
-
-    // Debounce the database update
-    updateTimeoutRef.current = setTimeout(async () => {
-      try {
-        const character = characters.find(c => c.id === id);
-        if (!character) return;
-
-        // Handle description update
-        let finalUpdates = { ...updates };
-        if ('description' in updates) {
-          const currentDescription = typeof character.description === 'object' 
-            ? character.description 
-            : { es: character.description, en: '' };
-          
-          finalUpdates.description = {
-            ...currentDescription,
-            es: updates.description as string
-          };
+        if (insertError) {
+          console.error('Error linking character to story:', insertError);
+          setError(`Error al vincular personaje: ${insertError.message}`);
+          return; // Prevent further execution if linking fails
         }
-
-        const { error } = await supabase
-          .from('characters')
-          .update({
-            ...finalUpdates,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', id);
-
-        if (error) throw error;
-        setStoreCharacters(updatedCharacters);
-      } catch (error) {
-        console.error('Error updating character:', error);
-        // Revert local state on error
-        setCharacters(characters);
-        setStoreCharacters(characters);
       }
-    }, DEBOUNCE_DELAY);
+      // Edit Mode: CharacterForm handles the update. No specific action here for story_characters.
+
+      await loadCharacters(storyId); // Refresh the character list
+      handleCloseForm(); // Close the modal
+    } catch (err) {
+      console.error('Error saving character relationship:', err);
+      setError("Error inesperado al guardar la relación del personaje.");
+    }
   };
+  
+  const handleDeleteCharacter = async (characterIdToDelete: string) => {
+    if (!storyId || !supabase) return;
+    setError(null);
+    try {
+        const { error: storyCharError } = await supabase
+            .from('story_characters')
+            .delete()
+            .match({ story_id: storyId, character_id: characterIdToDelete });
+
+        if (storyCharError) throw storyCharError;
+
+        // Consider if the character itself should be deleted if no longer referenced.
+        // For now, only the link to the story is removed.
+
+        const updatedCharactersState = characters.filter(c => c.id !== characterIdToDelete);
+        setCharacters(updatedCharactersState);
+        setWizardCharacters(updatedCharactersState);
+
+    } catch (err: any) {
+        console.error('Error deleting character:', err);
+        setError(`Error al eliminar personaje: ${err.message}`);
+    }
+  };
+
 
   return (
     <div className="space-y-8">
@@ -350,188 +183,45 @@ const CharactersStep: React.FC = () => {
           Personajes de tu Historia
         </h2>
         <p className="text-gray-600">
-          Crea hasta 3 personajes para tu cuento
+          Gestiona los personajes de tu cuento.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {characters.map((character) => (
-          <div
+          <CharacterCard
             key={character.id}
-            className="bg-white rounded-lg shadow-md overflow-hidden"
-          >
-            {/* Character thumbnail */}
-            <div className="aspect-square relative bg-gray-100">
-              {character.thumbnailUrl ? (
-                <img
-                  src={character.thumbnailUrl}
-                  alt={character.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center p-4">
-                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">
-                      Sube una foto o describe al personaje
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Loading overlay */}
-              {isGenerating === character.id && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <Loader className="w-8 h-8 animate-spin mx-auto mb-2" />
-                    <p className="text-sm">Generando miniatura...</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Character form */}
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre
-                </label>
-                <input
-                  type="text"
-                  value={character.name}
-                  onChange={(e) =>
-                    updateCharacter(character.id, { name: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Nombre del personaje"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Edad
-                </label>
-                <input
-                  type="text"
-                  value={character.age}
-                  onChange={(e) =>
-                    updateCharacter(character.id, { age: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Edad del personaje"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Descripción
-                </label>
-                <textarea
-                  value={
-                    typeof character.description === 'object'
-                      ? character.description.es
-                      : character.description
-                  }
-                  onChange={(e) =>
-                    updateCharacter(character.id, { description: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Describe al personaje..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Imágenes de referencia
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {character.reference_urls?.map((url, index) => (
-                    <div
-                      key={index}
-                      className="w-16 h-16 relative rounded overflow-hidden"
-                    >
-                      <img
-                        src={url}
-                        alt={`Referencia ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ))}
-                  {(!character.reference_urls ||
-                    character.reference_urls.length < 3) && (
-                    <label className="w-16 h-16 flex items-center justify-center border-2 border-dashed border-gray-300 rounded cursor-pointer hover:border-purple-500">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) =>
-                          handleFileUpload(character.id, e.target.files)
-                        }
-                      />
-                      <Plus className="w-6 h-6 text-gray-400" />
-                    </label>
-                  )}
-                </div>
-
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => generateThumbnail(character.id)}
-                  disabled={isGenerating === character.id || !canGenerateThumbnail(character)}
-                  className="flex-1"
-                >
-                  {isGenerating === character.id ? (
-                    <>
-                      <Loader className="w-4 h-4 animate-spin" />
-                      <span>Generando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Generar</span>
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => removeCharacter(character.id)}
-                  disabled={characters.length <= 1}
-                  className="flex-1"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Eliminar</span>
-                </Button>
-              </div>
-
-              {!canGenerateThumbnail(character) && (
-                <div className="flex items-start gap-2 text-sm text-amber-600 bg-amber-50 p-2 rounded">
-                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <p>Añade una descripción o una imagen para generar la miniatura</p>
-                </div>
-              )}
-            </div>
-          </div>
+            character={character}
+            onEdit={handleEdit} // Pass handleEdit directly, CharacterCard will call it with ID
+            onDelete={handleDeleteCharacter} // Pass handleDeleteCharacter directly
+          />
         ))}
 
-        {characters.length < 3 && (
-          <button
-            onClick={addCharacter}
-            className="h-full min-h-[400px] border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-colors"
-          >
-            <Plus className="w-12 h-12" />
-            <span className="text-lg">Añadir personaje</span>
-          </button>
+        {characters.length < 3 && storyId !== 'new' && (
+          <CharacterCard
+            isAddCard={true}
+            onClick={handleAdd} // handleAdd is already defined to open the modal for new character
+          />
         )}
       </div>
+      
+      {isLoading && <p className="text-center py-4">Cargando personajes...</p>}
+      {error && <p className="text-red-500 text-center py-4">{error}</p>}
 
-      {uploadError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-600">{uploadError}</p>
-        </div>
+
+      {isFormOpen && storyId && storyId !== 'new' && (
+        <Modal 
+            isOpen={isFormOpen} 
+            onClose={handleCloseForm} 
+            title={editingCharacterId ? "Editar Personaje" : "Añadir Nuevo Personaje"}
+        >
+          <CharacterForm
+            characterId={editingCharacterId}
+            storyId={storyId}
+            onSave={handleSaveCharacter}
+            onCancel={handleCloseForm}
+          />
+        </Modal>
       )}
     </div>
   );
