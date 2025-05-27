@@ -5,14 +5,16 @@ import { Character } from '../../types';
 
 interface CharacterCardProps {
   character: Character;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  showActions?: boolean;
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({
   character,
   onEdit,
   onDelete,
+  showActions = true,
 }) => {
   return (
     <motion.div
@@ -49,22 +51,28 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
             : character.description}
         </p>
 
-        <div className="flex gap-2">
-          <button
-            onClick={() => onEdit(character.id)}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
-          >
-            <Edit2 className="w-4 h-4" />
-            <span>Editar</span>
-          </button>
-          <button
-            onClick={() => onDelete(character.id)}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Eliminar</span>
-          </button>
-        </div>
+        {showActions && (
+          <div className="flex gap-2">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(character.id)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+              >
+                <Edit2 className="w-4 h-4" />
+                <span>Editar</span>
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => onDelete(character.id)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Eliminar</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
