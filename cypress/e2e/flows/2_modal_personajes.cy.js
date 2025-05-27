@@ -46,7 +46,11 @@ describe('2. Apertura del modal de personajes', function() {
     // Verificar que el botón interno "Crear nuevo personaje" está disponible
     cy.createNewCharacterFromModal();
     
-    // Verificar que nos redirige a la página de creación de personaje
-    cy.url().should('include', '/nuevo-cuento/personaje/nuevo');
+    // Verificar que el modal de creación de personaje está abierto
+    cy.get('[data-testid="modal-personajes"]')
+      .should('be.visible')
+      .within(() => {
+        cy.get('input[placeholder="Nombre del personaje"]').should('be.visible');
+      });
   });
 });

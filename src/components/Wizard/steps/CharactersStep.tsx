@@ -113,6 +113,7 @@ const CharactersStep: React.FC = () => {
           isOpen={isFormOpen}
           onClose={() => setIsFormOpen(false)}
           title={editingCharacterId ? "Editar personaje" : "Crear personaje"}
+          data-testid="modal-personajes"
         >
           <CharacterForm
             characterId={editingCharacterId}

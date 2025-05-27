@@ -25,8 +25,12 @@ describe('3. Creación de Nuevo Personaje', function() {
     // Hacer clic en "Crear nuevo personaje"
     cy.createNewCharacterFromModal();
     
-    // Verificar que nos redirige a la página de creación de personaje
-    cy.url().should('include', '/nuevo-cuento/personaje/nuevo');
+    // Verificar que el modal de creación de personaje está abierto
+    cy.get('[data-testid="modal-personajes"]')
+      .should('be.visible')
+      .within(() => {
+        cy.get('input[placeholder="Nombre del personaje"]').should('be.visible');
+      });
     
     // Completar el formulario
     cy.get('input[placeholder="Nombre del personaje"]').type(this.testData.character.name);

@@ -17,9 +17,8 @@ Cypress.Commands.add('login', (email, password) => {
 
 // -- Comando para crear un nuevo personaje --
 Cypress.Commands.add('createCharacter', (name, age, description, imagePath = 'cypress/fixtures/test-avatar.png') => {
-  // Navegar a la página de creación de personaje
-  cy.contains('+ Nuevo cuento').click();
-  cy.contains('+ Crear nuevo').click();
+  // Navegar al wizard y abrir el modal de personajes
+  cy.openNewStoryModal();
   
   // Completar el formulario
   cy.get('input[placeholder="Nombre del personaje"]').type(name);
@@ -42,8 +41,8 @@ Cypress.Commands.add('createCharacter', (name, age, description, imagePath = 'cy
   // Guardar personaje
   cy.contains('button', 'Guardar personaje').click();
   
-  // Verificar que se ha redirigido a la pantalla de diseño de historia
-  cy.url().should('include', '/nuevo-cuento/personajes');
+  // Verificar que estamos en el wizard de personajes
+  cy.url().should('match', /\/wizard\/[^\/]+\/personajes$/);
 });
 
 // -- Comando para abrir el modal de personajes --
@@ -59,6 +58,13 @@ Cypress.Commands.add('openNewStoryModal', () => {
     .should('be.visible')
     .and('not.be.disabled')
     .click({ force: true });
+
+  // Verificar que navegamos al wizard de personajes
+  cy.url({ timeout: 10000 }).should('match', /\/wizard\/[^\/]+\/personajes$/);
+  
+  cy.get('div[class*="aspect-square"][class*="cursor-pointer"]', { timeout: 10000 })
+    .contains('Crear personaje')
+    .click();
 
   // Verificar que el modal aparece y es visible
   return cy.get('[data-testid="modal-personajes"]', { timeout: 10000 })
@@ -128,8 +134,13 @@ Cypress.Commands.add('createNewCharacterFromModal', () => {
             .should('not.be.disabled')
             .click({ force: true });
           
-          // Verificar que la navegación ocurrió
-          cy.url({ timeout: 10000 }).should('include', '/nuevo-cuento/personaje/nuevo');
+          // Verificar que el formulario de personaje está visible en el modal
+          cy.get('[data-testid="modal-personajes"]')
+            .should('be.visible')
+            .within(() => {
+              cy.get('input[placeholder="Nombre del personaje"]', { timeout: 15000 })
+                .should('be.visible');
+            });
         } else {
           // Intentar con el siguiente texto posible
           tryClickButton(index + 1);
@@ -238,9 +249,7 @@ Cypress.Commands.add('cleanupTestData', () => {
 
 // -- Comando para verificar campos obligatorios --
 Cypress.Commands.add('checkRequiredFields', () => {
-  // Navegar a la página de creación de personaje
-  cy.contains('+ Nuevo cuento').click();
-  cy.contains('+ Crear nuevo').click();
+  cy.openNewStoryModal();
   
   // Verificar que los campos requeridos muestran mensaje de error
   cy.get('input[placeholder="Nombre del personaje"]').type(' ').clear();
