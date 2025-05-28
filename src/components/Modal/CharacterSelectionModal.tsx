@@ -1,0 +1,112 @@
+import React, { useState, useEffect } from 'react';
+import { Plus, X, Loader } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { Character } from '../../types';
+import CharacterCard from '../Character/CharacterCard';
+import CharacterForm from '../Character/CharacterForm';
+
+interface CharacterSelectionModalProps {
+  isOpen: boolean;
+  storyId: string;
+  onClose: () => void;
+  onCharacterAdded: () => void;
+}
+
+const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
+  isOpen,
+  storyId,
+  onClose,
+  onCharacterAdded
+}) => {
+  const { supabase } = useAuth();
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && !showForm) {
+      loadCharacters();
+    }
+  }, [isOpen, showForm]);
+
+  const loadCharacters = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('characters')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error) {
+      const processed = (data || []).map(c => ({
+        ...c,
+        thumbnailUrl: c.thumbnail_url
+      }));
+      setCharacters(processed);
+    }
+    setIsLoading(false);
+  };
+
+  const linkCharacter = async (id: string) => {
+    await supabase.from('story_characters').insert({ story_id: storyId, character_id: id });
+    onCharacterAdded();
+    onClose();
+  };
+
+  const handleSave = async (id: string) => {
+    setShowForm(false);
+    await linkCharacter(id);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      {showForm ? (
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-[600px] overflow-auto max-h-[90vh]">
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-800">Nuevo personaje</h2>
+            <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-gray-700">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="p-6">
+            <CharacterForm onSave={handleSave} onCancel={() => setShowForm(false)} />
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-[560px] overflow-hidden">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-800">Selecciona un personaje</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="p-6 overflow-y-auto max-h-[60vh]">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader className="w-8 h-8 text-purple-600 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                {characters.map((character) => (
+                  <div key={character.id} onClick={() => linkCharacter(character.id)} className="cursor-pointer">
+                    <CharacterCard character={character} showActions={false} />
+                  </div>
+                ))}
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-colors"
+                >
+                  <Plus className="w-8 h-8" />
+                  <span className="text-sm">Crear nuevo</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CharacterSelectionModal;
