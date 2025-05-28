@@ -64,6 +64,22 @@ export const useNotificationStore = create<NotificationStore>()(
               inApp: true,
               email: false
             }
+          },
+          SYSTEM_SUCCESS: {
+            enabled: true,
+            channels: {
+              push: false,
+              inApp: true,
+              email: false
+            }
+          },
+          SYSTEM_ERROR: {
+            enabled: true,
+            channels: {
+              push: false,
+              inApp: true,
+              email: false
+            }
           }
         }
       },

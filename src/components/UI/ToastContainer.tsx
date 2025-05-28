@@ -41,6 +41,12 @@ const ToastContainer: React.FC = () => {
       case NotificationType.INACTIVITY_REMINDER:
         toastType = 'info';
         break;
+      case NotificationType.SYSTEM_SUCCESS:
+        toastType = 'success';
+        break;
+      case NotificationType.SYSTEM_ERROR:
+        toastType = 'error';
+        break;
       default:
         toastType = 'notification';
     }
