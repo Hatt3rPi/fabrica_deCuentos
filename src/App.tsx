@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { AdminProvider } from './context/AdminContext';
 import { WizardProvider } from './context/WizardContext';
 import { useAuth } from './context/AuthContext';
 import Wizard from './components/Wizard/Wizard';
@@ -13,6 +14,7 @@ import CharactersGrid from './components/Character/CharactersGrid';
 import NotificationBell from './components/Notifications/NotificationBell';
 import ToastContainer from './components/UI/ToastContainer';
 import ProfileSettings from './pages/ProfileSettings';
+import PromptManager from './pages/Admin/PromptManager';
 import { useProfileStore } from './stores/profileStore';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -88,6 +90,14 @@ function AppContent() {
                   </PrivateRoute>
                 }
               />
+              <Route
+                path="/admin/prompts"
+                element={
+                  <PrivateRoute>
+                    <PromptManager />
+                  </PrivateRoute>
+                }
+              />
             </Routes>
           </main>
           <footer className="py-4 text-center text-purple-600 text-sm">
@@ -133,7 +143,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        <AdminProvider>
+          <AppContent />
+        </AdminProvider>
       </AuthProvider>
     </Router>
   );
