@@ -105,6 +105,9 @@ BEGIN
 END;
 $$;
 
+-- Ensure old reset_password function is dropped to avoid type conflicts
+DROP FUNCTION IF EXISTS reset_password(text, text);
+
 -- Function to reset password
 CREATE OR REPLACE FUNCTION reset_password(p_token text, p_new_password text)
 RETURNS void

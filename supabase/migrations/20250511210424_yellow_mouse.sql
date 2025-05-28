@@ -10,7 +10,8 @@
     - Function remains accessible to authenticated users only
     - Maintains existing security constraints
 */
-
+-- DROPS para evitar conflicto de tipos
+DROP FUNCTION IF EXISTS reset_password(text, text);
 CREATE OR REPLACE FUNCTION reset_password(
   p_token text,
   p_new_password text
