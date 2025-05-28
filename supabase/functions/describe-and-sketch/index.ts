@@ -1,5 +1,6 @@
 import OpenAI from "npm:openai@4.28.0";
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
+import { logPromptMetric } from '../_shared/metrics.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -136,6 +137,7 @@ Deno.serve(async (req) => {
     formData.append('n', '1');
     formData.append('image', refBlob, `reference.${ext}`);
 
+    const start = Date.now();
     const editRes = await fetch('https://api.openai.com/v1/images/edits', {
       method: 'POST',
       headers: {
@@ -143,7 +145,13 @@ Deno.serve(async (req) => {
       },
       body: formData
     });
+    const elapsed = Date.now() - start;
     const editData = await editRes.json();
+    await logPromptMetric({
+      modelo_ia: 'gpt-image-1',
+      tiempo_respuesta_ms: elapsed,
+      estado: editRes.ok ? 'success' : 'error',
+    });
     if (!editRes.ok) {
       const msg = editData.error?.message || editRes.statusText;
       throw new Error(`Error al editar la imagen: ${msg}`);
@@ -163,6 +171,12 @@ Deno.serve(async (req) => {
 
   } catch (error: any) {
     console.error('Error in describe-and-sketch:', error);
+    await logPromptMetric({
+      modelo_ia: 'gpt-image-1',
+      tiempo_respuesta_ms: 0,
+      estado: 'error',
+      metadatos: { error: (error as Error).message },
+    });
     return new Response(JSON.stringify({
       error: error.message || 'Error al generar la miniatura'
     }), {

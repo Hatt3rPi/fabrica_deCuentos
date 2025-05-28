@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { encode as base64Encode } from "https://deno.land/std@0.203.0/encoding/base64.ts";
+import { logPromptMetric } from '../_shared/metrics.ts';
 const FILE = 'analyze-character';
 const STAGE = 'personaje';
 const corsHeaders = {
@@ -78,6 +79,8 @@ Deno.serve(async (req)=>{
       headers: corsHeaders
     });
   }
+  let start = 0;
+  let promptId: string | undefined;
   try {
     const { imageUrl, name, age, description: sanitizedNotes } = await req.json();
     if (!imageUrl) {
@@ -86,9 +89,12 @@ Deno.serve(async (req)=>{
     let analysisPrompt = Deno.env.get('PROMPT_DESCRIPCION_PERSONAJE') || '';
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('content')
+      .select('id, content')
       .eq('type', 'PROMPT_DESCRIPCION_PERSONAJE')
       .single();
+    if (promptRow?.id) {
+      promptId = promptRow.id;
+    }
     if (promptRow?.content) {
       analysisPrompt = promptRow.content;
     }
@@ -123,6 +129,7 @@ Deno.serve(async (req)=>{
       }
     };
     console.log(`[${FILE}] [${STAGE}] [IN]  ${JSON.stringify(requestBody)}`);
+    start = Date.now();
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -131,7 +138,16 @@ Deno.serve(async (req)=>{
       },
       body: JSON.stringify(requestBody)
     });
+    const elapsed = Date.now() - start;
     const responseData = await response.json();
+    await logPromptMetric({
+      prompt_id: promptId,
+      modelo_ia: requestBody.model,
+      tiempo_respuesta_ms: elapsed,
+      estado: response.ok ? 'success' : 'error',
+      tokens_entrada: responseData.usage?.prompt_tokens ?? 0,
+      tokens_salida: responseData.usage?.completion_tokens ?? 0,
+    });
     console.log(`[${FILE}] [${STAGE}] [OUT] ${JSON.stringify(responseData)}`);
     if (!response.ok) {
       const errorInfo = handleOpenAIError({
@@ -162,6 +178,17 @@ Deno.serve(async (req)=>{
     });
   } catch (error) {
     console.error(`[${FILE}] [ERROR]`, error);
+    if (start) {
+      await logPromptMetric({
+        prompt_id: promptId,
+        modelo_ia: 'gpt-4-turbo',
+        tiempo_respuesta_ms: Date.now() - start,
+        estado: 'error',
+        tokens_entrada: 0,
+        tokens_salida: 0,
+        metadatos: { error: (error as Error).message },
+      });
+    }
     const errResp = handleOpenAIError(error);
     return new Response(JSON.stringify({
       error: errResp.message

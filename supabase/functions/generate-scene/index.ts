@@ -1,4 +1,5 @@
 import OpenAI from 'npm:openai@4.28.0';
+import { logPromptMetric } from '../_shared/metrics.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,14 +56,21 @@ Paleta de color: ${scene.colorPalette}
 Ilustración para libro infantil. Formato panorámico si es spread.`;
 
     // Generate scene image using max 2 reference images per character
+    const start = Date.now();
     const response = await openai.images.generate({
       model: "gpt-image-1",
       prompt: `${identityBlocks}\n${sceneBlock}`,
-      referenced_image_ids: characters.flatMap(char => 
+      referenced_image_ids: characters.flatMap(char =>
         char.referenceUrls.slice(0, 2)
       ),
       size: "1024x1024",
       n: 1
+    });
+    const elapsed = Date.now() - start;
+    await logPromptMetric({
+      modelo_ia: 'gpt-image-1',
+      tiempo_respuesta_ms: elapsed,
+      estado: response.data?.[0]?.url ? 'success' : 'error',
     });
 
     return new Response(
@@ -71,6 +79,12 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
     );
   } catch (error) {
     console.error('Error:', error);
+    await logPromptMetric({
+      modelo_ia: 'gpt-image-1',
+      tiempo_respuesta_ms: 0,
+      estado: 'error',
+      metadatos: { error: (error as Error).message },
+    });
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

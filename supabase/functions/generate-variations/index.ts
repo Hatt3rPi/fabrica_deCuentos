@@ -1,4 +1,5 @@
 import OpenAI from 'npm:openai@4.28.0';
+import { logPromptMetric } from '../_shared/metrics.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,6 +19,7 @@ Deno.serve(async (req) => {
     });
 
     // Generate new thumbnail
+    const start = Date.now();
     const imageResponse = await openai.images.generate({
       model: "dall-e-2",
       prompt: `Clean full-body pencil sketch illustration for a children's book. ` +
@@ -25,6 +27,12 @@ Deno.serve(async (req) => {
       size: "256x256",
       //quality: "standard",
       n: 1,
+    });
+    const elapsed = Date.now() - start;
+    await logPromptMetric({
+      modelo_ia: 'dall-e-2',
+      tiempo_respuesta_ms: elapsed,
+      estado: imageResponse.data?.[0]?.url ? 'success' : 'error',
     });
 
     return new Response(
@@ -35,6 +43,12 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in generate-variations:', error);
+    await logPromptMetric({
+      modelo_ia: 'dall-e-2',
+      tiempo_respuesta_ms: 0,
+      estado: 'error',
+      metadatos: { error: (error as Error).message },
+    });
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
