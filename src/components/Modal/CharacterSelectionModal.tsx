@@ -22,6 +22,7 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
   const [characters, setCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && !showForm) {
@@ -52,9 +53,52 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
     onClose();
   };
 
+  const handleEdit = (id: string) => {
+    setEditingId(id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (characterId: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este personaje?')) return;
+
+    try {
+      const character = characters.find(c => c.id === characterId);
+      if (character?.reference_urls?.length) {
+        for (const url of character.reference_urls) {
+          const path = url.split('/').pop();
+          if (path) {
+            await supabase.storage
+              .from('characters')
+              .remove([`reference-images/${characterId}/${path}`]);
+          }
+        }
+      }
+
+      const { error } = await supabase
+        .from('characters')
+        .delete()
+        .eq('id', characterId);
+
+      if (error) throw error;
+
+      setCharacters(prev => prev.filter(c => c.id !== characterId));
+    } catch (error) {
+      console.error('Error deleting character:', error);
+      alert('Error al eliminar el personaje');
+    } finally {
+      /* empty */
+    }
+  };
+
   const handleSave = async (id: string) => {
     setShowForm(false);
-    await linkCharacter(id);
+    if (editingId) {
+      setEditingId(null);
+      await loadCharacters();
+      onCharacterAdded();
+    } else {
+      await linkCharacter(id);
+    }
   };
 
   if (!isOpen) return null;
@@ -64,13 +108,13 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
       {showForm ? (
         <div className="bg-white rounded-xl shadow-xl w-full max-w-[600px] overflow-auto max-h-[90vh]">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-800">Nuevo personaje</h2>
-            <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-gray-700">
+            <h2 className="text-xl font-semibold text-gray-800">{editingId ? 'Editar personaje' : 'Nuevo personaje'}</h2>
+            <button onClick={() => { setEditingId(null); setShowForm(false); }} className="text-gray-500 hover:text-gray-700">
               <X className="w-5 h-5" />
             </button>
           </div>
           <div className="p-6">
-            <CharacterForm onSave={handleSave} onCancel={() => setShowForm(false)} />
+            <CharacterForm id={editingId || undefined} onSave={handleSave} onCancel={() => { setEditingId(null); setShowForm(false); }} />
           </div>
         </div>
       ) : (
@@ -89,9 +133,14 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                 {characters.map((character) => (
-                  <div key={character.id} onClick={() => linkCharacter(character.id)} className="cursor-pointer">
-                    <CharacterCard character={character} showActions={false} />
-                  </div>
+                  <CharacterCard
+                    key={character.id}
+                    character={character}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onClick={() => linkCharacter(character.id)}
+                    isSelected={false}
+                  />
                 ))}
                 <button
                   onClick={() => setShowForm(true)}
