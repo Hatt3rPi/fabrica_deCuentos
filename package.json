@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "test:e2e": "cypress run"
+    "test:e2e": "cypress run",
+    "supabase:pull": "supabase functions pull && supabase db pull",
+    "supabase:start": "supabase start"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",
