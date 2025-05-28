@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
@@ -6,6 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useWizard } from '../../../context/WizardContext';
 import { useCharacterStore } from '../../../stores/characterStore';
 import CharacterCard from '../../Character/CharacterCard';
+import CharacterSelectionModal from '../../Modal/CharacterSelectionModal';
 
 const CharactersStep: React.FC = () => {
   const { supabase } = useAuth();
@@ -13,11 +14,18 @@ const CharactersStep: React.FC = () => {
   const navigate = useNavigate();
   const { characters, setCharacters } = useWizard();
   const { setCharacters: setStoreCharacters } = useCharacterStore();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     loadStoryCharacters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storyId]);
+
+  useEffect(() => {
+    if (characters.length === 0) {
+      setIsModalOpen(true);
+    }
+  }, [characters]);
 
   const loadStoryCharacters = async () => {
     if (!storyId) return;
@@ -82,8 +90,12 @@ const CharactersStep: React.FC = () => {
     await loadStoryCharacters();
   };
 
+  const handleCharacterAdded = async () => {
+    await loadStoryCharacters();
+  };
+
   const handleAddCharacter = () => {
-    navigate('/nuevo-cuento/personajes');
+    setIsModalOpen(true);
   };
 
   return (
@@ -122,12 +134,13 @@ const CharactersStep: React.FC = () => {
           </motion.button>
         )}
 
-        {characters.length === 0 && (
-          <p className="col-span-full text-center text-gray-600">
-            Aún no has añadido personajes a este cuento
-          </p>
-        )}
       </div>
+      <CharacterSelectionModal
+        isOpen={isModalOpen}
+        storyId={storyId!}
+        onClose={() => setIsModalOpen(false)}
+        onCharacterAdded={handleCharacterAdded}
+      />
     </div>
   );
 };

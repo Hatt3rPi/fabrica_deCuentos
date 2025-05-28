@@ -9,7 +9,12 @@ import { useNotifications } from '../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../types/notification';
 import { Character } from '../../types';
 
-const CharacterForm: React.FC = () => {
+interface CharacterFormProps {
+  onSave?: (id: string) => void;
+  onCancel?: () => void;
+}
+
+const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel }) => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { supabase, user } = useAuth();
@@ -374,7 +379,11 @@ const CharacterForm: React.FC = () => {
       }
 
       setIsRedirecting(true);
-      navigate('/nuevo-cuento/personajes');
+      if (onSave) {
+        onSave(currentCharacterId);
+      } else {
+        navigate('/nuevo-cuento/personajes');
+      }
     } catch (err) {
       console.error('Error saving character:', err);
       setError('Error al guardar el personaje');
@@ -589,7 +598,7 @@ const CharacterForm: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => navigate('/nuevo-cuento/personajes')}
+            onClick={() => (onCancel ? onCancel() : navigate('/nuevo-cuento/personajes'))}
             className="flex-1 py-3 px-4 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50"
           >
             Cancelar

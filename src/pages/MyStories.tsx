@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, BookOpen, Pencil } from 'lucide-react';
-import ModalPersonajes from '../components/Modals/ModalPersonajes';
 import { useNavigate } from 'react-router-dom';
 
 interface Story {
@@ -15,8 +14,6 @@ interface Story {
 const MyStories: React.FC = () => {
   const { supabase, user } = useAuth();
   const [stories, setStories] = useState<Story[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,13 +31,23 @@ const MyStories: React.FC = () => {
       setStories(data || []);
     } catch (error) {
       console.error('Error loading stories:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleNewStory = () => {
-    setIsModalOpen(true);
+  const handleNewStory = async () => {
+    try {
+      const { data: story, error } = await supabase
+        .from('stories')
+        .insert({ user_id: user?.id, status: 'draft', title: 'Nuevo cuento' })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      navigate(`/wizard/${story.id}`);
+    } catch (err) {
+      console.error('Error creating story:', err);
+    }
   };
 
   const handleContinueStory = (storyId: string) => {
@@ -113,10 +120,6 @@ const MyStories: React.FC = () => {
         </button>
       </div>
 
-      <ModalPersonajes
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
     </div>
   );
 };

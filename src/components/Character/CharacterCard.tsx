@@ -8,6 +8,8 @@ interface CharacterCardProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   showActions?: boolean;
+  onClick?: () => void;
+  isSelected?: boolean;
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({
@@ -15,6 +17,8 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   onEdit,
   onDelete,
   showActions = true,
+  onClick,
+  isSelected,
 }) => {
   return (
     <motion.div
@@ -22,7 +26,8 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="bg-white rounded-lg shadow-md overflow-hidden"
+      onClick={onClick}
+      className={`bg-white rounded-lg shadow-md overflow-hidden ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className="aspect-square relative">
         {character.thumbnailUrl ? (
@@ -34,6 +39,11 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
         ) : (
           <div className="w-full h-full bg-gray-100 flex items-center justify-center">
             <span className="text-gray-400">Sin imagen</span>
+          </div>
+        )}
+        {isSelected && (
+          <div className="absolute inset-0 bg-purple-600 bg-opacity-20 flex items-center justify-center pointer-events-none">
+            <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm">✓</div>
           </div>
         )}
       </div>
