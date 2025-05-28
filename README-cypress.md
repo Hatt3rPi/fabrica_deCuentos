@@ -49,10 +49,12 @@ Las pruebas E2E están organizadas de la siguiente manera:
 
 Se han creado varios comandos personalizados para facilitar las pruebas:
 
-- `cy.login(email, password)`: Inicia sesión con las credenciales proporcionadas
-- `cy.createCharacter(name, age, description, imagePath)`: Crea un nuevo personaje con los datos proporcionados
-- `cy.checkRequiredFields()`: Verifica la validación de campos obligatorios en el formulario de personaje
-- `cy.cleanupTestData()`: Limpia los datos de prueba después de cada test
+- `cy.login(email, password)`: Inicia sesión con las credenciales proporcionadas.
+- `cy.openNewStoryModal()`: Abre el asistente de creación de cuentos y muestra el modal de selección de personajes.
+- `cy.createNewCharacterFromModal()`: Abre el formulario para crear un personaje dentro de dicho modal.
+- `cy.createCharacter(name, age, description, imagePath)`: Crea un nuevo personaje utilizando el flujo antiguo (aún disponible para pruebas puntuales).
+- `cy.checkRequiredFields()`: Verifica la validación de campos obligatorios en el formulario de personaje.
+- `cy.cleanupTestData()`: Limpia los datos de prueba después de cada test.
 
 ## Datos de prueba
 

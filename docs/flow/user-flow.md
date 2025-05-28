@@ -8,12 +8,11 @@
    - Inicia sesión con credenciales
    - Se redirige al dashboard
 
-2. **Creación de Personajes**
-   - Usuario accede a la sección de personajes
-   - Selecciona número de personajes (1-3)
-   - Completa formulario por cada personaje
-   - Genera imágenes usando IA
-   - Personaliza características
+2. **Nuevo Cuento y Personajes**
+   - Usuario presiona **Nuevo cuento** en el dashboard
+   - Se abre el asistente (wizard) y un modal para seleccionar personajes
+   - Puede crear personajes desde el modal
+   - Selecciona hasta 3 personajes para el cuento
 
 3. **Diseño de Historia**
    - Selecciona tema y estilo
@@ -43,10 +42,10 @@
 
 ### Creación de Personajes
 
-1. **Selección Inicial**
-   - Elige número de personajes
-   - Verifica límite de 3 personajes
-   - Configura espacio para personajes
+1. **Selección en el Wizard**
+   - Al entrar al asistente se muestra un modal con los personajes existentes
+   - Permite crear nuevos personajes directamente allí
+   - Límite de 3 personajes por cuento
 
 2. **Formulario de Personaje**
    - Nombre y características
@@ -54,10 +53,9 @@
    - Generación de imagen
    - Validación de datos
 
-3. **Galería de Personajes**
+3. **Galería dentro del Wizard**
    - Visualización en cuadrícula
-   - Gestión de selección
-   - Acciones CRUD
+   - Gestión de selección y eliminación
 
 ### Diseño de Historia
 

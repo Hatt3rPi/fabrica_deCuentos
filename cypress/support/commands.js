@@ -50,21 +50,20 @@ Cypress.Commands.add('createCharacter', (name, age, description, imagePath = 'cy
 Cypress.Commands.add('openNewStoryModal', () => {
   // Asegurarse de que estamos en la página de inicio
   cy.url().should('include', '/home');
-  
+
   // Esperar a que cualquier notificación desaparezca (tiempo adicional)
   cy.wait(3000); // Esperar 3 segundos para asegurar que la notificación desaparezca
-  
-  // Esperar a que el botón esté completamente interactivo
-  cy.contains('button', 'Nuevo cuento', { timeout: 15000 }) // Aumentar el tiempo de espera
+
+  // Abrir el asistente de nuevo cuento
+  cy.contains('button', 'Nuevo cuento', { timeout: 15000 })
     .should('be.visible')
     .and('not.be.disabled')
     .click({ force: true });
 
-  // Verificar que el modal aparece y es visible
-  return cy.get('[data-testid="modal-personajes"]', { timeout: 10000 })
-    .should('be.visible')
-    .and('have.css', 'display', 'flex')  // Verificar que es un flex container
-    .and('have.css', 'opacity', '1');    // Verificar que es completamente visible
+  // Verificar que se redirige al wizard y que el modal de selección está visible
+  cy.url({ timeout: 10000 }).should('match', /\/wizard\/[^/]+/);
+  return cy.contains('h2', 'Selecciona un personaje', { timeout: 10000 })
+    .should('be.visible');
 });
 
 // -- Comando para verificar que el modal está abierto --
@@ -81,66 +80,20 @@ Cypress.Commands.add('verifyModalIsOpen', () => {
 
 // -- Comando para crear un nuevo personaje desde el modal --
 Cypress.Commands.add('createNewCharacterFromModal', () => {
-  // Esperar a que el modal esté completamente cargado
-  cy.get('[data-testid="modal-personajes"]', { timeout: 15000 }).should('be.visible');
-  
+  // Asegurar que el modal de selección está visible
+  cy.contains('h2', 'Selecciona un personaje', { timeout: 15000 }).should('be.visible');
+
   // Tomar una captura de pantalla para depuración
   cy.screenshot('modal-personajes-visible');
-  
-  // Intentar encontrar el botón con el texto exacto 'Crear nuevo' (en minúsculas)
-  const possibleButtonTexts = [
-    'Crear nuevo',  // Texto exacto del botón en la interfaz
-    'Crear Nuevo',  // Versión con mayúscula por si acaso
-    'Crear nuevo personaje',
-    'Nuevo personaje',
-    'Crear personaje',
-    'Agregar personaje',
-    '+ Nuevo',
-    'Nuevo',
-    'Crear',
-    'Agregar'
-  ];
-  
-  // Función para intentar hacer clic en el botón
-  const tryClickButton = (index = 0) => {
-    if (index >= possibleButtonTexts.length) {
-      // Tomar captura de pantalla para depuración
-      cy.screenshot('no-se-encontro-boton-crear-personaje');
-      // Listar todos los botones visibles para depuración
-      cy.get('button').each(($btn, i) => {
-        cy.log(`Botón ${i}:`, $btn.text().trim());
-      });
-      throw new Error('No se pudo encontrar el botón de creación de personaje');
-    }
-    
-    const buttonText = possibleButtonTexts[index];
-    cy.log(`Buscando botón con texto: "${buttonText}"`);
-    
-    // Buscar el botón por texto
-    cy.get('button:visible', { timeout: 5000 })
-      .contains(buttonText)
-      .then($buttons => {
-        if ($buttons.length > 0) {
-          cy.log(`Botón encontrado: "${$buttons.first().text().trim()}"`);
-          // Encontramos el botón, hacer clic
-          cy.wrap($buttons.first())
-            .should('be.visible')
-            .should('not.be.disabled')
-            .click({ force: true });
-          
-          // Verificar que la navegación ocurrió
-          cy.url({ timeout: 10000 }).should('include', '/nuevo-cuento/personaje/nuevo');
-        } else {
-          // Intentar con el siguiente texto posible
-          tryClickButton(index + 1);
-        }
-      });
-  };
-  
-  // Iniciar el proceso de búsqueda del botón
-  tryClickButton(0);
-  
-  // Esperar a que el formulario de creación de personaje esté listo
+
+  // Hacer clic en el botón "Crear nuevo" dentro del modal
+  cy.contains('button', 'Crear nuevo', { timeout: 10000 })
+    .should('be.visible')
+    .and('not.be.disabled')
+    .click({ force: true });
+
+  // Esperar a que se muestre el formulario de creación dentro del modal
+  cy.contains('h2', 'Nuevo personaje', { timeout: 15000 }).should('be.visible');
   cy.get('input[placeholder="Nombre del personaje"]', { timeout: 15000 })
     .should('be.visible');
 });
