@@ -144,8 +144,8 @@ cypress/
 ### 💯 Flujos probados
 
 1. **Login**: Autenticación de usuario
-2. **Modal de personajes**: Apertura del modal desde la página de inicio
-3. **Creación de personaje**: Flujo completo de creación con validación de miniatura
+2. **Selección de personajes**: Apertura automática del modal en el asistente de nuevo cuento
+3. **Creación de personaje**: Flujo completo de creación con validación de miniatura dentro del modal
 4. **Validación de campos**: Verificación de campos obligatorios
 5. **Independencia**: Verificación de que las pruebas no interfieren entre sí
 

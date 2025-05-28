@@ -12,41 +12,33 @@ describe('2. Apertura del modal de personajes', function() {
     cy.fixture('test-data.json').as('testData');
   });
 
-  it('Debe abrir el modal de personajes desde la página de inicio', function() {
+  it('Debe abrir el modal de selección de personajes al iniciar un cuento', function() {
     // Iniciar sesión
     cy.login(this.testData.user.email, this.testData.user.password);
     
     // Verificar que estamos en la página de inicio
     cy.url().should('include', '/home');
     
-    // Usar el comando personalizado para abrir el modal
+    // Usar el comando personalizado para abrir el wizard y el modal
     cy.openNewStoryModal();
-    
-    // Verificar que el modal está visible
-    cy.get('[data-testid="modal-personajes"]', { timeout: 10000 })
-      .should('be.visible')
-      .and(($el) => {
-        // Verificar que el modal está visible
-        const display = $el.css('display');
-        const opacity = parseFloat($el.css('opacity'));
-        
-        expect(display).to.not.equal('none');
-        expect(opacity).to.be.greaterThan(0);
-      });
+
+    // Verificar que el modal de selección aparece
+    cy.contains('h2', 'Selecciona un personaje', { timeout: 10000 })
+      .should('be.visible');
     
     // Tomar una captura de pantalla para depuración
     cy.screenshot('modal-personajes-visible');
   });
   
-  it('Debe mostrar el botón para crear un nuevo personaje', function() {
+  it('Debe mostrar el formulario para crear un nuevo personaje', function() {
     // Iniciar sesión y abrir el modal
     cy.login(this.testData.user.email, this.testData.user.password);
     cy.openNewStoryModal();
-    
-    // Verificar que el botón interno "Crear nuevo personaje" está disponible
+
+    // Abrir el formulario de creación
     cy.createNewCharacterFromModal();
-    
-    // Verificar que nos redirige a la página de creación de personaje
-    cy.url().should('include', '/nuevo-cuento/personaje/nuevo');
+
+    // Verificar que el formulario se muestra dentro del modal
+    cy.contains('h2', 'Nuevo personaje').should('be.visible');
   });
 });

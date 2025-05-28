@@ -19,14 +19,14 @@ describe('3. Creación de Nuevo Personaje', function() {
     // Verificar que estamos en la página de inicio
     cy.url().should('include', '/home');
     
-    // Abrir el modal de personajes
+    // Abrir el modal de selección de personajes
     cy.openNewStoryModal();
-    
-    // Hacer clic en "Crear nuevo personaje"
+
+    // Abrir el formulario de creación de personaje
     cy.createNewCharacterFromModal();
-    
-    // Verificar que nos redirige a la página de creación de personaje
-    cy.url().should('include', '/nuevo-cuento/personaje/nuevo');
+
+    // Verificar que el formulario esté visible
+    cy.contains('h2', 'Nuevo personaje').should('be.visible');
     
     // Completar el formulario
     cy.get('input[placeholder="Nombre del personaje"]').type(this.testData.character.name);
@@ -58,14 +58,10 @@ describe('3. Creación de Nuevo Personaje', function() {
       .and('not.be.disabled')
       .click();
     
-    // Esperar 1000ms para la redirección
-    cy.wait(1000);
+    // Esperar a volver al wizard
+    cy.url({ timeout: 10000 }).should('match', /\/wizard\/[^/]+/);
 
-    // Obtener y registrar la URL actual
-    cy.url().then((url) => {
-      cy.log(`Redirigido a: ${url}`);
-    });
-    // Verificar que el personaje se ha creado
+    // Verificar que el personaje se ha agregado
     cy.contains(this.testData.character.name, { timeout: 15000 })
       .should('be.visible');
   });
