@@ -8,6 +8,15 @@ interface CharacterCardProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   showActions?: boolean;
+  /**
+   * When true the action buttons will only display the icon without text.
+   */
+  actionsIconOnly?: boolean;
+  /**
+   * Controls whether the character description is shown.
+   * Defaults to true for backwards compatibility.
+   */
+  showDescription?: boolean;
   onClick?: () => void;
   isSelected?: boolean;
 }
@@ -17,6 +26,8 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   onEdit,
   onDelete,
   showActions = true,
+  actionsIconOnly = false,
+  showDescription = true,
   onClick,
   isSelected,
 }) => {
@@ -52,14 +63,14 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
         <h3 className="text-lg font-semibold text-gray-800 mb-1">
           {character.name}
         </h3>
-        <p className="text-sm text-gray-600 mb-2">
-          {character.age} años
-        </p>
-        <p className="text-sm text-gray-600 line-clamp-2 mb-4">
-          {typeof character.description === 'object'
-            ? character.description.es
-            : character.description}
-        </p>
+        <p className="text-sm text-gray-600 mb-2">{character.age} años</p>
+        {showDescription && (
+          <p className="text-sm text-gray-600 line-clamp-2 mb-4">
+            {typeof character.description === 'object'
+              ? character.description.es
+              : character.description}
+          </p>
+        )}
 
         {showActions && (
           <div className="flex gap-2">
@@ -70,9 +81,10 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                   onEdit(character.id);
                 }}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+                aria-label="Editar personaje"
               >
                 <Edit2 className="w-4 h-4" />
-                <span>Editar</span>
+                {!actionsIconOnly && <span>Editar</span>}
               </button>
             )}
             {onDelete && (
@@ -82,9 +94,10 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                   onDelete(character.id);
                 }}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                aria-label="Eliminar personaje"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Eliminar</span>
+                {!actionsIconOnly && <span>Eliminar</span>}
               </button>
             )}
           </div>

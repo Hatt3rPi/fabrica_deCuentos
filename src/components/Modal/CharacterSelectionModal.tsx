@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Loader } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { Character } from '../../types';
 import CharacterCard from '../Character/CharacterCard';
@@ -132,6 +133,18 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
               </div>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                <motion.button
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  onClick={() => setShowForm(true)}
+                  className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-colors"
+                  aria-label="Crear nuevo personaje"
+                >
+                  <Plus className="w-8 h-8" />
+                  <span className="text-sm">Crear nuevo</span>
+                </motion.button>
                 {characters.map((character) => (
                   <CharacterCard
                     key={character.id}
@@ -140,15 +153,10 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
                     onDelete={handleDelete}
                     onClick={() => linkCharacter(character.id)}
                     isSelected={false}
+                    showDescription={false}
+                    actionsIconOnly
                   />
                 ))}
-                <button
-                  onClick={() => setShowForm(true)}
-                  className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-colors"
-                >
-                  <Plus className="w-8 h-8" />
-                  <span className="text-sm">Crear nuevo</span>
-                </button>
               </div>
             )}
           </div>
