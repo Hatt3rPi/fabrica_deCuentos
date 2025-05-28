@@ -9,6 +9,7 @@ const passwordSchema = z.string().min(6, 'La contraseña debe tener al menos 6 c
 const tokenSchema = z.string().length(8, 'El código debe tener 8 caracteres');
 
 const LoginForm: React.FC = () => {
+  console.log('El componente LoginForm está funcionando correctamente');
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
