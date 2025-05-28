@@ -303,7 +303,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
 
       setFormData(prev => ({
         ...prev,
-        thumbnail_url: publicUrl
+        thumbnailUrl: publicUrl
       }));
       
       // Marcar que la miniatura ha sido generada exitosamente
@@ -352,7 +352,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
         age: formData.age,
         description: formData.description,
         reference_urls: formData.reference_urls,
-        thumbnail_url: formData.thumbnail_url,
+        thumbnail_url: formData.thumbnailUrl,
       };
 
       const { error } = await supabase
@@ -511,9 +511,9 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
               Miniatura generada
             </label>
             <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-              {formData.thumbnail_url ? (
+              {formData.thumbnailUrl ? (
                 <img
-                  src={formData.thumbnail_url}
+                  src={formData.thumbnailUrl}
                   alt="Miniatura"
                   className="w-full h-full object-cover rounded-lg"
                 />
