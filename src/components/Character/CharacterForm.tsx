@@ -12,11 +12,14 @@ import { Character } from '../../types';
 interface CharacterFormProps {
   onSave?: (id: string) => void;
   onCancel?: () => void;
+  /** ID del personaje a editar. Si no se proporciona se lee desde la ruta */
+  id?: string;
 }
 
-const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel }) => {
+const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: propId }) => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { id: routeId } = useParams<{ id: string }>();
+  const id = propId || routeId;
   const { supabase, user } = useAuth();
   const { addCharacter, updateCharacter } = useCharacterStore();
   const { createNotification } = useNotifications();

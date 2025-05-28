@@ -65,7 +65,10 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
           <div className="flex gap-2">
             {onEdit && (
               <button
-                onClick={() => onEdit(character.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(character.id);
+                }}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
@@ -74,7 +77,10 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
             )}
             {onDelete && (
               <button
-                onClick={() => onDelete(character.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(character.id);
+                }}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
