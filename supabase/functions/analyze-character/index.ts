@@ -6,6 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  { auth: { persistSession: false, autoRefreshToken: false } }
+);
 const handleOpenAIError = (error)=>{
   if (error.response?.status === 429) {
     return {
@@ -78,7 +83,15 @@ Deno.serve(async (req)=>{
     if (!imageUrl) {
       throw new Error('No image URL provided');
     }
-    const analysisPrompt = Deno.env.get('PROMPT_DESCRIPCION_PERSONAJE');
+    let analysisPrompt = Deno.env.get('PROMPT_DESCRIPCION_PERSONAJE') || '';
+    const { data: promptRow } = await supabaseAdmin
+      .from('prompts')
+      .select('content')
+      .eq('type', 'PROMPT_DESCRIPCION_PERSONAJE')
+      .single();
+    if (promptRow?.content) {
+      analysisPrompt = promptRow.content;
+    }
     if (!analysisPrompt) {
       throw new Error('Error de configuración: Falta el prompt de análisis de personaje');
     }

@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, User, Settings, LogOut, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useAdmin } from '../../context/AdminContext';
 import { Link } from 'react-router-dom';
 import { ImageGenerationSettings, ImageEngine, OpenAIModel, StabilityModel } from '../../types';
 
 const Sidebar: React.FC = () => {
-  const { signOut, user, supabase } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { signOut, supabase } = useAuth();
+  const isAdmin = useAdmin();
   const [settings, setSettings] = useState<ImageGenerationSettings | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const checkAdminStatus = () => {
-      setIsAdmin(user?.email === 'fabarca212@gmail.com');
-    };
-
     const loadSettings = async () => {
       if (!isAdmin) return;
       
@@ -32,9 +29,8 @@ const Sidebar: React.FC = () => {
       }
     };
 
-    checkAdminStatus();
     loadSettings();
-  }, [user, supabase, isAdmin]);
+  }, [supabase, isAdmin]);
 
   const handleEngineChange = async (
     type: 'thumbnail' | 'variations' | 'spriteSheet',
@@ -174,6 +170,14 @@ const Sidebar: React.FC = () => {
               <span>Mi Perfil</span>
             </Link>
           </li>
+          {isAdmin && (
+            <li>
+              <Link to="/admin/prompts" className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20">
+                <Settings className="w-5 h-5" />
+                <span>Prompts</span>
+              </Link>
+            </li>
+          )}
           {isAdmin && (
             <li className="mt-4">
               <div className="px-4 py-2">

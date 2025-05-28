@@ -1,9 +1,16 @@
 import OpenAI from "npm:openai@4.28.0";
+import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
+
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  { auth: { persistSession: false, autoRefreshToken: false } }
+);
 
 // Valida si la cadena es:
 //  • Un data URI de imagen
@@ -61,7 +68,15 @@ Deno.serve(async (req) => {
     // 1) Config y prompts
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) throw new Error('Falta la clave de API de OpenAI');
-    const characterPrompt = Deno.env.get('PROMPT_CREAR_MINIATURA_PERSONAJE');
+    let characterPrompt = Deno.env.get('PROMPT_CREAR_MINIATURA_PERSONAJE') || '';
+    const { data: promptRow } = await supabaseAdmin
+      .from('prompts')
+      .select('content')
+      .eq('type', 'PROMPT_CREAR_MINIATURA_PERSONAJE')
+      .single();
+    if (promptRow?.content) {
+      characterPrompt = promptRow.content;
+    }
     if (!characterPrompt) throw new Error('Falta el prompt de generación de personaje');
 
     // 2) Payload
