@@ -15,6 +15,7 @@ import NotificationBell from './components/Notifications/NotificationBell';
 import ToastContainer from './components/UI/ToastContainer';
 import ProfileSettings from './pages/ProfileSettings';
 import PromptManager from './pages/Admin/PromptManager';
+import PromptAnalytics from './pages/Admin/Analytics/PromptAnalytics';
 import { useProfileStore } from './stores/profileStore';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -95,6 +96,14 @@ function AppContent() {
                 element={
                   <PrivateRoute>
                     <PromptManager />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/admin/analytics"
+                element={
+                  <PrivateRoute>
+                    <PromptAnalytics />
                   </PrivateRoute>
                 }
               />
