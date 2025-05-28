@@ -14,6 +14,7 @@ Plataforma web interactiva para crear cuentos infantiles personalizados con ilus
 - [📊 Flujo de Usuario](#-flujo-de-usuario)
 - [🔧 Contextos](#-contextos)
 - [🖼️ Imágenes de Respaldo](#-imágenes-de-respaldo)
+- [🔄 Sincronización Supabase](#-sincronización-supabase)
 - [🤝 Contribución](#-contribución)
 - [📄 Licencia](#-licencia)
 - [✨ Créditos](#-créditos)
@@ -218,6 +219,10 @@ El proyecto utiliza imágenes genéricas de respaldo para cada estilo visual cua
 - **Kawaii**: `supabase/storage/fallback-images/kawaii.webp`
 
 Estas imágenes se encuentran en Supabase Storage en la carpeta `fallback-images/`. Para más detalles sobre cómo generar y utilizar estas imágenes, consulta la [guía de imágenes de respaldo](docs/fallback_images_guide.md).
+
+## 🔄 Sincronización Supabase
+
+Si se realizaron cambios directamente en el dashboard de Supabase y no están reflejados en el repositorio local, consulta el documento [Sincronización de Cambios en Supabase](docs/tech/supabase-sync.md) para obtener los pasos necesarios y evitar conflictos de migración.
 
 ## 🤝 Contribución
 
