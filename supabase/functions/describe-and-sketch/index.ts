@@ -150,14 +150,16 @@ Deno.serve(async (req) => {
     });
     const elapsed = Date.now() - start;
     const editData = await editRes.json();
+    const tokensEntrada = editData.usage?.input_tokens ?? 0;
+    const tokensSalida = editData.usage?.output_tokens ?? 0;
     await logPromptMetric({
       prompt_id: promptId,
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: elapsed,
       estado: editRes.ok ? 'success' : 'error',
       error_type: editRes.ok ? null : 'service_error',
-      tokens_entrada: 0,
-      tokens_salida: 0,
+      tokens_entrada: tokensEntrada,
+      tokens_salida: tokensSalida,
       usuario_id: userId,
     });
     if (!editRes.ok) {
