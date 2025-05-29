@@ -160,35 +160,52 @@ export const analyticsService = {
   },
 
   async fetchUserUsage(range?: DateRange): Promise<UserUsageMetric[]> {
-    // First, get all the prompt metrics
+    // Primero, obtener todas las métricas
     let query = supabase
       .from('prompt_metrics')
       .select('usuario_id, estado, tokens_entrada, tokens_salida, timestamp');
     query = applyDateFilter(query, 'timestamp', range);
 
     const { data: metrics, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error('Error al obtener métricas:', error);
+      throw error;
+    }
     if (!metrics) return [];
 
-    // Get unique user IDs
+    // Obtener IDs de usuario únicos
     const userIds = [...new Set(metrics.map(m => m.usuario_id).filter(Boolean))];
     
-    // Fetch user emails in a separate query from auth.users
+    // Mapa de IDs a correos electrónicos
     const userEmails: Record<string, string> = {};
+    
+    // Si hay IDs de usuario, obtener sus correos usando la función de base de datos
     if (userIds.length > 0) {
-      // Use the auth.users table for Supabase authentication users
-      const { data: users, error: usersError } = await supabase
-        .from('auth.users')
-        .select('id, email')
-        .in('id', userIds);
-      
-      if (usersError) {
-        console.error('Error fetching user emails:', usersError);
-      } else if (users) {
-        users.forEach(user => {
-          if (user.id) {
-            userEmails[user.id] = user.email || '';
-          }
+      try {
+        // Llamar a la función de base de datos
+        const { data: userData, error: userError } = await supabase
+          .rpc('get_user_emails', { 
+            user_ids: userIds 
+          });
+        
+        if (userError) {
+          console.error('Error al obtener correos:', userError);
+          throw userError;
+        }
+        
+        // Mapear los resultados
+        if (userData) {
+          userData.forEach((user: { user_id: string; user_email: string }) => {
+            if (user.user_id && user.user_email) {
+              userEmails[user.user_id] = user.user_email;
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error al obtener correos electrónicos:', err);
+        // Si hay un error, usar el ID como fallback
+        userIds.forEach(id => {
+          if (id) userEmails[id] = id;
         });
       }
     }
