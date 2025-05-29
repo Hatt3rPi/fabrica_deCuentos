@@ -31,7 +31,7 @@ export const promptService = {
   async upsertPrompt(type: string, content: string): Promise<Prompt> {
     const { data, error } = await supabase
       .from('prompts')
-      .upsert({ type, content })
+      .upsert({ type, content }, { onConflict: 'type' })
       .select('*')
       .single();
     if (error) throw error;

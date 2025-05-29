@@ -45,8 +45,13 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
       >
-        <span className="font-medium text-left">
-          {prompt.type} (v{prompt.version}, modificado {formatRelativeTime(prompt.updated_at)})
+
+        <span className="text-left">
+          <span className="font-bold">{prompt.type}</span>{' '}
+          <span className="text-sm italic font-normal">
+            (v{prompt.version}, modificado {formatRelativeTime(prompt.updated_at)})
+          </span>
+
         </span>
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
