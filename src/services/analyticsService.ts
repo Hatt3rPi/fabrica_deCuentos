@@ -162,7 +162,7 @@ export const analyticsService = {
   async fetchUserUsage(range?: DateRange): Promise<UserUsageMetric[]> {
     let query = supabase
       .from('prompt_metrics')
-      .select('usuario_id, estado, tokens_entrada, tokens_salida, user:usuario_id(email)');
+      .select('usuario_id, estado, tokens_entrada, tokens_salida, user:auth.users!prompt_metrics_usuario_id_fkey(email)');
     query = applyDateFilter(query, 'timestamp', range);
 
     const { data, error } = await query;
