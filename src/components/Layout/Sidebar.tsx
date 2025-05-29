@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3 } from 'lucide-react';
+import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
 import { Link } from 'react-router-dom';
 import { ImageGenerationSettings, ImageEngine, OpenAIModel, StabilityModel } from '../../types';
+import PromptViewerModal from '../Modals/PromptViewerModal';
 
 const Sidebar: React.FC = () => {
   const { signOut, supabase } = useAuth();
   const isAdmin = useAdmin();
   const [settings, setSettings] = useState<ImageGenerationSettings | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPromptModal, setShowPromptModal] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -187,6 +189,18 @@ const Sidebar: React.FC = () => {
             </li>
           )}
           {isAdmin && (
+            <li>
+              <button
+                type="button"
+                onClick={() => setShowPromptModal(true)}
+                className="w-full flex items-center gap-3 px-4 py-2 text-left text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
+              >
+                <Eye className="w-5 h-5" />
+                <span>Ver Prompts</span>
+              </button>
+            </li>
+          )}
+          {isAdmin && (
             <li className="mt-4">
               <div className="px-4 py-2">
                 <h3 className="text-sm font-medium text-gray-900 mb-2">Configuración del Sistema</h3>
@@ -227,6 +241,12 @@ const Sidebar: React.FC = () => {
           <span>Cerrar Sesión</span>
         </button>
       </div>
+      {isAdmin && (
+        <PromptViewerModal
+          isOpen={showPromptModal}
+          onClose={() => setShowPromptModal(false)}
+        />
+      )}
     </div>
   );
 };
