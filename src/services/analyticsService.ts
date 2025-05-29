@@ -160,28 +160,48 @@ export const analyticsService = {
   },
 
   async fetchUserUsage(range?: DateRange): Promise<UserUsageMetric[]> {
+    // First, get all the prompt metrics
     let query = supabase
       .from('prompt_metrics')
-      .select(`
-        usuario_id,
-        estado,
-        tokens_entrada,
-        tokens_salida,
-        user:usuario_id (email)
-      `);
+      .select('usuario_id, estado, tokens_entrada, tokens_salida, timestamp');
     query = applyDateFilter(query, 'timestamp', range);
 
-    const { data, error } = await query;
+    const { data: metrics, error } = await query;
     if (error) throw error;
+    if (!metrics) return [];
+
+    // Get unique user IDs
+    const userIds = [...new Set(metrics.map(m => m.usuario_id).filter(Boolean))];
+    
+    // Fetch user emails in a separate query from auth.users
+    const userEmails: Record<string, string> = {};
+    if (userIds.length > 0) {
+      // Use the auth.users table for Supabase authentication users
+      const { data: users, error: usersError } = await supabase
+        .from('auth.users')
+        .select('id, email')
+        .in('id', userIds);
+      
+      if (usersError) {
+        console.error('Error fetching user emails:', usersError);
+      } else if (users) {
+        users.forEach(user => {
+          if (user.id) {
+            userEmails[user.id] = user.email || '';
+          }
+        });
+      }
+    }
 
     const grouped: Record<string, UserUsageMetric> = {};
 
-    (data || []).forEach((row: any) => {
+    // Process the metrics data
+    metrics.forEach((row) => {
       const key = row.usuario_id || 'unknown';
       if (!grouped[key]) {
         grouped[key] = {
           userId: row.usuario_id,
-          userEmail: row.user?.email ?? null,
+          userEmail: row.usuario_id ? userEmails[row.usuario_id] || null : null,
           executions: 0,
           successCount: 0,
           totalInputTokens: 0,
