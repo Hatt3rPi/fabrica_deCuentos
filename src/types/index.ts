@@ -105,11 +105,12 @@ export const messageOptions = [
 
 // Opciones disponibles para el diseño
 export const visualStyleOptions = [
+  { value: 'default', label: 'Estilo por defecto' },
   { value: 'acuarela', label: 'Acuarela' },
-  { value: 'cartoon', label: 'Cartoon' },
-  { value: 'pixar', label: 'Estilo Pixar' },
+  { value: 'bordado', label: 'Bordado' },
+  { value: 'kawaii', label: 'Kawaii' },
   { value: 'dibujado', label: 'Dibujado a mano' },
-  { value: 'realista', label: 'Semi-realista' }
+  { value: 'recortes', label: 'Recortes de papel' }
 ];
 
 export const colorPaletteOptions = [
