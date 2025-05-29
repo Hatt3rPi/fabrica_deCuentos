@@ -160,24 +160,67 @@ export const analyticsService = {
   },
 
   async fetchUserUsage(range?: DateRange): Promise<UserUsageMetric[]> {
+    // Primero, obtener todas las métricas
     let query = supabase
       .from('prompt_metrics')
-      .select(
-        'usuario_id, estado, tokens_entrada, tokens_salida, user:auth.users!prompt_metrics_usuario_id_fkey(email)'
-      );
+
+      .select('usuario_id, estado, tokens_entrada, tokens_salida, timestamp');
+
     query = applyDateFilter(query, 'timestamp', range);
 
-    const { data, error } = await query;
-    if (error) throw error;
+    const { data: metrics, error } = await query;
+    if (error) {
+      console.error('Error al obtener métricas:', error);
+      throw error;
+    }
+    if (!metrics) return [];
+
+    // Obtener IDs de usuario únicos
+    const userIds = [...new Set(metrics.map(m => m.usuario_id).filter(Boolean))];
+    
+    // Mapa de IDs a correos electrónicos
+    const userEmails: Record<string, string> = {};
+    
+    // Si hay IDs de usuario, obtener sus correos usando la función de base de datos
+    if (userIds.length > 0) {
+      try {
+        // Llamar a la función de base de datos
+        const { data: userData, error: userError } = await supabase
+          .rpc('get_user_emails', { 
+            user_ids: userIds 
+          });
+        
+        if (userError) {
+          console.error('Error al obtener correos:', userError);
+          throw userError;
+        }
+        
+        // Mapear los resultados
+        if (userData) {
+          userData.forEach((user: { user_id: string; user_email: string }) => {
+            if (user.user_id && user.user_email) {
+              userEmails[user.user_id] = user.user_email;
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error al obtener correos electrónicos:', err);
+        // Si hay un error, usar el ID como fallback
+        userIds.forEach(id => {
+          if (id) userEmails[id] = id;
+        });
+      }
+    }
 
     const grouped: Record<string, UserUsageMetric> = {};
 
-    (data || []).forEach((row: any) => {
+    // Process the metrics data
+    metrics.forEach((row) => {
       const key = row.usuario_id || 'unknown';
       if (!grouped[key]) {
         grouped[key] = {
           userId: row.usuario_id,
-          userEmail: row.user?.email ?? null,
+          userEmail: row.usuario_id ? userEmails[row.usuario_id] || null : null,
           executions: 0,
           successCount: 0,
           totalInputTokens: 0,
