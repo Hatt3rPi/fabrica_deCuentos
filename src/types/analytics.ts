@@ -14,6 +14,10 @@ export interface PromptPerformanceMetric {
   promptType: string | null;
   totalExecutions: number;
   successCount: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  averageInputTokens: number;
+  averageOutputTokens: number;
   averageResponseMs: number;
 }
 
@@ -29,6 +33,8 @@ export interface ModelUsageMetric {
   executions: number;
   successCount: number;
   averageResponseMs: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
   averageInputTokens: number;
   averageOutputTokens: number;
 }
@@ -48,4 +54,6 @@ export interface UserUsageMetric {
   successCount: number;
   totalInputTokens: number;
   totalOutputTokens: number;
+  averageInputTokens: number;
+  averageOutputTokens: number;
 }

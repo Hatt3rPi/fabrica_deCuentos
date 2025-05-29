@@ -1,3 +1,6 @@
-export function formatNumber(num: number): string {
-  return Math.round(num).toLocaleString('es-ES');
+export function formatNumber(num: number, decimals = 0): string {
+  return num.toLocaleString('es-ES', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
 }

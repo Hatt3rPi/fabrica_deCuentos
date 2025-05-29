@@ -94,15 +94,15 @@ const PromptAnalytics: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="p-4 bg-purple-50 rounded">
             <p className="text-sm text-gray-500">Usuarios activos</p>
-            <p className="text-xl font-semibold">{general.activeUsers}</p>
+            <p className="text-xl font-semibold">{formatNumber(general.activeUsers)}</p>
           </div>
           <div className="p-4 bg-purple-50 rounded">
             <p className="text-sm text-gray-500">Cuentos generados</p>
-            <p className="text-xl font-semibold">{general.storiesGenerated}</p>
+            <p className="text-xl font-semibold">{formatNumber(general.storiesGenerated)}</p>
           </div>
           <div className="p-4 bg-purple-50 rounded">
             <p className="text-sm text-gray-500">Personajes creados</p>
-            <p className="text-xl font-semibold">{general.charactersCreated}</p>
+            <p className="text-xl font-semibold">{formatNumber(general.charactersCreated)}</p>
           </div>
         </div>
       )}
@@ -131,8 +131,9 @@ const PromptAnalytics: React.FC = () => {
                 <tr className="text-left">
                   <th className="p-2">Prompt</th>
                   <th className="p-2">Ejecuciones</th>
-                  <th className="p-2">Exitos</th>
-                  <th className="p-2">% Éxito</th>
+                  <th className="p-2">Tasa éxito</th>
+                  <th className="p-2">Tokens in</th>
+                  <th className="p-2">Tokens out</th>
                   <th className="p-2">Prom. respuesta (ms)</th>
                 </tr>
               </thead>
@@ -140,12 +141,17 @@ const PromptAnalytics: React.FC = () => {
                 {prompts.map((p) => (
                   <tr key={p.promptId} className="border-t">
                     <td className="p-2">{p.promptType || p.promptId}</td>
-                    <td className="p-2">{p.totalExecutions}</td>
-                    <td className="p-2">{p.successCount}</td>
+                    <td className="p-2">{formatNumber(p.totalExecutions)}</td>
                     <td className="p-2">
                       {((p.successCount / p.totalExecutions) * 100).toFixed(0)}%
                     </td>
-                    <td className="p-2">{Math.round(p.averageResponseMs)}</td>
+                    <td className="p-2">
+                      {formatNumber(p.totalInputTokens)} ({formatNumber(p.averageInputTokens)})
+                    </td>
+                    <td className="p-2">
+                      {formatNumber(p.totalOutputTokens)} ({formatNumber(p.averageOutputTokens)})
+                    </td>
+                    <td className="p-2">{formatNumber(Math.round(p.averageResponseMs))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -162,9 +168,9 @@ const PromptAnalytics: React.FC = () => {
                 <tr className="text-left">
                   <th className="p-2">Modelo</th>
                   <th className="p-2">Ejecuciones</th>
-                  <th className="p-2">% Éxito</th>
-                  <th className="p-2">Prom. tokens in</th>
-                  <th className="p-2">Prom. tokens out</th>
+                  <th className="p-2">Tasa éxito</th>
+                  <th className="p-2">Tokens in</th>
+                  <th className="p-2">Tokens out</th>
                   <th className="p-2">Prom. respuesta (ms)</th>
                 </tr>
               </thead>
@@ -172,13 +178,17 @@ const PromptAnalytics: React.FC = () => {
                 {models.map((m) => (
                   <tr key={m.model} className="border-t">
                     <td className="p-2">{m.model}</td>
-                    <td className="p-2">{m.executions}</td>
+                    <td className="p-2">{formatNumber(m.executions)}</td>
                     <td className="p-2">
                       {((m.successCount / m.executions) * 100).toFixed(0)}%
                     </td>
-                    <td className="p-2">{m.averageInputTokens.toFixed(1)}</td>
-                    <td className="p-2">{m.averageOutputTokens.toFixed(1)}</td>
-                    <td className="p-2">{Math.round(m.averageResponseMs)}</td>
+                    <td className="p-2">
+                      {formatNumber(m.totalInputTokens)} ({formatNumber(m.averageInputTokens)})
+                    </td>
+                    <td className="p-2">
+                      {formatNumber(m.totalOutputTokens)} ({formatNumber(m.averageOutputTokens)})
+                    </td>
+                    <td className="p-2">{formatNumber(Math.round(m.averageResponseMs))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -201,7 +211,7 @@ const PromptAnalytics: React.FC = () => {
                 {errors.map((er) => (
                   <tr key={er.status} className="border-t">
                     <td className="p-2">{er.status}</td>
-                    <td className="p-2">{er.count}</td>
+                    <td className="p-2">{formatNumber(er.count)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -218,7 +228,7 @@ const PromptAnalytics: React.FC = () => {
                 <tr className="text-left">
                   <th className="p-2">Usuario</th>
                   <th className="p-2">Ejecuciones</th>
-                  <th className="p-2">% Éxito</th>
+                  <th className="p-2">Tasa éxito</th>
                   <th className="p-2">Tokens in</th>
                   <th className="p-2">Tokens out</th>
                 </tr>
@@ -227,12 +237,16 @@ const PromptAnalytics: React.FC = () => {
                 {users.map((u) => (
                   <tr key={u.userId || 'unknown'} className="border-t">
                     <td className="p-2">{u.userEmail || u.userId || 'Desconocido'}</td>
-                    <td className="p-2">{u.executions}</td>
+                    <td className="p-2">{formatNumber(u.executions)}</td>
                     <td className="p-2">
                       {((u.successCount / u.executions) * 100).toFixed(0)}%
                     </td>
-                    <td className="p-2">{u.totalInputTokens}</td>
-                    <td className="p-2">{u.totalOutputTokens}</td>
+                    <td className="p-2">
+                      {formatNumber(u.totalInputTokens)} ({formatNumber(u.averageInputTokens)})
+                    </td>
+                    <td className="p-2">
+                      {formatNumber(u.totalOutputTokens)} ({formatNumber(u.averageOutputTokens)})
+                    </td>
                   </tr>
                 ))}
               </tbody>
