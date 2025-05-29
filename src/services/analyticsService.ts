@@ -162,7 +162,7 @@ export const analyticsService = {
   async fetchUserUsage(range?: DateRange): Promise<UserUsageMetric[]> {
     let query = supabase
       .from('prompt_metrics')
-      .select('usuario_id, estado, tokens_entrada, tokens_salida');
+      .select('usuario_id, estado, tokens_entrada, tokens_salida, user:usuario_id(email)');
     query = applyDateFilter(query, 'timestamp', range);
 
     const { data, error } = await query;
@@ -175,6 +175,7 @@ export const analyticsService = {
       if (!grouped[key]) {
         grouped[key] = {
           userId: row.usuario_id,
+          userEmail: row.user?.email ?? null,
           executions: 0,
           successCount: 0,
           totalInputTokens: 0,

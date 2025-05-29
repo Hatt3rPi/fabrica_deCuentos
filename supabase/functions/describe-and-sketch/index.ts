@@ -1,6 +1,6 @@
 import OpenAI from "npm:openai@4.28.0";
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
-import { logPromptMetric } from '../_shared/metrics.ts';
+import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,21 +64,24 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  let promptId: string | undefined;
+  let userId: string | null = null;
+
   try {
 
     // 1) Config y prompts
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) throw new Error('Falta la clave de API de OpenAI');
-    let characterPrompt = Deno.env.get('PROMPT_CREAR_MINIATURA_PERSONAJE') || '';
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('content')
+      .select('id, content')
       .eq('type', 'PROMPT_CREAR_MINIATURA_PERSONAJE')
       .single();
-    if (promptRow?.content) {
-      characterPrompt = promptRow.content;
-    }
+    const characterPrompt = promptRow?.content || '';
+    promptId = promptRow?.id;
     if (!characterPrompt) throw new Error('Falta el prompt de generación de personaje');
+
+    userId = await getUserId(req);
 
     // 2) Payload
     const rawPayload = await req.json().catch(() => {
@@ -148,10 +151,14 @@ Deno.serve(async (req) => {
     const elapsed = Date.now() - start;
     const editData = await editRes.json();
     await logPromptMetric({
+      prompt_id: promptId,
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: elapsed,
       estado: editRes.ok ? 'success' : 'error',
       error_type: editRes.ok ? null : 'service_error',
+      tokens_entrada: 0,
+      tokens_salida: 0,
+      usuario_id: userId,
     });
     if (!editRes.ok) {
       const msg = editData.error?.message || editRes.statusText;
@@ -173,10 +180,14 @@ Deno.serve(async (req) => {
   } catch (error: any) {
     console.error('Error in describe-and-sketch:', error);
     await logPromptMetric({
+      prompt_id: promptId,
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: 0,
       estado: 'error',
       error_type: 'service_error',
+      tokens_entrada: 0,
+      tokens_salida: 0,
+      usuario_id: userId,
       metadatos: { error: (error as Error).message },
     });
     return new Response(JSON.stringify({

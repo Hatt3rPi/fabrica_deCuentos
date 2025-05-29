@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { encode as base64Encode } from "https://deno.land/std@0.203.0/encoding/base64.ts";
-import { logPromptMetric } from '../_shared/metrics.ts';
+import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 const FILE = 'analyze-character';
 const STAGE = 'personaje';
 const corsHeaders = {
@@ -90,26 +90,25 @@ Deno.serve(async (req)=>{
   }
   let start = 0;
   let promptId: string | undefined;
+  let userId: string | null = null;
   try {
     const { imageUrl, name, age, description: sanitizedNotes } = await req.json();
     if (!imageUrl) {
       throw new Error('No image URL provided');
     }
-    let analysisPrompt = Deno.env.get('PROMPT_DESCRIPCION_PERSONAJE') || '';
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
       .select('id, content')
       .eq('type', 'PROMPT_DESCRIPCION_PERSONAJE')
       .single();
+    const analysisPrompt = promptRow?.content || '';
     if (promptRow?.id) {
       promptId = promptRow.id;
-    }
-    if (promptRow?.content) {
-      analysisPrompt = promptRow.content;
     }
     if (!analysisPrompt) {
       throw new Error('Error de configuración: Falta el prompt de análisis de personaje');
     }
+    userId = await getUserId(req);
     console.log(`[${FILE}] [INIT] Attempting to fetch image: ${imageUrl}`);
     const base64Image = await fetchImageAsBase64(imageUrl);
     const prompt = analysisPrompt.replace('{name}', name || '').replace('${sanitizedAge}', age?.toString() || '').replace('${sanitizedNotes}', sanitizedNotes || '');
@@ -157,6 +156,7 @@ Deno.serve(async (req)=>{
       error_type: response.ok ? null : handleOpenAIError({response}).type,
       tokens_entrada: responseData.usage?.prompt_tokens ?? 0,
       tokens_salida: responseData.usage?.completion_tokens ?? 0,
+      usuario_id: userId,
     });
     console.log(`[${FILE}] [${STAGE}] [OUT] ${JSON.stringify(responseData)}`);
     if (!response.ok) {
@@ -197,6 +197,7 @@ Deno.serve(async (req)=>{
         error_type: handleOpenAIError(error).type,
         tokens_entrada: 0,
         tokens_salida: 0,
+        usuario_id: userId,
         metadatos: { error: (error as Error).message },
       });
     }

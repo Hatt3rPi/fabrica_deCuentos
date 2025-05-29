@@ -221,7 +221,7 @@ const PromptAnalytics: React.FC = () => {
               <tbody>
                 {users.map((u) => (
                   <tr key={u.userId || 'unknown'} className="border-t">
-                    <td className="p-2">{u.userId ?? 'Desconocido'}</td>
+                    <td className="p-2">{u.userEmail || u.userId || 'Desconocido'}</td>
                     <td className="p-2">{u.executions}</td>
                     <td className="p-2">
                       {((u.successCount / u.executions) * 100).toFixed(0)}%
