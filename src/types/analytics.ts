@@ -33,7 +33,9 @@ export interface ModelUsageMetric {
 
 export interface ErrorBreakdownMetric {
   status: string;
+
   errorType?: string | null;
+
   count: number;
 }
 

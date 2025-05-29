@@ -141,7 +141,9 @@ export const analyticsService = {
   },
 
   async fetchErrorBreakdown(range?: DateRange): Promise<ErrorBreakdownMetric[]> {
+
     let query = supabase.from('prompt_metrics').select('estado, error_type');
+
     query = applyDateFilter(query, 'timestamp', range);
 
     const { data, error } = await query;
@@ -149,9 +151,9 @@ export const analyticsService = {
 
     const counts: Record<string, number> = {};
 
-    (data || []).forEach((row: any) => {
-      const key = row.error_type || row.estado || 'unknown';
+    (data || []).forEach((row: any) => {      const key = row.error_type || row.estado || 'unknown';
       counts[key] = (counts[key] || 0) + 1;
+
     });
 
     return Object.entries(counts).map(([status, count]) => ({ status, count }));
