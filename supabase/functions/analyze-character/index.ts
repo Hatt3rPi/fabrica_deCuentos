@@ -16,11 +16,20 @@ const handleOpenAIError = (error)=>{
   if (error.response?.status === 429) {
     return {
       status: 429,
+      type: 'rate_limit',
       message: 'Límite de solicitudes excedido. Por favor, intenta de nuevo en unos minutos.'
+    };
+  }
+  if (error.response?.status >= 500) {
+    return {
+      status: error.response.status,
+      type: 'service_down',
+      message: error.message || 'Servicio no disponible'
     };
   }
   return {
     status: 500,
+    type: 'unknown_error',
     message: error.message || 'Error al analizar el personaje'
   };
 };
@@ -145,6 +154,7 @@ Deno.serve(async (req)=>{
       modelo_ia: requestBody.model,
       tiempo_respuesta_ms: elapsed,
       estado: response.ok ? 'success' : 'error',
+      error_type: response.ok ? null : handleOpenAIError({response}).type,
       tokens_entrada: responseData.usage?.prompt_tokens ?? 0,
       tokens_salida: responseData.usage?.completion_tokens ?? 0,
     });
@@ -184,6 +194,7 @@ Deno.serve(async (req)=>{
         modelo_ia: 'gpt-4-turbo',
         tiempo_respuesta_ms: Date.now() - start,
         estado: 'error',
+        error_type: handleOpenAIError(error).type,
         tokens_entrada: 0,
         tokens_salida: 0,
         metadatos: { error: (error as Error).message },
