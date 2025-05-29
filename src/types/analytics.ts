@@ -16,3 +16,30 @@ export interface PromptPerformanceMetric {
   successCount: number;
   averageResponseMs: number;
 }
+
+export interface TokenUsage {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+}
+
+export interface ModelUsageMetric {
+  model: string;
+  executions: number;
+  successCount: number;
+  averageResponseMs: number;
+  averageInputTokens: number;
+  averageOutputTokens: number;
+}
+
+export interface ErrorBreakdownMetric {
+  status: string;
+  count: number;
+}
+
+export interface UserUsageMetric {
+  userId: string | null;
+  executions: number;
+  successCount: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+}

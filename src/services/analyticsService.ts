@@ -3,6 +3,10 @@ import {
   DateRange,
   GeneralUsageMetrics,
   PromptPerformanceMetric,
+  TokenUsage,
+  ModelUsageMetric,
+  ErrorBreakdownMetric,
+  UserUsageMetric,
 } from '../types/analytics';
 
 function applyDateFilter(query: any, column: string, range?: DateRange) {
@@ -67,6 +71,119 @@ export const analyticsService = {
       metric.averageResponseMs =
         (prevAvg * (metric.totalExecutions - 1) + (item.tiempo_respuesta_ms || 0)) /
         metric.totalExecutions;
+    });
+
+    return Object.values(grouped);
+  },
+
+  async fetchTokenUsage(range?: DateRange): Promise<TokenUsage> {
+    let query = supabase
+      .from('prompt_metrics')
+      .select('tokens_entrada,tokens_salida', { count: 'exact' });
+    query = applyDateFilter(query, 'timestamp', range);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    let totalInput = 0;
+    let totalOutput = 0;
+    (data || []).forEach((row: any) => {
+      totalInput += row.tokens_entrada || 0;
+      totalOutput += row.tokens_salida || 0;
+    });
+
+    return { totalInputTokens: totalInput, totalOutputTokens: totalOutput };
+  },
+
+  async fetchModelUsage(range?: DateRange): Promise<ModelUsageMetric[]> {
+    let query = supabase
+      .from('prompt_metrics')
+      .select(
+        'modelo_ia, estado, tiempo_respuesta_ms, tokens_entrada, tokens_salida'
+      );
+    query = applyDateFilter(query, 'timestamp', range);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const grouped: Record<string, ModelUsageMetric> = {};
+
+    (data || []).forEach((row: any) => {
+      const key = row.modelo_ia || 'unknown';
+      if (!grouped[key]) {
+        grouped[key] = {
+          model: key,
+          executions: 0,
+          successCount: 0,
+          averageResponseMs: 0,
+          averageInputTokens: 0,
+          averageOutputTokens: 0,
+        };
+      }
+      const metric = grouped[key];
+      metric.executions++;
+      if (row.estado === 'success') metric.successCount++;
+
+      metric.averageResponseMs =
+        (metric.averageResponseMs * (metric.executions - 1) + (row.tiempo_respuesta_ms || 0)) /
+        metric.executions;
+
+      metric.averageInputTokens =
+        (metric.averageInputTokens * (metric.executions - 1) + (row.tokens_entrada || 0)) /
+        metric.executions;
+
+      metric.averageOutputTokens =
+        (metric.averageOutputTokens * (metric.executions - 1) + (row.tokens_salida || 0)) /
+        metric.executions;
+    });
+
+    return Object.values(grouped);
+  },
+
+  async fetchErrorBreakdown(range?: DateRange): Promise<ErrorBreakdownMetric[]> {
+    let query = supabase.from('prompt_metrics').select('estado');
+    query = applyDateFilter(query, 'timestamp', range);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const counts: Record<string, number> = {};
+
+    (data || []).forEach((row: any) => {
+      const status = row.estado || 'unknown';
+      counts[status] = (counts[status] || 0) + 1;
+    });
+
+    return Object.entries(counts).map(([status, count]) => ({ status, count }));
+  },
+
+  async fetchUserUsage(range?: DateRange): Promise<UserUsageMetric[]> {
+    let query = supabase
+      .from('prompt_metrics')
+      .select('usuario_id, estado, tokens_entrada, tokens_salida');
+    query = applyDateFilter(query, 'timestamp', range);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const grouped: Record<string, UserUsageMetric> = {};
+
+    (data || []).forEach((row: any) => {
+      const key = row.usuario_id || 'unknown';
+      if (!grouped[key]) {
+        grouped[key] = {
+          userId: row.usuario_id,
+          executions: 0,
+          successCount: 0,
+          totalInputTokens: 0,
+          totalOutputTokens: 0,
+        };
+      }
+      const metric = grouped[key];
+      metric.executions++;
+      if (row.estado === 'success') metric.successCount++;
+      metric.totalInputTokens += row.tokens_entrada || 0;
+      metric.totalOutputTokens += row.tokens_salida || 0;
     });
 
     return Object.values(grouped);
