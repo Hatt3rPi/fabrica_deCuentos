@@ -3,14 +3,18 @@ import { Character, ThumbnailStyle } from '../types/character';
 import { promptService } from '../services/promptService';
 import { characterService } from '../services/characterService';
 
-const STYLE_MAP: Array<{ key: ThumbnailStyle; type: string; side?: string }> = [
+
+const STYLE_MAP: Array<{ key: ThumbnailStyle; type: string }> = [
+
   { key: 'kawaii', type: 'PROMPT_ESTILO_KAWAII' },
   { key: 'acuarela', type: 'PROMPT_ESTILO_ACUARELADIGITAL' },
   { key: 'bordado', type: 'PROMPT_ESTILO_BORDADO' },
   { key: 'mano', type: 'PROMPT_ESTILO_MANO' },
   { key: 'recortes', type: 'PROMPT_ESTILO_RECORTES' },
-  { key: 'trasera', type: 'PROMPT_VARIANTE_TRASERA', side: 'back' },
-  { key: 'lateral', type: 'PROMPT_VARIANTE_LATERAL', side: 'left' },
+
+  { key: 'trasera', type: 'PROMPT_VARIANTE_TRASERA' },
+  { key: 'lateral', type: 'PROMPT_VARIANTE_LATERAL' },
+
 ];
 
 export const useCharacter = () => {
@@ -23,35 +27,28 @@ export const useCharacter = () => {
       const prompts = await promptService.getPromptsByTypes(types);
 
       const tasks = STYLE_MAP.map(async (style) => {
-        const prompt = prompts[style.type];
+
+        const promptType = style.type;
+        const prompt = prompts[promptType];
+
         if (!prompt) return;
         try {
           const { data: { session } } = await supabase.auth.getSession();
           const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-illustration`, {
+
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-thumbnail-variant`, {
+
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              identity: {
-                name: character.name,
-                age: character.age,
-                description: typeof character.description === 'object' ? character.description.es : character.description
-              },
-              scene: {
-                background: '',
-                pose: '',
-                style: prompt,
-                palette: ''
-              },
-              side: style.side || 'central',
-              size: '1024x1024',
-              quality: 'low',
-              output: 'png',
-              referencedImageIds: [character.thumbnailUrl]
+
+              imageUrl: character.thumbnailUrl,
+              promptType
+
             })
           });
 
