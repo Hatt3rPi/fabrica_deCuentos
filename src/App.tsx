@@ -14,7 +14,7 @@ import CharactersGrid from './components/Character/CharactersGrid';
 import NotificationBell from './components/Notifications/NotificationBell';
 import ToastContainer from './components/UI/ToastContainer';
 import ProfileSettings from './pages/ProfileSettings';
-import PromptManager from './pages/Admin/PromptManager';
+import PromptsManager from './pages/Admin/Prompts/PromptsManager';
 import PromptAnalytics from './pages/Admin/Analytics/PromptAnalytics';
 import { useProfileStore } from './stores/profileStore';
 
@@ -95,7 +95,7 @@ function AppContent() {
                 path="/admin/prompts"
                 element={
                   <PrivateRoute>
-                    <PromptManager />
+                    <PromptsManager />
                   </PrivateRoute>
                 }
               />
