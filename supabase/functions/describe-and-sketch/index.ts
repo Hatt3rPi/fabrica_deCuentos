@@ -69,16 +69,15 @@ Deno.serve(async (req) => {
     // 1) Config y prompts
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) throw new Error('Falta la clave de API de OpenAI');
-    let characterPrompt = Deno.env.get('PROMPT_CREAR_MINIATURA_PERSONAJE') || '';
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
       .select('content')
       .eq('type', 'PROMPT_CREAR_MINIATURA_PERSONAJE')
       .single();
-    if (promptRow?.content) {
-      characterPrompt = promptRow.content;
+    if (!promptRow?.content) {
+      throw new Error('Falta el prompt de generación de personaje');
     }
-    if (!characterPrompt) throw new Error('Falta el prompt de generación de personaje');
+    const characterPrompt = promptRow.content;
 
     // 2) Payload
     const rawPayload = await req.json().catch(() => {

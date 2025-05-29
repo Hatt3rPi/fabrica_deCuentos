@@ -86,7 +86,6 @@ Deno.serve(async (req)=>{
     if (!imageUrl) {
       throw new Error('No image URL provided');
     }
-    let analysisPrompt = Deno.env.get('PROMPT_DESCRIPCION_PERSONAJE') || '';
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
       .select('id, content')
@@ -95,12 +94,10 @@ Deno.serve(async (req)=>{
     if (promptRow?.id) {
       promptId = promptRow.id;
     }
-    if (promptRow?.content) {
-      analysisPrompt = promptRow.content;
-    }
-    if (!analysisPrompt) {
+    if (!promptRow?.content) {
       throw new Error('Error de configuración: Falta el prompt de análisis de personaje');
     }
+    const analysisPrompt = promptRow.content;
     console.log(`[${FILE}] [INIT] Attempting to fetch image: ${imageUrl}`);
     const base64Image = await fetchImageAsBase64(imageUrl);
     const prompt = analysisPrompt.replace('{name}', name || '').replace('${sanitizedAge}', age?.toString() || '').replace('${sanitizedNotes}', sanitizedNotes || '');
