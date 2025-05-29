@@ -45,7 +45,9 @@ export const analyticsService = {
   async fetchPromptPerformance(range?: DateRange): Promise<PromptPerformanceMetric[]> {
     let query = supabase
       .from('prompt_metrics')
-      .select('prompt_id, tiempo_respuesta_ms, estado, prompts(type)');
+      .select(
+        'prompt_id, tiempo_respuesta_ms, estado, tokens_entrada, tokens_salida, prompts(type)'
+      );
     query = applyDateFilter(query, 'timestamp', range);
 
     const { data, error } = await query;
@@ -61,16 +63,24 @@ export const analyticsService = {
           promptType: item.prompts?.type ?? null,
           totalExecutions: 0,
           successCount: 0,
+          totalInputTokens: 0,
+          totalOutputTokens: 0,
+          averageInputTokens: 0,
+          averageOutputTokens: 0,
           averageResponseMs: 0,
         };
       }
       const metric = grouped[key];
       metric.totalExecutions++;
       if (item.estado === 'success') metric.successCount++;
+      metric.totalInputTokens += item.tokens_entrada || 0;
+      metric.totalOutputTokens += item.tokens_salida || 0;
       const prevAvg = metric.averageResponseMs;
       metric.averageResponseMs =
         (prevAvg * (metric.totalExecutions - 1) + (item.tiempo_respuesta_ms || 0)) /
         metric.totalExecutions;
+      metric.averageInputTokens = metric.totalInputTokens / metric.totalExecutions;
+      metric.averageOutputTokens = metric.totalOutputTokens / metric.totalExecutions;
     });
 
     return Object.values(grouped);
@@ -123,6 +133,8 @@ export const analyticsService = {
           executions: 0,
           successCount: 0,
           averageResponseMs: 0,
+          totalInputTokens: 0,
+          totalOutputTokens: 0,
           averageInputTokens: 0,
           averageOutputTokens: 0,
         };
@@ -131,17 +143,16 @@ export const analyticsService = {
       metric.executions++;
       if (row.estado === 'success') metric.successCount++;
 
+      metric.totalInputTokens += row.tokens_entrada || 0;
+      metric.totalOutputTokens += row.tokens_salida || 0;
+
       metric.averageResponseMs =
         (metric.averageResponseMs * (metric.executions - 1) + (row.tiempo_respuesta_ms || 0)) /
         metric.executions;
 
-      metric.averageInputTokens =
-        (metric.averageInputTokens * (metric.executions - 1) + (row.tokens_entrada || 0)) /
-        metric.executions;
+      metric.averageInputTokens = metric.totalInputTokens / metric.executions;
 
-      metric.averageOutputTokens =
-        (metric.averageOutputTokens * (metric.executions - 1) + (row.tokens_salida || 0)) /
-        metric.executions;
+      metric.averageOutputTokens = metric.totalOutputTokens / metric.executions;
     });
 
     return Object.values(grouped);
@@ -232,6 +243,8 @@ export const analyticsService = {
           successCount: 0,
           totalInputTokens: 0,
           totalOutputTokens: 0,
+          averageInputTokens: 0,
+          averageOutputTokens: 0,
         };
       }
       const metric = grouped[key];
@@ -239,6 +252,8 @@ export const analyticsService = {
       if (row.estado === 'success') metric.successCount++;
       metric.totalInputTokens += row.tokens_entrada || 0;
       metric.totalOutputTokens += row.tokens_salida || 0;
+      metric.averageInputTokens = metric.totalInputTokens / metric.executions;
+      metric.averageOutputTokens = metric.totalOutputTokens / metric.executions;
     });
 
     return Object.values(grouped);
