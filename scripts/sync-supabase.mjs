@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
@@ -59,8 +59,24 @@ async function runCommandAsync(command, cwd = ROOT_DIR) {
   }
 }
 
-// Almacén temporal para hashes remotos (en producción, usarías una base de datos)
+// Almacén para hashes de funciones
 const remoteFunctionHashes = new Map();
+
+// Cargar caché de funciones si existe
+const cacheFile = path.join(ROOT_DIR, '.supabase-functions-cache.json');
+if (fs.existsSync(cacheFile)) {
+  try {
+    const cache = JSON.parse(fs.readFileSync(cacheFile, 'utf-8'));
+    Object.entries(cache).forEach(([funcName, data]) => {
+      if (data && data.hash) {
+        remoteFunctionHashes.set(funcName, data.hash);
+      }
+    });
+    console.log(`✓ Cargada caché de ${Object.keys(cache).length} funciones`);
+  } catch (error) {
+    console.warn('No se pudo cargar la caché de funciones:', error.message);
+  }
+}
 
 // Función para calcular el hash de un directorio
 async function calculateDirHash(dir) {
@@ -88,21 +104,41 @@ async function getFilesRecursively(dir) {
 // Obtener lista de funciones remotas
 async function getRemoteFunctions() {
   try {
-    const { stdout } = await execAsync('npx supabase functions list --project-ref ogegdctdniijmublbmgy --json');
-    return JSON.parse(stdout).map(f => ({
-      name: f.name,
-      hash: f.updated_at ? crypto.createHash('sha256').update(f.updated_at).digest('hex') : null
-    }));
+    const { stdout } = await execAsync('npx supabase functions list --project-ref ogegdctdniijmublbmgy');
+    // El comando devuelve una lista de funciones, una por línea
+    return stdout.trim().split('\n').slice(1) // Saltar el encabezado
+      .map(line => {
+        // Extraer el nombre de la función (primera columna)
+        const name = line.split('\t')[0].trim();
+        return name ? { name, hash: null } : null;
+      })
+      .filter(Boolean); // Filtrar líneas vacías
   } catch (error) {
     console.error('Error obteniendo funciones remotas:', error.message);
+    console.log('Continuando asumiendo que no hay funciones remotas...');
     return [];
   }
 }
 
-// Actualizar el hash de una función remota (simulado)
+// Actualizar el hash de una función remota
 async function updateRemoteFunctionHash(funcName, hash) {
-  // En un entorno real, aquí actualizarías la base de datos o caché
+  // Almacenamos el hash en memoria para la sesión actual
   remoteFunctionHashes.set(funcName, hash);
+  
+  // También podríamos almacenar esto en un archivo para persistencia entre ejecuciones
+  const cacheFile = path.join(ROOT_DIR, '.supabase-functions-cache.json');
+  let cache = {};
+  
+  try {
+    if (fs.existsSync(cacheFile)) {
+      cache = JSON.parse(await fs.promises.readFile(cacheFile, 'utf-8'));
+    }
+    
+    cache[funcName] = { hash, updatedAt: new Date().toISOString() };
+    await fs.promises.writeFile(cacheFile, JSON.stringify(cache, null, 2));
+  } catch (error) {
+    console.warn('No se pudo actualizar la caché de funciones:', error.message);
+  }
 }
 
 async function main() {

@@ -128,6 +128,7 @@ export type Database = {
       }
       prompt_metrics: {
         Row: {
+          error_type: string | null
           estado: string | null
           id: string
           metadatos: Json | null
@@ -137,10 +138,10 @@ export type Database = {
           timestamp: string | null
           tokens_entrada: number | null
           tokens_salida: number | null
-          error_type: string | null
           usuario_id: string | null
         }
         Insert: {
+          error_type?: string | null
           estado?: string | null
           id?: string
           metadatos?: Json | null
@@ -150,10 +151,10 @@ export type Database = {
           timestamp?: string | null
           tokens_entrada?: number | null
           tokens_salida?: number | null
-          error_type?: string | null
           usuario_id?: string | null
         }
         Update: {
+          error_type?: string | null
           estado?: string | null
           id?: string
           metadatos?: Json | null
@@ -163,7 +164,6 @@ export type Database = {
           timestamp?: string | null
           tokens_entrada?: number | null
           tokens_salida?: number | null
-          error_type?: string | null
           usuario_id?: string | null
         }
         Relationships: [
