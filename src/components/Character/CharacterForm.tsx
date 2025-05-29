@@ -74,10 +74,12 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
 
   const callAnalyzeCharacter = async (attempt = 0): Promise<any> => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-character`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -234,10 +236,12 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
         // Llamada a describe-and-sketch (para generar la miniatura)
         (async () => {
           try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
             const thumbnailResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/describe-and-sketch`, {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({

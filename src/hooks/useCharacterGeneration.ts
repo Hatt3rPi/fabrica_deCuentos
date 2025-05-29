@@ -15,10 +15,12 @@ export const useCharacterGeneration = (character: Character) => {
 
     for (const style of visualStyles) {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-illustration`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -58,10 +60,12 @@ export const useCharacterGeneration = (character: Character) => {
     if (!frontalViewUrl || !traseraViewUrl) return;
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-illustration`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
