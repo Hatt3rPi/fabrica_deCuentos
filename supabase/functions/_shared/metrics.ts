@@ -19,6 +19,25 @@ export interface PromptMetric {
   metadatos?: Record<string, unknown> | null;
 }
 
+export async function getUserId(req: Request): Promise<string | null> {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  try {
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error) {
+      console.error('[metrics] failed to get user:', error.message);
+      return null;
+    }
+    return data.user?.id ?? null;
+  } catch (err) {
+    console.error('[metrics] error getting user id:', err);
+    return null;
+  }
+}
+
 export async function logPromptMetric(metric: PromptMetric) {
   const { error } = await supabaseAdmin.from('prompt_metrics').insert(metric);
   if (error) {

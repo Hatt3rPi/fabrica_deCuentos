@@ -41,6 +41,7 @@ export interface ErrorBreakdownMetric {
 
 export interface UserUsageMetric {
   userId: string | null;
+  userEmail?: string | null;
   executions: number;
   successCount: number;
   totalInputTokens: number;
