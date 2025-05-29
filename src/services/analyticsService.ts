@@ -163,7 +163,9 @@ export const analyticsService = {
     // Primero, obtener todas las métricas
     let query = supabase
       .from('prompt_metrics')
+
       .select('usuario_id, estado, tokens_entrada, tokens_salida, timestamp');
+
     query = applyDateFilter(query, 'timestamp', range);
 
     const { data: metrics, error } = await query;
