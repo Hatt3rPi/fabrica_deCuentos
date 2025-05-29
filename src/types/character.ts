@@ -41,3 +41,21 @@ export interface GenerateCharacterParams {
   output?: OutputFormat;
   referencedImageIds: string[];
 }
+
+export type ThumbnailStyle =
+  | 'kawaii'
+  | 'acuarela'
+  | 'bordado'
+  | 'mano'
+  | 'recortes'
+  | 'trasera'
+  | 'lateral';
+
+export interface CharacterThumbnail {
+  id?: string;
+  character_id: string;
+  style_type: ThumbnailStyle;
+  url: string;
+  created_at?: string;
+  updated_at?: string;
+}

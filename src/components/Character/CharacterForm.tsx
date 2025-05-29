@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useCharacterStore } from '../../stores/characterStore';
 import { useCharacterAutosave } from '../../hooks/useCharacterAutosave';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useCharacter } from '../../hooks/useCharacter';
 import { NotificationType, NotificationPriority } from '../../types/notification';
 import { Character } from '../../types';
 
@@ -21,13 +21,11 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
   const { id: routeId } = useParams<{ id: string }>();
   const id = propId || routeId;
   const { supabase, user } = useAuth();
-  const { addCharacter, updateCharacter } = useCharacterStore();
   const { createNotification } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [fieldsReadOnly, setFieldsReadOnly] = useState(false);
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
@@ -47,6 +45,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
   });
 
   const { currentCharacterId, recoverFromBackup } = useCharacterAutosave(formData, id);
+  const { generateAdditionalThumbnails } = useCharacter();
   
   const isEditMode = Boolean(id);
 
@@ -309,6 +308,18 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
         ...prev,
         thumbnailUrl: publicUrl
       }));
+
+      // Iniciar generación asincrónica de miniaturas adicionales
+      generateAdditionalThumbnails({
+        id: currentCharacterId,
+        user_id: user.id,
+        name: formData.name || '',
+        age: formData.age || '',
+        description: formData.description,
+        images: [],
+        thumbnailUrl: publicUrl,
+        reference_urls: formData.reference_urls,
+      });
       
       // Marcar que la miniatura ha sido generada exitosamente
       setThumbnailGenerated(true);
@@ -546,10 +557,10 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
           </div>
         </div>
 
-        {(error || uploadError) && (
+        {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-600">{error || uploadError}</p>
+            <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
 
