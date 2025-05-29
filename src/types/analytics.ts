@@ -20,6 +20,8 @@ export interface PromptPerformanceMetric {
 export interface TokenUsage {
   totalInputTokens: number;
   totalOutputTokens: number;
+  averageInputTokens: number;
+  averageOutputTokens: number;
 }
 
 export interface ModelUsageMetric {
