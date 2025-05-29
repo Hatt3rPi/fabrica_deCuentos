@@ -82,7 +82,7 @@ export const analyticsService = {
       .select('tokens_entrada,tokens_salida', { count: 'exact' });
     query = applyDateFilter(query, 'timestamp', range);
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
 
     let totalInput = 0;
@@ -92,7 +92,14 @@ export const analyticsService = {
       totalOutput += row.tokens_salida || 0;
     });
 
-    return { totalInputTokens: totalInput, totalOutputTokens: totalOutput };
+    const executions = count || (data ? data.length : 0);
+
+    return {
+      totalInputTokens: totalInput,
+      totalOutputTokens: totalOutput,
+      averageInputTokens: executions ? totalInput / executions : 0,
+      averageOutputTokens: executions ? totalOutput / executions : 0,
+    };
   },
 
   async fetchModelUsage(range?: DateRange): Promise<ModelUsageMetric[]> {
