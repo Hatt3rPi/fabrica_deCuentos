@@ -71,6 +71,7 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: elapsed,
       estado: response.data?.[0]?.url ? 'success' : 'error',
+      error_type: response.data?.[0]?.url ? null : 'service_error',
     });
 
     return new Response(
@@ -83,6 +84,7 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: 0,
       estado: 'error',
+      error_type: 'service_error',
       metadatos: { error: (error as Error).message },
     });
     return new Response(

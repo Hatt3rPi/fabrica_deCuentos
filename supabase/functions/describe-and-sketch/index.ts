@@ -151,6 +151,7 @@ Deno.serve(async (req) => {
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: elapsed,
       estado: editRes.ok ? 'success' : 'error',
+      error_type: editRes.ok ? null : 'service_error',
     });
     if (!editRes.ok) {
       const msg = editData.error?.message || editRes.statusText;
@@ -175,6 +176,7 @@ Deno.serve(async (req) => {
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: 0,
       estado: 'error',
+      error_type: 'service_error',
       metadatos: { error: (error as Error).message },
     });
     return new Response(JSON.stringify({

@@ -12,6 +12,7 @@ export interface PromptMetric {
   modelo_ia: string;
   tiempo_respuesta_ms: number;
   estado: 'success' | 'error';
+  error_type?: string | null;
   tokens_entrada?: number;
   tokens_salida?: number;
   usuario_id?: string | null;

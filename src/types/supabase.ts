@@ -137,6 +137,7 @@ export type Database = {
           timestamp: string | null
           tokens_entrada: number | null
           tokens_salida: number | null
+          error_type: string | null
           usuario_id: string | null
         }
         Insert: {
@@ -149,6 +150,7 @@ export type Database = {
           timestamp?: string | null
           tokens_entrada?: number | null
           tokens_salida?: number | null
+          error_type?: string | null
           usuario_id?: string | null
         }
         Update: {
@@ -161,6 +163,7 @@ export type Database = {
           timestamp?: string | null
           tokens_entrada?: number | null
           tokens_salida?: number | null
+          error_type?: string | null
           usuario_id?: string | null
         }
         Relationships: [

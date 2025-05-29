@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
       modelo_ia: 'dall-e-2',
       tiempo_respuesta_ms: elapsed,
       estado: imageResponse.data?.[0]?.url ? 'success' : 'error',
+      error_type: imageResponse.data?.[0]?.url ? null : 'service_error',
     });
 
     return new Response(
@@ -47,6 +48,7 @@ Deno.serve(async (req) => {
       modelo_ia: 'dall-e-2',
       tiempo_respuesta_ms: 0,
       estado: 'error',
+      error_type: 'service_error',
       metadatos: { error: (error as Error).message },
     });
     return new Response(
