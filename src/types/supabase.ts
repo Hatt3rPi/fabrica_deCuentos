@@ -506,8 +506,8 @@ export type Database = {
       get_user_emails: {
         Args: { user_ids: string[] }
         Returns: {
-          id: string
-          email: string
+          user_id: string
+          user_email: string
         }[]
       }
       get_user_id_by_email: {
