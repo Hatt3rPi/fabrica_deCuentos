@@ -28,6 +28,20 @@ export const promptService = {
     return data as Prompt | null;
   },
 
+  async getPromptsByTypes(types: string[]): Promise<Record<string, string>> {
+    if (types.length === 0) return {};
+    const { data, error } = await supabase
+      .from('prompts')
+      .select('type, content')
+      .in('type', types);
+    if (error) throw error;
+    const map: Record<string, string> = {};
+    for (const row of data as { type: string; content: string }[]) {
+      map[row.type] = row.content;
+    }
+    return map;
+  },
+
   async upsertPrompt(type: string, content: string): Promise<Prompt> {
     const { data, error } = await supabase
       .from('prompts')
