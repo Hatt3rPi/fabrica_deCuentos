@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
+import { useAuth } from '../../../context/AuthContext';
 import { Download, Copy, Check, Loader } from 'lucide-react';
 import Button from '../../UI/Button';
 
 const ExportStep: React.FC = () => {
   const { generatedPages } = useWizard();
+  const { supabase } = useAuth();
   const [saveToLibrary, setSaveToLibrary] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -13,10 +15,12 @@ const ExportStep: React.FC = () => {
   const handleExport = async () => {
     setIsExporting(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/story/export`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
