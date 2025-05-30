@@ -28,16 +28,17 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function AnimatedRoutes() {
   const location = useLocation();
   const { user } = useAuth();
+  const isAuthTransition = location.pathname === '/login' || location.pathname === '/' || location.pathname === '/home';
 
   if (!user) {
     return (
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}
-          initial={{ opacity: 0, x: 100 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -100 }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          initial={isAuthTransition ? undefined : { opacity: 0, x: 100 }}
+          animate={isAuthTransition ? undefined : { opacity: 1, x: 0 }}
+          exit={isAuthTransition ? undefined : { opacity: 0, x: -100 }}
+          transition={isAuthTransition ? { duration: 0 } : { duration: 0.3, ease: 'easeInOut' }}
           className="w-full h-full"
         >
           <Routes location={location} key={location.pathname}>
@@ -55,10 +56,10 @@ function AnimatedRoutes() {
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}
-          initial={{ opacity: 0, x: 100 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -100 }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          initial={isAuthTransition ? undefined : { opacity: 0, x: 100 }}
+          animate={isAuthTransition ? undefined : { opacity: 1, x: 0 }}
+          exit={isAuthTransition ? undefined : { opacity: 0, x: -100 }}
+          transition={isAuthTransition ? { duration: 0 } : { duration: 0.3, ease: 'easeInOut' }}
           className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 dark:bg-gray-900 dark:text-white flex flex-col lg:flex-row"
         >
           <div className="hidden lg:block lg:w-60 lg:flex-shrink-0 bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700">
