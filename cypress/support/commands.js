@@ -2,14 +2,33 @@
 // Comandos personalizados para las pruebas de La CuenterIA
 // ***********************************************
 
+// -- Comando para navegar desde el landing hasta el formulario de login --
+Cypress.Commands.add('navigateToLogin', () => {
+  // Visitar la página inicial (landing)
+  cy.visit('/');
+
+  // Esperar a que el botón "Comenzar" esté visible tras la animación
+  cy.contains('a, button', 'Comenzar', { timeout: 10000 })
+    .should('be.visible')
+    .click();
+
+  // Verificar que se cargó la página de login
+  cy.url().should('include', '/login');
+  cy.get('input[id="email"]', { timeout: 10000 }).should('be.visible');
+});
+
 // -- Comando para iniciar sesión --
 Cypress.Commands.add('login', (email, password) => {
-  cy.visit('/');
+  // Navegar al formulario de login desde el landing
+  cy.navigateToLogin();
+
   cy.get('input[id="email"]').type(email);
   cy.get('input[id="password"]').type(password);
   cy.contains('button', 'Iniciar sesión').click();
+
   // Esperar a que se redirija a la página de inicio
   cy.url().should('include', '/home');
+
   // Verificar que se muestra el mensaje de bienvenida (header con el logo)
   cy.get('header').should('be.visible');
   cy.get('header').find('h1').should('contain', 'La CuenterIA');
