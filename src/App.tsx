@@ -8,6 +8,7 @@ import Wizard from './components/Wizard/Wizard';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import LoginForm from './components/Auth/LoginForm';
+import LandingPage from './pages/LandingPage';
 import MyStories from './pages/MyStories';
 import CharacterForm from './components/Character/CharacterForm';
 import CharactersGrid from './components/Character/CharactersGrid';
@@ -27,8 +28,13 @@ function AppContent() {
   const { user } = useAuth();
 
   if (!user) {
-    
-    return <LoginForm />;
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
   }
 
   return (
@@ -42,7 +48,7 @@ function AppContent() {
           <Header />
           <main className="flex-grow p-4 md:p-6 lg:p-8">
             <Routes>
-              <Route path="/" element={user ? <Navigate to="/home" replace /> : <LoginForm />} />
+              <Route path="/" element={<Navigate to="/home" replace />} />
               <Route
                 path="/wizard/:storyId"
                 element={
