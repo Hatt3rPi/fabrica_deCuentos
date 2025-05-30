@@ -1,14 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LogIn, KeyRound, Mail, AlertCircle, Loader, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
+import BackgroundCarousel, { ThemeType } from '../Landing/BackgroundCarousel';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'La contraseña debe tener al menos 6 caracteres');
 const tokenSchema = z.string().length(8, 'El código debe tener 8 caracteres');
 
+// Define los temas para el carrusel
+const loginThemes: ThemeType[] = [
+  {
+    id: 'forest',
+    name: 'Aventura Prehistórica',
+    background: '/images/backgrounds/forest-bg.jpg',
+    character: 'Dinosaurio Amigable',
+    characterImage: '/images/characters/dinosaur-log.png',
+    characterDescription: 'Un amigable dinosaurio que te guiará a través de emocionantes aventuras prehistóricas.'
+  },
+  {
+    id: 'castle',
+    name: 'Reino de Fantasía',
+    background: '/images/backgrounds/castle-bg.png',
+    character: 'Castillo Mágico',
+    characterImage: '/images/characters/castle-log.png',
+    characterDescription: 'Un majestuoso castillo lleno de misterios y aventuras por descubrir.'
+  },
+  {
+    id: 'space',
+    name: 'Aventura Espacial',
+    background: '/images/backgrounds/space-bg.png',
+    character: 'Nave Espacial',
+    characterImage: '/images/characters/space-logg.png',
+    characterDescription: 'Explora las maravillas del espacio con esta increíble nave espacial.'
+  }
+];
+
 const LoginForm: React.FC = () => {
+  // Mantenemos el estado del tema actual para posibles usos futuros
+  const [_, setCurrentTheme] = useState<ThemeType>(loginThemes[0]);
+  
+  const handleThemeChange = useCallback((theme: ThemeType) => {
+    setCurrentTheme(theme);
+  }, []);
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -143,7 +178,7 @@ const LoginForm: React.FC = () => {
   };
 
   const renderRecoveryForm = () => (
-    <form onSubmit={tokenSent ? handlePasswordReset : handleRecoveryRequest} className="space-y-6">
+    <form onSubmit={tokenSent ? handlePasswordReset : handleRecoveryRequest} className="space-y-6 p-1">
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
           Correo electrónico
@@ -182,7 +217,7 @@ const LoginForm: React.FC = () => {
               type="text"
               value={recoveryToken}
               onChange={(e) => setRecoveryToken(e.target.value.toUpperCase())}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-300 bg-white/80 text-amber-900 placeholder-amber-600/60"
               placeholder="XXXXXXXX"
               maxLength={8}
               required
@@ -248,7 +283,7 @@ const LoginForm: React.FC = () => {
           setTokenSent(false);
           setError('');
         }}
-        className="w-full py-2 px-4 text-purple-600 hover:text-purple-700 flex items-center justify-center gap-2"
+        className="w-full py-2 px-4 text-amber-700 hover:text-amber-800 flex items-center justify-center gap-2 font-medium hover:bg-amber-100/50 rounded-lg transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Volver al inicio de sesión</span>
@@ -257,7 +292,7 @@ const LoginForm: React.FC = () => {
   );
 
   const renderLoginForm = () => (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 p-1">
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
           Correo electrónico
@@ -297,8 +332,8 @@ const LoginForm: React.FC = () => {
               setPassword(e.target.value);
               validatePassword(e.target.value);
             }}
-            className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-              passwordError ? 'border-red-300' : 'border-gray-300'
+            className={`w-full pl-10 pr-4 py-2.5 border-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-300 bg-white/80 text-amber-900 placeholder-amber-600/60 ${
+              passwordError ? 'border-red-300' : 'border-amber-200'
             }`}
             placeholder="••••••••"
             required
@@ -314,7 +349,7 @@ const LoginForm: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsRecovering(true)}
-          className="text-sm text-purple-600 hover:text-purple-700"
+          className="text-sm text-amber-700 hover:text-amber-800 font-medium"
         >
           ¿Olvidaste tu contraseña?
         </button>
@@ -348,16 +383,58 @@ const LoginForm: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-purple-50 to-blue-50">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-        <div className="flex items-center justify-center mb-8">
-          <LogIn className="w-12 h-12 text-purple-600" />
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-amber-50">
+      {/* Fondo con carrusel */}
+      <div className="absolute inset-0 z-0">
+        <BackgroundCarousel 
+          themes={loginThemes} 
+          interval={8000}
+          onThemeChange={handleThemeChange}
+        />
+        <div className="absolute inset-0 bg-amber-900/40 backdrop-blur-sm" />
+      </div>
+      
+      {/* Contenido del formulario con apariencia de libro */}
+      <div className="relative z-10 w-full max-w-2xl mx-4 my-8">
+        <div className="relative">
+          {/* Lomo del libro */}
+          <div className="absolute -left-2 top-0 h-full w-8 bg-gradient-to-r from-amber-800 to-amber-700 rounded-l-lg shadow-lg border-r-2 border-amber-900/30" />
+          
+          {/* Página del libro */}
+          <div className="relative bg-amber-50/95 backdrop-blur-sm p-8 pl-12 rounded-lg shadow-[8px_8px_20px_rgba(0,0,0,0.2)] border-l-4 border-amber-200 min-h-[500px] flex flex-col">
+            {/* Decoración de esquina */}
+            <div className="absolute top-4 right-4 w-16 h-16 border-t-4 border-r-4 border-amber-200 rounded-tr-lg" />
+            
+            {/* Contenido del formulario */}
+            <div className="flex-1 flex flex-col">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-amber-100 rounded-full border-4 border-amber-200 shadow-inner mb-4">
+                  <LogIn className="w-10 h-10 text-amber-700" />
+                </div>
+                <h2 className="text-3xl font-bold text-amber-900 font-serif tracking-wide">
+                  {isRecovering ? 'Recuperar contraseña' : 'La CuenterIA'}
+                </h2>
+                <p className="text-amber-700 mt-2">
+                  {isRecovering ? 'Ingresa tus datos para recuperar el acceso' : 'Inicia tu aventura'}
+                </p>
+              </div>
+              
+              <div className="flex-1 flex items-center">
+                <div className="w-full max-w-md mx-auto">
+                  {isRecovering ? renderRecoveryForm() : renderLoginForm()}
+                </div>
+              </div>
+            </div>
+            
+            {/* Pie de página decorativo */}
+            <div className="mt-8 pt-4 border-t border-amber-200 text-center text-amber-600 text-sm">
+              <p>© {new Date().getFullYear()} La CuenterIA - Todos los derechos reservados</p>
+            </div>
+          </div>
+          
+          {/* Sombra inferior */}
+          <div className="absolute -bottom-4 left-4 right-4 h-4 bg-amber-900/20 rounded-b-lg blur-md" />
         </div>
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">
-          {isRecovering ? 'Recuperar contraseña' : 'La CuenterIA'}
-        </h2>
-        
-        {isRecovering ? renderRecoveryForm() : renderLoginForm()}
       </div>
     </div>
   );
