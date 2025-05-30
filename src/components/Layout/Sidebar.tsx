@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3 } from 'lucide-react';
+import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Home } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
 import { Link } from 'react-router-dom';
@@ -164,6 +164,12 @@ const Sidebar: React.FC = () => {
       {/* Navigation */}
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
+          <li>
+            <Link to="/home" className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20">
+              <Home className="w-5 h-5" />
+              <span>Mis Cuentos</span>
+            </Link>
+          </li>
           <li>
             <Link to="/perfil" className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20">
               <User className="w-5 h-5" />
