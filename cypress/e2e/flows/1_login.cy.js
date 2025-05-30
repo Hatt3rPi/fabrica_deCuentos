@@ -13,10 +13,10 @@ describe('1. Login Exitoso', function() {
   });
 
   it('Debe permitir iniciar sesión con credenciales válidas', function() {
-    // Visitar la página de login
-    cy.visit('/');
-    
-    // Verificar que estamos en la página de login
+    // Navegar desde la landing hasta el formulario de login
+    cy.navigateToLogin();
+
+    // Verificar que estamos en el formulario de login
     cy.contains('h2', 'La CuenterIA').should('be.visible');
     
     // Ingresar credenciales

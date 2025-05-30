@@ -47,8 +47,9 @@ Las pruebas E2E están organizadas de la siguiente manera:
 
 ## Comandos personalizados
 
-Se han creado varios comandos personalizados para facilitar las pruebas:
+- Se han creado varios comandos personalizados para facilitar las pruebas:
 
+- `cy.navigateToLogin()`: Navega desde la landing page hasta el formulario de login.
 - `cy.login(email, password)`: Inicia sesión con las credenciales proporcionadas.
 - `cy.openNewStoryModal()`: Abre el asistente de creación de cuentos y muestra el modal de selección de personajes.
 - `cy.createNewCharacterFromModal()`: Abre el formulario para crear un personaje dentro de dicho modal.
