@@ -61,7 +61,7 @@ const ToastContainer: React.FC = () => {
   };
 
   return (
-    <div className="toast-container">
+    <div className="toast-container fixed right-4 top-[calc(var(--header-height,4rem)+1rem)] z-50 flex flex-col gap-2">
       {toasts.map(toast => (
         <Toast
           key={toast.id}
