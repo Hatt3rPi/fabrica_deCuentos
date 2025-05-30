@@ -69,7 +69,7 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
           const path = url.split('/').pop();
           if (path) {
             await supabase.storage
-              .from('characters')
+              .from('storage')
               .remove([`reference-images/${characterId}/${path}`]);
           }
         }

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, BookOpen, Pencil } from 'lucide-react';
+import { Plus, BookOpen, Pencil, Trash2 } from 'lucide-react';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
+import { storyService } from '../services/storyService';
 import { useNavigate } from 'react-router-dom';
 
 interface Story {
@@ -14,6 +16,9 @@ interface Story {
 const MyStories: React.FC = () => {
   const { supabase, user } = useAuth();
   const [stories, setStories] = useState<Story[]>([]);
+  const [storyToDelete, setStoryToDelete] = useState<Story | null>(null);
+  const [deleteCharacters, setDeleteCharacters] = useState<boolean>(true);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -57,6 +62,33 @@ const MyStories: React.FC = () => {
   const handleReadStory = (storyId: string) => {
     navigate(`/story/${storyId}`);
   };
+
+  const handleDeleteClick = (story: Story) => {
+    setStoryToDelete(story);
+    setDeleteCharacters(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!storyToDelete) return;
+    setIsDeleting(true);
+    try {
+      if (deleteCharacters) {
+        await storyService.deleteStoryWithCharacters(storyToDelete.id);
+      } else {
+        await storyService.deleteStoryOnly(storyToDelete.id);
+      }
+      setStories(prev => prev.filter(s => s.id !== storyToDelete.id));
+      alert('Cuento eliminado correctamente');
+    } catch (err) {
+      console.error('Error deleting story:', err);
+      alert('Error al eliminar el cuento');
+    } finally {
+      setIsDeleting(false);
+      setStoryToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => setStoryToDelete(null);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 p-6">
@@ -105,23 +137,48 @@ const MyStories: React.FC = () => {
                       <span>Continuar</span>
                     </button>
                   )}
+                  <button
+                    onClick={() => handleDeleteClick(story)}
+                    className="flex items-center justify-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        <button
-          onClick={handleNewStory}
-          className="fixed bottom-8 right-8 flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-full shadow-lg hover:bg-purple-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Nuevo cuento</span>
-        </button>
-      </div>
-
+      <button
+        onClick={handleNewStory}
+        className="fixed bottom-8 right-8 flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-full shadow-lg hover:bg-purple-700 transition-colors"
+      >
+        <Plus className="w-5 h-5" />
+        <span>Nuevo cuento</span>
+      </button>
+      <ConfirmDialog
+        isOpen={storyToDelete !== null}
+        title="Eliminar cuento"
+        message="¿Estás seguro de que deseas eliminar este cuento?"
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        confirmLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      >
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={deleteCharacters}
+            onChange={e => setDeleteCharacters(e.target.checked)}
+          />
+          Eliminar personajes asociados
+        </label>
+      </ConfirmDialog>
     </div>
-  );
+
+  </div>
+);
 };
 
 export default MyStories;
