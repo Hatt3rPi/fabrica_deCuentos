@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { PageTransition } from '../components/Common/PageTransition';
 import { useAuth } from '../context/AuthContext';
 import LandingHeader from '../components/Landing/LandingHeader';
 import BackgroundCarousel, { ThemeType } from '../components/Landing/BackgroundCarousel';
@@ -283,7 +284,7 @@ const LandingPage: React.FC = () => {
           </div>
           
           <div className="mt-16 text-center">
-            <Link
+            <PageTransition
               to={user ? '/home' : '/login'}
               className="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-full shadow-lg text-purple-900 bg-gradient-to-r from-yellow-400 to-yellow-300 hover:from-yellow-300 hover:to-yellow-200 transform transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400"
             >
@@ -291,7 +292,7 @@ const LandingPage: React.FC = () => {
               <svg className="ml-3 -mr-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
-            </Link>
+            </PageTransition>
           </div>
         </div>
       </section>
