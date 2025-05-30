@@ -13,8 +13,6 @@ Plataforma web interactiva para crear cuentos infantiles personalizados con ilus
 - [🚨 Pruebas Automatizadas con Cypress](#-pruebas-automatizadas-con-cypress)
 - [📊 Flujo de Usuario](#-flujo-de-usuario)
 - [🔧 Contextos](#-contextos)
-- [🖼️ Imágenes de Respaldo](#-imágenes-de-respaldo)
-- [🔄 Sincronización Supabase](#-sincronización-supabase)
 - [🤝 Contribución](#-contribución)
 - [📄 Licencia](#-licencia)
 - [✨ Créditos](#-créditos)
@@ -208,21 +206,6 @@ npx cypress open
 
 - `AuthContext`: Manejo de autenticación
 - `WizardContext`: Estado y control del asistente
-
-## 🖼️ Imágenes de Respaldo
-
-El proyecto utiliza imágenes genéricas de respaldo para cada estilo visual cuando falla la generación de variantes personalizadas:
-
-- **Acuarela Digital**: `supabase/storage/fallback-images/acuarela-digital.webp`
-- **Dibujado a mano**: `supabase/storage/fallback-images/dibujado-a-mano.webp`
-- **Recortes de papel**: `supabase/storage/fallback-images/recortes-de-papel.webp`
-- **Kawaii**: `supabase/storage/fallback-images/kawaii.webp`
-
-Estas imágenes se encuentran en Supabase Storage en la carpeta `fallback-images/`. Para más detalles sobre cómo generar y utilizar estas imágenes, consulta la [guía de imágenes de respaldo](docs/fallback_images_guide.md).
-
-## 🔄 Sincronización Supabase
-
-Si se realizaron cambios directamente en el dashboard de Supabase y no están reflejados en el repositorio local, consulta el documento [Sincronización de Cambios en Supabase](docs/tech/supabase-sync.md) para obtener los pasos necesarios y evitar conflictos de migración.
 
 ## 🤝 Contribución
 
