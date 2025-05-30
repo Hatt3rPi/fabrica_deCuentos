@@ -1,10 +1,50 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { visualStyleOptions, colorPaletteOptions } from '../../../types';
 import { Palette, Brush } from 'lucide-react';
+import { characterService } from '../../../services/characterService';
+import { ThumbnailStyle } from '../../../types/character';
+
+const STYLE_TO_KEY: Record<string, ThumbnailStyle | 'default'> = {
+  default: 'default',
+  acuarela: 'acuarela',
+  bordado: 'bordado',
+  kawaii: 'kawaii',
+  dibujado: 'mano',
+  recortes: 'recortes',
+};
+
+const FALLBACK_IMAGES: Record<string, string> = {
+  default: 'storage/fallback-images/miniatura.jpeg',
+  acuarela: 'storage/fallback-images/miniatura_acuarela.png',
+  bordado: 'storage/fallback-images/miniatura_bordado.png',
+  kawaii: 'storage/fallback-images/miniatura_kawaii.png',
+  dibujado: 'storage/fallback-images/miniatura_mano.png',
+  recortes: 'storage/fallback-images/miniatura_recortes.png',
+};
 
 const DesignStep: React.FC = () => {
-  const { designSettings, setDesignSettings } = useWizard();
+  const { designSettings, setDesignSettings, characters } = useWizard();
+  const [images, setImages] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const load = async () => {
+      if (!characters.length) return;
+      const character = characters[0];
+      const map: Record<string, string> = { default: character.thumbnailUrl || '' };
+      try {
+        const thumbs = await characterService.getThumbnailsByCharacter(character.id);
+        thumbs.forEach(t => {
+          map[t.style_type] = t.url;
+        });
+      } catch (err) {
+        console.error('Error loading thumbnails', err);
+      }
+      setImages(map);
+    };
+
+    load();
+  }, [characters]);
 
   const handleChange = (field: string, value: string) => {
     setDesignSettings({
@@ -29,19 +69,30 @@ const DesignStep: React.FC = () => {
               Estilo visual
             </label>
             <div className="grid grid-cols-2 gap-4">
-              {visualStyleOptions.map((option) => (
-                <div
-                  key={option.value}
-                  onClick={() => handleChange('visualStyle', option.value)}
-                  className={`cursor-pointer p-4 rounded-lg border-2 transition-all ${
-                    designSettings.visualStyle === option.value
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-purple-200'
-                  }`}
-                >
-                  <h3 className="font-medium text-gray-900">{option.label}</h3>
-                </div>
-              ))}
+              {visualStyleOptions.map((option) => {
+                const key = STYLE_TO_KEY[option.value];
+                const src = images[key] || FALLBACK_IMAGES[option.value];
+                return (
+                  <div
+                    key={option.value}
+                    onClick={() => handleChange('visualStyle', option.value)}
+                    className={`cursor-pointer p-4 rounded-lg border-2 transition-all flex flex-col items-center ${
+                      designSettings.visualStyle === option.value
+                        ? 'border-purple-500 bg-purple-50'
+                        : 'border-gray-200 hover:border-purple-200'
+                    }`}
+                  >
+                    <div className="w-full aspect-square mb-2 overflow-hidden rounded-md bg-gray-100">
+                      <img
+                        src={src}
+                        alt={option.label}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h3 className="font-medium text-gray-900 text-center">{option.label}</h3>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -84,15 +135,17 @@ const DesignStep: React.FC = () => {
             </h3>
           </div>
 
-          <div className="aspect-square rounded-lg overflow-hidden bg-white shadow-md">
-            {designSettings.visualStyle && designSettings.colorPalette ? (
-              <div className="w-full h-full flex items-center justify-center">
-                <Brush className="w-16 h-16 text-purple-600" />
-              </div>
+          <div className="aspect-square rounded-lg overflow-hidden bg-white shadow-md flex items-center justify-center">
+            {designSettings.visualStyle ? (
+              <img
+                src={images[STYLE_TO_KEY[designSettings.visualStyle]] || FALLBACK_IMAGES[designSettings.visualStyle]}
+                alt="Vista previa"
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center p-6 text-center">
                 <p className="text-gray-500">
-                  Selecciona un estilo visual y una paleta de colores para ver una vista previa
+                  Selecciona un estilo visual para ver una vista previa
                 </p>
               </div>
             )}
