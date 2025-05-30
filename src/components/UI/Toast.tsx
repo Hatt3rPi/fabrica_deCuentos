@@ -45,36 +45,36 @@ const Toast: React.FC<ToastProps> = ({
   const getBgColor = () => {
     switch (type) {
       case 'success':
-        return 'bg-green-50 border-green-200';
+        return 'bg-green-50 border-green-200 dark:bg-green-900 dark:border-green-700';
       case 'error':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-50 border-red-200 dark:bg-red-900 dark:border-red-700';
       case 'info':
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-blue-50 border-blue-200 dark:bg-blue-900 dark:border-blue-700';
       case 'notification':
-        return 'bg-purple-50 border-purple-200';
+        return 'bg-purple-50 border-purple-200 dark:bg-purple-900 dark:border-purple-700';
       default:
-        return 'bg-gray-50 border-gray-200';
+        return 'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700';
     }
   };
 
   const getTextColor = () => {
     switch (type) {
       case 'success':
-        return 'text-green-800';
+        return 'text-green-800 dark:text-green-200';
       case 'error':
-        return 'text-red-800';
+        return 'text-red-800 dark:text-red-200';
       case 'info':
-        return 'text-blue-800';
+        return 'text-blue-800 dark:text-blue-200';
       case 'notification':
-        return 'text-purple-800';
+        return 'text-purple-800 dark:text-purple-200';
       default:
-        return 'text-gray-800';
+        return 'text-gray-800 dark:text-gray-200';
     }
   };
 
   return (
-    <div 
-      className={`fixed bottom-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg border ${getBgColor()} transition-opacity duration-300 ${
+    <div
+      className={`relative max-w-md w-80 p-4 rounded-lg shadow-lg border ${getBgColor()} transition-opacity duration-300 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
     >

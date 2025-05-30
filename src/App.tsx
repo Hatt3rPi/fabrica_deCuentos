@@ -17,6 +17,7 @@ import ProfileSettings from './pages/ProfileSettings';
 import PromptsManager from './pages/Admin/Prompts/PromptsManager';
 import PromptAnalytics from './pages/Admin/Analytics/PromptAnalytics';
 import { useProfileStore } from './stores/profileStore';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -58,9 +59,9 @@ function AnimatedRoutes() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -100 }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
-          className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 flex flex-col lg:flex-row"
+          className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 dark:bg-gray-900 dark:text-white flex flex-col lg:flex-row"
         >
-          <div className="hidden lg:block lg:w-60 lg:flex-shrink-0 bg-white border-r border-gray-200">
+          <div className="hidden lg:block lg:w-60 lg:flex-shrink-0 bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700">
             <Sidebar />
           </div>
 
@@ -136,7 +137,7 @@ function AnimatedRoutes() {
                 <Route path="*" element={<Navigate to="/home" replace />} />
               </Routes>
             </main>
-            <footer className="py-4 text-center text-purple-600 text-sm">
+            <footer className="py-4 text-center text-purple-600 dark:text-purple-400 text-sm">
               <p>Customware © {new Date().getFullYear()}</p>
             </footer>
           </div>
@@ -151,6 +152,19 @@ function AppContent() {
   // El contenido de la aplicación ahora está manejado por AnimatedRoutes
   return <AnimatedRoutes />;
 }
+
+const ThemeInitializer: React.FC = () => {
+  const { setTheme } = useTheme();
+
+  React.useEffect(() => {
+    const profileStore = useProfileStore.getState();
+    if (profileStore.profile?.theme_preference) {
+      setTheme(profileStore.profile.theme_preference);
+    }
+  }, [setTheme]);
+
+  return null;
+};
 
 // Registrar el service worker para las notificaciones
 const registerServiceWorker = () => {
@@ -172,23 +186,17 @@ function App() {
   React.useEffect(() => {
     registerServiceWorker();
   }, []);
-  
-  React.useEffect(() => {
-    const profileStore = useProfileStore.getState();
-    if (profileStore.profile?.theme_preference === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
 
   return (
     <Router>
-      <AuthProvider>
-        <AdminProvider>
-          <AppContent />
-        </AdminProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <ThemeInitializer />
+        <AuthProvider>
+          <AdminProvider>
+            <AppContent />
+          </AdminProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </Router>
   );
 }
