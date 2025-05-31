@@ -20,17 +20,15 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
   // Initialize storyId on mount
   useEffect(() => {
     if (!storyIdRef.current) {
-      // Try to recover from localStorage first
-      const savedId = localStorage.getItem('current_story_draft_id');
-      if (savedId && isValidUUID(savedId)) {
-        storyIdRef.current = savedId;
-      } else if (initialStoryId && isValidUUID(initialStoryId)) {
+      if (initialStoryId && isValidUUID(initialStoryId)) {
         storyIdRef.current = initialStoryId;
         localStorage.setItem('current_story_draft_id', initialStoryId);
       } else {
-        const newId = crypto.randomUUID();
-        storyIdRef.current = newId;
-        localStorage.setItem('current_story_draft_id', newId);
+        // Avoid creating a new story automatically when no ID is provided
+        const savedId = localStorage.getItem('current_story_draft_id');
+        if (savedId && isValidUUID(savedId)) {
+          storyIdRef.current = savedId;
+        }
       }
     }
   }, [initialStoryId]);
