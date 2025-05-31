@@ -254,15 +254,21 @@ class NotificationService {
     data?: Record<string, any>,
     actions?: any[]
   ): Promise<AppNotification | null> {
+    // Validar que el tipo de notificación sea válido
+    if (!Object.values(NotificationType).includes(type)) {
+      console.error('Tipo de notificación no válido:', type);
+      type = NotificationType.SYSTEM_UPDATE; // Valor por defecto
+    }
+
     const notification: AppNotification = {
       id: uuidv4(),
       userId,
       type,
-      title,
-      message,
-      priority,
-      data,
-      actions,
+      title: title || 'Notificación',
+      message: message || '',
+      priority: priority || NotificationPriority.MEDIUM,
+      data: data || {},
+      actions: actions || [],
       read: false,
       createdAt: new Date(),
     };
