@@ -69,6 +69,7 @@ const CharactersStep: React.FC = () => {
   };
 
   const handleEdit = (id: string) => {
+    sessionStorage.setItem('skipWizardCleanup', 'true');
     navigate(`/nuevo-cuento/personaje/${id}/editar`);
   };
 
