@@ -38,6 +38,24 @@ const Wizard: React.FC = () => {
     };
   }, [storyId, supabase]);
 
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      if (!storyId) return;
+      const { data } = await supabase
+        .from('story_characters')
+        .select('character_id')
+        .eq('story_id', storyId);
+      if (!data || data.length === 0) {
+        await supabase.rpc('delete_full_story', { story_id: storyId });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [storyId, supabase]);
+
   const renderStep = () => {
     switch (currentStep) {
       case 'characters':

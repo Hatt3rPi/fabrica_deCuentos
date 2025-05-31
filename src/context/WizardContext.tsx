@@ -78,12 +78,11 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [generatedPages, setGeneratedPages] = useState<GeneratedPage[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-  useAutosave(state, storyId || '');
+  useAutosave(state, storyId || null);
 
   useEffect(() => {
     const loadDraft = async () => {
       if (!storyId || !user) {
-        navigate('/');
         return;
       }
 
@@ -116,7 +115,6 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
       } catch (error) {
         console.error('Error loading draft:', error);
-        navigate('/');
       }
     };
 
