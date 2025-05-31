@@ -65,10 +65,11 @@ Plataforma web interactiva para crear cuentos infantiles personalizados con ilus
 git clone [url-del-repositorio]
 ```
 
-2. Instala las dependencias:
+2. Ejecuta el script de preparación del entorno:
 ```bash
-npm install
+./setup.sh
 ```
+Este paso asegura que todas las dependencias queden instaladas antes de perder acceso a la red en entornos como Codex.
 
 3. Configura las variables de entorno:
 ```bash
