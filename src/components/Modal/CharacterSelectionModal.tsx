@@ -48,10 +48,118 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
     setIsLoading(false);
   };
 
-  const linkCharacter = async (id: string) => {
-    await supabase.from('story_characters').insert({ story_id: storyId, character_id: id });
-    onCharacterAdded();
-    onClose();
+  const linkCharacter = async (characterId: string) => {
+    const MAX_RETRIES = 3;
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`[Intento ${attempt}/${MAX_RETRIES}] Asociando personaje ${characterId} a historia`);
+        
+        // 1. Obtener usuario autenticado con manejo de error específico
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          throw new Error('No se pudo verificar la sesión del usuario');
+        }
+  
+        // 2. Verificar el personaje
+        const { data: character, error: charError } = await supabase
+          .from('characters')
+          .select('id, user_id')
+          .eq('id', characterId)
+          .eq('user_id', user.id)
+          .single();
+          
+        if (charError?.code === 'PGRST116' || !character) {
+          throw new Error('El personaje no existe o no tienes permisos');
+        }
+  
+        // 3. Obtener la historia (intentar con storyId primero, luego la más reciente)
+        let story;
+        if (storyId) {
+          const { data: storyData, error: storyError } = await supabase
+            .from('stories')
+            .select('id, user_id, title')
+            .eq('id', storyId)
+            .eq('user_id', user.id)
+            .single();
+            
+          if (storyError?.code === 'PGRST116') {
+            console.warn(`Historia ${storyId} no encontrada, buscando la más reciente`);
+          } else if (storyError) {
+            throw storyError;
+          } else {
+            story = storyData;
+          }
+        }
+  
+        // Si no se encontró con storyId o no había storyId, buscar la más reciente
+        if (!story) {
+          const { data: latestStories, error: latestError } = await supabase
+            .from('stories')
+            .select('id, user_id, title, created_at')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+            
+          if (latestError) throw latestError;
+          if (!latestStories || latestStories.length === 0) {
+            throw new Error('No se encontraron historias para este usuario');
+          }
+          story = latestStories[0];
+          console.log(`Usando historia más reciente: ${story.title || 'Sin título'} (${story.id})`);
+        }
+  
+        // 4. Intentar asociar el personaje a la historia
+        const { error: insertError } = await supabase.rpc('link_character_to_story', {
+          p_story_id: story.id,
+          p_character_id: characterId,
+          p_user_id: user.id
+        });
+  
+        if (insertError) {
+          // Si es un error de duplicado, no es un error crítico
+          if (insertError.code === '23505') {
+            console.log('El personaje ya está asociado a esta historia');
+            return true;
+          }
+          // Si es un error de permisos, no tiene sentido reintentar
+          if (insertError.code === 'P0001') {
+            throw new Error('No tienes permisos para realizar esta acción');
+          }
+          throw insertError;
+        }
+        
+        console.log('Personaje asociado exitosamente');
+        onCharacterAdded();
+        return true;
+  
+      } catch (error) {
+        lastError = error as Error;
+        console.error(`[Intento ${attempt}/${MAX_RETRIES}] Error:`, error);
+        
+        // No reintentar para ciertos errores
+        if (error instanceof Error) {
+          if (error.message.includes('No tienes permisos') || 
+              error.message.includes('no existe') ||
+              error.message === 'No se encontraron historias para este usuario') {
+            break;
+          }
+        }
+        
+        if (attempt < MAX_RETRIES) {
+          const delayMs = 1000 * Math.pow(2, attempt - 1);
+          console.log(`Reintentando en ${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+    
+    // Si llegamos aquí es porque todos los intentos fallaron
+    const errorMessage = lastError?.message || 'Error desconocido al asociar el personaje';
+    console.error('Error final al asociar personaje:', errorMessage);
+    alert(errorMessage);
+    return false;
   };
 
   const handleEdit = (id: string) => {
@@ -64,13 +172,17 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
 
     try {
       const character = characters.find(c => c.id === characterId);
-      if (character?.reference_urls?.length) {
-        for (const url of character.reference_urls) {
-          const path = url.split('/').pop();
-          if (path) {
-            await supabase.storage
-              .from('storage')
-              .remove([`reference-images/${characterId}/${path}`]);
+      // Verificamos si el personaje tiene imágenes de referencia
+      const referenceUrls = (character as any)?.reference_urls || [];
+      if (referenceUrls.length > 0) {
+        for (const url of referenceUrls) {
+          if (typeof url === 'string') {
+            const path = url.split('/').pop();
+            if (path) {
+              await supabase.storage
+                .from('storage')
+                .remove([`reference-images/${characterId}/${path}`]);
+            }
           }
         }
       }
@@ -98,7 +210,10 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
       await loadCharacters();
       onCharacterAdded();
     } else {
+      // Si es un nuevo personaje, lo vinculamos automáticamente
       await linkCharacter(id);
+      // No cerramos el modal aquí para permitir agregar más personajes
+      // El usuario puede cerrarlo manualmente o se cerrará al alcanzar el límite
     }
   };
 

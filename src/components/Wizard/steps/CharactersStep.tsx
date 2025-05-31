@@ -92,6 +92,10 @@ const CharactersStep: React.FC = () => {
 
   const handleCharacterAdded = async () => {
     await loadStoryCharacters();
+    // Si ya hay 3 personajes, cerramos el modal automáticamente
+    if (characters.length >= 2) { // 2 porque aún no se ha actualizado el estado
+      setIsModalOpen(false);
+    }
   };
 
   const handleAddCharacter = () => {
