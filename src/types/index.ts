@@ -43,6 +43,7 @@ export type StabilityModel = 'stable-diffusion-3.5';
 
 // Tipos para la configuración del cuento
 export interface StorySettings {
+  theme: string;
   targetAge: string;
   literaryStyle: string;
   centralMessage: string;

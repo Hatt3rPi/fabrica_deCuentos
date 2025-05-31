@@ -66,6 +66,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [currentStep, setCurrentStep] = useState<WizardStep>('characters');
   const [characters, setCharacters] = useState<Character[]>([]);
   const [storySettings, setStorySettings] = useState<StorySettings>({
+    theme: '',
     targetAge: '',
     literaryStyle: '',
     centralMessage: '',
@@ -142,6 +143,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setCurrentStep('characters');
     setCharacters([]);
     setStorySettings({
+      theme: '',
       targetAge: '',
       literaryStyle: '',
       centralMessage: '',
@@ -169,6 +171,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         });
       case 'story':
         return (
+          storySettings.theme !== '' &&
           storySettings.targetAge !== '' &&
           storySettings.literaryStyle !== '' &&
           storySettings.centralMessage !== ''
