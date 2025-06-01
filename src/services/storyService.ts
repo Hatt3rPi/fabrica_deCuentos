@@ -37,5 +37,19 @@ export const storyService = {
     const { data, error } = await supabase.rpc('delete_story_preserve_characters', { story_id: storyId });
     if (error) throw error;
     if (data) await cleanupStorage(data as string[]);
+  },
+
+  async generateStory(params: { theme: string; characters: { name: string }[]; settings: { targetAge: string; literaryStyle: string; centralMessage: string; additionalDetails: string } }) {
+    // Placeholder implementation simulating GPT call
+    await new Promise(res => setTimeout(res, 1000));
+    const names = params.characters.map(c => c.name).join(' y ');
+    return {
+      title: `La aventura de ${names}`,
+      paragraphs: [
+        `Este cuento trata sobre ${params.theme}.`,
+        'Era un día especial para nuestros protagonistas.',
+        'Y así comenzó su gran aventura.'
+      ]
+    };
   }
 };

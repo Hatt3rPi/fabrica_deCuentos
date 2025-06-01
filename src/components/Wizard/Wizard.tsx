@@ -17,6 +17,10 @@ const Wizard: React.FC = () => {
   const { supabase } = useAuth();
 
   useEffect(() => {
+    sessionStorage.removeItem('skipWizardCleanup');
+  }, []);
+
+  useEffect(() => {
     if (!storyId) {
       navigate('/');
     }
@@ -26,6 +30,9 @@ const Wizard: React.FC = () => {
     return () => {
       const cleanup = async () => {
         if (!storyId) return;
+        const skip = sessionStorage.getItem('skipWizardCleanup');
+        sessionStorage.removeItem('skipWizardCleanup');
+        if (skip === 'true') return;
         const { data } = await supabase
           .from('story_characters')
           .select('character_id')

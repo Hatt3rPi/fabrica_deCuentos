@@ -48,10 +48,37 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
     setIsLoading(false);
   };
 
-  const linkCharacter = async (id: string) => {
-    await supabase.from('story_characters').insert({ story_id: storyId, character_id: id });
-    onCharacterAdded();
-    onClose();
+  const linkCharacter = async (characterId: string) => {
+    try {
+      // Insertar directamente en la tabla de relación
+      const { error } = await supabase
+        .from('story_characters')
+        .insert({ 
+          story_id: storyId, 
+          character_id: characterId 
+        });
+
+      if (error) {
+        // Si es un error de duplicado, no es un error crítico
+        if (error.code === '23505') {
+          console.log('El personaje ya está asociado a esta historia');
+          onCharacterAdded();
+          onClose();
+          return true;
+        }
+        throw error;
+      }
+
+      // Notificar éxito
+      onCharacterAdded();
+      onClose();
+      return true;
+      
+    } catch (error) {
+      console.error('Error al asociar personaje:', error);
+      alert('No se pudo asociar el personaje. Por favor, inténtalo de nuevo.');
+      return false;
+    }
   };
 
   const handleEdit = (id: string) => {
@@ -64,13 +91,17 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
 
     try {
       const character = characters.find(c => c.id === characterId);
-      if (character?.reference_urls?.length) {
-        for (const url of character.reference_urls) {
-          const path = url.split('/').pop();
-          if (path) {
-            await supabase.storage
-              .from('storage')
-              .remove([`reference-images/${characterId}/${path}`]);
+      // Verificamos si el personaje tiene imágenes de referencia
+      const referenceUrls = (character as any)?.reference_urls || [];
+      if (referenceUrls.length > 0) {
+        for (const url of referenceUrls) {
+          if (typeof url === 'string') {
+            const path = url.split('/').pop();
+            if (path) {
+              await supabase.storage
+                .from('storage')
+                .remove([`reference-images/${characterId}/${path}`]);
+            }
           }
         }
       }
@@ -98,7 +129,10 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
       await loadCharacters();
       onCharacterAdded();
     } else {
+      // Si es un nuevo personaje, lo vinculamos automáticamente
       await linkCharacter(id);
+      // No cerramos el modal aquí para permitir agregar más personajes
+      // El usuario puede cerrarlo manualmente o se cerrará al alcanzar el límite
     }
   };
 
