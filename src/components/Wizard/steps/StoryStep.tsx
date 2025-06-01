@@ -91,43 +91,8 @@ const StoryStep: React.FC = () => {
               </button>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Edad objetivo
-            </label>
-            <select
-              value={storySettings.targetAge}
-              onChange={(e) => handleChange('targetAge', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="">Selecciona una edad</option>
-              {ageOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
 
           {/* La sección de estilos literarios ha sido removida y respaldada en /src/components/Wizard/steps/backup/LiteraryStyleSelector.tsx */}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mensaje central
-            </label>
-            <select
-              value={storySettings.centralMessage}
-              onChange={(e) => handleChange('centralMessage', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
-              <option value="">Selecciona un mensaje</option>
-              {messageOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-xl">
