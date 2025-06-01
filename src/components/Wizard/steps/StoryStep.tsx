@@ -1,6 +1,6 @@
 import React from 'react';
 import { useWizard } from '../../../context/WizardContext';
-import { ageOptions, styleOptions, messageOptions } from '../../../types';
+import { ageOptions, messageOptions } from '../../../types';
 import { BookOpen } from 'lucide-react';
 import { storyService } from '../../../services/storyService';
 
@@ -109,38 +109,7 @@ const StoryStep: React.FC = () => {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Estilo literario
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              {styleOptions.map((option) => (
-                <div
-                  key={option.value}
-                  onClick={() => handleChange('literaryStyle', option.value)}
-                  className={`group cursor-pointer p-4 rounded-lg border-2 transition-all relative overflow-hidden ${
-                    storySettings.literaryStyle === option.value
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-purple-200'
-                  }`}
-                >
-                  <h3 className="font-medium text-gray-900 mb-2">{option.label}</h3>
-                  <div className="relative">
-                    <p className="text-sm text-gray-600 line-clamp-2 group-hover:line-clamp-none">
-                      {option.example}
-                    </p>
-                    {/* Overlay that appears on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-white to-transparent opacity-100 group-hover:opacity-0 transition-opacity pointer-events-none" />
-                  </div>
-                  {/* Expanded text that shows on hover */}
-                  <div className="absolute inset-0 bg-white p-4 opacity-0 group-hover:opacity-100 transition-opacity overflow-y-auto">
-                    <h3 className="font-medium text-gray-900 mb-2">{option.label}</h3>
-                    <p className="text-sm text-gray-600">{option.example}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* La sección de estilos literarios ha sido removida y respaldada en /src/components/Wizard/steps/backup/LiteraryStyleSelector.tsx */}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -165,15 +134,28 @@ const StoryStep: React.FC = () => {
           <div className="flex items-center gap-3 mb-4">
             <BookOpen className="w-6 h-6 text-purple-600" />
             <h3 className="text-lg font-semibold text-purple-800">
-              Detalles adicionales
+              Tu cuento completo
             </h3>
           </div>
-          <textarea
-            value={storySettings.additionalDetails}
-            onChange={(e) => handleChange('additionalDetails', e.target.value)}
-            placeholder="Añade detalles específicos para tu historia, como elementos especiales que quieras incluir, temas a evitar, o cualquier otra consideración importante..."
-            className="w-full h-[250px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-          />
+          {generated ? (
+            <div className="overflow-auto h-[450px] px-4 py-3 border border-gray-300 rounded-lg bg-white">
+              <h3 className="text-xl font-bold text-purple-700 mb-4">
+                {generated.title}
+              </h3>
+              {generated.paragraphs.map((p, i) => (
+                <p key={i} className="text-gray-700 mb-4">
+                  {p}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <textarea
+              value={storySettings.additionalDetails}
+              readOnly
+              placeholder="Aquí aparecerá tu cuento completo una vez generado. Contiene todos los 8 párrafos de la historia."
+              className="w-full h-[450px] px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 resize-none"
+            />
+          )}
         </div>
       </div>
 
@@ -192,25 +174,15 @@ const StoryStep: React.FC = () => {
         </button>
 
         {generated && (
-          <div className="mt-6 space-y-3 text-left">
-            <h3 className="text-xl font-bold text-purple-700 text-center">
-              {generated.title}
-            </h3>
-            {generated.paragraphs.map((p, i) => (
-              <p key={i} className="text-gray-700">
-                {p}
-              </p>
-            ))}
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={isLoading}
-                className="mt-4 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
-              >
-                {isLoading ? 'Generando...' : 'Generar nuevamente'}
-              </button>
-            </div>
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={isLoading}
+              className="mt-4 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+            >
+              {isLoading ? 'Generando...' : 'Generar nuevamente'}
+            </button>
           </div>
         )}
       </div>
