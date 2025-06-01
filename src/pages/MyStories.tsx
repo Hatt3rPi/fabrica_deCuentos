@@ -33,7 +33,23 @@ const MyStories: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setStories(data || []);
+
+      const ids = (data || []).map((s) => s.id);
+      let covers: Record<string, string> = {};
+      if (ids.length > 0) {
+        const { data: pages } = await supabase
+          .from('story_pages')
+          .select('story_id,image_url')
+          .in('story_id', ids)
+          .eq('page_number', 0);
+        (pages || []).forEach((p) => {
+          covers[p.story_id] = p.image_url;
+        });
+      }
+
+      setStories(
+        (data || []).map((s) => ({ ...s, cover_url: covers[s.id] || '' })) as Story[]
+      );
     } catch (error) {
       console.error('Error loading stories:', error);
     }
@@ -101,12 +117,17 @@ const MyStories: React.FC = () => {
               key={story.id}
               className="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-[1.02]"
             >
-              <div className="aspect-square">
-                <img
-                  src={story.cover_url || 'https://images.pexels.com/photos/1148399/pexels-photo-1148399.jpeg'}
-                  alt={story.title}
-                  className="w-full h-full object-cover"
-                />
+              <div className="aspect-video bg-gray-100">
+                {story.cover_url ? (
+                  <img
+                    src={story.cover_url}
+                    alt={story.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full animate-pulse bg-gray-200" />
+                )}
               </div>
               <div className="p-4">
                 <div className="flex items-start justify-between mb-2">
