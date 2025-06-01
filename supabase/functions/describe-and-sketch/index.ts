@@ -1,4 +1,3 @@
-import OpenAI from "npm:openai@4.28.0";
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 
@@ -35,26 +34,26 @@ function isValidBase64Image(str: string) {
 
 function sanitizeText(text: unknown): string {
   if (!text) return '';
-  if (typeof text === 'object' && text !== null && 'es' in (text as any)) {
-    return sanitizeText((text as any).es);
+  if (typeof text === 'object' && text !== null && 'es' in (text as { es?: unknown })) {
+    return sanitizeText((text as { es?: unknown }).es);
   }
   const s = String(text);
   return s.replace(/[^\w\s.,!?-]/g, '').trim().slice(0, 500);
 }
 
-function validatePayload(payload: any) {
+function validatePayload(payload: unknown) {
   if (!payload || typeof payload !== 'object') {
     throw new Error('Invalid request payload');
   }
   return {
-    imageBase64: payload.imageBase64 != null
-      ? String(payload.imageBase64)
-      : payload.referenceImage != null
-        ? String(payload.referenceImage)
+    imageBase64: (payload as Record<string, unknown>).imageBase64 != null
+      ? String((payload as Record<string, unknown>).imageBase64)
+      : (payload as Record<string, unknown>).referenceImage != null
+        ? String((payload as Record<string, unknown>).referenceImage)
         : null,
-    userNotes: String(payload.userNotes || ''),   // ← solo de userNotes
-    name:      String(payload.name || ''),
-    age:       String(payload.age || '')
+    userNotes: String((payload as Record<string, unknown>).userNotes || ''),   // ← solo de userNotes
+    name:      String((payload as Record<string, unknown>).name || ''),
+    age:       String((payload as Record<string, unknown>).age || '')
   };
 }
 
@@ -179,7 +178,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in describe-and-sketch:', error);
     await logPromptMetric({
       prompt_id: promptId,

@@ -68,7 +68,7 @@ export const handler = async (req: Request): Promise<Response> => {
     console.log(`[${new Date().toISOString()}] Buscando usuario: ${email}`)
 
     // 1. Obtener ID del usuario
-    const { data: user, error: userError } = await supabaseAdmin.auth.admin.listUsers()
+    const { data: user } = await supabaseAdmin.auth.admin.listUsers()
     const targetUser = user?.users.find(u => u.email === email)
     
     if (!targetUser) {
@@ -212,10 +212,10 @@ async function cleanupStorageFiles(supabase, userId: string, imageUrlsAndIds: st
                   console.error(`Error al eliminar archivos de ${bucket}/${path}:`, removeError);
                 }
               }
-            } catch (err) {
-              // Ignorar errores de carpetas que no existen
-              console.log(`Carpeta ${bucket}/${path} no encontrada o error al listar`);
-            }
+              } catch {
+                // Ignorar errores de carpetas que no existen
+                console.log(`Carpeta ${bucket}/${path} no encontrada o error al listar`);
+              }
           }
         }
       }
@@ -255,7 +255,7 @@ async function cleanupUserFolders(supabase, userId: string): Promise<number> {
       // También intentar eliminar archivos en subcarpetas
       await cleanupFolderRecursive(supabase, bucket, userId, deletedCount);
       
-    } catch (err) {
+    } catch {
       // Ignorar errores de carpetas que no existen
       console.log(`Carpeta ${bucket}/${userId} no encontrada o error al listar`);
     }

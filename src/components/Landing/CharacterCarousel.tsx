@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { ThemeType } from './BackgroundCarousel';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -73,19 +73,12 @@ const CharacterCarousel: React.FC<CharacterCarouselProps> = ({
   characters,
   currentTheme
 }) => {
-  const [isAnimating, setIsAnimating] = useState(false);
-  
   // Find the current character based on the theme
   const currentCharacter = useMemo(() => {
     return characters.find(char => char.id === currentTheme.id) || characters[0];
   }, [characters, currentTheme.id]);
   
-  useEffect(() => {
-    // Set animating state when character changes
-    setIsAnimating(true);
-    const timer = setTimeout(() => setIsAnimating(false), 1000);
-    return () => clearTimeout(timer);
-  }, [currentTheme.id]);
+
   
   if (!currentCharacter) return null;
 

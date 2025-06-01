@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Menu, X, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import NotificationBell from '../Notifications/NotificationBell';
-import { Link } from 'react-router-dom';
 
 const Header: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useAutosave } from '../hooks/useAutosave';
 import { Character, StorySettings, DesignSettings, WizardState } from '../types';
@@ -60,7 +60,6 @@ const INITIAL_STATE: WizardState = {
 
 export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { storyId } = useParams();
-  const navigate = useNavigate();
   const { supabase, user } = useAuth();
   const [state, setState] = useState<WizardState>(INITIAL_STATE);
   const [currentStep, setCurrentStep] = useState<WizardStep>('characters');

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNotifications } from '../../hooks/useNotifications';
-import { 
-  Notification, 
-  NotificationType, 
-  NotificationGroup,
+import {
+  Notification,
+  NotificationType,
   NotificationFilterOptions
 } from '../../types/notification';
 
@@ -20,7 +19,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
     fetchNotifications,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
     deleteMultipleNotifications,
     groupNotificationsByDate
   } = useNotifications();

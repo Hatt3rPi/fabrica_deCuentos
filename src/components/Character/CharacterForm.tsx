@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Loader, AlertCircle, Wand2 } from 'lucide-react';
@@ -56,7 +56,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `reference-images/${user.id}/${characterId}/${fileName}`;
 
-    const { error: uploadError, data } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('storage')
       .upload(filePath, file);
 
@@ -186,11 +186,6 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
       }
     }
   });
-
-  const canGenerateThumbnail = (character: Character): boolean => {
-    const description = typeof character.description === 'object' ? character.description.es : character.description;
-    return !!(description && description.trim() !== '') || !!(character.reference_urls && character.reference_urls.length > 0);
-  };
 
   const generateThumbnail = async () => {
     if (!user) {

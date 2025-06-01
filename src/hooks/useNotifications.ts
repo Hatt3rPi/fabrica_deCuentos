@@ -133,8 +133,8 @@ export const useNotifications = () => {
     title: string,
     message: string,
     priority: NotificationPriority = NotificationPriority.MEDIUM,
-    data?: Record<string, any>,
-    actions?: any[]
+    data?: Record<string, unknown>,
+    actions?: unknown[]
   ) => {
     if (!user) return null;
     

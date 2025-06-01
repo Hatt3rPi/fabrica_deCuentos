@@ -1,6 +1,6 @@
 import React from 'react';
 import { useWizard } from '../../../context/WizardContext';
-import { ageOptions, messageOptions } from '../../../types';
+
 import { BookOpen } from 'lucide-react';
 import { storyService } from '../../../services/storyService';
 

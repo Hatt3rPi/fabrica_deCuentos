@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { visualStyleOptions, colorPaletteOptions } from '../../../types';
-import { Palette, Brush } from 'lucide-react';
+import { Palette } from 'lucide-react';
 import { characterService } from '../../../services/characterService';
 import { ThumbnailStyle } from '../../../types/character';
 

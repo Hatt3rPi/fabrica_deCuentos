@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+
 import { useCharacterStore, visualStyles, defaultPalette } from '../stores/characterStore';
 import { Character } from '../types/character';
 import { useAuth } from '../context/AuthContext';

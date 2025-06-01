@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { name, description, age } = await req.json();
+    const { description, age } = await req.json();
     
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY'),
