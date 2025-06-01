@@ -24,18 +24,10 @@ Deno.serve(async (req) => {
   let start = 0;
 
   try {
-    const {
-      story_id,
-      characters,
-      theme,
-      target_age,
-      literary_style,
-      central_message,
-      additional_details,
-    } = await req.json();
+    const { story_id, characters, theme } = await req.json();
 
-    if (!story_id || !Array.isArray(characters) || characters.length === 0) {
-      throw new Error('Missing required fields');
+    if (!story_id || !Array.isArray(characters) || characters.length === 0 || !theme) {
+      throw new Error('Faltan campos requeridos: story_id, characters o theme');
     }
 
     userId = await getUserId(req);
@@ -49,14 +41,17 @@ Deno.serve(async (req) => {
     promptId = promptRow?.id;
     if (!storyPrompt) throw new Error('Prompt not configured');
 
-    const charNames = characters.map((c: any) => c.name).join(', ');
+    // Formatear personajes: "Nombre de 99 años, Otro de 5 años"
+    const charNames = characters
+      .map((c: any) => `${c.name} de ${c.age} años`)
+      .join(', ');
+    
+    // Usar solo el tema como historia
+    const storyTheme = theme || 'Sin tema específico';
+    
     const finalPrompt = storyPrompt
-      .replace('{theme}', theme || '')
-      .replace('{characters}', charNames)
-      .replace('{targetAge}', target_age || '')
-      .replace('{literaryStyle}', literary_style || '')
-      .replace('{centralMessage}', central_message || '')
-      .replace('{additionalDetails}', additional_details || '');
+      .replace('{personajes}', charNames)
+      .replace('{historia}', storyTheme);
 
     const model = 'gpt-4-turbo';
     start = Date.now();
@@ -92,21 +87,48 @@ Deno.serve(async (req) => {
       throw new Error(respData.error?.message || 'OpenAI error');
     }
 
-    const result = JSON.parse(respData.choices?.[0]?.message?.content || '{}');
-    const title = result.title || 'Cuento sin título';
-    const paragraphs: string[] = Array.isArray(result.paragraphs) ? result.paragraphs : [];
-    if (paragraphs.length === 0) {
-      throw new Error('Invalid story response');
+    const responseContent = respData.choices?.[0]?.message?.content;
+    
+    if (!responseContent) {
+      console.error('OpenAI response has no content:', JSON.stringify(respData, null, 2));
+      throw new Error('La respuesta de OpenAI no contiene contenido');
     }
 
-    await supabaseAdmin.from('stories').update({
-      title,
-      target_age,
-      literary_style,
-      central_message,
-      additional_details,
-      status: 'completed',
-    }).eq('id', story_id);
+    let result;
+    try {
+      result = JSON.parse(responseContent);
+    } catch (e) {
+      console.error('Error al parsear la respuesta de OpenAI:', e, '\nContenido:', responseContent);
+      throw new Error('Formato de respuesta de OpenAI inválido');
+    }
+
+    console.log('Respuesta parseada de OpenAI:', JSON.stringify(result, null, 2));
+
+    // Verificar la estructura esperada
+    if (!result.titulo || !result.paginas || typeof result.paginas !== 'object') {
+      console.error('Estructura de respuesta inesperada:', result);
+      throw new Error('Formato de historia inválido. Se esperaba {titulo: string, paginas: {1: {texto: string, prompt: string}, ...}}');
+    }
+
+    const title = result.titulo;
+    const paginas = result.paginas;
+    
+    // Extraer los párrafos en orden
+    const paragraphs = Object.entries(paginas)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+      .map(([_, page]: [string, any]) => page?.texto)
+      .filter(Boolean);
+
+    if (paragraphs.length === 0) {
+      throw new Error('La historia generada no contiene párrafos válidos');
+    }
+
+    await supabaseAdmin.from('stories')
+      .update({
+        title,
+        status: 'completed',
+      })
+      .eq('id', story_id);
 
     for (const ch of characters) {
       if (!ch.id) continue;
@@ -147,6 +169,9 @@ Deno.serve(async (req) => {
         prompt: promptText,
         size: '1792x1024',
         n: 1,
+        response_format: 'url',
+        style: 'vivid',
+        quality: 'standard'
       });
       const celapsed = Date.now() - cstart;
       await logPromptMetric({
@@ -171,9 +196,24 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Devolver solo la información esencial
     return new Response(
-      JSON.stringify({ story_id, title, pages: paragraphs.length, coverUrl }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      JSON.stringify({ 
+        success: true, 
+        story: { 
+          id: story_id, 
+          title, 
+          pages: paragraphs.length, 
+          cover_url: coverUrl 
+        } 
+      }),
+      { 
+        status: 200,
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
     );
   } catch (err) {
     console.error('[generate-story] Error:', err);
