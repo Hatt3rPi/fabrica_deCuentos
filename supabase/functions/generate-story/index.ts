@@ -169,7 +169,6 @@ Deno.serve(async (req) => {
         prompt: promptText,
         size: '1792x1024',
         n: 1,
-        response_format: 'url',
         style: 'vivid',
         quality: 'standard'
       });

@@ -68,7 +68,6 @@ Deno.serve(async (req) => {
       size: apiSize,
       n: 1,
       referenced_image_ids: referencedImageIds,
-      response_format: "url",
     });
     const elapsed = Date.now() - start;
     await logPromptMetric({
