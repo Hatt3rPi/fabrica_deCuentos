@@ -171,6 +171,7 @@ Deno.serve(async (req) => {
       const coverRes = await openai.images.generate({
         model: 'gpt-image-1',
         prompt: promptText,
+
         size: '1024x1024',
         n: 1,
         image: charThumbnails,
