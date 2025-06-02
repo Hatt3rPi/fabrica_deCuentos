@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { prompts } = await req.json();
+    const { prompts, referenceImageIds = [] } = await req.json();
     
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY'),
@@ -22,15 +22,16 @@ Deno.serve(async (req) => {
       prompts.map(async (prompt: string) => {
         const start = Date.now();
         const response = await openai.images.generate({
-          model: "dall-e-3",
+          model: "gpt-image-1",
           prompt,
-          size: "2362x4724",
-          quality: "hd",
+          size: "1024x1024",
+          quality: "standard",
           n: 1,
+          referenced_image_ids: referenceImageIds,
         });
         const elapsed = Date.now() - start;
         await logPromptMetric({
-          modelo_ia: 'dall-e-3',
+          modelo_ia: 'gpt-image-1',
           tiempo_respuesta_ms: elapsed,
           estado: response.data?.[0]?.url ? 'success' : 'error',
           error_type: response.data?.[0]?.url ? null : 'service_error',

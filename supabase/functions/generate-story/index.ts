@@ -45,6 +45,10 @@ Deno.serve(async (req) => {
     const charNames = characters
       .map((c: any) => `${c.name} de ${c.age} años`)
       .join(', ');
+
+    const charThumbnails = characters
+      .map((c: any) => c.thumbnailUrl || c.thumbnail_url)
+      .filter((u: string | null | undefined) => !!u) as string[];
     
     // Usar solo el tema como historia
     const storyTheme = theme || 'Sin tema específico';
@@ -167,10 +171,11 @@ Deno.serve(async (req) => {
       const coverRes = await openai.images.generate({
         model: 'gpt-image-1',
         prompt: promptText,
-        size: '1792x1024',
+        size: '1024x1024',
         n: 1,
         style: 'vivid',
-        quality: 'standard'
+        quality: 'standard',
+        referenced_image_ids: charThumbnails,
       });
       const celapsed = Date.now() - cstart;
       await logPromptMetric({
