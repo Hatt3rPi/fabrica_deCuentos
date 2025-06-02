@@ -12,13 +12,22 @@ This function generates the story text and cover using OpenAI.
 {
   "story_id": "<uuid>",
   "theme": "Adventure in the woods",
-  "characters": [{"id": "<uuid>", "name": "Luna"}],
+"characters": [{
+  "id": "<uuid>",
+  "name": "Luna",
+  "age": "7",
+  "thumbnail_url": "https://..."
+}],
   "target_age": "5-7",
   "literary_style": "Narrativo",
   "central_message": "La amistad es lo más importante",
-  "additional_details": ""
+"additional_details": ""
 }
 ```
+
+The `thumbnail_url` values are used as reference images when generating the
+cover so the characters match their thumbnails. All images are produced with
+`gpt-image-1` using a fixed size and standard quality.
 
 ## Response
 
