@@ -39,17 +39,41 @@ export const storyService = {
     if (data) await cleanupStorage(data as string[]);
   },
 
-  async generateStory(params: { theme: string; characters: { name: string }[]; settings: { targetAge: string; literaryStyle: string; centralMessage: string; additionalDetails: string } }) {
-    // Placeholder implementation simulating GPT call
-    await new Promise(res => setTimeout(res, 1000));
-    const names = params.characters.map(c => c.name).join(' y ');
-    return {
-      title: `La aventura de ${names}`,
-      paragraphs: [
-        `Este cuento trata sobre ${params.theme}.`,
-        'Era un día especial para nuestros protagonistas.',
-        'Y así comenzó su gran aventura.'
-      ]
+  async generateStory(params: {
+    storyId: string;
+    theme: string;
+    characters: { id?: string; name: string }[];
+    settings: {
+      targetAge: string;
+      literaryStyle: string;
+      centralMessage: string;
+      additionalDetails: string;
     };
+  }) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-story`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        story_id: params.storyId,
+        theme: params.theme,
+        characters: params.characters,
+        target_age: params.settings.targetAge,
+        literary_style: params.settings.literaryStyle,
+        central_message: params.settings.centralMessage,
+        additional_details: params.settings.additionalDetails
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Story generation failed');
+    }
+
+    return await response.json();
   }
 };

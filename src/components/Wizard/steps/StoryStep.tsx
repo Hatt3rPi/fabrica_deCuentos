@@ -1,4 +1,5 @@
 import React from 'react';
+import { useParams } from 'react-router-dom';
 import { useWizard } from '../../../context/WizardContext';
 import { ageOptions, messageOptions } from '../../../types';
 import { BookOpen } from 'lucide-react';
@@ -6,6 +7,7 @@ import { storyService } from '../../../services/storyService';
 
 const StoryStep: React.FC = () => {
   const { characters, storySettings, setStorySettings } = useWizard();
+  const { storyId } = useParams();
   const [isLoading, setIsLoading] = React.useState(false);
   const [generated, setGenerated] = React.useState<{ title: string; paragraphs: string[] } | null>(null);
 
@@ -21,6 +23,7 @@ const StoryStep: React.FC = () => {
     setGenerated(null);
     try {
       const result = await storyService.generateStory({
+        storyId: storyId!,
         theme: storySettings.theme,
         characters,
         settings: storySettings

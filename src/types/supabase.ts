@@ -534,6 +534,10 @@ export type Database = {
         Args: { story_id: string }
         Returns: string[]
       }
+      delete_story_preserve_characters: {
+        Args: { p_story_id: string }
+        Returns: string[]
+      }
       generate_reset_token: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -548,6 +552,10 @@ export type Database = {
       get_user_id_by_email: {
         Args: { p_email: string }
         Returns: string
+      }
+      link_character_to_story: {
+        Args: { p_story_id: string; p_character_id: string; p_user_id: string }
+        Returns: undefined
       }
       reset_password: {
         Args: { p_token: string; p_new_password: string }
