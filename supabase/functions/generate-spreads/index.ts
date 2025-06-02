@@ -1,4 +1,4 @@
-import OpenAI from 'npm:openai@4.28.0';
+
 import { logPromptMetric } from '../_shared/metrics.ts';
 
 const corsHeaders = {
@@ -14,21 +14,25 @@ Deno.serve(async (req) => {
   try {
     const { prompts, referenceImageIds = [] } = await req.json();
     
-    const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
-    });
-
     const images = await Promise.all(
       prompts.map(async (prompt: string) => {
         const start = Date.now();
-        const response = await openai.images.generate({
-          model: "gpt-image-1",
-          prompt,
-          size: "1024x1024",
-          quality: "standard",
-          n: 1,
-          referenced_image_ids: referenceImageIds,
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-image-1',
+            prompt,
+            size: '1024x1024',
+            quality: 'hd',
+            n: 1,
+            referenced_image_ids: referenceImageIds,
+          }),
         });
+        const response = await res.json();
         const elapsed = Date.now() - start;
         await logPromptMetric({
           modelo_ia: 'gpt-image-1',

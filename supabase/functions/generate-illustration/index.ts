@@ -1,4 +1,3 @@
-import OpenAI from "npm:openai@4.28.0";
 import { GenerateIllustrationParams } from "./types.ts";
 import { logPromptMetric } from '../_shared/metrics.ts';
 
@@ -59,16 +58,23 @@ Deno.serve(async (req) => {
       Ilustración para libro infantil.
     `.trim();
 
-    const openai = new OpenAI({ apiKey: Deno.env.get("OPENAI_API_KEY")! });
-
     const start = Date.now();
-    const response = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt,
-      size: apiSize,
-      n: 1,
-      referenced_image_ids: referencedImageIds,
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-image-1',
+        prompt,
+        size: apiSize,
+        quality: 'hd',
+        n: 1,
+        referenced_image_ids: referencedImageIds,
+      }),
     });
+    const response = await res.json();
     const elapsed = Date.now() - start;
     await logPromptMetric({
       modelo_ia: "gpt-image-1",
