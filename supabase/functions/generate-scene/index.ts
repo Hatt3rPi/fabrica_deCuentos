@@ -1,4 +1,3 @@
-import OpenAI from 'npm:openai@4.28.0';
 import { logPromptMetric } from '../_shared/metrics.ts';
 
 const corsHeaders = {
@@ -39,9 +38,6 @@ Deno.serve(async (req) => {
   try {
     const { characters, scene }: SceneRequest = await req.json();
 
-    const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
-    });
 
     // Build identity blocks
     const identityBlocks = characters.map(buildCharacterBlock).join('\n\n');
@@ -57,15 +53,24 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
 
     // Generate scene image using max 2 reference images per character
     const start = Date.now();
-    const response = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt: `${identityBlocks}\n${sceneBlock}`,
-      referenced_image_ids: characters.flatMap(char =>
-        char.referenceUrls.slice(0, 2)
-      ),
-      size: "1024x1024",
-      n: 1
+    const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-image-1',
+        prompt: `${identityBlocks}\n${sceneBlock}`,
+        referenced_image_ids: characters.flatMap((char) =>
+          char.referenceUrls.slice(0, 2)
+        ),
+        size: '1024x1024',
+        quality: 'hd',
+        n: 1,
+      }),
     });
+    const response = await imgRes.json();
     const elapsed = Date.now() - start;
     await logPromptMetric({
       modelo_ia: 'gpt-image-1',

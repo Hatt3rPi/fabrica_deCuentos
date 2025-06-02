@@ -1,4 +1,3 @@
-import OpenAI from 'npm:openai@4.28.0';
 import { logPromptMetric } from '../_shared/metrics.ts';
 
 const corsHeaders = {
@@ -14,23 +13,26 @@ Deno.serve(async (req) => {
   try {
     const { name, description, age } = await req.json();
     
-    const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
-    });
-
-    // Generate new thumbnail
     const start = Date.now();
-    const imageResponse = await openai.images.generate({
-      model: "dall-e-2",
-      prompt: `Clean full-body pencil sketch illustration for a children's book. ` +
-        `Character: ${age}. ${description}. Simple lines, no background, child-friendly.`,
-      size: "256x256",
-      //quality: "standard",
-      n: 1,
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-image-1',
+        prompt: `Clean full-body pencil sketch illustration for a children's book. ` +
+          `Character: ${age}. ${description}. Simple lines, no background, child-friendly.`,
+        size: '1024x1024',
+        quality: 'hd',
+        n: 1,
+      }),
     });
+    const imageResponse = await res.json();
     const elapsed = Date.now() - start;
     await logPromptMetric({
-      modelo_ia: 'dall-e-2',
+      modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: elapsed,
       estado: imageResponse.data?.[0]?.url ? 'success' : 'error',
       error_type: imageResponse.data?.[0]?.url ? null : 'service_error',

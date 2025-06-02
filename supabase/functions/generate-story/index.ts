@@ -1,5 +1,4 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
-import OpenAI from 'npm:openai@4.28.0';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 
 const corsHeaders = {
@@ -166,16 +165,23 @@ Deno.serve(async (req) => {
         .replace('{style}', 'acuarela digital')
         .replace('{palette}', 'colores vibrantes')
         .replace('{story}', title);
-      const openai = new OpenAI({ apiKey: Deno.env.get('OPENAI_API_KEY')! });
       const cstart = Date.now();
-      const coverRes = await openai.images.generate({
-        model: 'gpt-image-1',
-        prompt: promptText,
-
-        size: '1024x1024',
-        n: 1,
-        image: charThumbnails,
+      const cRes = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-image-1',
+          prompt: promptText,
+          size: '1024x1024',
+          quality: 'hd',
+          n: 1,
+          referenced_image_ids: charThumbnails,
+        }),
       });
+      const coverRes = await cRes.json();
       const celapsed = Date.now() - cstart;
       await logPromptMetric({
         prompt_id: coverPromptId,
