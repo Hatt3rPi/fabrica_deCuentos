@@ -42,7 +42,7 @@ export const storyService = {
   async generateStory(params: {
     storyId: string;
     theme: string;
-    characters: { id?: string; name: string }[];
+    characters: { id?: string; name: string; age?: string; thumbnailUrl?: string | null }[];
     settings: {
       targetAge: string;
       literaryStyle: string;

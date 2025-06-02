@@ -35,7 +35,7 @@ const MyStories: React.FC = () => {
       if (error) throw error;
 
       const ids = (data || []).map((s) => s.id);
-      let covers: Record<string, string> = {};
+      const covers: Record<string, string> = {};
       if (ids.length > 0) {
         const { data: pages } = await supabase
           .from('story_pages')
