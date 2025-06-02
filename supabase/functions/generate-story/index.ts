@@ -173,9 +173,7 @@ Deno.serve(async (req) => {
         prompt: promptText,
         size: '1024x1024',
         n: 1,
-        style: 'vivid',
-        quality: 'standard',
-        referenced_image_ids: charThumbnails,
+        image: charThumbnails,
       });
       const celapsed = Date.now() - cstart;
       await logPromptMetric({
@@ -200,23 +198,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Devolver solo la información esencial
+    // Devolver la historia generada antes de crear la portada
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        story: { 
-          id: story_id, 
-          title, 
-          pages: paragraphs.length, 
-          cover_url: coverUrl 
-        } 
+      JSON.stringify({
+        story_id,
+        title,
+        paragraphs,
+        pages: paragraphs.length,
+        coverUrl
       }),
-      { 
+      {
         status: 200,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
     );
   } catch (err) {
