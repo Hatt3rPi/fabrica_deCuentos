@@ -106,15 +106,13 @@ const StoryStep: React.FC = () => {
             </h3>
           </div>
           {generated ? (
-            <div className="overflow-auto h-[450px] px-4 py-3 border border-gray-300 rounded-lg bg-white">
-              <h3 className="text-xl font-bold text-purple-700 mb-4">
-                {generated.title}
-              </h3>
-              {generated.paragraphs.map((p, i) => (
-                <p key={i} className="text-gray-700 mb-4">
-                  {p}
-                </p>
-              ))}
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-purple-700">{generated.title}</h3>
+              <textarea
+                readOnly
+                value={generated.paragraphs.join('\n\n')}
+                className="w-full h-[450px] px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 resize-none"
+              />
             </div>
           ) : (
             <textarea
