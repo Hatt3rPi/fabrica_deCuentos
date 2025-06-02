@@ -30,6 +30,10 @@ const StoryStep: React.FC = () => {
       });
       if (result && result.title && Array.isArray(result.paragraphs)) {
         setGenerated(result);
+        setStorySettings({
+          ...storySettings,
+          additionalDetails: result.paragraphs.join('\n\n')
+        });
       } else {
         alert('Respuesta inválida');
       }
