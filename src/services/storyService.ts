@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { Character } from '../types';
 
 /**
  * Deletes a story and optionally its orphan characters using Supabase RPCs.
@@ -75,5 +76,47 @@ export const storyService = {
     }
 
     return await response.json();
+  },
+
+  async getStoryDraft(storyId: string) {
+    const { data: story, error: storyError } = await supabase
+      .from('stories')
+      .select('*')
+      .eq('id', storyId)
+      .single();
+
+    if (storyError) throw storyError;
+
+    const { data: links } = await supabase
+      .from('story_characters')
+      .select('character_id')
+      .eq('story_id', storyId);
+
+    let characters: Character[] = [];
+    if (links && links.length > 0) {
+      const ids = links.map(l => l.character_id);
+      const { data: chars } = await supabase
+        .from('characters')
+        .select('*')
+        .in('id', ids);
+      characters = (chars || []).map(c => ({
+        ...c,
+        thumbnailUrl: c.thumbnail_url,
+      }));
+    }
+
+    const { data: design } = await supabase
+      .from('story_designs')
+      .select('*')
+      .eq('story_id', storyId)
+      .single();
+
+    const { data: pages } = await supabase
+      .from('story_pages')
+      .select('*')
+      .eq('story_id', storyId)
+      .order('page_number');
+
+    return { story, characters, design, pages };
   }
 };
