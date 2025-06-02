@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     await supabaseAdmin.from('stories')
       .update({
         title,
-        status: 'completed',
+        status: 'draft',
       })
       .eq('id', story_id);
 
