@@ -192,34 +192,6 @@ const Sidebar: React.FC = () => {
               </Link>
             </li>
           )}
-          {isAdmin && (
-            <li className="mt-4">
-              <div className="px-4 py-2">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Configuración del Sistema</h3>
-                
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-yellow-800">
-                      ⚠️ ATENCIÓN: Su selección afectará el método de generación de imágenes para TODOS los usuarios del sistema
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  {renderEngineSelector('thumbnail', 'Motor para miniaturas')}
-                  {renderEngineSelector('variations', 'Motor para variaciones')}
-                  {renderEngineSelector('spriteSheet', 'Motor para sprite sheets')}
-                </div>
-
-                {settings && (
-                  <p className="mt-4 text-xs text-gray-500">
-                    Última actualización: {new Date(settings.last_updated).toLocaleString()}
-                  </p>
-                )}
-              </div>
-            </li>
-          )}
         </ul>
       </nav>
 
