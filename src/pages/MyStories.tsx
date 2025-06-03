@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, BookOpen, Pencil, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import { storyService } from '../services/storyService';
 import { useNavigate } from 'react-router-dom';
+import StoryCard from '../components/StoryCard';
 
 interface Story {
   id: string;
@@ -113,60 +114,13 @@ const MyStories: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {stories.map((story) => (
-            <div
+            <StoryCard
               key={story.id}
-              className="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-[1.02]"
-            >
-              <div className="aspect-video bg-gray-100">
-                {story.cover_url ? (
-                  <img
-                    src={story.cover_url}
-                    alt={story.title}
-                    loading="lazy"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full animate-pulse bg-gray-200" />
-                )}
-              </div>
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-800">{story.title}</h3>
-                  {story.status === 'draft' && (
-                    <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
-                      Borrador
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500 mb-4">
-                  {new Date(story.created_at).toLocaleDateString()}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleReadStory(story.id)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    <span>Leer</span>
-                  </button>
-                  {story.status === 'draft' && (
-                    <button
-                      onClick={() => handleContinueStory(story.id)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
-                    >
-                      <Pencil className="w-4 h-4" />
-                      <span>Continuar</span>
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDeleteClick(story)}
-                    className="flex items-center justify-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
+              story={story}
+              onContinue={handleContinueStory}
+              onRead={handleReadStory}
+              onDelete={handleDeleteClick}
+            />
           ))}
         </div>
 
