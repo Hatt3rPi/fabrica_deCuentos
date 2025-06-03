@@ -69,9 +69,9 @@ async function generateImageWithRetry(
         throw new Error(data.error?.message || 'No se pudo generar la imagen');
       } else {
         // Para gpt-image-1, podemos enviar múltiples imágenes de referencia
-        // Agregar todas las imágenes de referencia al formData
+        // Deben enviarse usando el parámetro image[]
         referenceImages.forEach((img, index) => {
-          formData.append('image', img, `reference_${index}.png`);
+          formData.append('image[]', img, `reference_${index}.png`);
         });
         
         const response = await fetch('https://api.openai.com/v1/images/edits', {
