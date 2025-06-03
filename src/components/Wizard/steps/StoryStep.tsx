@@ -4,9 +4,11 @@ import { useWizard } from '../../../context/WizardContext';
 import { ageOptions, messageOptions } from '../../../types';
 import { BookOpen } from 'lucide-react';
 import { storyService } from '../../../services/storyService';
+import { useStory } from '../../../context/StoryContext';
 
 const StoryStep: React.FC = () => {
-  const { characters, storySettings, setStorySettings } = useWizard();
+  const { characters, storySettings, designSettings, setStorySettings } = useWizard();
+  const { generateCover } = useStory();
   const { storyId } = useParams();
   const [isLoading, setIsLoading] = React.useState(false);
   const [generated, setGenerated] = React.useState<{ title: string; paragraphs: string[] } | null>(null);
@@ -30,6 +32,15 @@ const StoryStep: React.FC = () => {
       });
       if (result && result.title && Array.isArray(result.paragraphs)) {
         setGenerated(result);
+        generateCover(
+          storyId!,
+          result.title,
+          {
+            style: designSettings.visualStyle,
+            palette: designSettings.colorPalette,
+            refIds: characters.map(c => c.thumbnailUrl || '').filter(Boolean)
+          }
+        );
       } else {
         alert('Respuesta inválida');
       }

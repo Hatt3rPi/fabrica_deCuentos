@@ -3,8 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AuthProvider } from './context/AuthContext';
 import { AdminProvider } from './context/AdminContext';
 import { WizardProvider } from './context/WizardContext';
+import { StoryProvider } from './context/StoryContext';
 import { useAuth } from './context/AuthContext';
-import Wizard from './components/Wizard/Wizard';
+import StoryCreationWizard from './pages/StoryCreationWizard';
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
 import LoginForm from './components/Auth/LoginForm';
@@ -51,6 +52,7 @@ function AnimatedRoutes() {
 
   return (
     <WizardProvider>
+      <StoryProvider>
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}
@@ -73,7 +75,7 @@ function AnimatedRoutes() {
                   path="/wizard/:storyId"
                   element={
                     <PrivateRoute>
-                      <Wizard />
+                      <StoryCreationWizard />
                     </PrivateRoute>
                   }
                 />
@@ -143,6 +145,7 @@ function AnimatedRoutes() {
           <ToastContainer />
         </motion.div>
       </AnimatePresence>
+      </StoryProvider>
     </WizardProvider>
   );
 }
