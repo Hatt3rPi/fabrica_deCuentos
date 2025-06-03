@@ -73,7 +73,24 @@ Deno.serve(async (req) => {
       }),
     });
     const elapsed = Date.now() - start;
-    const respData = await resp.json();
+    const rawResponse = await resp.text();
+    let respData;
+    try {
+      respData = JSON.parse(rawResponse);
+    } catch (_err) {
+      await logPromptMetric({
+        prompt_id: promptId,
+        modelo_ia: model,
+        tiempo_respuesta_ms: elapsed,
+        estado: 'error',
+        error_type: 'invalid_json',
+        tokens_entrada: 0,
+        tokens_salida: 0,
+        usuario_id: userId,
+      });
+      console.error('Respuesta inválida de OpenAI:', rawResponse.slice(0, 100));
+      throw new Error('Formato de respuesta de OpenAI inválido');
+    }
 
     await logPromptMetric({
       prompt_id: promptId,
@@ -147,15 +164,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    for (let i = 0; i < pages.length; i++) {
-      await supabaseAdmin.from('story_pages').insert({
-        story_id,
-        page_number: i + 1,
-        text: pages[i].texto,
-        image_url: '',
-        prompt: pages[i].prompt,
-      });
-    }
+    const pageRows = pages.map((p, idx) => ({
+      story_id,
+      page_number: idx + 1,
+      text: p.texto,
+      image_url: '',
+      prompt: p.prompt,
+    }));
+    // Insertar también la portada con un placeholder para actualizar luego
+    pageRows.unshift({
+      story_id,
+      page_number: 0,
+      text: title,
+      image_url: '',
+      prompt: '',
+    });
+
+    await supabaseAdmin.from('story_pages').insert(pageRows);
 
     let coverUrl = '';
     const { data: coverRow } = await supabaseAdmin
@@ -200,13 +225,10 @@ Deno.serve(async (req) => {
       });
       if (coverRes.data?.[0]?.url) {
         coverUrl = coverRes.data[0].url;
-        await supabaseAdmin.from('story_pages').insert({
-          story_id,
-          page_number: 0,
-          text: title,
-          image_url: coverUrl,
-          prompt: promptText,
-        });
+        await supabaseAdmin.from('story_pages')
+          .update({ image_url: coverUrl, prompt: promptText })
+          .eq('story_id', story_id)
+          .eq('page_number', 0);
       }
     }
 
