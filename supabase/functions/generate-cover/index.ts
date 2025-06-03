@@ -224,16 +224,33 @@ Deno.serve(async (req) => {
       .getPublicUrl(path);
 
     // Actualizar base de datos
-    await supabaseAdmin.from('story_pages').upsert(
-      {
+    try {
+      const { error: upsertError } = await supabaseAdmin
+        .from('story_pages')
+        .upsert(
+          {
+            story_id,
+            page_number: 0,
+            text: title,
+            image_url: publicUrl,
+            prompt
+          },
+          { onConflict: 'story_id,page_number' }
+        );
+
+      if (upsertError) {
+        throw new Error(`Error al actualizar story_pages: ${upsertError.message}`);
+      }
+
+      console.log('✅ Portada guardada en story_pages correctamente', {
         story_id,
         page_number: 0,
-        text: title,
-        image_url: publicUrl,
-        prompt
-      },
-      { onConflict: 'story_id,page_number' }
-    );
+        image_url: publicUrl
+      });
+    } catch (error) {
+      console.error('Error al actualizar story_pages:', error);
+      throw new Error(`No se pudo guardar la portada en la base de datos: ${error.message}`);
+    }
 
     // Registrar métricas
     const elapsed = Date.now() - startTime;
@@ -246,6 +263,13 @@ Deno.serve(async (req) => {
       tokens_entrada: 0,
       tokens_salida: 0,
       usuario_id: userId,
+    });
+
+    console.log('✅ Portada generada exitosamente', {
+      story_id,
+      image_url: publicUrl,
+      elapsed_time_ms: elapsed,
+      reference_images_used: referenceImages.length
     });
 
     return new Response(
