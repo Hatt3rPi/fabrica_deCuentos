@@ -1,3 +1,15 @@
+> **NOTA PARA EL AGENTE**
+> 
+> Antes de trabajar con cualquier proveedor de IA (ya sea OpenAI, Flux u otros), es **obligatorio** revisar y comprender completamente la documentación oficial del proveedor. Esto incluye pero no se limita a:
+> 
+> 1. **Parámetros admitidos** y sus valores por defecto
+> 2. **Limitaciones y restricciones** del modelo
+> 3. **Mejores prácticas** para la generación de imágenes
+> 4. **Políticas de uso** y restricciones de contenido
+> 5. **Consideraciones de costos** y límites de la API
+> 
+> No asumas el funcionamiento de los parámetros o características sin verificar la documentación correspondiente. Los proveedores actualizan frecuentemente sus APIs y modelos, por lo que es esencial trabajar con la información más reciente.
+
 Image generation
 ================
 
