@@ -41,6 +41,7 @@ const StoryStep: React.FC = () => {
             refIds: characters.map(c => c.thumbnailUrl || '').filter(Boolean)
           }
         );
+
       } else {
         alert('Respuesta inválida');
       }

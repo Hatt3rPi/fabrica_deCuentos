@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useAutosave } from '../hooks/useAutosave';
 import { Character, StorySettings, DesignSettings, WizardState } from '../types';
+import { storyService } from '../services/storyService';
 
 export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'export';
 
@@ -88,32 +89,66 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
 
       try {
-        const { data: story, error } = await supabase
-          .from('stories')
-          .select('*')
-          .eq('id', storyId)
-          .single();
-
-        if (error) throw error;
-
-        if (story) {
-          const savedState = localStorage.getItem(`story_draft_${storyId}`);
-          if (savedState) {
-            setState(JSON.parse(savedState));
-          } else {
-            setState({
-              ...INITIAL_STATE,
-              meta: {
-                title: story.title || '',
-                targetAge: story.target_age || '',
-                literaryStyle: story.literary_style || '',
-                centralMessage: story.central_message || '',
-                additionalDetails: story.additional_details || '',
-                status: story.status
-              }
-            });
-          }
+        const savedState = localStorage.getItem(`story_draft_${storyId}`);
+        if (savedState) {
+          const parsed = JSON.parse(savedState);
+          if (parsed.state) setState(parsed.state);
+          else setState(parsed);
+          if (parsed.currentStep) setCurrentStep(parsed.currentStep);
+          if (parsed.storySettings) setStorySettings(parsed.storySettings);
+          if (parsed.designSettings) setDesignSettings(parsed.designSettings);
+          if (parsed.characters) setCharacters(parsed.characters);
+          if (parsed.generatedPages) setGeneratedPages(parsed.generatedPages);
+          return;
         }
+
+        const draft = await storyService.getStoryDraft(storyId);
+        if (draft.story) {
+          setState({
+            ...INITIAL_STATE,
+            meta: {
+              title: draft.story.title || '',
+              targetAge: draft.story.target_age || '',
+              literaryStyle: draft.story.literary_style || '',
+              centralMessage: draft.story.central_message || '',
+              additionalDetails: draft.story.additional_details || '',
+              status: draft.story.status,
+            },
+          });
+          setStorySettings({
+            theme: '',
+            targetAge: draft.story.target_age || '',
+            literaryStyle: draft.story.literary_style || '',
+            centralMessage: draft.story.central_message || '',
+            additionalDetails: draft.story.additional_details || '',
+          });
+        }
+        if (draft.characters) {
+          setCharacters(draft.characters);
+        }
+        if (draft.design) {
+          setDesignSettings({
+            visualStyle: draft.design.visual_style,
+            colorPalette: draft.design.color_palette,
+          });
+        }
+        if (draft.pages) {
+          const pages = draft.pages.map(p => ({
+            id: p.id,
+            pageNumber: p.page_number,
+            text: p.text,
+            imageUrl: p.image_url,
+            prompt: p.prompt,
+          }));
+          setGeneratedPages(pages);
+        }
+
+        let step: WizardStep = 'characters';
+        if (draft.pages && draft.pages.length > 0) step = 'preview';
+        else if (draft.design) step = 'design';
+        else if (draft.story && draft.story.central_message) step = 'story';
+        else if (draft.characters && draft.characters.length > 0) step = 'story';
+        setCurrentStep(step);
       } catch (error) {
         console.error('Error loading draft:', error);
       }
@@ -156,6 +191,38 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setGeneratedPages([]);
     setIsGenerating(false);
   };
+
+  useEffect(() => {
+    if (!storyId) return;
+    const spreads = generatedPages.map(p => ({
+      page: p.pageNumber,
+      text: p.text,
+      prompt: p.prompt,
+      imageUrl: p.imageUrl,
+    }));
+    const newState: WizardState = {
+      characters,
+      styles: [],
+      spreads,
+      meta: {
+        ...state.meta,
+        targetAge: storySettings.targetAge,
+        literaryStyle: storySettings.literaryStyle,
+        centralMessage: storySettings.centralMessage,
+        additionalDetails: storySettings.additionalDetails,
+      },
+    };
+    setState(newState);
+    const local = {
+      state: newState,
+      currentStep,
+      storySettings,
+      designSettings,
+      characters,
+      generatedPages,
+    };
+    localStorage.setItem(`story_draft_${storyId}`, JSON.stringify(local));
+  }, [storyId, characters, storySettings, designSettings, generatedPages, currentStep]);
 
   const canProceed = (): boolean => {
     switch (currentStep) {
