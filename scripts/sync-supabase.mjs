@@ -162,8 +162,13 @@ async function main() {
       .filter(dirent => dirent.isDirectory() && !dirent.name.startsWith('_'))
       .map(dirent => dirent.name);
 
-    // Obtener lista de funciones remotas
-    const remoteFunctions = await getRemoteFunctions();
+  // Obtener lista de funciones remotas
+  const remoteFunctions = await getRemoteFunctions();
+  // Mezclar hashes almacenados en caché
+  for (const func of remoteFunctions) {
+    const cachedHash = remoteFunctionHashes.get(func.name);
+    if (cachedHash) func.hash = cachedHash;
+  }
     
     // Calcular hashes locales
     const functionHashes = new Map();

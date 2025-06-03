@@ -110,10 +110,25 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { story_id, title, visual_style, color_palette, reference_image_ids } = await req.json();
-    if (!story_id || !title) {
-      throw new Error('Falta story_id o título');
+    const { story_id, visual_style, color_palette, reference_image_ids } = await req.json();
+    if (!story_id) {
+      throw new Error('Falta story_id');
     }
+
+    // Obtener información de la página de portada
+    const { data: coverRow, error: coverError } = await supabaseAdmin
+      .from('story_pages')
+      .select('text, prompt')
+      .eq('story_id', story_id)
+      .eq('page_number', 0)
+      .single();
+
+    if (coverError || !coverRow) {
+      throw new Error('No se encontró la información de la portada');
+    }
+
+    const title = coverRow.text;
+    const coverPrompt = coverRow.prompt || title;
 
     userId = await getUserId(req);
 
@@ -133,13 +148,14 @@ Deno.serve(async (req) => {
       .replace('{estilo}', visual_style || 'acuarela digital')
       .replace('{palette}', color_palette || 'colores vibrantes')
       .replace('{paleta}', color_palette || 'colores vibrantes')
-      .replace('{story}', title)
-      .replace('{historia}', title);
+      .replace('{story}', coverPrompt)
+      .replace('{historia}', coverPrompt);
       
     // Registrar el prompt generado
     console.log('=== PROMPT GENERADO ===');
     console.log(`Story ID: ${story_id}`);
     console.log(`Título: ${title}`);
+    console.log(`Prompt de portada: ${coverPrompt}`);
     console.log(`Estilo visual: ${visual_style || 'No especificado'}`);
     console.log(`Paleta de colores: ${color_palette || 'No especificada'}`);
     console.log('--- Prompt final ---');
@@ -240,7 +256,7 @@ Deno.serve(async (req) => {
     try {
       const { data: updatedRows, error: updateError } = await supabaseAdmin
         .from('story_pages')
-        .update({ image_url: publicUrl, prompt })
+        .update({ image_url: publicUrl })
         .eq('story_id', story_id)
         .eq('page_number', 0)
         .select();
@@ -257,7 +273,7 @@ Deno.serve(async (req) => {
             page_number: 0,
             text: title,
             image_url: publicUrl,
-            prompt
+            prompt: coverPrompt
           });
 
         if (insertError) {
