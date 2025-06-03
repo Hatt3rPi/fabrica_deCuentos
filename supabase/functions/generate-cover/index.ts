@@ -132,6 +132,16 @@ Deno.serve(async (req) => {
       .replace('{style}', visual_style || 'acuarela digital')
       .replace('{palette}', color_palette || 'colores vibrantes')
       .replace('{story}', title);
+      
+    // Registrar el prompt generado
+    console.log('=== PROMPT GENERADO ===');
+    console.log(`Story ID: ${story_id}`);
+    console.log(`Título: ${title}`);
+    console.log(`Estilo visual: ${visual_style || 'No especificado'}`);
+    console.log(`Paleta de colores: ${color_palette || 'No especificada'}`);
+    console.log('--- Prompt final ---');
+    console.log(prompt);
+    console.log('=====================');
 
     // Descargar imágenes de referencia si se proporcionan
     let referenceImages: Blob[] = [];
