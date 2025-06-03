@@ -165,6 +165,12 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Remove existing pages to avoid duplicates if the story is regenerated
+    await supabaseAdmin
+      .from('story_pages')
+      .delete()
+      .eq('story_id', story_id);
+
     const pageRows = pages.map((p, idx) => ({
       story_id,
       page_number: idx + 1,

@@ -109,7 +109,7 @@ export const storyService = {
       .from('story_designs')
       .select('*')
       .eq('story_id', storyId)
-      .single();
+      .maybeSingle();
 
     const { data: pages } = await supabase
       .from('story_pages')

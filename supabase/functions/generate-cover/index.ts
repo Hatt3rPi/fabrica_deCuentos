@@ -116,19 +116,41 @@ Deno.serve(async (req) => {
     }
 
     // Obtener información de la página de portada
-    const { data: coverRow, error: coverError } = await supabaseAdmin
+    const { data: coverRow } = await supabaseAdmin
       .from('story_pages')
       .select('text, prompt')
       .eq('story_id', story_id)
       .eq('page_number', 0)
-      .single();
+      .maybeSingle();
 
-    if (coverError || !coverRow) {
-      throw new Error('No se encontró la información de la portada');
+    let title: string;
+    let coverPrompt: string;
+
+    if (!coverRow) {
+      const { data: story, error: storyError } = await supabaseAdmin
+        .from('stories')
+        .select('title')
+        .eq('id', story_id)
+        .single();
+
+      if (storyError || !story) {
+        throw new Error('No se encontró la información de la portada');
+      }
+
+      title = story.title;
+      coverPrompt = story.title;
+
+      await supabaseAdmin.from('story_pages').insert({
+        story_id,
+        page_number: 0,
+        text: title,
+        image_url: '',
+        prompt: coverPrompt,
+      });
+    } else {
+      title = coverRow.text;
+      coverPrompt = coverRow.prompt || coverRow.text;
     }
-
-    const title = coverRow.text;
-    const coverPrompt = coverRow.prompt || title;
 
     userId = await getUserId(req);
 
