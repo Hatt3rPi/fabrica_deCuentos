@@ -130,8 +130,11 @@ Deno.serve(async (req) => {
 
     const prompt = basePrompt
       .replace('{style}', visual_style || 'acuarela digital')
+      .replace('{estilo}', visual_style || 'acuarela digital')
       .replace('{palette}', color_palette || 'colores vibrantes')
-      .replace('{story}', title);
+      .replace('{paleta}', color_palette || 'colores vibrantes')
+      .replace('{story}', title)
+      .replace('{historia}', title);
       
     // Registrar el prompt generado
     console.log('=== PROMPT GENERADO ===');
@@ -235,21 +238,31 @@ Deno.serve(async (req) => {
 
     // Actualizar base de datos
     try {
-      const { error: upsertError } = await supabaseAdmin
+      const { data: updatedRows, error: updateError } = await supabaseAdmin
         .from('story_pages')
-        .upsert(
-          {
+        .update({ image_url: publicUrl, prompt })
+        .eq('story_id', story_id)
+        .eq('page_number', 0)
+        .select();
+
+      if (updateError) {
+        throw new Error(`Error al actualizar story_pages: ${updateError.message}`);
+      }
+
+      if (!updatedRows || updatedRows.length === 0) {
+        const { error: insertError } = await supabaseAdmin
+          .from('story_pages')
+          .insert({
             story_id,
             page_number: 0,
             text: title,
             image_url: publicUrl,
             prompt
-          },
-          { onConflict: 'story_id,page_number' }
-        );
+          });
 
-      if (upsertError) {
-        throw new Error(`Error al actualizar story_pages: ${upsertError.message}`);
+        if (insertError) {
+          throw new Error(`Error al insertar story_pages: ${insertError.message}`);
+        }
       }
 
       console.log('✅ Portada guardada en story_pages correctamente', {
