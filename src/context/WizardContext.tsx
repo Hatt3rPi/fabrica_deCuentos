@@ -74,8 +74,8 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     additionalDetails: '',
   });
   const [designSettings, setDesignSettings] = useState<DesignSettings>({
-    visualStyle: '',
-    colorPalette: '',
+    visualStyle: 'default',
+    colorPalette: 'pastel_vibrant',
   });
   const [generatedPages, setGeneratedPages] = useState<GeneratedPage[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -185,8 +185,8 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       additionalDetails: '',
     });
     setDesignSettings({
-      visualStyle: '',
-      colorPalette: '',
+      visualStyle: 'default',
+      colorPalette: 'pastel_vibrant',
     });
     setGeneratedPages([]);
     setIsGenerating(false);
