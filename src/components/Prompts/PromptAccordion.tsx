@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import Button from '../UI/Button';
 import { Prompt } from '../../types/prompts';
+import { promptMetadata } from '../../constants/promptMetadata';
 
 interface PromptAccordionProps {
   prompt: Prompt;
@@ -66,6 +67,12 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
             />
           ) : (
             <pre className="whitespace-pre-wrap text-sm">{prompt.content}</pre>
+          )}
+          {promptMetadata[prompt.type] && (
+            <p className="text-xs text-gray-500">
+              Endpoint: <code>{promptMetadata[prompt.type].endpoint}</code> | Modelo:{' '}
+              {promptMetadata[prompt.type].model}
+            </p>
           )}
           <div className="flex justify-end gap-2">
             {isEditing ? (
