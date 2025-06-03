@@ -69,9 +69,9 @@ async function generateImageWithRetry(
         throw new Error(data.error?.message || 'No se pudo generar la imagen');
       } else {
         // Para gpt-image-1, podemos enviar múltiples imágenes de referencia
-        // Agregar todas las imágenes de referencia al formData
+        // Deben enviarse usando el parámetro image[]
         referenceImages.forEach((img, index) => {
-          formData.append('image', img, `reference_${index}.png`);
+          formData.append('image[]', img, `reference_${index}.png`);
         });
         
         const response = await fetch('https://api.openai.com/v1/images/edits', {
@@ -110,10 +110,25 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { story_id, title, visual_style, color_palette, reference_image_ids } = await req.json();
-    if (!story_id || !title) {
-      throw new Error('Falta story_id o título');
+    const { story_id, visual_style, color_palette, reference_image_ids } = await req.json();
+    if (!story_id) {
+      throw new Error('Falta story_id');
     }
+
+    // Obtener información de la página de portada
+    const { data: coverRow, error: coverError } = await supabaseAdmin
+      .from('story_pages')
+      .select('text, prompt')
+      .eq('story_id', story_id)
+      .eq('page_number', 0)
+      .single();
+
+    if (coverError || !coverRow) {
+      throw new Error('No se encontró la información de la portada');
+    }
+
+    const title = coverRow.text;
+    const coverPrompt = coverRow.prompt || title;
 
     userId = await getUserId(req);
 
@@ -130,13 +145,17 @@ Deno.serve(async (req) => {
 
     const prompt = basePrompt
       .replace('{style}', visual_style || 'acuarela digital')
+      .replace('{estilo}', visual_style || 'acuarela digital')
       .replace('{palette}', color_palette || 'colores vibrantes')
-      .replace('{story}', title);
+      .replace('{paleta}', color_palette || 'colores vibrantes')
+      .replace('{story}', coverPrompt)
+      .replace('{historia}', coverPrompt);
       
     // Registrar el prompt generado
     console.log('=== PROMPT GENERADO ===');
     console.log(`Story ID: ${story_id}`);
     console.log(`Título: ${title}`);
+    console.log(`Prompt de portada: ${coverPrompt}`);
     console.log(`Estilo visual: ${visual_style || 'No especificado'}`);
     console.log(`Paleta de colores: ${color_palette || 'No especificada'}`);
     console.log('--- Prompt final ---');
@@ -235,21 +254,31 @@ Deno.serve(async (req) => {
 
     // Actualizar base de datos
     try {
-      const { error: upsertError } = await supabaseAdmin
+      const { data: updatedRows, error: updateError } = await supabaseAdmin
         .from('story_pages')
-        .upsert(
-          {
+        .update({ image_url: publicUrl })
+        .eq('story_id', story_id)
+        .eq('page_number', 0)
+        .select();
+
+      if (updateError) {
+        throw new Error(`Error al actualizar story_pages: ${updateError.message}`);
+      }
+
+      if (!updatedRows || updatedRows.length === 0) {
+        const { error: insertError } = await supabaseAdmin
+          .from('story_pages')
+          .insert({
             story_id,
             page_number: 0,
             text: title,
             image_url: publicUrl,
-            prompt
-          },
-          { onConflict: 'story_id,page_number' }
-        );
+            prompt: coverPrompt
+          });
 
-      if (upsertError) {
-        throw new Error(`Error al actualizar story_pages: ${upsertError.message}`);
+        if (insertError) {
+          throw new Error(`Error al insertar story_pages: ${insertError.message}`);
+        }
       }
 
       console.log('✅ Portada guardada en story_pages correctamente', {

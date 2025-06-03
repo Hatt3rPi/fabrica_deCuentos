@@ -132,6 +132,7 @@ Deno.serve(async (req) => {
 
     const title = result.titulo;
     const paginas = result.paginas;
+    const coverPromptBase = result.portada?.prompt || '';
 
     // Extraer texto y prompt por página en orden
     const pages = Object.entries(paginas)
@@ -177,7 +178,7 @@ Deno.serve(async (req) => {
       page_number: 0,
       text: title,
       image_url: '',
-      prompt: '',
+      prompt: coverPromptBase,
     });
 
     await supabaseAdmin.from('story_pages').insert(pageRows);
@@ -226,7 +227,7 @@ Deno.serve(async (req) => {
       if (coverRes.data?.[0]?.url) {
         coverUrl = coverRes.data[0].url;
         await supabaseAdmin.from('story_pages')
-          .update({ image_url: coverUrl, prompt: promptText })
+          .update({ image_url: coverUrl })
           .eq('story_id', story_id)
           .eq('page_number', 0);
       }
