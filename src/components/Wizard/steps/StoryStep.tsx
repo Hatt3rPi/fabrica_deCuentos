@@ -1,13 +1,19 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useWizard } from '../../../context/WizardContext';
-import { ageOptions, messageOptions } from '../../../types';
 import { BookOpen } from 'lucide-react';
 import { storyService } from '../../../services/storyService';
 import { useStory } from '../../../context/StoryContext';
 
 const StoryStep: React.FC = () => {
-  const { characters, storySettings, designSettings, setStorySettings } = useWizard();
+  const {
+    characters,
+    storySettings,
+    designSettings,
+    setStorySettings,
+    setGeneratedPages,
+    setIsGenerating,
+  } = useWizard();
   const { generateCover } = useStory();
   const { storyId } = useParams();
   const [isLoading, setIsLoading] = React.useState(false);
@@ -22,6 +28,7 @@ const StoryStep: React.FC = () => {
 
   const handleGenerate = async () => {
     setIsLoading(true);
+    setIsGenerating(true);
     setGenerated(null);
     try {
       const result = await storyService.generateStory({
@@ -32,7 +39,18 @@ const StoryStep: React.FC = () => {
       });
       if (result && result.title && Array.isArray(result.paragraphs)) {
         setGenerated(result);
-        generateCover(
+        const draft = await storyService.getStoryDraft(storyId!);
+        if (draft.pages) {
+          const mapped = draft.pages.map(p => ({
+            id: p.id,
+            pageNumber: p.page_number,
+            text: p.text,
+            imageUrl: p.image_url,
+            prompt: p.prompt,
+          }));
+          setGeneratedPages(mapped);
+        }
+        await generateCover(
           storyId!,
           result.title,
           {
@@ -50,6 +68,7 @@ const StoryStep: React.FC = () => {
       alert('No fue posible generar la historia');
     } finally {
       setIsLoading(false);
+      setIsGenerating(false);
     }
   };
 

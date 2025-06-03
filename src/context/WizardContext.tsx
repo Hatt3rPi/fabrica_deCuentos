@@ -241,7 +241,8 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           storySettings.theme !== '' &&
           storySettings.targetAge !== '' &&
           storySettings.literaryStyle !== '' &&
-          storySettings.centralMessage !== ''
+          storySettings.centralMessage !== '' &&
+          generatedPages.length > 0
         );
       case 'design':
         return designSettings.visualStyle !== '' && designSettings.colorPalette !== '';
