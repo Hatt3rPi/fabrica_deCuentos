@@ -237,13 +237,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           return name !== '' && description !== '' && c.thumbnailUrl !== null;
         });
       case 'story':
-        return (
-          storySettings.theme !== '' &&
-          storySettings.targetAge !== '' &&
-          storySettings.literaryStyle !== '' &&
-          storySettings.centralMessage !== '' &&
-          generatedPages.length > 0
-        );
+        // The "story" step now only requires the story text and cover
+        // generation to be completed, which is represented by having
+        // generated pages available.
+        return generatedPages.length > 0;
       case 'design':
         return designSettings.visualStyle !== '' && designSettings.colorPalette !== '';
       case 'preview':
