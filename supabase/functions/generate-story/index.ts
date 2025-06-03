@@ -115,12 +115,17 @@ Deno.serve(async (req) => {
 
     const title = result.titulo;
     const paginas = result.paginas;
-    
-    // Extraer los párrafos en orden
-    const paragraphs = Object.entries(paginas)
+
+    // Extraer texto y prompt por página en orden
+    const pages = Object.entries(paginas)
       .sort(([a], [b]) => parseInt(a) - parseInt(b))
-      .map(([_, page]: [string, any]) => page?.texto)
-      .filter(Boolean);
+      .map(([_, page]: [string, any]) => ({
+        texto: page?.texto,
+        prompt: page?.prompt || '',
+      }))
+      .filter(p => !!p.texto);
+
+    const paragraphs = pages.map(p => p.texto as string);
 
     if (paragraphs.length === 0) {
       throw new Error('La historia generada no contiene párrafos válidos');
@@ -142,13 +147,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    for (let i = 0; i < paragraphs.length; i++) {
+    for (let i = 0; i < pages.length; i++) {
       await supabaseAdmin.from('story_pages').insert({
         story_id,
         page_number: i + 1,
-        text: paragraphs[i],
+        text: pages[i].texto,
         image_url: '',
-        prompt: '',
+        prompt: pages[i].prompt,
       });
     }
 
