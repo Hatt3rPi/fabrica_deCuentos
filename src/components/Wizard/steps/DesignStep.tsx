@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
+import { useStory } from '../../../context/StoryContext';
+import { useParams } from 'react-router-dom';
 import { visualStyleOptions, colorPaletteOptions } from '../../../types';
 import { Palette, Brush } from 'lucide-react';
 import { characterService } from '../../../services/characterService';
@@ -25,7 +27,10 @@ const FALLBACK_IMAGES: Record<string, string> = {
 
 const DesignStep: React.FC = () => {
   const { designSettings, setDesignSettings, characters } = useWizard();
+  const { covers } = useStory();
+  const { storyId } = useParams();
   const [images, setImages] = useState<Record<string, string>>({});
+  const coverState = storyId ? covers[storyId] : undefined;
 
   useEffect(() => {
     const load = async () => {
@@ -138,7 +143,7 @@ const DesignStep: React.FC = () => {
           <div className="aspect-square rounded-lg overflow-hidden bg-white shadow-md flex items-center justify-center">
             {designSettings.visualStyle ? (
               <img
-                src={images[STYLE_TO_KEY[designSettings.visualStyle]] || FALLBACK_IMAGES[designSettings.visualStyle]}
+                src={coverState?.url || images[STYLE_TO_KEY[designSettings.visualStyle]] || FALLBACK_IMAGES[designSettings.visualStyle]}
                 alt="Vista previa"
                 className="w-full h-full object-cover"
               />
