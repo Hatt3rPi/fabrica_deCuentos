@@ -77,6 +77,7 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
             id: currentStoryId,
             user_id: user.id,
             title: state.meta.title,
+            theme: state.meta.theme,
             target_age: state.meta.targetAge,
             literary_style: state.meta.literaryStyle,
             central_message: state.meta.centralMessage,
