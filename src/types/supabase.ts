@@ -293,6 +293,7 @@ export type Database = {
           loaders: Json | null
           status: string
           target_age: string | null
+          theme: string | null
           title: string
           updated_at: string | null
           user_id: string
@@ -307,6 +308,7 @@ export type Database = {
           loaders?: Json | null
           status?: string
           target_age?: string | null
+          theme?: string | null
           title: string
           updated_at?: string | null
           user_id: string
@@ -321,6 +323,7 @@ export type Database = {
           loaders?: Json | null
           status?: string
           target_age?: string | null
+          theme?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string

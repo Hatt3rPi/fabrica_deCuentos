@@ -442,5 +442,20 @@ List of Kontext parameters for image editing via the `/flux-kontext-pro` endpoin
 | `seed`             | Optional seed for reproducibility             | None     | Any integer   |
 | `safety_tolerance` | Moderation level (0=strict, 6=permissive)     | 2        | 0-6           |
 | `output_format`    | Format of the output image                    | "jpeg"   | "jpeg", "png" |
-| `webhook_url`      | URL for asynchronous completion notification  | None     | Valid URL     |
-| `webhook_secret`   | Secret for webhook signature verification     | None     | String        |
+| `safety_filter`    | Whether to apply safety filters              | true     | boolean       |
+| `store`            | Whether to store the generated image        | true     | boolean       |
+
+## Referencia de la API
+
+Para una documentación más detallada de la API de Flux, incluyendo todos los endpoints disponibles, parámetros y esquemas de solicitud/respuesta, consulta el [Cookbook de la API de Flux](./Cookbook.md).
+
+La documentación completa incluye:
+
+- Especificación OpenAPI 3.1.0 completa
+- Descripción detallada de todos los endpoints
+- Esquemas de solicitud y respuesta
+- Códigos de estado HTTP
+- Esquemas de autenticación
+- Ejemplos de solicitudes y respuestas
+
+Esta documentación es especialmente útil para desarrolladores que necesitan integrar la API de Flux en sus aplicaciones o para entender en profundidad las capacidades del sistema.
