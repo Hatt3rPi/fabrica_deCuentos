@@ -52,6 +52,7 @@ const INITIAL_STATE: WizardState = {
   meta: {
     title: '',
     synopsis: '',
+    theme: '',
     targetAge: '',
     literaryStyle: '',
     centralMessage: '',
@@ -132,6 +133,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             ...INITIAL_STATE,
             meta: {
               title: draft.story.title || '',
+              theme: draft.story.theme || '',
               targetAge: draft.story.target_age || '',
               literaryStyle: draft.story.literary_style || '',
               centralMessage: draft.story.central_message || '',
@@ -140,7 +142,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             },
           });
           setStorySettings({
-            theme: '',
+            theme: draft.story.theme || '',
             targetAge: draft.story.target_age || '',
             literaryStyle: draft.story.literary_style || '',
             centralMessage: draft.story.central_message || '',
@@ -265,6 +267,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       spreads,
       meta: {
         ...state.meta,
+        theme: storySettings.theme,
         targetAge: storySettings.targetAge,
         literaryStyle: storySettings.literaryStyle,
         centralMessage: storySettings.centralMessage,
