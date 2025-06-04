@@ -13,6 +13,15 @@ export interface EstadoFlujo {
   vistaPrevia: EtapaEstado;
 }
 
+const logEstado = (estado: EstadoFlujo, accion: string) => {
+  console.log(`[WizardFlow] ${accion}`, {
+    personajes: estado.personajes.estado,
+    cuento: estado.cuento,
+    diseno: estado.diseno,
+    vistaPrevia: estado.vistaPrevia,
+  });
+};
+
 interface WizardFlowStore {
   estado: EstadoFlujo;
   setPersonajes: (count: number) => void;
@@ -46,6 +55,7 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
               nuevoEstado.cuento = 'borrador';
             }
           }
+          logEstado(nuevoEstado, 'setPersonajes');
           return { estado: nuevoEstado };
         }),
       avanzarEtapa: (etapa) =>
@@ -71,6 +81,7 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
               nuevoEstado.vistaPrevia = 'borrador';
             }
           }
+          logEstado(nuevoEstado, 'avanzarEtapa');
           return { estado: nuevoEstado };
         }),
       regresarEtapa: (etapa) =>
@@ -83,9 +94,13 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
           } else if (etapa === 'vistaPrevia') {
             nuevoEstado.vistaPrevia = 'borrador';
           }
+          logEstado(nuevoEstado, 'regresarEtapa');
           return { estado: nuevoEstado };
         }),
-      resetEstado: () => set({ estado: initialState })
+      resetEstado: () => {
+        logEstado(initialState, 'resetEstado');
+        set({ estado: initialState });
+      }
     }),
     {
       name: 'wizard-flow-store'

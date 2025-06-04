@@ -101,6 +101,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return;
       }
 
+      console.log('[WizardFlow] loadDraft inicio');
       try {
         const savedState = localStorage.getItem(`story_draft_${storyId}`);
         if (savedState) {
@@ -112,6 +113,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           if (parsed.designSettings) setDesignSettings(parsed.designSettings);
           if (parsed.characters) setCharacters(parsed.characters);
           if (parsed.generatedPages) setGeneratedPages(parsed.generatedPages);
+          console.log('[WizardFlow] borrador local cargado', useWizardFlowStore.getState().estado);
           return;
         }
 
@@ -156,6 +158,8 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           setGeneratedPages(pages);
         }
 
+        console.log('[WizardFlow] borrador remoto cargado', useWizardFlowStore.getState().estado);
+
         let step: WizardStep = 'characters';
         if (draft.pages && draft.pages.length > 0) step = 'preview';
         else if (draft.design) step = 'design';
@@ -174,6 +178,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           avanzarEtapa('cuento');
           avanzarEtapa('diseno');
         }
+        console.log('[WizardFlow] estado tras load', useWizardFlowStore.getState().estado);
       } catch (error) {
         console.error('Error loading draft:', error);
       }
@@ -218,6 +223,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
     setGeneratedPages([]);
     setIsGenerating(false);
+    console.log('[WizardFlow] resetWizard', useWizardFlowStore.getState().estado);
   };
 
   useEffect(() => {
