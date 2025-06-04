@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { WizardState } from '../types';
+import { WizardState, EstadoFlujo } from '../types';
 
 const AUTOSAVE_DELAY = 1000; // 1 second delay between saves
 const MAX_RETRIES = 3;
@@ -11,7 +11,11 @@ const isValidUUID = (uuid: string) => {
   return uuidRegex.test(uuid);
 };
 
-export const useAutosave = (state: WizardState, initialStoryId: string | null) => {
+export const useAutosave = (
+  state: WizardState,
+  flow: EstadoFlujo,
+  initialStoryId: string | null,
+) => {
   const { supabase, user } = useAuth();
   const timeoutRef = useRef<number>();
   const retryCountRef = useRef(0);
@@ -45,7 +49,10 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
 
       try {
         // Save to localStorage first as backup
-        localStorage.setItem(`story_draft_${currentStoryId}`, JSON.stringify(state));
+        localStorage.setItem(
+          `story_draft_${currentStoryId}`,
+          JSON.stringify({ state, flow }),
+        );
 
         // Save characters to characters table
         if (state.characters.length > 0) {
@@ -82,6 +89,7 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
             literary_style: state.meta.literaryStyle,
             central_message: state.meta.centralMessage,
             additional_details: state.meta.additionalDetails,
+            wizard_state: flow,
             updated_at: new Date().toISOString(),
             status: 'draft'
           })
@@ -99,7 +107,7 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
           // Save to localStorage backup before retrying
           localStorage.setItem(
             `story_draft_${currentStoryId}_backup`,
-            JSON.stringify({ state, timestamp: Date.now() })
+            JSON.stringify({ state, flow, timestamp: Date.now() })
           );
           
           // Increment retry count
@@ -123,7 +131,7 @@ export const useAutosave = (state: WizardState, initialStoryId: string | null) =
     return () => {
       clearTimeout(timeoutRef.current);
     };
-  }, [state, supabase, user]);
+  }, [state, flow, supabase, user]);
 
   // Cleanup storyId on unmount
   useEffect(() => {

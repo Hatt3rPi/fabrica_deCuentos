@@ -89,7 +89,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [generatedPages, setGeneratedPages] = useState<GeneratedPage[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-  useAutosave(state, storyId || null);
+  useAutosave(state, estado, storyId || null);
 
   // Mantener sincronizado el conteo de personajes en el store de flujo
   useEffect(() => {
@@ -120,7 +120,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           if (parsed.designSettings) setDesignSettings(parsed.designSettings);
           if (parsed.characters) setCharacters(parsed.characters);
           if (parsed.generatedPages) setGeneratedPages(parsed.generatedPages);
-          const estadoActual = useWizardFlowStore.getState().estado;
+          if (parsed.flow) {
+            useWizardFlowStore.setState({ estado: parsed.flow });
+          }
+          const estadoActual = parsed.flow || useWizardFlowStore.getState().estado;
           const step = stepFromEstado(estadoActual);
           setCurrentStep(step);
           console.log('[WizardFlow] borrador local cargado', estadoActual);
@@ -148,6 +151,9 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             centralMessage: draft.story.central_message || '',
             additionalDetails: draft.story.additional_details || '',
           });
+          if (draft.story.wizard_state) {
+            useWizardFlowStore.setState({ estado: draft.story.wizard_state });
+          }
         }
         if (draft.characters) {
           setCharacters(draft.characters);
@@ -171,28 +177,12 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         console.log('[WizardFlow] borrador remoto cargado', useWizardFlowStore.getState().estado);
 
-        let step: WizardStep = 'characters';
-        if (draft.pages && draft.pages.length > 0) step = 'preview';
-        else if (draft.design) step = 'design';
-        else if (draft.story && draft.story.central_message) step = 'story';
-        else if (draft.characters && draft.characters.length > 0) step = 'story';
-        setCurrentStep(step);
-
         if (draft.characters) setPersonajes(draft.characters.length);
-        if (step === 'story') {
-          avanzarEtapa('personajes');
-        } else if (step === 'design') {
-          avanzarEtapa('personajes');
-          avanzarEtapa('cuento');
-        } else if (step === 'preview') {
-          avanzarEtapa('personajes');
-          avanzarEtapa('cuento');
-          avanzarEtapa('diseno');
-        }
-        const nuevoEstado = useWizardFlowStore.getState().estado;
-        const next = stepFromEstado(nuevoEstado);
+
+        const current = draft.story.wizard_state || useWizardFlowStore.getState().estado;
+        const next = stepFromEstado(current);
         setCurrentStep(next);
-        console.log('[WizardFlow] estado tras load', nuevoEstado);
+        console.log('[WizardFlow] estado tras load', current);
       } catch (error) {
         console.error('Error loading draft:', error);
       }
@@ -277,6 +267,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setState(newState);
     const local = {
       state: newState,
+      flow: estado,
       currentStep,
       storySettings,
       designSettings,
