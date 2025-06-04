@@ -27,6 +27,7 @@ interface WizardFlowStore {
   setPersonajes: (count: number) => void;
   avanzarEtapa: (etapa: keyof EstadoFlujo) => void;
   regresarEtapa: (etapa: keyof EstadoFlujo) => void;
+  setEstadoCompleto: (estado: EstadoFlujo) => void;
   resetEstado: () => void;
 }
 
@@ -39,7 +40,7 @@ const initialState: EstadoFlujo = {
 
 export const useWizardFlowStore = create<WizardFlowStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       estado: initialState,
       setPersonajes: (count) =>
         set((state) => {
@@ -57,6 +58,11 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
           }
           logEstado(nuevoEstado, 'setPersonajes');
           return { estado: nuevoEstado };
+        }),
+      setEstadoCompleto: (nuevo) =>
+        set(() => {
+          logEstado(nuevo, 'setEstadoCompleto');
+          return { estado: nuevo };
         }),
       avanzarEtapa: (etapa) =>
         set((state) => {

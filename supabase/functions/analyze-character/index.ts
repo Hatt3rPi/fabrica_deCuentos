@@ -91,6 +91,7 @@ Deno.serve(async (req)=>{
   let start = 0;
   let promptId: string | undefined;
   let userId: string | null = null;
+  let apiModel = '';
   try {
     const { imageUrl, name, age, description: sanitizedNotes } = await req.json();
     if (!imageUrl) {
@@ -103,7 +104,7 @@ Deno.serve(async (req)=>{
       .single();
     const analysisPrompt = promptRow?.content || '';
     const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/chat/completions';
-    const apiModel = promptRow?.model || 'gpt-4-turbo';
+    apiModel = promptRow?.model || 'gpt-4-turbo';
     if (promptRow?.id) {
       promptId = promptRow.id;
     }

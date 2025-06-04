@@ -109,6 +109,7 @@ Deno.serve(async (req) => {
 
   let promptId: string | undefined;
   let userId: string | null = null;
+  let apiModel = '';
   const startTime = Date.now();
 
   try {
@@ -165,7 +166,7 @@ Deno.serve(async (req) => {
       
     const basePrompt = promptRow?.content || '';
     const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/images/generations';
-    const apiModel = promptRow?.model || 'gpt-image-1';
+    apiModel = promptRow?.model || 'gpt-image-1';
     promptId = promptRow?.id;
     if (!basePrompt) throw new Error('No se encontró el prompt');
 

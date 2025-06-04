@@ -89,6 +89,7 @@ export interface WizardState {
   meta: {
     title: string;
     synopsis: string;
+    theme: string;
     targetAge: string;
     literaryStyle: string;
     centralMessage: string;

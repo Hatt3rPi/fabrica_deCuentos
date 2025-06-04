@@ -297,6 +297,7 @@ export type Database = {
           title: string
           updated_at: string | null
           user_id: string
+          wizard_state: Json | null
         }
         Insert: {
           additional_details?: string | null
@@ -312,6 +313,7 @@ export type Database = {
           title: string
           updated_at?: string | null
           user_id: string
+          wizard_state?: Json | null
         }
         Update: {
           additional_details?: string | null
@@ -327,6 +329,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+          wizard_state?: Json | null
         }
         Relationships: []
       }

@@ -10,6 +10,7 @@ const StoryStep: React.FC = () => {
     characters,
     storySettings,
     designSettings,
+    generatedPages,
     setStorySettings,
     setGeneratedPages,
     setIsGenerating,
@@ -18,6 +19,16 @@ const StoryStep: React.FC = () => {
   const { storyId } = useParams();
   const [isLoading, setIsLoading] = React.useState(false);
   const [generated, setGenerated] = React.useState<{ title: string; paragraphs: string[] } | null>(null);
+
+  React.useEffect(() => {
+    if (!generated && generatedPages && generatedPages.length > 0) {
+      const paragraphs = generatedPages
+        .filter(p => p.pageNumber > 0)
+        .map(p => p.text);
+      const cover = generatedPages.find(p => p.pageNumber === 0);
+      setGenerated({ title: cover ? cover.text : '', paragraphs });
+    }
+  }, [generatedPages, generated]);
 
   const characterNames = characters.map(c => c.name).join(' y ');
   const suggestions = [

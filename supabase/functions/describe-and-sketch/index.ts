@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
 
   let promptId: string | undefined;
   let userId: string | null = null;
+  let apiModel = '';
 
   try {
 
@@ -79,7 +80,7 @@ Deno.serve(async (req) => {
       .single();
     const characterPrompt = promptRow?.content || '';
     const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/images/edits';
-    const apiModel = promptRow?.model || 'gpt-image-1';
+    apiModel = promptRow?.model || 'gpt-image-1';
     promptId = promptRow?.id;
     if (!characterPrompt) throw new Error('Falta el prompt de generación de personaje');
 
