@@ -162,7 +162,7 @@ image.save('gato_astronauta.png')
 | Proveedor | Endpoints | Modelos |
 |-----------|-----------|---------|
 | **OpenAI** | `/v1/images/generations`, `/v1/images/edits`, `/v1/images/variations` | `gpt-image-1`, `dall-e-3`, `dall-e-2` |
-| **Flux** | `/v1/flux-kontext-pro`, `/v1/get_result` | `flux-kontext-pro` |
+| **Flux** | `/v1/flux-pro*`, `/v1/flux-kontext-pro`, `/v1/flux-kontext-max`, `/v1/flux-dev`, `/v1/get_result` | `flux-pro*`, `flux-kontext-pro`, `flux-kontext-max`, `flux-dev` |
 | **Stable Diffusion** | `http://localhost:7860` | `stable-diffusion-3.5` |
 
 ## Recomendaciones
