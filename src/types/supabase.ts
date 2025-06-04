@@ -280,6 +280,7 @@ export type Database = {
           created_at: string | null
           id: string
           literary_style: string | null
+          loader: Json | null
           status: string
           target_age: string | null
           title: string
@@ -292,6 +293,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           literary_style?: string | null
+          loader?: Json | null
           status?: string
           target_age?: string | null
           title: string
@@ -304,6 +306,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           literary_style?: string | null
+          loader?: Json | null
           status?: string
           target_age?: string | null
           title?: string

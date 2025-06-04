@@ -132,6 +132,7 @@ Deno.serve(async (req) => {
 
     const title = result.titulo;
     const paginas = result.paginas;
+    const loaderMessages = result.loader || result.loaders || null;
     const coverPromptBase = result.portada?.prompt || '';
 
     // Extraer texto y prompt por página en orden
@@ -153,6 +154,7 @@ Deno.serve(async (req) => {
       .update({
         title,
         status: 'draft',
+        loader: loaderMessages,
       })
       .eq('id', story_id);
 

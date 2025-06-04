@@ -43,3 +43,5 @@ cover so the characters match their thumbnails. All images are produced with
 The function stores the generated title in `stories`, creates nine records in
 `story_pages` (page 0 is the cover) and links the provided characters using the
 `link_character_to_story` RPC.
+If the prompt returns loader messages, they are saved as JSON in the
+`stories.loader` column for future use.
