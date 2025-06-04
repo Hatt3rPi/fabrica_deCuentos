@@ -95,6 +95,13 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setPersonajes(characters.length);
   }, [characters, setPersonajes]);
 
+  const stepFromEstado = (estado: EstadoFlujo): WizardStep => {
+    if (estado.personajes.estado !== 'completado') return 'characters';
+    if (estado.cuento !== 'completado') return 'story';
+    if (estado.diseno !== 'completado') return 'design';
+    return 'preview';
+  };
+
   useEffect(() => {
     const loadDraft = async () => {
       if (!storyId || !user) {
@@ -108,12 +115,14 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           const parsed = JSON.parse(savedState);
           if (parsed.state) setState(parsed.state);
           else setState(parsed);
-          if (parsed.currentStep) setCurrentStep(parsed.currentStep);
           if (parsed.storySettings) setStorySettings(parsed.storySettings);
           if (parsed.designSettings) setDesignSettings(parsed.designSettings);
           if (parsed.characters) setCharacters(parsed.characters);
           if (parsed.generatedPages) setGeneratedPages(parsed.generatedPages);
-          console.log('[WizardFlow] borrador local cargado', useWizardFlowStore.getState().estado);
+          const estadoActual = useWizardFlowStore.getState().estado;
+          const step = stepFromEstado(estadoActual);
+          setCurrentStep(step);
+          console.log('[WizardFlow] borrador local cargado', estadoActual);
           return;
         }
 
@@ -178,7 +187,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           avanzarEtapa('cuento');
           avanzarEtapa('diseno');
         }
-        console.log('[WizardFlow] estado tras load', useWizardFlowStore.getState().estado);
+        const nuevoEstado = useWizardFlowStore.getState().estado;
+        const next = stepFromEstado(nuevoEstado);
+        setCurrentStep(next);
+        console.log('[WizardFlow] estado tras load', nuevoEstado);
       } catch (error) {
         console.error('Error loading draft:', error);
       }
