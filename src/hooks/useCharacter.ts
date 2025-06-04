@@ -22,6 +22,8 @@ export const useCharacter = () => {
 
   const generateAdditionalThumbnails = async (character: Character) => {
     if (!user || !character.thumbnailUrl) return;
+    // Skip thumbnail variants for the Cypress test user to save tokens
+    if (user.email === 'tester@lacuenteria.cl') return;
     try {
       const types = STYLE_MAP.map((s) => s.type);
       const prompts = await promptService.getPromptsByTypes(types);
