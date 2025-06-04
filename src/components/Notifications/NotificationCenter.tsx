@@ -173,10 +173,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-[80vh] flex flex-col max-w-[calc(100vw-2rem)]" data-testid="notification-center">
+    <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-h-[80vh] flex flex-col max-w-[calc(100vw-2rem)]" data-testid="notification-center">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Notificaciones</h2>
+      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-gray-800">Notificaciones</h2>
         <div className="flex space-x-2">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
@@ -201,7 +201,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
 
       {/* Filter panel */}
       {isFilterOpen && (
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
           <div className="flex flex-col space-y-3">
             <div className="relative">
               <input
@@ -260,7 +260,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
       </div>
 
       {/* Actions */}
-      <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700">
+      <div className="p-3 border-b border-gray-200 flex justify-between items-center bg-gray-50">
         <div className="flex items-center">
           <input
             type="checkbox"
@@ -324,7 +324,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
           <div>
             {groupedNotifications.map((group) => (
               <div key={group.date} className="mb-2">
-                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-xs font-medium text-gray-500 dark:text-gray-300">
+                <div className="px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500">
                   {group.date}
                 </div>
                 {group.notifications
@@ -335,8 +335,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
                   .map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 ${
-                        !notification.read ? 'bg-purple-50 dark:bg-purple-900' : ''
+                      className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 ${
+                        !notification.read ? 'bg-purple-50' : ''
                       }`}
                     >
                       <div className="flex items-start">
@@ -404,10 +404,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
       </div>
 
       {/* Footer */}
-      <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-center">
+      <div className="p-3 border-t border-gray-200 bg-gray-50 text-center">
         <a
           href="/configuracion/notificaciones"
-          className="text-sm text-purple-600 hover:text-purple-800 dark:text-purple-400"
+          className="text-sm text-purple-600 hover:text-purple-800"
           onClick={(e) => {
             e.preventDefault();
             // Navigate to notification settings

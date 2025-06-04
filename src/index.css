@@ -43,14 +43,8 @@
 @media (max-width: 640px) {
   .notification-panel-container {
     width: calc(100vw - 2rem) !important;
-    margin-right: 1rem;
+    margin-left: 1rem;
   }
-}
-
-.toast-container {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 
 /* Set a default header height for tests */
