@@ -1,13 +1,13 @@
 import React from 'react';
 import { Moon, Sun } from 'lucide-react';
-import { useProfileStore } from '../../stores/profileStore';
+import { useTheme } from '../../context/ThemeContext';
 
 const ThemeToggle: React.FC = () => {
-  const { profile, updateTheme } = useProfileStore();
-  const isDarkMode = profile?.theme_preference === 'dark';
+  const { theme, toggleTheme } = useTheme();
+  const isDarkMode = theme === 'dark';
   
-  const toggleTheme = () => {
-    updateTheme(isDarkMode ? 'light' : 'dark');
+  const handleThemeToggle = async () => {
+    await toggleTheme();
   };
   
   return (
@@ -16,7 +16,7 @@ const ThemeToggle: React.FC = () => {
       
       <div className="flex items-center gap-3">
         <button
-          onClick={toggleTheme}
+          onClick={handleThemeToggle}
           className={`p-2 rounded-full transition-colors ${
             !isDarkMode 
               ? 'bg-purple-100 text-purple-600' 
@@ -28,14 +28,14 @@ const ThemeToggle: React.FC = () => {
         </button>
         
         <div className="w-14 h-7 flex items-center bg-gray-300 dark:bg-gray-600 rounded-full p-1 cursor-pointer"
-          onClick={toggleTheme}>
+          onClick={handleThemeToggle}>
           <div className={`bg-white dark:bg-gray-800 h-5 w-5 rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${
             isDarkMode ? 'translate-x-7' : ''
           }`} />
         </div>
         
         <button
-          onClick={toggleTheme}
+          onClick={handleThemeToggle}
           className={`p-2 rounded-full transition-colors ${
             isDarkMode 
               ? 'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300' 

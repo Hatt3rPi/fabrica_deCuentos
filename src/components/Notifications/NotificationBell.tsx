@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 import NotificationCenter from './NotificationCenter';
 
@@ -72,11 +74,48 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
         )}
       </button>
 
-      {isOpen && (
-        <div className="fixed right-0 top-[calc(var(--header-height,4rem))] mt-0 w-80 sm:w-96 z-50 notification-panel-container" data-testid="notification-panel">
-          <NotificationCenter onClose={() => setIsOpen(false)} />
-        </div>
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Overlay para móvil */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              onClick={() => setIsOpen(false)}
+            />
+            
+            {/* Panel de notificaciones */}
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', ease: 'easeInOut' }}
+              className="fixed right-0 top-0 h-screen w-72 sm:w-80 bg-white dark:bg-gray-800 shadow-xl z-50 flex flex-col"
+              data-testid="notification-panel"
+            >
+              {/* Header móvil */}
+              <div className="lg:hidden p-4 border-b border-gray-200 dark:border-gray-700 flex items-center">
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 mr-2"
+                  aria-label="Cerrar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Notificaciones</h2>
+              </div>
+              
+              {/* Contenido */}
+              <div className="flex-1 overflow-y-auto">
+                <NotificationCenter onClose={() => setIsOpen(false)} />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

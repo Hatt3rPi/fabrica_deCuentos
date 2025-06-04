@@ -3,6 +3,7 @@ import { createClient, User, SupabaseClient } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   supabase: SupabaseClient;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
@@ -18,33 +19,62 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Verificar la sesión actual primero
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Error al verificar la sesión:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Configurar el listener de cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (_event === 'INITIAL_SESSION') {
+        setLoading(false);
+      }
     });
 
+    checkSession();
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    setLoading(false);
   };
 
   const signUp = async (email: string, password: string) => {
+    setLoading(true);
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
+    setLoading(false);
   };
 
   const signOut = async () => {
+    setLoading(true);
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    setLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, supabase, signIn, signUp, signOut }}>
-      {children}
+    <AuthContext.Provider value={{ user, loading, supabase, signIn, signUp, signOut }}>
+      {!loading && children}
+      {loading && (
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 };

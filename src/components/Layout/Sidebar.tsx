@@ -1,231 +1,145 @@
-import React, { useState, useEffect } from 'react';
-import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3 } from 'lucide-react';
+import React from 'react';
+import { BookOpen, User, LogOut, AlertTriangle, BarChart3, Home, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
-import { Link } from 'react-router-dom';
-import { ImageGenerationSettings, ImageEngine, OpenAIModel, StabilityModel } from '../../types';
+import { Link, useLocation } from 'react-router-dom';
 
-const Sidebar: React.FC = () => {
-  const { signOut, supabase } = useAuth();
+interface SidebarProps {
+  isMobile?: boolean;
+  isMenuOpen?: boolean;
+  onNavigation?: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isMobile = false, onNavigation, isMenuOpen = true }) => {
+  const { signOut } = useAuth();
   const isAdmin = useAdmin();
-  const [settings, setSettings] = useState<ImageGenerationSettings | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const location = useLocation();
 
-  useEffect(() => {
-    const loadSettings = async () => {
-      if (!isAdmin) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('system_settings')
-          .select('value')
-          .eq('key', 'image_generation')
-          .single();
-
-        if (error) throw error;
-        setSettings(data.value as ImageGenerationSettings);
-      } catch (error) {
-        console.error('Error loading settings:', error);
-      }
-    };
-
-    loadSettings();
-  }, [supabase, isAdmin]);
-
-  const handleEngineChange = async (
-    type: 'thumbnail' | 'variations' | 'spriteSheet',
-    provider: 'openai' | 'stability',
-    model: OpenAIModel | StabilityModel,
-    quality?: string,
-    size?: string,
-    style?: string
-  ) => {
-    if (!isAdmin || !settings) return;
-    setIsLoading(true);
-
-    const updatedEngine: ImageEngine = {
-      provider,
-      model,
-      ...(quality && { quality }),
-      ...(size && { size }),
-      ...(style && { style })
-    };
-
-    try {
-      const updatedSettings: ImageGenerationSettings = {
-        ...settings,
-        engines: {
-          ...settings.engines,
-          [type]: updatedEngine
-        },
-        last_updated: new Date().toISOString()
-      };
-
-      const { error } = await supabase
-        .from('system_settings')
-        .update({
-          value: updatedSettings
-        })
-        .eq('key', 'image_generation');
-
-      if (error) throw error;
-
-      setSettings(updatedSettings);
-    } catch (error) {
-      console.error('Error updating settings:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleNavigation = () => {
+    if (onNavigation) onNavigation();
   };
 
-  const renderEngineSelector = (
-    type: 'thumbnail' | 'variations' | 'spriteSheet',
-    label: string
-  ) => {
-    const engine = settings?.engines[type];
-    
-    return (
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
-          {label}
-        </label>
-        <select
-          value={`${engine?.provider}:${engine?.model}`}
-          onChange={(e) => {
-            const [provider, model] = e.target.value.split(':');
-            handleEngineChange(
-              type,
-              provider as 'openai' | 'stability',
-              model as OpenAIModel | StabilityModel
-            );
-          }}
-          disabled={isLoading}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-        >
-          <optgroup label="OpenAI">
-            <option value="openai:dall-e-2">DALL-E 2</option>
-            <option value="openai:dall-e-3">DALL-E 3</option>
-            <option value="openai:gpt-image-1">GPT-4 Vision</option>
-          </optgroup>
-          <optgroup label="Stability AI">
-            <option value="stability:stable-diffusion-3.5">Stable Diffusion 3.5</option>
-          </optgroup>
-        </select>
-
-        {engine?.provider === 'openai' && engine.model === 'dall-e-3' && (
-          <>
-            <select
-              value={engine.quality || 'standard'}
-              onChange={(e) => handleEngineChange(
-                type,
-                engine.provider,
-                engine.model,
-                e.target.value,
-                engine.size,
-                engine.style
-              )}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-2"
-            >
-              <option value="standard">Calidad Estándar</option>
-              <option value="hd">Calidad HD</option>
-            </select>
-
-            <select
-              value={engine.style || 'vivid'}
-              onChange={(e) => handleEngineChange(
-                type,
-                engine.provider,
-                engine.model,
-                engine.quality,
-                engine.size,
-                e.target.value
-              )}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-2"
-            >
-              <option value="vivid">Estilo Vívido</option>
-              <option value="natural">Estilo Natural</option>
-            </select>
-          </>
-        )}
-      </div>
-    );
+  const handleSignOut = () => {
+    signOut();
+    if (onNavigation) onNavigation();
   };
+
+  const navItems = [
+    { to: '/', icon: Home, label: 'Inicio', exact: true },
+    { to: '/home', icon: BookOpen, label: 'Cuentos', exact: false },
+    { to: '/perfil', icon: User, label: 'Mi Perfil', exact: false },
+    ...(isAdmin ? [{ to: '/admin/prompts', icon: AlertTriangle, label: 'Administrar', exact: false }] : []),
+    ...(isAdmin ? [{ to: '/admin/analytics', icon: BarChart3, label: 'Analíticas', exact: false }] : []),
+  ];
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Logo section */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <BookOpen className="w-8 h-8 text-purple-600" />
-          <span className="font-semibold text-gray-900">CuenterIA</span>
+    <div 
+      className={`
+        h-full flex-shrink-0 flex flex-col
+        bg-white dark:bg-gray-900
+        border-r border-gray-200 dark:border-gray-800
+        overflow-y-auto transition-all duration-300
+        ${isMobile ? 'fixed left-0 top-0 z-40 w-64' : 'relative'}
+        ${!isMenuOpen && isMobile ? 'hidden' : 'block'}
+        ${!isMobile && !isMenuOpen ? 'w-16' : 'w-64'}
+      `}
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'thin',
+        scrollbarColor: 'rgba(139, 92, 246, 0.5) transparent',
+        height: isMobile ? '100vh' : '100%'
+      }}
+    >
+      {/* Logo Section */}
+      <div className="sticky top-0 z-10 p-4 border-b border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-500 text-white shadow-sm">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            {isMenuOpen && (
+              <div className="overflow-hidden">
+                <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent whitespace-nowrap">
+                  CuenterIA
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Crea tus historias</p>
+              </div>
+            )}
+          </div>
+          {(isMobile || !isMenuOpen) && (
+            <button 
+              onClick={onNavigation}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              aria-label="Cerrar menú"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
-          <li>
-            <Link to="/perfil" className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20">
-              <User className="w-5 h-5" />
-              <span>Mi Perfil</span>
-            </Link>
-          </li>
-          {isAdmin && (
-            <li>
-              <Link to="/admin/prompts" className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20">
-                <Settings className="w-5 h-5" />
-                <span>Prompts</span>
-              </Link>
-            </li>
-          )}
-          {isAdmin && (
-            <li>
-              <Link to="/admin/analytics" className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20">
-                <BarChart3 className="w-5 h-5" />
-                <span>Analytics</span>
-              </Link>
-            </li>
-          )}
-          {isAdmin && (
-            <li className="mt-4">
-              <div className="px-4 py-2">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Configuración del Sistema</h3>
-                
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-yellow-800">
-                      ⚠️ ATENCIÓN: Su selección afectará el método de generación de imágenes para TODOS los usuarios del sistema
-                    </p>
-                  </div>
-                </div>
+      <nav className="flex-1 overflow-y-auto">
+        <ul className="p-2 space-y-1">
+          {navItems.map((item) => {
+            const isActive = item.exact 
+              ? location.pathname === item.to
+              : location.pathname.startsWith(item.to);
+            return (
+              <li key={item.to}>
+                <Link
+                  to={item.to}
+                  onClick={handleNavigation}
+                  className={`
+                    flex items-center gap-3 px-3 py-3 rounded-lg
+                    transition-all duration-200
+                    ${
+                      isActive
+                        ? 'bg-purple-50 text-purple-700 dark:bg-gray-800 dark:text-purple-300'
+                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/50'
+                    }
 
-                <div className="space-y-4">
-                  {renderEngineSelector('thumbnail', 'Motor para miniaturas')}
-                  {renderEngineSelector('variations', 'Motor para variaciones')}
-                  {renderEngineSelector('spriteSheet', 'Motor para sprite sheets')}
-                </div>
-
-                {settings && (
-                  <p className="mt-4 text-xs text-gray-500">
-                    Última actualización: {new Date(settings.last_updated).toLocaleString()}
-                  </p>
-                )}
-              </div>
-            </li>
-          )}
+                  `}
+                >
+                  <span className={`p-1.5 rounded-lg ${
+                    isActive 
+                      ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-300'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                  }`}>
+                    <item.icon className="w-4 h-4" />
+                  </span>
+                  {isMenuOpen && (
+                    <span className="text-sm font-medium whitespace-nowrap">
+                      {item.label}
+                    </span>
+                  )}
+                  {isActive && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-purple-500" />
+                  )}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
-      {/* Footer actions */}
-      <div className="p-4 border-t border-gray-200">
+      {/* User section */}
+      <div className="mt-auto p-2 border-t border-gray-200 dark:border-gray-800">
         <button
-          onClick={() => signOut()}
-          className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg"
+          onClick={handleSignOut}
+          className={`flex items-center gap-3 w-full px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors ${!isMenuOpen ? 'justify-center' : ''}`}
+          title={!isMenuOpen ? 'Cerrar sesión' : ''}
         >
-          <LogOut className="w-5 h-5" />
-          <span>Cerrar Sesión</span>
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          {isMenuOpen && <span>Cerrar sesión</span>}
         </button>
+        {isMenuOpen && (
+          <div className="mt-2 text-center">
+            <p className="text-xs text-purple-600 dark:text-purple-400">
+              {isAdmin ? 'Administrador' : 'Usuario'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

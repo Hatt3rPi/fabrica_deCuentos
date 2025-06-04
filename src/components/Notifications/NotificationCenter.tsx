@@ -173,14 +173,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-[80vh] flex flex-col max-w-[calc(100vw-2rem)]" data-testid="notification-center">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+    <div className="bg-white dark:bg-gray-800 dark:text-gray-200 lg:rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 h-full flex flex-col w-full" data-testid="notification-center">
+      {/* Header - Only visible on desktop */}
+      <div className="hidden lg:flex p-4 border-b border-gray-200 dark:border-gray-700 justify-between items-center">
         <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Notificaciones</h2>
         <div className="flex space-x-2">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
             aria-label="Filtrar"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -189,7 +189,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
           </button>
           <button
             onClick={onClose}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
             aria-label="Cerrar"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -294,8 +294,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
         </div>
       </div>
 
-      {/* Notification list */}
-      <div className="overflow-y-auto flex-grow">
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-2 lg:p-4">
         {loading ? (
           <div className="flex justify-center items-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
