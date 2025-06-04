@@ -112,6 +112,20 @@ const Sidebar: React.FC = () => {
           </optgroup>
           <optgroup label="Flux">
             <option value="flux:flux-kontext-pro">Flux Kontext Pro</option>
+            <option value="flux:flux-kontext-max">Flux Kontext Max</option>
+            <option value="flux:flux-pro">Flux Pro 1.0</option>
+            <option value="flux:flux-pro-1.1">Flux Pro 1.1</option>
+            <option value="flux:flux-pro-1.1-ultra">Flux Pro 1.1 Ultra</option>
+            <option value="flux:flux-pro-1.0-fill">Flux Pro 1.0 Fill</option>
+            <option value="flux:flux-pro-1.0-expand">Flux Pro 1.0 Expand</option>
+            <option value="flux:flux-pro-1.0-canny">Flux Pro 1.0 Canny</option>
+            <option value="flux:flux-pro-1.0-depth">Flux Pro 1.0 Depth</option>
+            <option value="flux:flux-pro-finetuned">Flux Pro 1.0 Finetuned</option>
+            <option value="flux:flux-pro-1.0-depth-finetuned">Flux Pro 1.0 Depth Finetuned</option>
+            <option value="flux:flux-pro-1.0-canny-finetuned">Flux Pro 1.0 Canny Finetuned</option>
+            <option value="flux:flux-pro-1.0-fill-finetuned">Flux Pro 1.0 Fill Finetuned</option>
+            <option value="flux:flux-pro-1.1-ultra-finetuned">Flux Pro 1.1 Ultra Finetuned</option>
+            <option value="flux:flux-dev">Flux Dev</option>
           </optgroup>
         </select>
 

@@ -40,7 +40,22 @@ export interface ImageEngine {
 
 export type OpenAIModel = 'dall-e-2' | 'dall-e-3' | 'gpt-image-1';
 export type StabilityModel = 'stable-diffusion-3.5';
-export type FluxModel = 'flux-kontext-pro';
+export type FluxModel =
+  | 'flux-kontext-pro'
+  | 'flux-kontext-max'
+  | 'flux-pro'
+  | 'flux-pro-1.1'
+  | 'flux-pro-1.1-ultra'
+  | 'flux-pro-1.0-fill'
+  | 'flux-pro-1.0-expand'
+  | 'flux-pro-1.0-canny'
+  | 'flux-pro-1.0-depth'
+  | 'flux-pro-finetuned'
+  | 'flux-pro-1.0-depth-finetuned'
+  | 'flux-pro-1.0-canny-finetuned'
+  | 'flux-pro-1.0-fill-finetuned'
+  | 'flux-pro-1.1-ultra-finetuned'
+  | 'flux-dev';
 
 // Tipos para la configuración del cuento
 export interface StorySettings {
