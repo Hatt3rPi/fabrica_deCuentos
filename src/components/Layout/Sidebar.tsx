@@ -3,7 +3,7 @@ import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Home } from
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
 import { Link } from 'react-router-dom';
-import { ImageGenerationSettings, ImageEngine, OpenAIModel, StabilityModel } from '../../types';
+import { ImageGenerationSettings, ImageEngine, OpenAIModel, StabilityModel, FluxModel } from '../../types';
 
 const Sidebar: React.FC = () => {
   const { signOut, supabase } = useAuth();
@@ -34,8 +34,8 @@ const Sidebar: React.FC = () => {
 
   const handleEngineChange = async (
     type: 'thumbnail' | 'variations' | 'spriteSheet',
-    provider: 'openai' | 'stability',
-    model: OpenAIModel | StabilityModel,
+    provider: 'openai' | 'stability' | 'flux',
+    model: OpenAIModel | StabilityModel | FluxModel,
     quality?: string,
     size?: string,
     style?: string
@@ -95,8 +95,8 @@ const Sidebar: React.FC = () => {
             const [provider, model] = e.target.value.split(':');
             handleEngineChange(
               type,
-              provider as 'openai' | 'stability',
-              model as OpenAIModel | StabilityModel
+              provider as 'openai' | 'stability' | 'flux',
+              model as OpenAIModel | StabilityModel | FluxModel
             );
           }}
           disabled={isLoading}
@@ -109,6 +109,9 @@ const Sidebar: React.FC = () => {
           </optgroup>
           <optgroup label="Stability AI">
             <option value="stability:stable-diffusion-3.5">Stable Diffusion 3.5</option>
+          </optgroup>
+          <optgroup label="Flux">
+            <option value="flux:flux-kontext-pro">Flux Kontext Pro</option>
           </optgroup>
         </select>
 

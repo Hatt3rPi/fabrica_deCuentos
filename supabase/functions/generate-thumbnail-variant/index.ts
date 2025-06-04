@@ -65,39 +65,73 @@ Deno.serve(async (req) => {
     formData.append('n', '1');
     formData.append('image', blob, `reference.${ext}`);
 
-    const start = Date.now();
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
-    const editRes = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${openaiKey}` },
-      body: formData
-    });
-    const elapsed = Date.now() - start;
-    const editData = await editRes.json();
-    const tokensIn = editData.usage?.input_tokens ?? 0;
-    const tokensOut = editData.usage?.output_tokens ?? 0;
+    let resultUrl = '';
+    let elapsed = 0;
+    let tokensIn = 0;
+    let tokensOut = 0;
+    if (apiEndpoint.includes('bfl.ai')) {
+      const fluxKey = Deno.env.get('BFL_API_KEY');
+      const start = Date.now();
+      const req = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'x-key': fluxKey ?? '', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: stylePrompt })
+      });
+      const data = await req.json();
+      const requestId = data.id;
+      let status = data.status;
+      elapsed = Date.now() - start;
+      for (let i = 0; i < 20 && requestId; i++) {
+        const poll = await fetch(`https://api.bfl.ai/v1/get_result?id=${requestId}`, {
+          headers: { 'x-key': fluxKey ?? '' }
+        });
+        const pollData = await poll.json();
+        status = pollData.status;
+        if (status === 'Ready') {
+          resultUrl = pollData.result?.sample || '';
+          break;
+        }
+        if (status !== 'Processing' && status !== 'Queued') {
+          throw new Error('Flux error');
+        }
+        await new Promise(r => setTimeout(r, 1500));
+      }
+      tokensIn = 0;
+      tokensOut = 0;
+      if (!resultUrl) throw new Error('No image returned');
+    } else {
+      const start = Date.now();
+      const openaiKey = Deno.env.get('OPENAI_API_KEY');
+      const editRes = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${openaiKey}` },
+        body: formData
+      });
+      elapsed = Date.now() - start;
+      const editData = await editRes.json();
+      tokensIn = editData.usage?.input_tokens ?? 0;
+      tokensOut = editData.usage?.output_tokens ?? 0;
+      if (!editRes.ok) {
+        const msg = editData.error?.message || editRes.statusText;
+        throw new Error(msg);
+      }
+      const b64 = editData.data?.[0]?.b64_json;
+      if (!b64) {
+        throw new Error('No image returned');
+      }
+      resultUrl = `data:${mimeType};base64,${b64}`;
+    }
 
     await logPromptMetric({
       prompt_id: promptId,
       modelo_ia: apiModel,
       tiempo_respuesta_ms: elapsed,
-      estado: editRes.ok ? 'success' : 'error',
-      error_type: editRes.ok ? null : 'service_error',
+      estado: 'success',
+      error_type: null,
       tokens_entrada: tokensIn,
       tokens_salida: tokensOut,
       usuario_id: userId,
     });
-
-    if (!editRes.ok) {
-      const msg = editData.error?.message || editRes.statusText;
-      throw new Error(msg);
-    }
-
-    const b64 = editData.data?.[0]?.b64_json;
-    if (!b64) {
-      throw new Error('No image returned');
-    }
-    const resultUrl = `data:${mimeType};base64,${b64}`;
 
     return new Response(JSON.stringify({ thumbnailUrl: resultUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

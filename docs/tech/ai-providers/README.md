@@ -54,6 +54,16 @@ response = client.images.generate(
 - **Generación y Edición**: `https://api.bfl.ai/v1/flux-kontext-pro`
 - **Consulta de Resultados**: `https://api.bfl.ai/v1/get_result`
 
+Estos endpoints están registrados en `src/constants/aiProviderCatalog.ts` para
+facilitar su selección en la interfaz de administración.
+
+<Info>
+  A diferencia de OpenAI, las solicitudes a Flux devuelven un `request_id` y se
+  debe consultar el endpoint de resultados para obtener la imagen una vez lista.
+  Además se utiliza la cabecera `x-key` en lugar de `Authorization`.
+  El código maneja esta comunicación asíncrona dentro de las funciones de Supabase.
+</Info>
+
 ### Modelos Disponibles
 
 #### FLUX.1 Kontext [pro]
@@ -146,6 +156,14 @@ image.save('gato_astronauta.png')
 | Modelo Local           | ❌                       | ❌          | ✅               |
 | Costo                 | Por token                 | Por solicitud| Gratis (autoalojado) |
 | Latencia              | Media-Alta                | Media        | Depende del hardware |
+
+## Resumen de Endpoints y Modelos
+
+| Proveedor | Endpoints | Modelos |
+|-----------|-----------|---------|
+| **OpenAI** | `/v1/images/generations`, `/v1/images/edits`, `/v1/images/variations` | `gpt-image-1`, `dall-e-3`, `dall-e-2` |
+| **Flux** | `/v1/flux-kontext-pro`, `/v1/get_result` | `flux-kontext-pro` |
+| **Stable Diffusion** | `http://localhost:7860` | `stable-diffusion-3.5` |
 
 ## Recomendaciones
 
