@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import Button from '../UI/Button';
 import { Prompt } from '../../types/prompts';
+import { aiProviderCatalog } from '../../constants/aiProviderCatalog';
 
 interface PromptAccordionProps {
   prompt: Prompt;
@@ -29,6 +30,24 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
   const [endpoint, setEndpoint] = useState(prompt.endpoint || '');
   const [model, setModel] = useState(prompt.model || 'gpt-image-1');
   const [isSaving, setIsSaving] = useState(false);
+
+  const modelToProvider: Record<string, string> = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    Object.entries(aiProviderCatalog).forEach(([provider, info]) => {
+      Object.keys(info.models).forEach((m) => {
+        map[m] = provider;
+      });
+    });
+    return map;
+  }, []);
+
+  const endpointOptions = React.useMemo(() => {
+    const provider = modelToProvider[model];
+    if (!provider) return [] as string[];
+    const modelInfo = aiProviderCatalog[provider as keyof typeof aiProviderCatalog].models[model];
+    if (!modelInfo) return [] as string[];
+    return Object.values(modelInfo.endpoints).filter(Boolean) as string[];
+  }, [model, modelToProvider]);
 
   useEffect(() => {
     setContent(prompt.content);
@@ -69,23 +88,39 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
                 rows={6}
                 className="w-full border rounded px-2 py-1 text-sm"
               />
-              <input
-                value={endpoint}
-                onChange={e => setEndpoint(e.target.value)}
-                className="w-full border rounded px-2 py-1 text-sm"
-                placeholder="Endpoint"
-              />
               <select
                 value={model}
-                onChange={e => setModel(e.target.value)}
+                onChange={e => {
+                  const val = e.target.value;
+                  setModel(val);
+                  const provider = modelToProvider[val];
+                  const modelInfo = provider
+                    ? aiProviderCatalog[provider as keyof typeof aiProviderCatalog].models[val]
+                    : undefined;
+                  const eps = modelInfo ? Object.values(modelInfo.endpoints).filter(Boolean) : [];
+                  setEndpoint(eps[0] || '');
+                }}
                 className="w-full border rounded px-2 py-1 text-sm"
               >
-                <option value="gpt-image-1">GPT-4 Vision</option>
-                <option value="dall-e-3">DALL-E 3</option>
-                <option value="dall-e-2">DALL-E 2</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                <option value="stable-diffusion-3.5">Stable Diffusion 3.5</option>
+                {Object.entries(aiProviderCatalog).map(([provider, info]) => (
+                  <optgroup key={provider} label={info.name}>
+                    {Object.keys(info.models).map((m) => (
+                      <option key={m} value={m}>{info.models[m].description}</option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
+              {endpointOptions.length > 0 && (
+                <select
+                  value={endpoint}
+                  onChange={e => setEndpoint(e.target.value)}
+                  className="w-full border rounded px-2 py-1 text-sm"
+                >
+                  {endpointOptions.map(url => (
+                    <option key={url} value={url}>{url}</option>
+                  ))}
+                </select>
+              )}
             </>
           ) : (
             <>

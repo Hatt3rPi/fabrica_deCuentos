@@ -31,8 +31,8 @@ export interface ImageGenerationSettings {
 }
 
 export interface ImageEngine {
-  provider: 'openai' | 'stability';
-  model: OpenAIModel | StabilityModel;
+  provider: 'openai' | 'stability' | 'flux';
+  model: OpenAIModel | StabilityModel | FluxModel;
   quality?: string;
   size?: string;
   style?: string;
@@ -40,6 +40,7 @@ export interface ImageEngine {
 
 export type OpenAIModel = 'dall-e-2' | 'dall-e-3' | 'gpt-image-1';
 export type StabilityModel = 'stable-diffusion-3.5';
+export type FluxModel = 'flux-kontext-pro';
 
 // Tipos para la configuración del cuento
 export interface StorySettings {
