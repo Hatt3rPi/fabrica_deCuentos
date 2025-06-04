@@ -188,11 +188,21 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [storyId, user]);
 
   const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'export'];
+  const stepMap: Record<WizardStep, keyof EstadoFlujo | null> = {
+    characters: 'personajes',
+    story: 'cuento',
+    design: 'diseno',
+    preview: 'vistaPrevia',
+    export: null,
+  };
 
   const nextStep = () => {
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex < steps.length - 1) {
-      avanzarEtapa(currentStep as keyof EstadoFlujo);
+      const etapa = stepMap[currentStep];
+      if (etapa) {
+        avanzarEtapa(etapa);
+      }
       setCurrentStep(steps[currentIndex + 1]);
     }
   };
@@ -200,7 +210,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const prevStep = () => {
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex > 0) {
-      regresarEtapa(currentStep as keyof EstadoFlujo);
+      const etapa = stepMap[currentStep];
+      if (etapa) {
+        regresarEtapa(etapa);
+      }
       setCurrentStep(steps[currentIndex - 1]);
     }
   };
