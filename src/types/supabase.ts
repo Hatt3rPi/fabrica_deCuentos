@@ -166,6 +166,7 @@ export type Database = {
           error_type: string | null
           estado: string | null
           id: string
+          loaders: Json | null
           metadatos: Json | null
           modelo_ia: string
           prompt_id: string | null
@@ -179,6 +180,7 @@ export type Database = {
           error_type?: string | null
           estado?: string | null
           id?: string
+          loaders?: Json | null
           metadatos?: Json | null
           modelo_ia: string
           prompt_id?: string | null
@@ -192,6 +194,7 @@ export type Database = {
           error_type?: string | null
           estado?: string | null
           id?: string
+          loaders?: Json | null
           metadatos?: Json | null
           modelo_ia?: string
           prompt_id?: string | null
@@ -249,7 +252,9 @@ export type Database = {
       prompts: {
         Row: {
           content: string
+          endpoint: string | null
           id: string
+          model: string | null
           type: string
           updated_at: string | null
           updated_by: string | null
@@ -257,7 +262,9 @@ export type Database = {
         }
         Insert: {
           content: string
+          endpoint?: string | null
           id?: string
+          model?: string | null
           type: string
           updated_at?: string | null
           updated_by?: string | null
@@ -265,7 +272,9 @@ export type Database = {
         }
         Update: {
           content?: string
+          endpoint?: string | null
           id?: string
+          model?: string | null
           type?: string
           updated_at?: string | null
           updated_by?: string | null
@@ -281,6 +290,7 @@ export type Database = {
           id: string
           literary_style: string | null
           loader: Json | null
+          loaders: Json | null
           status: string
           target_age: string | null
           title: string
@@ -294,6 +304,7 @@ export type Database = {
           id?: string
           literary_style?: string | null
           loader?: Json | null
+          loaders?: Json | null
           status?: string
           target_age?: string | null
           title: string
@@ -307,6 +318,7 @@ export type Database = {
           id?: string
           literary_style?: string | null
           loader?: Json | null
+          loaders?: Json | null
           status?: string
           target_age?: string | null
           title?: string
