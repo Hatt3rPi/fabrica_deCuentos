@@ -4,6 +4,8 @@ export interface Prompt {
   id: string;
   type: string;
   content: string;
+  endpoint?: string | null;
+  model?: string | null;
   version: number;
   updated_at: string;
 }
@@ -42,10 +44,15 @@ export const promptService = {
     return map;
   },
 
-  async upsertPrompt(type: string, content: string): Promise<Prompt> {
+  async upsertPrompt(
+    type: string,
+    content: string,
+    endpoint: string,
+    model: string
+  ): Promise<Prompt> {
     const { data, error } = await supabase
       .from('prompts')
-      .upsert({ type, content }, { onConflict: 'type' })
+      .upsert({ type, content, endpoint, model }, { onConflict: 'type' })
       .select('*')
       .single();
     if (error) throw error;

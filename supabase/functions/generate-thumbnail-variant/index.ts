@@ -28,11 +28,13 @@ Deno.serve(async (req) => {
 
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content')
+      .select('id, content, endpoint, model')
       .eq('type', promptType)
       .single();
 
     const stylePrompt = promptRow?.content || '';
+    const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/images/edits';
+    const apiModel = promptRow?.model || 'gpt-image-1';
     promptId = promptRow?.id;
     if (!stylePrompt) {
       throw new Error('Prompt not found');
@@ -57,7 +59,7 @@ Deno.serve(async (req) => {
     const blob = new Blob([buf], { type: mimeType });
 
     const formData = new FormData();
-    formData.append('model', 'gpt-image-1');
+    formData.append('model', apiModel);
     formData.append('prompt', stylePrompt);
     formData.append('size', '1024x1024');
     formData.append('n', '1');
@@ -65,7 +67,7 @@ Deno.serve(async (req) => {
 
     const start = Date.now();
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
-    const editRes = await fetch('https://api.openai.com/v1/images/edits', {
+    const editRes = await fetch(apiEndpoint, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${openaiKey}` },
       body: formData
@@ -77,7 +79,7 @@ Deno.serve(async (req) => {
 
     await logPromptMetric({
       prompt_id: promptId,
-      modelo_ia: 'gpt-image-1',
+      modelo_ia: apiModel,
       tiempo_respuesta_ms: elapsed,
       estado: editRes.ok ? 'success' : 'error',
       error_type: editRes.ok ? null : 'service_error',
@@ -105,7 +107,7 @@ Deno.serve(async (req) => {
     console.error('Error in generate-thumbnail-variant:', error);
     await logPromptMetric({
       prompt_id: promptId,
-      modelo_ia: 'gpt-image-1',
+      modelo_ia: apiModel,
       tiempo_respuesta_ms: 0,
       estado: 'error',
       error_type: 'service_error',

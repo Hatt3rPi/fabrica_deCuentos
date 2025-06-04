@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import Button from '../UI/Button';
 import { Prompt } from '../../types/prompts';
-import { promptMetadata } from '../../constants/promptMetadata';
 
 interface PromptAccordionProps {
   prompt: Prompt;
-  onSave: (content: string) => Promise<void> | void;
+  onSave: (content: string, endpoint: string, model: string) => Promise<void> | void;
 }
 
 const rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
@@ -27,15 +26,19 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(prompt.content);
+  const [endpoint, setEndpoint] = useState(prompt.endpoint || '');
+  const [model, setModel] = useState(prompt.model || 'gpt-image-1');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setContent(prompt.content);
-  }, [prompt.content]);
+    setEndpoint(prompt.endpoint || '');
+    setModel(prompt.model || 'gpt-image-1');
+  }, [prompt.content, prompt.endpoint, prompt.model]);
 
   const handleSave = async () => {
     setIsSaving(true);
-    await onSave(content);
+    await onSave(content, endpoint, model);
     setIsSaving(false);
     setIsEditing(false);
   };
@@ -59,25 +62,52 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
       {isOpen && (
         <div className="p-4 space-y-4">
           {isEditing ? (
-            <textarea
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              rows={6}
-              className="w-full border rounded px-2 py-1 text-sm"
-            />
+            <>
+              <textarea
+                value={content}
+                onChange={e => setContent(e.target.value)}
+                rows={6}
+                className="w-full border rounded px-2 py-1 text-sm"
+              />
+              <input
+                value={endpoint}
+                onChange={e => setEndpoint(e.target.value)}
+                className="w-full border rounded px-2 py-1 text-sm"
+                placeholder="Endpoint"
+              />
+              <select
+                value={model}
+                onChange={e => setModel(e.target.value)}
+                className="w-full border rounded px-2 py-1 text-sm"
+              >
+                <option value="gpt-image-1">GPT-4 Vision</option>
+                <option value="dall-e-3">DALL-E 3</option>
+                <option value="dall-e-2">DALL-E 2</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="stable-diffusion-3.5">Stable Diffusion 3.5</option>
+              </select>
+            </>
           ) : (
-            <pre className="whitespace-pre-wrap text-sm">{prompt.content}</pre>
-          )}
-          {promptMetadata[prompt.type] && (
-            <p className="text-xs text-gray-500">
-              Endpoint: <code>{promptMetadata[prompt.type].endpoint}</code> | Modelo:{' '}
-              {promptMetadata[prompt.type].model}
-            </p>
+            <>
+              <pre className="whitespace-pre-wrap text-sm">{prompt.content}</pre>
+              <p className="text-xs text-gray-500">
+                Endpoint: <code>{prompt.endpoint}</code> | Modelo: {prompt.model}
+              </p>
+            </>
           )}
           <div className="flex justify-end gap-2">
             {isEditing ? (
               <>
-                <Button variant="secondary" onClick={() => { setIsEditing(false); setContent(prompt.content); }} disabled={isSaving}>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setContent(prompt.content);
+                    setEndpoint(prompt.endpoint || '');
+                    setModel(prompt.model || 'gpt-image-1');
+                  }}
+                  disabled={isSaving}
+                >
                   Cancelar
                 </Button>
                 <Button onClick={handleSave} isLoading={isSaving}>
