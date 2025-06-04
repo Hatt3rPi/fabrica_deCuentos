@@ -284,7 +284,6 @@ export type Database = {
       }
       stories: {
         Row: {
-          theme: string | null
           additional_details: string | null
           central_message: string | null
           created_at: string | null
@@ -294,12 +293,12 @@ export type Database = {
           loaders: Json | null
           status: string
           target_age: string | null
+          theme: string | null
           title: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
-          theme?: string | null
           additional_details?: string | null
           central_message?: string | null
           created_at?: string | null
@@ -309,12 +308,12 @@ export type Database = {
           loaders?: Json | null
           status?: string
           target_age?: string | null
+          theme?: string | null
           title: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
-          theme?: string | null
           additional_details?: string | null
           central_message?: string | null
           created_at?: string | null
@@ -324,6 +323,7 @@ export type Database = {
           loaders?: Json | null
           status?: string
           target_age?: string | null
+          theme?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string
