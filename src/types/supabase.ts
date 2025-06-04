@@ -291,15 +291,13 @@ export type Database = {
           literary_style: string | null
           loader: Json | null
           loaders: Json | null
-          wizard_state: Json | null
           status: string
           target_age: string | null
-          wizard_state?: Json | null
-          wizard_state?: Json | null
           theme: string | null
           title: string
           updated_at: string | null
           user_id: string
+          wizard_state: Json | null
         }
         Insert: {
           additional_details?: string | null
@@ -315,6 +313,7 @@ export type Database = {
           title: string
           updated_at?: string | null
           user_id: string
+          wizard_state?: Json | null
         }
         Update: {
           additional_details?: string | null
@@ -330,6 +329,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string
+          wizard_state?: Json | null
         }
         Relationships: []
       }
