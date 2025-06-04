@@ -81,6 +81,20 @@ export interface WizardState {
   };
 }
 
+
+// --- Wizard Flow State Types ---
+export type EtapaEstado = 'no_iniciada' | 'borrador' | 'completado';
+
+export interface EstadoFlujo {
+  personajes: {
+    estado: EtapaEstado;
+    personajesAsignados: number;
+  };
+  cuento: EtapaEstado;
+  diseno: EtapaEstado;
+  vistaPrevia: EtapaEstado;
+}
+
 // Opciones disponibles para la configuración del cuento
 export const ageOptions = [
   { value: '3-5', label: '3 a 5 años' },

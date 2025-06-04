@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useAutosave } from '../hooks/useAutosave';
-import { Character, StorySettings, DesignSettings, WizardState } from '../types';
+import { Character, StorySettings, DesignSettings, WizardState, EstadoFlujo } from '../types';
+import { useWizardFlowStore } from '../stores/wizardFlowStore';
 import { storyService } from '../services/storyService';
 
 export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'export';
@@ -63,6 +64,13 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const { storyId } = useParams();
   const navigate = useNavigate();
   const { supabase, user } = useAuth();
+  const {
+    estado,
+    setPersonajes,
+    avanzarEtapa,
+    regresarEtapa,
+    resetEstado,
+  } = useWizardFlowStore();
   const [state, setState] = useState<WizardState>(INITIAL_STATE);
   const [currentStep, setCurrentStep] = useState<WizardStep>('characters');
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -82,23 +90,39 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   useAutosave(state, storyId || null);
 
+  // Mantener sincronizado el conteo de personajes en el store de flujo
+  useEffect(() => {
+    setPersonajes(characters.length);
+  }, [characters, setPersonajes]);
+
+  const stepFromEstado = (estado: EstadoFlujo): WizardStep => {
+    if (estado.personajes.estado !== 'completado') return 'characters';
+    if (estado.cuento !== 'completado') return 'story';
+    if (estado.diseno !== 'completado') return 'design';
+    return 'preview';
+  };
+
   useEffect(() => {
     const loadDraft = async () => {
       if (!storyId || !user) {
         return;
       }
 
+      console.log('[WizardFlow] loadDraft inicio');
       try {
         const savedState = localStorage.getItem(`story_draft_${storyId}`);
         if (savedState) {
           const parsed = JSON.parse(savedState);
           if (parsed.state) setState(parsed.state);
           else setState(parsed);
-          if (parsed.currentStep) setCurrentStep(parsed.currentStep);
           if (parsed.storySettings) setStorySettings(parsed.storySettings);
           if (parsed.designSettings) setDesignSettings(parsed.designSettings);
           if (parsed.characters) setCharacters(parsed.characters);
           if (parsed.generatedPages) setGeneratedPages(parsed.generatedPages);
+          const estadoActual = useWizardFlowStore.getState().estado;
+          const step = stepFromEstado(estadoActual);
+          setCurrentStep(step);
+          console.log('[WizardFlow] borrador local cargado', estadoActual);
           return;
         }
 
@@ -143,12 +167,30 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           setGeneratedPages(pages);
         }
 
+        console.log('[WizardFlow] borrador remoto cargado', useWizardFlowStore.getState().estado);
+
         let step: WizardStep = 'characters';
         if (draft.pages && draft.pages.length > 0) step = 'preview';
         else if (draft.design) step = 'design';
         else if (draft.story && draft.story.central_message) step = 'story';
         else if (draft.characters && draft.characters.length > 0) step = 'story';
         setCurrentStep(step);
+
+        if (draft.characters) setPersonajes(draft.characters.length);
+        if (step === 'story') {
+          avanzarEtapa('personajes');
+        } else if (step === 'design') {
+          avanzarEtapa('personajes');
+          avanzarEtapa('cuento');
+        } else if (step === 'preview') {
+          avanzarEtapa('personajes');
+          avanzarEtapa('cuento');
+          avanzarEtapa('diseno');
+        }
+        const nuevoEstado = useWizardFlowStore.getState().estado;
+        const next = stepFromEstado(nuevoEstado);
+        setCurrentStep(next);
+        console.log('[WizardFlow] estado tras load', nuevoEstado);
       } catch (error) {
         console.error('Error loading draft:', error);
       }
@@ -158,10 +200,21 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [storyId, user]);
 
   const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'export'];
+  const stepMap: Record<WizardStep, keyof EstadoFlujo | null> = {
+    characters: 'personajes',
+    story: 'cuento',
+    design: 'diseno',
+    preview: 'vistaPrevia',
+    export: null,
+  };
 
   const nextStep = () => {
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex < steps.length - 1) {
+      const etapa = stepMap[currentStep];
+      if (etapa) {
+        avanzarEtapa(etapa);
+      }
       setCurrentStep(steps[currentIndex + 1]);
     }
   };
@@ -169,6 +222,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const prevStep = () => {
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex > 0) {
+      const etapa = stepMap[currentStep];
+      if (etapa) {
+        regresarEtapa(etapa);
+      }
       setCurrentStep(steps[currentIndex - 1]);
     }
   };
@@ -177,6 +234,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setState(INITIAL_STATE);
     setCurrentStep('characters');
     setCharacters([]);
+    resetEstado();
     setStorySettings({
       theme: '',
       targetAge: '',
@@ -190,6 +248,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
     setGeneratedPages([]);
     setIsGenerating(false);
+    console.log('[WizardFlow] resetWizard', useWizardFlowStore.getState().estado);
   };
 
   useEffect(() => {
