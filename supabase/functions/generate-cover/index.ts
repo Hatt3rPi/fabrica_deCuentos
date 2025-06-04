@@ -31,6 +31,8 @@ function arrayBufferToBlob(buffer: ArrayBuffer, type: string = 'image/png'): Blo
 async function generateImageWithRetry(
   prompt: string,
   referenceImages: Blob[],
+  endpoint: string,
+  model: string,
   retries = MAX_RETRIES
 ): Promise<{ url: string }> {
   const openaiKey = Deno.env.get('OPENAI_API_KEY');
@@ -38,21 +40,21 @@ async function generateImageWithRetry(
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const formData = new FormData();
-      formData.append('model', 'gpt-image-1');
+      formData.append('model', model);
       formData.append('prompt', prompt);
       formData.append('size', '1024x1024');
       formData.append('n', '1');
       
       // Si no hay imágenes, usar generación estándar
       if (referenceImages.length === 0) {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${openaiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-image-1',
+            model,
             prompt,
             size: '1024x1024',
             n: 1
@@ -74,9 +76,9 @@ async function generateImageWithRetry(
           formData.append('image[]', img, `reference_${index}.png`);
         });
         
-        const response = await fetch('https://api.openai.com/v1/images/edits', {
+        const response = await fetch(endpoint, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Authorization': `Bearer ${openaiKey}`,
           },
           body: formData
@@ -157,11 +159,13 @@ Deno.serve(async (req) => {
     // Obtener el prompt
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content')
+      .select('id, content, endpoint, model')
       .eq('type', 'PROMPT_CUENTO_PORTADA')
       .single();
       
     const basePrompt = promptRow?.content || '';
+    const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/images/generations';
+    const apiModel = promptRow?.model || 'gpt-image-1';
     promptId = promptRow?.id;
     if (!basePrompt) throw new Error('No se encontró el prompt');
 
@@ -250,7 +254,7 @@ Deno.serve(async (req) => {
     }
 
     // Generar imagen con reintentos
-    const { url: imageUrl } = await generateImageWithRetry(prompt, referenceImages);
+    const { url: imageUrl } = await generateImageWithRetry(prompt, referenceImages, apiEndpoint, apiModel);
     
     // Convertir base64 a Blob
     const base64Data = imageUrl.split(',')[1];
@@ -317,7 +321,7 @@ Deno.serve(async (req) => {
     const elapsed = Date.now() - startTime;
     await logPromptMetric({
       prompt_id: promptId,
-      modelo_ia: 'gpt-image-1',
+      modelo_ia: apiModel,
       tiempo_respuesta_ms: elapsed,
       estado: 'success',
       error_type: null,
@@ -344,7 +348,7 @@ Deno.serve(async (req) => {
     if (promptId) {
       await logPromptMetric({
         prompt_id: promptId,
-        modelo_ia: 'gpt-image-1',
+        modelo_ia: apiModel,
         tiempo_respuesta_ms: Date.now() - startTime,
         estado: 'error',
         error_type: 'service_error',

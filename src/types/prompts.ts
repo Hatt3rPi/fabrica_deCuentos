@@ -2,6 +2,8 @@ export interface Prompt {
   id: string;
   type: string;
   content: string;
+  endpoint?: string | null;
+  model?: string | null;
   version: number;
   updated_at: string;
   updated_by?: string | null;

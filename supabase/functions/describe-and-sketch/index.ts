@@ -74,10 +74,12 @@ Deno.serve(async (req) => {
     if (!openaiKey) throw new Error('Falta la clave de API de OpenAI');
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content')
+      .select('id, content, endpoint, model')
       .eq('type', 'PROMPT_CREAR_MINIATURA_PERSONAJE')
       .single();
     const characterPrompt = promptRow?.content || '';
+    const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/images/edits';
+    const apiModel = promptRow?.model || 'gpt-image-1';
     promptId = promptRow?.id;
     if (!characterPrompt) throw new Error('Falta el prompt de generación de personaje');
 
@@ -134,14 +136,14 @@ Deno.serve(async (req) => {
 
     // 6) Enviar a /v1/images/edits vía fetch + FormData
     const formData = new FormData();
-    formData.append('model', 'gpt-image-1');
+    formData.append('model', apiModel);
     formData.append('prompt', imagePrompt);
     formData.append('size', '1024x1024');
     formData.append('n', '1');
     formData.append('image', refBlob, `reference.${ext}`);
 
     const start = Date.now();
-    const editRes = await fetch('https://api.openai.com/v1/images/edits', {
+    const editRes = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiKey}`,
@@ -154,7 +156,7 @@ Deno.serve(async (req) => {
     const tokensSalida = editData.usage?.output_tokens ?? 0;
     await logPromptMetric({
       prompt_id: promptId,
-      modelo_ia: 'gpt-image-1',
+      modelo_ia: apiModel,
       tiempo_respuesta_ms: elapsed,
       estado: editRes.ok ? 'success' : 'error',
       error_type: editRes.ok ? null : 'service_error',
@@ -183,7 +185,7 @@ Deno.serve(async (req) => {
     console.error('Error in describe-and-sketch:', error);
     await logPromptMetric({
       prompt_id: promptId,
-      modelo_ia: 'gpt-image-1',
+      modelo_ia: apiModel,
       tiempo_respuesta_ms: 0,
       estado: 'error',
       error_type: 'service_error',

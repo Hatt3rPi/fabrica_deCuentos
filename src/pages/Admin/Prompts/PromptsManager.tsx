@@ -23,14 +23,18 @@ const PromptsManager: React.FC = () => {
       {loading && <p>Cargando...</p>}
       <div className="space-y-2">
         {prompts.map(p => (
-          <PromptAccordion key={p.id} prompt={p} onSave={content => updatePrompt(p.id, content)} />
+          <PromptAccordion
+            key={p.id}
+            prompt={p}
+            onSave={(content, endpoint, model) => updatePrompt(p.id, content, endpoint, model)}
+          />
         ))}
       </div>
       <PromptForm
         isOpen={showForm}
         onClose={() => setShowForm(false)}
-        onSave={async (type, content) => {
-          await createPrompt(type, content);
+        onSave={async (type, content, endpoint, model) => {
+          await createPrompt(type, content, endpoint, model);
           setShowForm(false);
         }}
       />

@@ -23,14 +23,16 @@ const PromptManager: React.FC = () => {
             <PromptEditor
               initialType={p.type}
               initialContent={p.content}
-              onSave={(type, content) => savePrompt(type, content)}
+              initialEndpoint={p.endpoint || ''}
+              initialModel={p.model || 'gpt-image-1'}
+              onSave={(type, content, endpoint, model) => savePrompt(type, content, endpoint, model)}
             />
           </div>
         ))}
       </div>
       <div className="mt-8 border-t pt-4">
         <h2 className="font-semibold mb-2">Nuevo prompt</h2>
-        <PromptEditor onSave={(type, content) => savePrompt(type, content)} />
+        <PromptEditor onSave={(type, content, endpoint, model) => savePrompt(type, content, endpoint, model)} />
       </div>
     </div>
   );

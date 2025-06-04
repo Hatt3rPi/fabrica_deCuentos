@@ -33,12 +33,14 @@ Deno.serve(async (req) => {
 
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content')
+      .select('id, content, endpoint, model')
       .eq('type', 'PROMPT_GENERADOR_CUENTOS')
       .single();
     const storyPrompt = promptRow?.content || '';
     promptId = promptRow?.id;
     if (!storyPrompt) throw new Error('Prompt not configured');
+    const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/chat/completions';
+    const model = promptRow?.model || 'gpt-4-turbo';
 
     // Formatear personajes: "Nombre de 99 años, Otro de 5 años"
     const charNames = characters
@@ -56,9 +58,8 @@ Deno.serve(async (req) => {
       .replace('{personajes}', charNames)
       .replace('{historia}', storyTheme);
 
-    const model = 'gpt-4-turbo';
     start = Date.now();
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    const resp = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
@@ -194,25 +195,27 @@ Deno.serve(async (req) => {
     let coverUrl = '';
     const { data: coverRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content')
+      .select('id, content, endpoint, model')
       .eq('type', 'PROMPT_CUENTO_PORTADA')
       .single();
     const coverPrompt = coverRow?.content || '';
     coverPromptId = coverRow?.id;
+    const coverEndpoint = coverRow?.endpoint || 'https://api.openai.com/v1/images/generations';
+    const coverModel = coverRow?.model || 'gpt-image-1';
     if (coverPrompt) {
       const promptText = coverPrompt
         .replace('{style}', 'acuarela digital')
         .replace('{palette}', 'colores vibrantes')
         .replace('{story}', title);
       const cstart = Date.now();
-      const cRes = await fetch('https://api.openai.com/v1/images/generations', {
+      const cRes = await fetch(coverEndpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-image-1',
+          model: coverModel,
           prompt: promptText,
           size: '1024x1024',
           quality: 'hd',
@@ -224,7 +227,7 @@ Deno.serve(async (req) => {
       const celapsed = Date.now() - cstart;
       await logPromptMetric({
         prompt_id: coverPromptId,
-        modelo_ia: 'gpt-image-1',
+        modelo_ia: coverModel,
         tiempo_respuesta_ms: celapsed,
         estado: coverRes.data?.[0]?.url ? 'success' : 'error',
         error_type: coverRes.data?.[0]?.url ? null : 'service_error',
@@ -263,7 +266,7 @@ Deno.serve(async (req) => {
     if (promptId) {
       await logPromptMetric({
         prompt_id: promptId,
-        modelo_ia: 'gpt-4-turbo',
+        modelo_ia: model,
         tiempo_respuesta_ms: Date.now() - start,
         estado: 'error',
         error_type: 'service_error',

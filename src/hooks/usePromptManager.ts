@@ -21,10 +21,15 @@ export const usePromptManager = () => {
     }
   }, [isAdmin]);
 
-  const savePrompt = useCallback(async (type: string, content: string) => {
+  const savePrompt = useCallback(async (
+    type: string,
+    content: string,
+    endpoint: string,
+    model: string
+  ) => {
     if (!isAdmin) return null;
     try {
-      const updated = await promptService.upsertPrompt(type, content);
+      const updated = await promptService.upsertPrompt(type, content, endpoint, model);
       setPrompts(prev => {
         const exists = prev.find(p => p.type === updated.type);
         if (exists) {

@@ -98,10 +98,12 @@ Deno.serve(async (req)=>{
     }
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content')
+      .select('id, content, endpoint, model')
       .eq('type', 'PROMPT_DESCRIPCION_PERSONAJE')
       .single();
     const analysisPrompt = promptRow?.content || '';
+    const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/chat/completions';
+    const apiModel = promptRow?.model || 'gpt-4-turbo';
     if (promptRow?.id) {
       promptId = promptRow.id;
     }
@@ -113,7 +115,7 @@ Deno.serve(async (req)=>{
     const base64Image = await fetchImageAsBase64(imageUrl);
     const prompt = analysisPrompt.replace('{name}', name || '').replace('${sanitizedAge}', age?.toString() || '').replace('${sanitizedNotes}', sanitizedNotes || '');
     const requestBody = {
-      model: "gpt-4-turbo",
+      model: apiModel,
       messages: [
         {
           role: "user",
@@ -138,7 +140,7 @@ Deno.serve(async (req)=>{
     };
     console.log(`[${FILE}] [${STAGE}] [IN]  ${JSON.stringify(requestBody)}`);
     start = Date.now();
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(apiEndpoint, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
@@ -191,7 +193,7 @@ Deno.serve(async (req)=>{
     if (start) {
       await logPromptMetric({
         prompt_id: promptId,
-        modelo_ia: 'gpt-4-turbo',
+        modelo_ia: apiModel,
         tiempo_respuesta_ms: Date.now() - start,
         estado: 'error',
         error_type: handleOpenAIError(error).type,
