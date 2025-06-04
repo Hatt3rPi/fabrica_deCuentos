@@ -284,7 +284,6 @@ export type Database = {
       }
       stories: {
         Row: {
-          theme: string | null
           additional_details: string | null
           central_message: string | null
           created_at: string | null
@@ -300,7 +299,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          theme?: string | null
           additional_details?: string | null
           central_message?: string | null
           created_at?: string | null
@@ -316,7 +314,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          theme?: string | null
           additional_details?: string | null
           central_message?: string | null
           created_at?: string | null
