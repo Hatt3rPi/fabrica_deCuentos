@@ -66,6 +66,16 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const navigate = useNavigate();
   const { supabase, user } = useAuth();
 
+  const {
+    estado,
+    setPersonajes,
+    avanzarEtapa,
+    regresarEtapa,
+    resetEstado,
+    setEstadoCompleto,
+    setStoryId,
+  } = useWizardFlowStore();
+
   useEffect(() => {
     if (storyId) {
       setStoryId(storyId);
@@ -79,15 +89,6 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       localStorage.removeItem('current_story_draft_id');
     };
   }, [resetEstado, setStoryId]);
-  const {
-    estado,
-    setPersonajes,
-    avanzarEtapa,
-    regresarEtapa,
-    resetEstado,
-    setEstadoCompleto,
-    setStoryId,
-  } = useWizardFlowStore();
   const [state, setState] = useState<WizardState>(INITIAL_STATE);
   const [currentStep, setCurrentStep] = useState<WizardStep>('characters');
   const [characters, setCharacters] = useState<Character[]>([]);
