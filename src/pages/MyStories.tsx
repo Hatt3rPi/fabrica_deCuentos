@@ -83,22 +83,15 @@ const MyStories: React.FC = () => {
 
   const handleContinueStory = (storyId: string) => {
     (async () => {
-      let draft: unknown = null;
-      const local = localStorage.getItem(`story_draft_${storyId}`);
-      if (local) {
-        draft = JSON.parse(local);
-      } else {
-        try {
-          draft = await storyService.getStoryDraft(storyId);
-        } catch (error) {
-          console.error('Error preloading draft:', error);
-        }
+      let draft: any = null;
+      try {
+        draft = await storyService.getStoryDraft(storyId);
+      } catch (error) {
+        console.error('Error preloading draft:', error);
       }
 
-      const data: any = draft;
       const flow: EstadoFlujo =
-        data?.flow ||
-        data?.story?.wizard_state || {
+        draft?.story?.wizard_state || {
           personajes: { estado: 'no_iniciada', personajesAsignados: 0 },
           cuento: 'no_iniciada',
           diseno: 'no_iniciada',
@@ -113,10 +106,10 @@ const MyStories: React.FC = () => {
         storyId,
         irA: step,
         campos: {
-          personajes: data?.characters?.length || data?.state?.characters?.length || 0,
-          cuento: data?.generatedPages?.length || 0,
-          diseno: data?.design?.visual_style || data?.designSettings?.visualStyle || null,
-          vistaPrevia: data?.generatedPages?.length ? 'listo' : null
+          personajes: draft?.characters?.length || 0,
+          cuento: draft?.pages?.length || draft?.generatedPages?.length || 0,
+          diseno: draft?.design?.visual_style || null,
+          vistaPrevia: draft?.pages?.length ? 'listo' : null
         }
       });
 

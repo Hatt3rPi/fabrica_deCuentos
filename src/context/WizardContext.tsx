@@ -121,25 +121,6 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       console.log('[WizardFlow] loadDraft inicio');
       try {
-        const savedState = localStorage.getItem(`story_draft_${storyId}`);
-        if (savedState) {
-          const parsed = JSON.parse(savedState);
-          if (parsed.state) setState(parsed.state);
-          else setState(parsed);
-          if (parsed.storySettings) setStorySettings(parsed.storySettings);
-          if (parsed.designSettings) setDesignSettings(parsed.designSettings);
-          if (parsed.characters) setCharacters(parsed.characters);
-          if (parsed.generatedPages) setGeneratedPages(parsed.generatedPages);
-          if (parsed.flow) {
-            setEstadoCompleto(parsed.flow);
-          }
-          const estadoActual = parsed.flow || useWizardFlowStore.getState().estado;
-          const step = stepFromEstado(estadoActual);
-          setCurrentStep(step);
-          console.log('[WizardFlow] borrador local cargado', estadoActual);
-          return;
-        }
-
         const draft = await storyService.getStoryDraft(storyId);
         if (draft.story) {
           setState({
@@ -275,16 +256,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       },
     };
     setState(newState);
-    const local = {
-      state: newState,
-      flow: estado,
-      currentStep,
-      storySettings,
-      designSettings,
-      characters,
-      generatedPages,
-    };
-    localStorage.setItem(`story_draft_${storyId}`, JSON.stringify(local));
+    // El estado del wizard se mantiene en memoria y se sincroniza mediante autosave
   }, [storyId, characters, storySettings, designSettings, generatedPages, currentStep]);
 
   const canProceed = (): boolean => {
