@@ -90,6 +90,14 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [generatedPages, setGeneratedPages] = useState<GeneratedPage[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
+  // Ensure the current story id is available for other hooks and logging
+  useEffect(() => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (storyId && uuidRegex.test(storyId)) {
+      localStorage.setItem('current_story_draft_id', storyId);
+    }
+  }, [storyId]);
+
   useAutosave(state, estado, storyId || null);
 
   // Mantener sincronizado el conteo de personajes en el store de flujo
