@@ -65,6 +65,15 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const { storyId } = useParams();
   const navigate = useNavigate();
   const { supabase, user } = useAuth();
+
+  useEffect(() => {
+    if (storyId) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(storyId)) {
+        localStorage.setItem('current_story_draft_id', storyId);
+      }
+    }
+  }, [storyId]);
   const {
     estado,
     setPersonajes,
