@@ -6,6 +6,7 @@ import { storyService } from '../services/storyService';
 import { useNavigate } from 'react-router-dom';
 import StoryCard from '../components/StoryCard';
 import { EstadoFlujo } from '../types';
+import { initialFlowState } from '../stores/wizardFlowStore';
 import type { WizardStep } from '../context/WizardContext';
 
 interface Story {
@@ -62,7 +63,12 @@ const MyStories: React.FC = () => {
     try {
       const { data: story, error } = await supabase
         .from('stories')
-        .insert({ user_id: user?.id, status: 'draft', title: 'Nuevo cuento' })
+        .insert({
+          user_id: user?.id,
+          status: 'draft',
+          title: 'Nuevo cuento',
+          wizard_state: initialFlowState
+        })
         .select()
         .single();
 

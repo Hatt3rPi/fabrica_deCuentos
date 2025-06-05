@@ -1,8 +1,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { encode as base64Encode } from "https://deno.land/std@0.203.0/encoding/base64.ts";
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
+import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
+import { isActivityEnabled } from '../_shared/stages.ts';
 const FILE = 'analyze-character';
-const STAGE = 'personaje';
+const STAGE = 'personajes';
+const ACTIVITY = 'generar_descripcion';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
@@ -112,6 +115,20 @@ Deno.serve(async (req)=>{
       throw new Error('Error de configuración: Falta el prompt de análisis de personaje');
     }
     userId = await getUserId(req);
+    const enabled = await isActivityEnabled(STAGE, ACTIVITY);
+    if (!enabled) {
+      return new Response(
+        JSON.stringify({ error: 'Actividad deshabilitada' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    await startInflightCall({
+      user_id: userId,
+      etapa: STAGE,
+      actividad: ACTIVITY,
+      modelo: apiModel,
+      input: { imageUrl, name, age, notes: sanitizedNotes }
+    });
     console.log(`[${FILE}] [INIT] Attempting to fetch image: ${imageUrl}`);
     const base64Image = await fetchImageAsBase64(imageUrl);
     const prompt = analysisPrompt.replace('{name}', name || '').replace('${sanitizedAge}', age?.toString() || '').replace('${sanitizedNotes}', sanitizedNotes || '');
@@ -181,14 +198,15 @@ Deno.serve(async (req)=>{
       throw new Error('No analysis result received from OpenAI');
     }
     const description = JSON.parse(responseData.choices[0].message.content);
-    return new Response(JSON.stringify({
-      description
-    }), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
+    await endInflightCall(userId, ACTIVITY);
+    return new Response(
+      JSON.stringify({
+        description
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
-    });
+    );
   } catch (error) {
     console.error(`[${FILE}] [ERROR]`, error);
     if (start) {
@@ -205,14 +223,13 @@ Deno.serve(async (req)=>{
       });
     }
     const errResp = handleOpenAIError(error);
-    return new Response(JSON.stringify({
-      error: errResp.message
-    }), {
-      status: errResp.status,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
+    await endInflightCall(userId, ACTIVITY);
+    return new Response(
+      JSON.stringify({ error: errResp.message }),
+      {
+        status: errResp.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
-    });
+    );
   }
 });

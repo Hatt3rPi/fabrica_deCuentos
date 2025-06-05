@@ -66,14 +66,6 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const navigate = useNavigate();
   const { supabase, user } = useAuth();
 
-  useEffect(() => {
-    if (storyId) {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (uuidRegex.test(storyId)) {
-        localStorage.setItem('current_story_draft_id', storyId);
-      }
-    }
-  }, [storyId]);
   const {
     estado,
     setPersonajes,
@@ -81,7 +73,22 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     regresarEtapa,
     resetEstado,
     setEstadoCompleto,
+    setStoryId,
   } = useWizardFlowStore();
+
+  useEffect(() => {
+    if (storyId) {
+      setStoryId(storyId);
+    }
+  }, [storyId, setStoryId]);
+
+  useEffect(() => {
+    return () => {
+      resetEstado();
+      setStoryId(null);
+      localStorage.removeItem('current_story_draft_id');
+    };
+  }, [resetEstado, setStoryId]);
   const [state, setState] = useState<WizardState>(INITIAL_STATE);
   const [currentStep, setCurrentStep] = useState<WizardStep>('characters');
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -114,73 +121,72 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   useEffect(() => {
-    const loadDraft = async () => {
-      if (!storyId || !user) {
-        return;
+    if (!storyId) return;
+
+    useWizardFlowStore.getState().resetEstado();
+
+    const backupKey = `story_draft_${storyId}_backup`;
+    const mainKey = `story_draft_${storyId}`;
+    const localBackup = localStorage.getItem(backupKey);
+    const localDraft = !localBackup ? localStorage.getItem(mainKey) : null;
+
+    if (localBackup || localDraft) {
+      const raw = JSON.parse(localBackup || localDraft!);
+      const { state: localState, flow } = raw;
+      useWizardFlowStore.getState().setEstadoCompleto(flow);
+      setCharacters(localState.characters || []);
+      setStorySettings(localState.meta || INITIAL_STATE.meta);
+      if (localState.designSettings) setDesignSettings(localState.designSettings);
+      if (localState.spreads) {
+        const mapped = localState.spreads.map((p: any) => ({
+          id: p.id,
+          pageNumber: p.pageNumber,
+          text: p.text,
+          imageUrl: p.imageUrl,
+          prompt: p.prompt,
+        }));
+        setGeneratedPages(mapped);
       }
+      const etapaInicial = stepFromEstado(useWizardFlowStore.getState().estado);
+      setCurrentStep(etapaInicial);
+      return;
+    }
 
-      console.log('[WizardFlow] loadDraft inicio');
-      try {
-        const draft = await storyService.getStoryDraft(storyId);
-        if (draft.story) {
-          setState({
-            ...INITIAL_STATE,
-            meta: {
-              title: draft.story.title || '',
-              theme: draft.story.theme || '',
-              targetAge: draft.story.target_age || '',
-              literaryStyle: draft.story.literary_style || '',
-              centralMessage: draft.story.central_message || '',
-              additionalDetails: draft.story.additional_details || '',
-              status: draft.story.status,
-            },
-          });
-          setStorySettings({
-            theme: draft.story.theme || '',
-            targetAge: draft.story.target_age || '',
-            literaryStyle: draft.story.literary_style || '',
-            centralMessage: draft.story.central_message || '',
-            additionalDetails: draft.story.additional_details || '',
-          });
-          if (draft.story.wizard_state) {
-            setEstadoCompleto(draft.story.wizard_state);
-          }
-        }
-        if (draft.characters) {
-          setCharacters(draft.characters);
-        }
-        if (draft.design) {
-          setDesignSettings({
-            visualStyle: draft.design.visual_style,
-            colorPalette: draft.design.color_palette,
-          });
-        }
-        if (draft.pages) {
-          const pages = draft.pages.map(p => ({
-            id: p.id,
-            pageNumber: p.page_number,
-            text: p.text,
-            imageUrl: p.image_url,
-            prompt: p.prompt,
-          }));
-          setGeneratedPages(pages);
-        }
-
-        console.log('[WizardFlow] borrador remoto cargado', useWizardFlowStore.getState().estado);
-
-        if (draft.characters) setPersonajes(draft.characters.length);
-
-        const current = draft.story.wizard_state || useWizardFlowStore.getState().estado;
-        const next = stepFromEstado(current);
-        setCurrentStep(next);
-        console.log('[WizardFlow] estado tras load', current);
-      } catch (error) {
-        console.error('Error loading draft:', error);
+    storyService.getStoryDraft(storyId).then(draft => {
+      const s = draft.story;
+      if (s.wizard_state) {
+        setEstadoCompleto(s.wizard_state);
+      } else {
+        useWizardFlowStore.getState().resetEstado();
       }
-    };
-
-    loadDraft();
-  }, [storyId, user]);
+      if (draft.characters) setCharacters(draft.characters);
+      setStorySettings({
+        theme: s.theme || '',
+        targetAge: s.target_age || '',
+        literaryStyle: s.literary_style || '',
+        centralMessage: s.central_message || '',
+        additionalDetails: s.additional_details || '',
+      });
+      if (draft.design) {
+        setDesignSettings({
+          visualStyle: draft.design.visual_style || '',
+          colorPalette: draft.design.color_palette || '',
+        });
+      }
+      if (draft.pages) {
+        const mapped = draft.pages.map(p => ({
+          id: p.id,
+          pageNumber: p.page_number,
+          text: p.text,
+          imageUrl: p.image_url || '',
+          prompt: p.prompt || ''
+        }));
+        setGeneratedPages(mapped);
+      }
+      const etapaInicial = stepFromEstado(useWizardFlowStore.getState().estado);
+      setCurrentStep(etapaInicial);
+    });
+  }, [storyId]);
 
   const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'export'];
   const stepMap: Record<WizardStep, keyof EstadoFlujo | null> = {
@@ -205,10 +211,6 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const prevStep = () => {
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex > 0) {
-      const etapa = stepMap[currentStep];
-      if (etapa) {
-        regresarEtapa(etapa);
-      }
       setCurrentStep(steps[currentIndex - 1]);
     }
   };
