@@ -12,9 +12,8 @@ export interface EstadoFlujo {
   vistaPrevia: EtapaEstado;
 }
 
-const logEstado = (estado: EstadoFlujo, accion: string) => {
-  const id = localStorage.getItem('current_story_draft_id');
-  const suffix = id ? id.slice(-6) : '------';
+const logEstado = (estado: EstadoFlujo, accion: string, id?: string | null) => {
+  const suffix = id?.slice(-6) || '------';
   console.log(`[WizardFlow:${suffix}] ${accion}`, {
     personajes: estado.personajes.estado,
     cuento: estado.cuento,
@@ -24,7 +23,9 @@ const logEstado = (estado: EstadoFlujo, accion: string) => {
 };
 
 interface WizardFlowStore {
+  currentStoryId: string | null;
   estado: EstadoFlujo;
+  setStoryId: (id: string | null) => void;
   setPersonajes: (count: number) => void;
   avanzarEtapa: (etapa: keyof EstadoFlujo) => void;
   regresarEtapa: (etapa: keyof EstadoFlujo) => void;
@@ -32,7 +33,7 @@ interface WizardFlowStore {
   resetEstado: () => void;
 }
 
-const initialState: EstadoFlujo = {
+export const initialFlowState: EstadoFlujo = {
   personajes: { estado: 'no_iniciada', personajesAsignados: 0 },
   cuento: 'no_iniciada',
   diseno: 'no_iniciada',
@@ -40,8 +41,12 @@ const initialState: EstadoFlujo = {
 };
 
 export const useWizardFlowStore = create<WizardFlowStore>()(
-  (set) => ({
-      estado: initialState,
+  (set, get) => ({
+      currentStoryId: null,
+      estado: initialFlowState,
+      setStoryId: (id) => {
+        set({ currentStoryId: id });
+      },
       setPersonajes: (count) =>
         set((state) => {
           const nuevoEstado = { ...state.estado };
@@ -56,12 +61,12 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
               nuevoEstado.cuento = 'borrador';
             }
           }
-          logEstado(nuevoEstado, 'setPersonajes');
+          logEstado(nuevoEstado, 'setPersonajes', get().currentStoryId);
           return { estado: nuevoEstado };
         }),
       setEstadoCompleto: (nuevo) =>
         set(() => {
-          logEstado(nuevo, 'setEstadoCompleto');
+          logEstado(nuevo, 'setEstadoCompleto', get().currentStoryId);
           return { estado: nuevo };
         }),
       avanzarEtapa: (etapa) =>
@@ -87,25 +92,25 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
               nuevoEstado.vistaPrevia = 'borrador';
             }
           }
-          logEstado(nuevoEstado, 'avanzarEtapa');
+          logEstado(nuevoEstado, 'avanzarEtapa', get().currentStoryId);
           return { estado: nuevoEstado };
         }),
       regresarEtapa: (etapa) =>
         set((state) => {
           const nuevoEstado = { ...state.estado };
-          if (etapa === 'cuento') {
+          if (etapa === 'cuento' && nuevoEstado.cuento !== 'completado') {
             nuevoEstado.cuento = 'borrador';
-          } else if (etapa === 'diseno') {
+          } else if (etapa === 'diseno' && nuevoEstado.diseno !== 'completado') {
             nuevoEstado.diseno = 'borrador';
-          } else if (etapa === 'vistaPrevia') {
+          } else if (etapa === 'vistaPrevia' && nuevoEstado.vistaPrevia !== 'completado') {
             nuevoEstado.vistaPrevia = 'borrador';
           }
-          logEstado(nuevoEstado, 'regresarEtapa');
+          logEstado(nuevoEstado, 'regresarEtapa', get().currentStoryId);
           return { estado: nuevoEstado };
         }),
       resetEstado: () => {
-        logEstado(initialState, 'resetEstado');
-        set({ estado: initialState });
+        logEstado(initialFlowState, 'resetEstado', get().currentStoryId);
+        set({ estado: initialFlowState });
       }
     })
 );

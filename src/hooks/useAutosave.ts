@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { WizardState, EstadoFlujo } from '../types';
+import { storyService } from '../services/storyService';
 
 const AUTOSAVE_DELAY = 1000; // 1 second delay between saves
 const MAX_RETRIES = 3;
@@ -78,20 +79,16 @@ export const useAutosave = (
         }
 
         // Save story metadata
-        const { error: storyError } = await supabase
-          .from('stories')
-          .update({
-            title: state.meta.title,
-            theme: state.meta.theme,
-            target_age: state.meta.targetAge,
-            literary_style: state.meta.literaryStyle,
-            central_message: state.meta.centralMessage,
-            additional_details: state.meta.additionalDetails,
-            wizard_state: flow,
-            updated_at: new Date().toISOString(),
-            status: 'draft'
-          })
-          .eq('id', currentStoryId);
+        const { error: storyError } = await storyService.persistStory(currentStoryId, {
+          title: state.meta.title,
+          theme: state.meta.theme,
+          target_age: state.meta.targetAge,
+          literary_style: state.meta.literaryStyle,
+          central_message: state.meta.centralMessage,
+          additional_details: state.meta.additionalDetails,
+          updated_at: new Date().toISOString(),
+          status: 'draft'
+        });
 
         if (storyError) throw storyError;
 
@@ -131,12 +128,6 @@ export const useAutosave = (
     };
   }, [state, flow, supabase, user]);
 
-  // Cleanup storyId on unmount
-  useEffect(() => {
-    return () => {
-      localStorage.removeItem('current_story_draft_id');
-    };
-  }, []);
 
   // Expose recovery method
   const recoverFromBackup = async (id: string) => {

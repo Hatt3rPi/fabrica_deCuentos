@@ -34,9 +34,13 @@ export interface EstadoFlujo {
    - No se puede avanzar a una etapa si la anterior no está en estado `completado`.
    - Al asignar los tres personajes se marca automáticamente la etapa de personajes como `completado`.
 2. **Persistencia**
-   - El estado se guarda con `zustand` utilizando `localStorage`, permitiendo reanudar el progreso al volver a la aplicación.
+   - El flujo se mantiene en el store `zustand` y se sincroniza con la columna `wizard_state` de la tabla `stories`.
+   - Cada actualización del cuento envía el estado completo a Supabase.
 3. **Carga de datos**
-   - Al continuar desde el inicio se identifica la primera etapa en `borrador` y se navega a ella cargando la información guardada.
+   - Al montar el wizard se intenta restaurar primero desde `localStorage` (backup o borrador principal).
+   - Si no existe información local se consulta la BD y se aplica el `wizard_state` guardado.
+4. **Solo avance**
+   - Una etapa marcada como `completado` no regresa a `borrador` salvo que el usuario cambie los datos correspondientes.
 
 ## Uso
 
@@ -45,6 +49,8 @@ El store `useWizardFlowStore` expone acciones para actualizar cada etapa y avanz
 ```ts
 const { estado, setPersonajes, avanzarEtapa, regresarEtapa, resetEstado } = useWizardFlowStore();
 ```
+
+Además, el store mantiene `currentStoryId` para identificar el borrador activo y evitar registros de log sin contexto.
 
 Estas acciones pueden integrarse en los componentes del wizard para mantener el seguimiento del flujo de creación.
 
