@@ -107,6 +107,8 @@ const MyStories: React.FC = () => {
 
       const step = stepFromEstado(flow);
 
+      console.log('[Home] wizard_state', { storyId, wizard_state: flow });
+
       console.log('[Home] continuar', {
         storyId,
         irA: step,
