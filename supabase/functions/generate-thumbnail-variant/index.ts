@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
+import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,8 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
+const STAGE = 'personajes';
+const ACTIVITY = 'miniatura_variante';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -42,6 +45,13 @@ Deno.serve(async (req) => {
     }
 
     userId = await getUserId(req);
+    await startInflightCall({
+      user_id: userId,
+      etapa: STAGE,
+      actividad: ACTIVITY,
+      modelo: apiModel,
+      input: { imageUrl, promptType }
+    });
 
     const imgRes = await fetch(imageUrl);
     if (!imgRes.ok) {
@@ -134,12 +144,14 @@ Deno.serve(async (req) => {
       usuario_id: userId,
     });
 
+    await endInflightCall(userId, ACTIVITY);
     return new Response(JSON.stringify({ thumbnailUrl: resultUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('Error in generate-thumbnail-variant:', error);
+    await endInflightCall(userId, ACTIVITY);
     await logPromptMetric({
       prompt_id: promptId,
       modelo_ia: apiModel,

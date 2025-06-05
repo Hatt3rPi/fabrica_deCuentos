@@ -17,6 +17,7 @@ import ToastContainer from './components/UI/ToastContainer';
 import ProfileSettings from './pages/ProfileSettings';
 import PromptsManager from './pages/Admin/Prompts/PromptsManager';
 import PromptAnalytics from './pages/Admin/Analytics/PromptAnalytics';
+import AdminFlujo from './pages/Admin/Flujo';
 import { useProfileStore } from './stores/profileStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -132,6 +133,14 @@ function AnimatedRoutes() {
                   element={
                     <PrivateRoute>
                       <PromptAnalytics />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/flujo"
+                  element={
+                    <PrivateRoute>
+                      <AdminFlujo />
                     </PrivateRoute>
                   }
                 />
