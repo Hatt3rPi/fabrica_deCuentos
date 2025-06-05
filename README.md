@@ -13,6 +13,7 @@ Plataforma web interactiva para crear cuentos infantiles personalizados con ilus
 - [🚨 Pruebas Automatizadas con Cypress](#-pruebas-automatizadas-con-cypress)
 - [📊 Flujo de Usuario](#-flujo-de-usuario)
 - [🔧 Contextos](#-contextos)
+- [📈 Panel de Analytics](#-panel-de-analytics)
 - [🤝 Contribución](#-contribución)
 - [📄 Licencia](#-licencia)
 - [✨ Créditos](#-créditos)
@@ -207,6 +208,15 @@ npx cypress open
 
 - `AuthContext`: Manejo de autenticación
 - `WizardContext`: Estado y control del asistente
+
+## 📈 Panel de Analytics
+
+La página `/admin/flujo` muestra en tiempo real las llamadas activas a las
+funciones de IA. Además de escuchar cambios vía Supabase Realtime, realiza
+consultas cada segundo para mantener los contadores actualizados. Cada tarjeta
+indica el nombre de la función Edge y permite habilitar o deshabilitar la
+actividad; dicha elección es respetada por las funciones mediante el helper
+`isActivityEnabled`.
 
 ## 🤝 Contribución
 

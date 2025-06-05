@@ -1,6 +1,8 @@
 import OpenAI from "npm:openai@4.28.0";
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
+import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
+import { isActivityEnabled } from '../_shared/stages.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +14,8 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
+const STAGE = 'personajes';
+const ACTIVITY = 'miniatura';
 
 // Valida si la cadena es:
 //  • Un data URI de imagen
@@ -85,6 +89,20 @@ Deno.serve(async (req) => {
     if (!characterPrompt) throw new Error('Falta el prompt de generación de personaje');
 
     userId = await getUserId(req);
+    const enabled = await isActivityEnabled(STAGE, ACTIVITY);
+    if (!enabled) {
+      return new Response(
+        JSON.stringify({ error: 'Actividad deshabilitada' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    await startInflightCall({
+      user_id: userId,
+      etapa: STAGE,
+      actividad: ACTIVITY,
+      modelo: apiModel,
+      input: { promptType: 'PROMPT_CREAR_MINIATURA_PERSONAJE' }
+    });
 
     // 2) Payload
     const rawPayload = await req.json().catch(() => {
@@ -177,13 +195,14 @@ Deno.serve(async (req) => {
     }
     const thumbnailUrl = `data:${mimeType};base64,${b64}`;
     console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbnailUrl);
-
+    await endInflightCall(userId, ACTIVITY);
     return new Response(JSON.stringify({ thumbnailUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error: any) {
     console.error('Error in describe-and-sketch:', error);
+    await endInflightCall(userId, ACTIVITY);
     await logPromptMetric({
       prompt_id: promptId,
       modelo_ia: apiModel,
@@ -195,11 +214,12 @@ Deno.serve(async (req) => {
       usuario_id: userId,
       metadatos: { error: (error as Error).message },
     });
-    return new Response(JSON.stringify({
-      error: error.message || 'Error al generar la miniatura'
-    }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({ error: error.message || 'Error al generar la miniatura' }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
 });
