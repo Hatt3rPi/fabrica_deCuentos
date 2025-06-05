@@ -21,18 +21,18 @@ export const useAutosave = (
   const retryCountRef = useRef(0);
   const storyIdRef = useRef<string | null>(null);
 
-  // Initialize storyId on mount
+  // Keep storyId in sync when the route parameter changes
   useEffect(() => {
-    if (!storyIdRef.current) {
-      if (initialStoryId && isValidUUID(initialStoryId)) {
+    if (initialStoryId && isValidUUID(initialStoryId)) {
+      if (storyIdRef.current !== initialStoryId) {
         storyIdRef.current = initialStoryId;
         localStorage.setItem('current_story_draft_id', initialStoryId);
-      } else {
-        // Avoid creating a new story automatically when no ID is provided
-        const savedId = localStorage.getItem('current_story_draft_id');
-        if (savedId && isValidUUID(savedId)) {
-          storyIdRef.current = savedId;
-        }
+      }
+    } else if (!storyIdRef.current) {
+      // Fallback to any value already stored in localStorage
+      const savedId = localStorage.getItem('current_story_draft_id');
+      if (savedId && isValidUUID(savedId)) {
+        storyIdRef.current = savedId;
       }
     }
   }, [initialStoryId]);
