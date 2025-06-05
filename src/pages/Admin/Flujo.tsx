@@ -10,13 +10,13 @@ interface Inflight {
 
 const CONFIG = {
   personajes: [
-    { key: 'generar_descripcion', label: 'Generar descripción', prompt: 'PROMPT_DESCRIPCION_PERSONAJE' },
-    { key: 'miniatura', label: 'Generar miniatura', prompt: 'PROMPT_CREAR_MINIATURA_PERSONAJE' },
-    { key: 'miniatura_variante', label: 'Miniatura variantes', prompt: 'PROMPT_VARIANTE_TRASERA' },
+    { key: 'generar_descripcion', label: 'Generar descripción', fn: 'analyze-character' },
+    { key: 'miniatura', label: 'Generar miniatura', fn: 'describe-and-sketch' },
+    { key: 'miniatura_variante', label: 'Miniatura variantes', fn: 'generate-thumbnail-variant' },
   ],
   historia: [
-    { key: 'generar_historia', label: 'Generar historia', prompt: 'PROMPT_GENERADOR_CUENTOS' },
-    { key: 'generar_portada', label: 'Generar portada', prompt: 'PROMPT_CUENTO_PORTADA' },
+    { key: 'generar_historia', label: 'Generar historia', fn: 'generate-story' },
+    { key: 'generar_portada', label: 'Generar portada', fn: 'generate-cover' },
   ],
 };
 
@@ -44,7 +44,11 @@ const AdminFlujo: React.FC = () => {
     loadSettings();
     loadInflight();
     const unsub = subscribeToInflight(loadInflight);
-    return unsub;
+    const id = setInterval(loadInflight, 1000);
+    return () => {
+      unsub();
+      clearInterval(id);
+    };
   }, [isAdmin]);
 
   const toggle = async (stage: string, act: string, value: boolean) => {
@@ -60,14 +64,15 @@ const AdminFlujo: React.FC = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Flujo</h1>
-      <div className="flex gap-4 overflow-x-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {Object.entries(CONFIG).map(([stage, acts]) => (
-          <div key={stage} className="space-y-3">
-            <h2 className="font-semibold capitalize">{stage}</h2>
+          <div key={stage} className="bg-gray-50 rounded-lg p-4 shadow space-y-4">
+            <h2 className="font-semibold capitalize text-lg">{stage}</h2>
             {acts.map((a) => (
               <StageActivityCard
                 key={a.key}
                 label={a.label}
+                fn={a.fn}
                 enabled={!!settings?.[stage]?.[a.key]}
                 inflight={inflight.filter((f) => f.actividad === a.key).length}
                 onToggle={(v) => toggle(stage, a.key, v)}

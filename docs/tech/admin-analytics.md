@@ -70,7 +70,9 @@ El componente `StageActivityCard` muestra el estado de cada actividad, con un to
 
 ## Página `/admin/flujo`
 
-La página reúne todas las actividades agrupadas por etapa y consume `subscribeToInflight` para mostrar en tiempo real el número de llamadas. Los estados de activación se guardan en `system_settings` bajo la clave `stages_enabled`.
+La página reúne todas las actividades agrupadas por etapa y utiliza `subscribeToInflight` junto con un pequeño _polling_ cada segundo para mantener los números actualizados. Los estados de activación se guardan en `system_settings` bajo la clave `stages_enabled`.
+
+Cada función Edge consulta este ajuste mediante `isActivityEnabled` antes de ejecutarse para respetar los toggles del panel.
 
 ---
 

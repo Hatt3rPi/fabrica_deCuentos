@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
+import { isActivityEnabled } from '../_shared/stages.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,6 +46,13 @@ Deno.serve(async (req) => {
     }
 
     userId = await getUserId(req);
+    const enabled = await isActivityEnabled(STAGE, ACTIVITY);
+    if (!enabled) {
+      return new Response(
+        JSON.stringify({ error: 'Actividad deshabilitada' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     await startInflightCall({
       user_id: userId,
       etapa: STAGE,

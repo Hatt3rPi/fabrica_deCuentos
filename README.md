@@ -212,8 +212,11 @@ npx cypress open
 ## 📈 Panel de Analytics
 
 La página `/admin/flujo` muestra en tiempo real las llamadas activas a las
-funciones de IA. Se alimenta de la tabla `inflight_calls` y permite activar o
-desactivar cada actividad del flujo.
+funciones de IA. Además de escuchar cambios vía Supabase Realtime, realiza
+consultas cada segundo para mantener los contadores actualizados. Cada tarjeta
+indica el nombre de la función Edge y permite habilitar o deshabilitar la
+actividad; dicha elección es respetada por las funciones mediante el helper
+`isActivityEnabled`.
 
 ## 🤝 Contribución
 

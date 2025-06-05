@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { encode as base64Encode } from "https://deno.land/std@0.203.0/encoding/base64.ts";
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
+import { isActivityEnabled } from '../_shared/stages.ts';
 const FILE = 'analyze-character';
 const STAGE = 'personajes';
 const ACTIVITY = 'generar_descripcion';
@@ -114,6 +115,13 @@ Deno.serve(async (req)=>{
       throw new Error('Error de configuración: Falta el prompt de análisis de personaje');
     }
     userId = await getUserId(req);
+    const enabled = await isActivityEnabled(STAGE, ACTIVITY);
+    if (!enabled) {
+      return new Response(
+        JSON.stringify({ error: 'Actividad deshabilitada' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     await startInflightCall({
       user_id: userId,
       etapa: STAGE,
