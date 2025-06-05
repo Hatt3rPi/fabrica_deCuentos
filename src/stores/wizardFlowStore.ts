@@ -14,7 +14,9 @@ export interface EstadoFlujo {
 }
 
 const logEstado = (estado: EstadoFlujo, accion: string) => {
-  console.log(`[WizardFlow] ${accion}`, {
+  const id = localStorage.getItem('current_story_draft_id');
+  const suffix = id ? id.slice(-6) : '------';
+  console.log(`[WizardFlow:${suffix}] ${accion}`, {
     personajes: estado.personajes.estado,
     cuento: estado.cuento,
     diseno: estado.diseno,

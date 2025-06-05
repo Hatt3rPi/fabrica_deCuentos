@@ -71,6 +71,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     avanzarEtapa,
     regresarEtapa,
     resetEstado,
+    setEstadoCompleto,
   } = useWizardFlowStore();
   const [state, setState] = useState<WizardState>(INITIAL_STATE);
   const [currentStep, setCurrentStep] = useState<WizardStep>('characters');
@@ -121,7 +122,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           if (parsed.characters) setCharacters(parsed.characters);
           if (parsed.generatedPages) setGeneratedPages(parsed.generatedPages);
           if (parsed.flow) {
-            useWizardFlowStore.setState({ estado: parsed.flow });
+            setEstadoCompleto(parsed.flow);
           }
           const estadoActual = parsed.flow || useWizardFlowStore.getState().estado;
           const step = stepFromEstado(estadoActual);
@@ -152,7 +153,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             additionalDetails: draft.story.additional_details || '',
           });
           if (draft.story.wizard_state) {
-            useWizardFlowStore.setState({ estado: draft.story.wizard_state });
+            setEstadoCompleto(draft.story.wizard_state);
           }
         }
         if (draft.characters) {

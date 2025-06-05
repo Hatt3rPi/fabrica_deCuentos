@@ -80,9 +80,7 @@ export const useAutosave = (
         // Save story metadata
         const { error: storyError } = await supabase
           .from('stories')
-          .upsert({
-            id: currentStoryId,
-            user_id: user.id,
+          .update({
             title: state.meta.title,
             theme: state.meta.theme,
             target_age: state.meta.targetAge,
@@ -93,7 +91,7 @@ export const useAutosave = (
             updated_at: new Date().toISOString(),
             status: 'draft'
           })
-          .select();
+          .eq('id', currentStoryId);
 
         if (storyError) throw storyError;
 
