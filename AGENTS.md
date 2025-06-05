@@ -1,4 +1,6 @@
 
+# Procura responder siempre en español
+# Para todos los diseños de componentes que te soliciten. asegúrate de que queden hermosos y hagan sinergia con el resto de la página. 
 # Guía de Buenas Prácticas y Mantenimiento del Proyecto
 
 ## 📝 Mantener la documentación al día
