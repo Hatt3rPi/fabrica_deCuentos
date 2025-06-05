@@ -5,6 +5,8 @@ import ConfirmDialog from '../components/UI/ConfirmDialog';
 import { storyService } from '../services/storyService';
 import { useNavigate } from 'react-router-dom';
 import StoryCard from '../components/StoryCard';
+import { EstadoFlujo } from '../types';
+import type { WizardStep } from '../context/WizardContext';
 
 interface Story {
   id: string;
@@ -72,8 +74,47 @@ const MyStories: React.FC = () => {
     }
   };
 
+  const stepFromEstado = (estado: EstadoFlujo): WizardStep => {
+    if (estado.personajes.estado !== 'completado') return 'characters';
+    if (estado.cuento !== 'completado') return 'story';
+    if (estado.diseno !== 'completado') return 'design';
+    return 'preview';
+  };
+
   const handleContinueStory = (storyId: string) => {
-    navigate(`/wizard/${storyId}`);
+    (async () => {
+      let draft: any = null;
+      try {
+        draft = await storyService.getStoryDraft(storyId);
+      } catch (error) {
+        console.error('Error preloading draft:', error);
+      }
+
+      const flow: EstadoFlujo =
+        draft?.story?.wizard_state || {
+          personajes: { estado: 'no_iniciada', personajesAsignados: 0 },
+          cuento: 'no_iniciada',
+          diseno: 'no_iniciada',
+          vistaPrevia: 'no_iniciada'
+        };
+
+      const step = stepFromEstado(flow);
+
+      console.log('[Home] wizard_state', { storyId, wizard_state: flow });
+
+      console.log('[Home] continuar', {
+        storyId,
+        irA: step,
+        campos: {
+          personajes: draft?.characters?.length || 0,
+          cuento: draft?.pages?.length || draft?.generatedPages?.length || 0,
+          diseno: draft?.design?.visual_style || null,
+          vistaPrevia: draft?.pages?.length ? 'listo' : null
+        }
+      });
+
+      navigate(`/wizard/${storyId}`);
+    })();
   };
 
   const handleReadStory = (storyId: string) => {

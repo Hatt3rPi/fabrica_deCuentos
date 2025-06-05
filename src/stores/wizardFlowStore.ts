@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export type EtapaEstado = 'no_iniciada' | 'borrador' | 'completado';
 
@@ -41,8 +40,7 @@ const initialState: EstadoFlujo = {
 };
 
 export const useWizardFlowStore = create<WizardFlowStore>()(
-  persist(
-    (set) => ({
+  (set) => ({
       estado: initialState,
       setPersonajes: (count) =>
         set((state) => {
@@ -109,10 +107,6 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
         logEstado(initialState, 'resetEstado');
         set({ estado: initialState });
       }
-    }),
-    {
-      name: 'wizard-flow-store'
-    }
-  )
+    })
 );
 

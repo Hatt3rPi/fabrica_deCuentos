@@ -89,6 +89,36 @@ export type Database = {
         }
         Relationships: []
       }
+      inflight_calls: {
+        Row: {
+          actividad: string | null
+          etapa: string | null
+          id: string
+          inicio: string | null
+          input: Json | null
+          modelo: string | null
+          user_id: string | null
+        }
+        Insert: {
+          actividad?: string | null
+          etapa?: string | null
+          id?: string
+          inicio?: string | null
+          input?: Json | null
+          modelo?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          actividad?: string | null
+          etapa?: string | null
+          id?: string
+          inicio?: string | null
+          input?: Json | null
+          modelo?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           actions: Json | null
