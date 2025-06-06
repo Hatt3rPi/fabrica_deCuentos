@@ -59,19 +59,21 @@ Deno.serve(async (req) => {
       .replace('{historia}', storyTheme);
 
     start = Date.now();
+    const storyPayload = {
+      model,
+      messages: [{ role: 'user', content: finalPrompt }],
+      response_format: { type: 'json_object' },
+      max_tokens: 1500,
+      temperature: 0.8,
+    };
+    console.log('[generate-story] [REQUEST]', JSON.stringify(storyPayload));
     const resp = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: finalPrompt }],
-        response_format: { type: 'json_object' },
-        max_tokens: 1500,
-        temperature: 0.8,
-      }),
+      body: JSON.stringify(storyPayload),
     });
     const elapsed = Date.now() - start;
     const rawResponse = await resp.text();
@@ -212,20 +214,22 @@ Deno.serve(async (req) => {
         .replace('{palette}', 'colores vibrantes')
         .replace('{story}', title);
       const cstart = Date.now();
+      const coverPayload = {
+        model: coverModel,
+        prompt: promptText,
+        size: '1024x1024',
+        quality: 'hd',
+        n: 1,
+        referenced_image_ids: charThumbnails,
+      };
+      console.log('[generate-story] [COVER REQUEST]', JSON.stringify(coverPayload));
       const cRes = await fetch(coverEndpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: coverModel,
-          prompt: promptText,
-          size: '1024x1024',
-          quality: 'hd',
-          n: 1,
-          referenced_image_ids: charThumbnails,
-        }),
+        body: JSON.stringify(coverPayload),
       });
       const coverRes = await cRes.json();
       const celapsed = Date.now() - cstart;

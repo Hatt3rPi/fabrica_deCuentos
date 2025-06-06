@@ -91,10 +91,12 @@ Deno.serve(async (req) => {
     if (apiEndpoint.includes('bfl.ai')) {
       const fluxKey = Deno.env.get('BFL_API_KEY');
       const start = Date.now();
+      const fluxPayload = { prompt: stylePrompt };
+      console.log('[generate-thumbnail-variant] [REQUEST]', JSON.stringify(fluxPayload));
       const req = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'x-key': fluxKey ?? '', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: stylePrompt })
+        body: JSON.stringify(fluxPayload)
       });
       const data = await req.json();
       const requestId = data.id;
@@ -121,6 +123,14 @@ Deno.serve(async (req) => {
     } else {
       const start = Date.now();
       const openaiKey = Deno.env.get('OPENAI_API_KEY');
+      const openaiPayload = {
+        model: apiModel,
+        prompt: stylePrompt,
+        size: '1024x1024',
+        n: 1,
+        image: imageUrl.split('/').pop()
+      };
+      console.log('[generate-thumbnail-variant] [REQUEST]', JSON.stringify(openaiPayload));
       const editRes = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${openaiKey}` },

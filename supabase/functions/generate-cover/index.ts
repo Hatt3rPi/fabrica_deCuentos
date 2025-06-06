@@ -47,18 +47,15 @@ async function generateImageWithRetry(
       
       // Si no hay imágenes, usar generación estándar
       if (referenceImages.length === 0) {
+        const payload = { model, prompt, size: '1024x1024', n: 1 };
+        console.log('[generate-cover] [REQUEST]', JSON.stringify(payload));
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${openaiKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model,
-            prompt,
-            size: '1024x1024',
-            n: 1
-          }),
+          body: JSON.stringify(payload),
         });
         
         const data = await response.json();
@@ -75,7 +72,8 @@ async function generateImageWithRetry(
         referenceImages.forEach((img, index) => {
           formData.append('image[]', img, `reference_${index}.png`);
         });
-        
+        const payload = { model, prompt, size: '1024x1024', n: 1, references: referenceImages.length };
+        console.log('[generate-cover] [REQUEST]', JSON.stringify(payload));
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {

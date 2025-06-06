@@ -14,20 +14,23 @@ Deno.serve(async (req) => {
     const { name, description, age } = await req.json();
     
     const start = Date.now();
+    const payload = {
+      model: 'gpt-image-1',
+      prompt:
+        `Clean full-body pencil sketch illustration for a children's book. ` +
+        `Character: ${age}. ${description}. Simple lines, no background, child-friendly.`,
+      size: '1024x1024',
+      quality: 'hd',
+      n: 1,
+    };
+    console.log('[generate-variations] [REQUEST]', JSON.stringify(payload));
     const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: `Clean full-body pencil sketch illustration for a children's book. ` +
-          `Character: ${age}. ${description}. Simple lines, no background, child-friendly.`,
-        size: '1024x1024',
-        quality: 'hd',
-        n: 1,
-      }),
+      body: JSON.stringify(payload),
     });
     const imageResponse = await res.json();
     const elapsed = Date.now() - start;

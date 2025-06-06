@@ -53,22 +53,24 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
 
     // Generate scene image using max 2 reference images per character
     const start = Date.now();
+    const payload = {
+      model: 'gpt-image-1',
+      prompt: `${identityBlocks}\n${sceneBlock}`,
+      referenced_image_ids: characters.flatMap((char) =>
+        char.referenceUrls.slice(0, 2)
+      ),
+      size: '1024x1024',
+      quality: 'hd',
+      n: 1,
+    };
+    console.log('[generate-scene] [REQUEST]', JSON.stringify(payload));
     const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: `${identityBlocks}\n${sceneBlock}`,
-        referenced_image_ids: characters.flatMap((char) =>
-          char.referenceUrls.slice(0, 2)
-        ),
-        size: '1024x1024',
-        quality: 'hd',
-        n: 1,
-      }),
+      body: JSON.stringify(payload),
     });
     const response = await imgRes.json();
     const elapsed = Date.now() - start;

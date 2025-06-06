@@ -78,6 +78,10 @@ La página reúne todas las actividades agrupadas por etapa y utiliza `subscribe
 
 Cada función Edge consulta este ajuste mediante `isActivityEnabled` antes de ejecutarse para respetar los toggles del panel.
 
+## Registro de solicitudes API
+
+Antes de llamar a OpenAI o Flux, las funciones imprimen en consola el JSON de la solicitud para facilitar la depuración. Esto ayuda a verificar que los parámetros enviados sean correctos.
+
 ---
 
 Con estos elementos se obtiene un panel que permite monitorizar el avance de las funciones de IA y habilitar o deshabilitar partes del flujo según sea necesario.

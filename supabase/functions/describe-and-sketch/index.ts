@@ -162,6 +162,14 @@ Deno.serve(async (req) => {
     formData.append('image', refBlob, `reference.${ext}`);
 
     const start = Date.now();
+    const requestJson = {
+      model: apiModel,
+      prompt: imagePrompt,
+      size: '1024x1024',
+      n: 1,
+      image: `reference.${ext}`
+    };
+    console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(requestJson));
     const editRes = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {

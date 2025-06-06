@@ -59,20 +59,22 @@ Deno.serve(async (req) => {
     `.trim();
 
     const start = Date.now();
+    const payload = {
+      model: 'gpt-image-1',
+      prompt,
+      size: apiSize,
+      quality: 'hd',
+      n: 1,
+      referenced_image_ids: referencedImageIds,
+    };
+    console.log('[generate-illustration] [REQUEST]', JSON.stringify(payload));
     const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt,
-        size: apiSize,
-        quality: 'hd',
-        n: 1,
-        referenced_image_ids: referencedImageIds,
-      }),
+      body: JSON.stringify(payload),
     });
     const response = await res.json();
     const elapsed = Date.now() - start;
