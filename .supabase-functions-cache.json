@@ -1,46 +1,50 @@
 {
   "analyze-character": {
     "hash": "e6e8d3a8767126673f874bc56b8554a0d8341015f17914c0e93b083afb7a48a0",
-    "updatedAt": "2025-06-06T15:39:15.041Z"
+    "updatedAt": "2025-06-06T17:13:02.593Z"
   },
   "delete-test-stories": {
     "hash": "770bd727a8d4f5875d8f41ed76007516ebbdf884d20c081960848a2aeea84cec",
-    "updatedAt": "2025-06-06T15:39:19.692Z"
+    "updatedAt": "2025-06-06T17:13:05.917Z"
   },
   "describe-and-sketch": {
     "hash": "541c399f6cbb6c34e25186017a6e42ed41f4e1e23582787b41a08ab7f977dbb5",
-    "updatedAt": "2025-06-06T15:39:23.399Z"
+    "updatedAt": "2025-06-06T17:13:09.598Z"
   },
   "generate-illustration": {
     "hash": "b232105565e6d18bae5b172965ea14a9181fec8ee786e8277be513f2bc98806f",
-    "updatedAt": "2025-06-06T15:39:30.708Z"
+    "updatedAt": "2025-06-06T17:13:20.787Z"
   },
   "generate-scene": {
     "hash": "e4332da361b04bf225a0a31cb16ceae839434d50882d69a3e3e7ce49daab5270",
-    "updatedAt": "2025-06-06T15:39:35.179Z"
+    "updatedAt": "2025-06-06T17:13:24.511Z"
   },
   "generate-spreads": {
     "hash": "ce4d29de24de95d7d89a5fece09a556c13e96cf543699583686c278fbbc3450d",
-    "updatedAt": "2025-06-06T15:39:38.645Z"
+    "updatedAt": "2025-06-06T17:13:28.109Z"
   },
   "generate-thumbnail-variant": {
     "hash": "70666ee36517c3373ab4c18b1a6b6437951b42dc464ddf1b59688fcf0a0b4a2c",
-    "updatedAt": "2025-06-06T15:39:46.310Z"
+    "updatedAt": "2025-06-06T17:13:36.611Z"
   },
   "generate-variations": {
     "hash": "0bbe90248e24f73eeed190e0e1f654afbcdfffd25cb9a73e9383bfaaa956bb98",
-    "updatedAt": "2025-06-06T15:39:49.980Z"
+    "updatedAt": "2025-06-06T17:13:40.007Z"
   },
   "send-reset-email": {
     "hash": "a0141c2fb36c1f0ab79af42fd7b3187b2d7aea605793cff0f68c98de2ca88e24",
-    "updatedAt": "2025-06-06T15:39:54.607Z"
+    "updatedAt": "2025-06-06T17:13:44.150Z"
   },
   "generate-story": {
     "hash": "7e3a6ed4dfc9b98bbfaa0b323163e0bbd609247b7312cff20c7810ceab301ffa",
-    "updatedAt": "2025-06-06T15:39:42.269Z"
+    "updatedAt": "2025-06-06T17:13:31.774Z"
   },
   "generate-cover": {
-    "hash": "f88e7c959a2109dddcc101af983aa45ef008a1a9fc067da5370555a95859d0a5",
-    "updatedAt": "2025-06-06T15:39:27.065Z"
+    "hash": "1a08221f4f7b89a5996767e287755a55cb526d043a8145c47eab234444818f35",
+    "updatedAt": "2025-06-06T17:13:13.353Z"
+  },
+  "generate-cover-variant": {
+    "hash": "5cf0006e7570b8d40be4d3281c41211b70e7387527ce9e2b48b53ad2cbb531cf",
+    "updatedAt": "2025-06-06T17:13:17.288Z"
   }
 }
