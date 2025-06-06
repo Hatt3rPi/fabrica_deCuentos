@@ -47,11 +47,6 @@ async function generateImageWithRetry(
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const formData = new FormData();
-      formData.append('model', model);
-      formData.append('prompt', prompt);
-      formData.append('size', '1024x1024');
-      formData.append('n', '1');
       
       // Si no hay imágenes, usar generación estándar
       if (endpoint.includes('bfl.ai')) {
@@ -73,10 +68,7 @@ async function generateImageWithRetry(
       } else {
         // Para gpt-image-1, podemos enviar múltiples imágenes de referencia
         // Deben enviarse usando el parámetro image[]
-        referenceImages.forEach((img, index) => {
-          formData.append('image[]', img, `reference_${index}.png`);
-        });
-        const payload = { model, prompt, size: '1024x1024', n: 1, references: referenceImages.length };
+        const payload = { model, prompt, size: '1024x1024', n: 1 };
         console.log('[generate-cover] [REQUEST]', JSON.stringify(payload));
         const { url } = await generateWithOpenAI({
           endpoint,
