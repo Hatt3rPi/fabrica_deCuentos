@@ -13,6 +13,7 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
+const FILE = 'generate-thumbnail-variant';
 const STAGE = 'personajes';
 const ACTIVITY = 'miniatura_variante';
 

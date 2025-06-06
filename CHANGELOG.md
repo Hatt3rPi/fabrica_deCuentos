@@ -9,3 +9,4 @@
 - Admin panel now guarda la configuración de cada actividad y muestra métricas de los últimos 10 minutos.
 - Nuevas columnas `actividad` y `edge_function` en `prompt_metrics`.
 - Las funciones Edge ahora imprimen en consola el JSON enviado a las APIs de IA.
+- Se corrige `describe-and-sketch` para soportar Flux y definir la constante `FILE`.

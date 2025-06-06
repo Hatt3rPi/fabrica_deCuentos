@@ -14,6 +14,7 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
+const FILE = 'describe-and-sketch';
 const STAGE = 'personajes';
 const ACTIVITY = 'miniatura';
 
@@ -153,58 +154,95 @@ Deno.serve(async (req) => {
     const mimeType = mimeMap[ext] || 'image/png';
     const refBlob = new Blob([refBuf], { type: mimeType });
 
-    // 6) Enviar a /v1/images/edits vía fetch + FormData
-    const formData = new FormData();
-    formData.append('model', apiModel);
-    formData.append('prompt', imagePrompt);
-    formData.append('size', '1024x1024');
-    formData.append('n', '1');
-    formData.append('image', refBlob, `reference.${ext}`);
+    let thumbnailUrl = '';
+    let elapsed = 0;
+    let tokensEntrada = 0;
+    let tokensSalida = 0;
 
     const start = Date.now();
-    const requestJson = {
-      model: apiModel,
-      prompt: imagePrompt,
-      size: '1024x1024',
-      n: 1,
-      image: `reference.${ext}`
-    };
-    console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(requestJson));
-    const editRes = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiKey}`,
-      },
-      body: formData
-    });
-    const elapsed = Date.now() - start;
-    const editData = await editRes.json();
-    const tokensEntrada = editData.usage?.input_tokens ?? 0;
-    const tokensSalida = editData.usage?.output_tokens ?? 0;
+    if (apiEndpoint.includes('bfl.ai')) {
+      const fluxKey = Deno.env.get('BFL_API_KEY');
+      const base64Image = btoa(String.fromCharCode(...new Uint8Array(refBuf)));
+      const fluxPayload = { prompt: imagePrompt, input_image: base64Image };
+      console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(fluxPayload));
+      const res = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'x-key': fluxKey ?? '', 'Content-Type': 'application/json' },
+        body: JSON.stringify(fluxPayload)
+      });
+      const data = await res.json();
+      const requestId = data.id;
+      let status = data.status;
+      elapsed = Date.now() - start;
+      for (let i = 0; i < 20 && requestId; i++) {
+        const poll = await fetch(`https://api.bfl.ai/v1/get_result?id=${requestId}`, {
+          headers: { 'x-key': fluxKey ?? '' }
+        });
+        const pollData = await poll.json();
+        status = pollData.status;
+        if (status === 'Ready') {
+          thumbnailUrl = pollData.result?.sample || '';
+          break;
+        }
+        if (status !== 'Processing' && status !== 'Queued') {
+          throw new Error('Flux error');
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      if (!thumbnailUrl) throw new Error('No image returned');
+    } else {
+      // Enviar a /v1/images/edits vía fetch + FormData
+      const formData = new FormData();
+      formData.append('model', apiModel);
+      formData.append('prompt', imagePrompt);
+      formData.append('size', '1024x1024');
+      formData.append('n', '1');
+      formData.append('image', refBlob, `reference.${ext}`);
+
+      const requestJson = {
+        model: apiModel,
+        prompt: imagePrompt,
+        size: '1024x1024',
+        n: 1,
+        image: `reference.${ext}`,
+      };
+      console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(requestJson));
+      const editRes = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiKey}`,
+        },
+        body: formData,
+      });
+      elapsed = Date.now() - start;
+      const editData = await editRes.json();
+      tokensEntrada = editData.usage?.input_tokens ?? 0;
+      tokensSalida = editData.usage?.output_tokens ?? 0;
+      if (!editRes.ok) {
+        const msg = editData.error?.message || editRes.statusText;
+        throw new Error(`Error al editar la imagen: ${msg}`);
+      }
+      // GPT-image-1 siempre devuelve b64_json
+      const b64 = editData.data?.[0]?.b64_json;
+      if (!b64) {
+        throw new Error('No se generó la imagen editada');
+      }
+      thumbnailUrl = `data:${mimeType};base64,${b64}`;
+      console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbnailUrl);
+    }
+
     await logPromptMetric({
       prompt_id: promptId,
       modelo_ia: apiModel,
       tiempo_respuesta_ms: elapsed,
-      estado: editRes.ok ? 'success' : 'error',
-      error_type: editRes.ok ? null : 'service_error',
+      estado: 'success',
+      error_type: null,
       tokens_entrada: tokensEntrada,
       tokens_salida: tokensSalida,
       usuario_id: userId,
       actividad: ACTIVITY,
       edge_function: FILE,
     });
-    if (!editRes.ok) {
-      const msg = editData.error?.message || editRes.statusText;
-      throw new Error(`Error al editar la imagen: ${msg}`);
-    }
-
-    // 7) GPT-image-1 siempre devuelve b64_json
-    const b64 = editData.data?.[0]?.b64_json;
-    if (!b64) {
-      throw new Error('No se generó la imagen editada');
-    }
-    const thumbnailUrl = `data:${mimeType};base64,${b64}`;
-    console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbnailUrl);
     await endInflightCall(userId, ACTIVITY);
     return new Response(JSON.stringify({ thumbnailUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
