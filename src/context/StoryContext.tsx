@@ -91,18 +91,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               Authorization: `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ imageUrl, promptType: style.type })
+            body: JSON.stringify({ imageUrl, promptType: style.type, storyId, styleKey: style.key })
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'failed');
           const url = data.coverUrl || data.url;
-          if (!url) continue;
-          const imgRes = await fetch(url);
-          const blob = await imgRes.blob();
-          const path = `covers/${storyId}_${style.key}.png`;
-          await supabase.storage.from('storage').upload(path, blob, { contentType: 'image/png', upsert: true });
-          const { data: { publicUrl } } = supabase.storage.from('storage').getPublicUrl(path);
-          variants[style.key] = publicUrl;
+          if (url) variants[style.key] = url;
         } catch (err) {
           console.error('Error generating cover variant', err);
         }

@@ -12,14 +12,16 @@ Se utiliza durante la etapa de diseño para mostrar una vista previa de cada est
 ```json
 {
   "imageUrl": "https://.../covers/<id>.png",
-  "promptType": "PROMPT_ESTILO_KAWAII"
+  "promptType": "PROMPT_ESTILO_KAWAII",
+  "storyId": "<uuid>",
+  "styleKey": "kawaii"
 }
 ```
 
-Ambos campos son obligatorios y `promptType` se usa para obtener el prompt desde la tabla `prompts`.
+Todos los campos son obligatorios. `promptType` se usa para obtener el texto del estilo y `styleKey` determina el nombre del archivo en Storage.
 
 ## Response
 
 ```json
-{ "coverUrl": "https://..." }
+{ "coverUrl": "https://.../covers/<id>_<style>.png" }
 ```

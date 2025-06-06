@@ -85,6 +85,8 @@ La página reúne todas las actividades agrupadas por etapa y utiliza `subscribe
 
 Cada función Edge consulta este ajuste mediante `isActivityEnabled` antes de ejecutarse para respetar los toggles del panel.
 
+En la etapa **historia** se añadió la actividad **portada_variante**, asociada a la función `generate-cover-variant` que genera las versiones de portada en distintos estilos.
+
 ## Registro de solicitudes API
 
 Antes de llamar a OpenAI o Flux, las funciones imprimen en consola el JSON de la solicitud para facilitar la depuración. Esto ayuda a verificar que los parámetros enviados sean correctos.

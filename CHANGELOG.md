@@ -19,3 +19,5 @@
 - Nuevo helper `generateWithOpenAI` para centralizar las llamadas a la API de imágenes de OpenAI.
 - `generate-story` y `generate-cover` ahora registran llamadas en `inflight_calls` para mostrarse como activas.
 - `StageActivityCard` usa un gráfico de área apilada para visualizar éxitos y errores de la última hora. Ver `docs/components/StageActivityCard.md`.
+- `generate-cover-variant` ahora recibe `storyId` y `styleKey`, guarda la imagen en Supabase y devuelve la URL pública.
+- Se muestra la actividad **portada_variante** en `/admin/flujo` para controlar la generación de variantes de portada.

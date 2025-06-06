@@ -29,9 +29,9 @@ Deno.serve(async (req) => {
   let apiModel = '';
 
   try {
-    const { imageUrl, promptType } = await req.json();
-    if (!imageUrl || !promptType) {
-      throw new Error('Missing imageUrl or promptType');
+    const { imageUrl, promptType, storyId, styleKey } = await req.json();
+    if (!imageUrl || !promptType || !storyId || !styleKey) {
+      throw new Error('Missing imageUrl, promptType, storyId or styleKey');
     }
 
     const { data: promptRow } = await supabaseAdmin
@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       etapa: STAGE,
       actividad: ACTIVITY,
       modelo: apiModel,
-      input: { imageUrl, promptType }
+      input: { imageUrl, promptType, storyId, styleKey }
     });
 
     const imgRes = await fetch(imageUrl);
@@ -114,6 +114,28 @@ Deno.serve(async (req) => {
       resultUrl = result.url;
     }
 
+    const base64Data = resultUrl.startsWith('data:')
+      ? resultUrl.split(',')[1]
+      : null;
+    let publicUrl = resultUrl;
+    if (base64Data) {
+      const byteString = atob(base64Data);
+      const arrayBuffer = new ArrayBuffer(byteString.length);
+      const uint8Array = new Uint8Array(arrayBuffer);
+      for (let i = 0; i < byteString.length; i++) {
+        uint8Array[i] = byteString.charCodeAt(i);
+      }
+      const resultBlob = new Blob([uint8Array], { type: 'image/png' });
+      const path = `covers/${storyId}_${styleKey}.png`;
+      await supabaseAdmin.storage
+        .from('storage')
+        .upload(path, resultBlob, { contentType: 'image/png', upsert: true });
+      const { data: { publicUrl: url } } = supabaseAdmin.storage
+        .from('storage')
+        .getPublicUrl(path);
+      publicUrl = url;
+    }
+
     await logPromptMetric({
       prompt_id: promptId,
       modelo_ia: apiModel,
@@ -128,7 +150,7 @@ Deno.serve(async (req) => {
     });
 
     await endInflightCall(userId, ACTIVITY);
-    return new Response(JSON.stringify({ coverUrl: resultUrl }), {
+    return new Response(JSON.stringify({ coverUrl: publicUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 

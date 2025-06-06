@@ -30,6 +30,7 @@ const CONFIG = {
   historia: [
     { key: 'generar_historia', label: 'Generar historia', fn: 'generate-story' },
     { key: 'generar_portada', label: 'Generar portada', fn: 'generate-cover' },
+    { key: 'portada_variante', label: 'Variantes de portada', fn: 'generate-cover-variant' },
   ],
 };
 
