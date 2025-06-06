@@ -45,3 +45,4 @@ The function stores the generated title in `stories`, creates nine records in
 `link_character_to_story` RPC.
 If the prompt returns loader messages, they are saved as JSON in the
 `stories.loader` column for future use.
+The frontend cycles through these messages every five seconds while the cover is being generated, providing progress feedback to the user.

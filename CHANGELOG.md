@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Portada principal desbloquea el paso de Diseño sin esperar las variantes. Los mensajes de `stories.loader` se muestran cada 5 s durante la generación.
 - Added `generate-story` Edge Function for story creation and cover generation.
 - UI now displays generated covers on home.
 - Documentation added at `docs/tech/story-generation.md`.

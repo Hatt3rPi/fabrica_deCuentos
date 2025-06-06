@@ -81,26 +81,28 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const variants: Record<string, string> = {};
 
-      for (const style of STYLE_MAP) {
-        const prompt = prompts[style.type];
-        if (!prompt) continue;
-        try {
-          const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-cover-variant`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ imageUrl, promptType: style.type, storyId, styleKey: style.key })
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'failed');
-          const url = data.coverUrl || data.url;
-          if (url) variants[style.key] = url;
-        } catch (err) {
-          console.error('Error generating cover variant', err);
-        }
-      }
+      await Promise.all(
+        STYLE_MAP.map(async (style) => {
+          const prompt = prompts[style.type];
+          if (!prompt) return;
+          try {
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-cover-variant`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ imageUrl, promptType: style.type, storyId, styleKey: style.key })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'failed');
+            const url = data.coverUrl || data.url;
+            if (url) variants[style.key] = url;
+          } catch (err) {
+            console.error('Error generating cover variant', err);
+          }
+        })
+      );
 
       setCovers(prev => ({
         ...prev,

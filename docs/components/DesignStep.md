@@ -16,3 +16,4 @@ Este componente no recibe props directamente; utiliza los contextos `WizardConte
 
 1. Selección de estilo visual y paleta de colores.
 2. Vista previa de la portada en el estilo seleccionado.
+3. Las variantes de portada se generan en segundo plano y las imágenes se cargan de forma perezosa para agilizar la navegación.
