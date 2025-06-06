@@ -2,6 +2,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
+import { generateWithOpenAI } from '../_shared/openai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +15,7 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
+const FILE = 'generate-thumbnail-variant';
 const STAGE = 'personajes';
 const ACTIVITY = 'miniatura_variante';
 
@@ -89,56 +92,37 @@ Deno.serve(async (req) => {
     let tokensIn = 0;
     let tokensOut = 0;
     if (apiEndpoint.includes('bfl.ai')) {
-      const fluxKey = Deno.env.get('BFL_API_KEY');
       const start = Date.now();
-      const req = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'x-key': fluxKey ?? '', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: stylePrompt })
-      });
-      const data = await req.json();
-      const requestId = data.id;
-      let status = data.status;
+      resultUrl = await generateWithFlux(stylePrompt);
       elapsed = Date.now() - start;
-      for (let i = 0; i < 20 && requestId; i++) {
-        const poll = await fetch(`https://api.bfl.ai/v1/get_result?id=${requestId}`, {
-          headers: { 'x-key': fluxKey ?? '' }
-        });
-        const pollData = await poll.json();
-        status = pollData.status;
-        if (status === 'Ready') {
-          resultUrl = pollData.result?.sample || '';
-          break;
-        }
-        if (status !== 'Processing' && status !== 'Queued') {
-          throw new Error('Flux error');
-        }
-        await new Promise(r => setTimeout(r, 1500));
-      }
       tokensIn = 0;
       tokensOut = 0;
-      if (!resultUrl) throw new Error('No image returned');
+      console.log('[generate-thumbnail-variant] [OUT]', resultUrl);
     } else {
       const start = Date.now();
-      const openaiKey = Deno.env.get('OPENAI_API_KEY');
-      const editRes = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${openaiKey}` },
-        body: formData
+      const openaiPayload = {
+        model: apiModel,
+        prompt: stylePrompt,
+        size: '1024x1024',
+        n: 1,
+        image: imageUrl.split('/').pop()
+      };
+      console.log('[generate-thumbnail-variant] [REQUEST]', JSON.stringify(openaiPayload));
+      const result = await generateWithOpenAI({
+        endpoint: apiEndpoint,
+        payload: {
+          model: apiModel,
+          prompt: stylePrompt,
+          size: '1024x1024',
+          n: 1,
+        },
+        files: { image: refBlob },
+        mimeType,
       });
       elapsed = Date.now() - start;
-      const editData = await editRes.json();
-      tokensIn = editData.usage?.input_tokens ?? 0;
-      tokensOut = editData.usage?.output_tokens ?? 0;
-      if (!editRes.ok) {
-        const msg = editData.error?.message || editRes.statusText;
-        throw new Error(msg);
-      }
-      const b64 = editData.data?.[0]?.b64_json;
-      if (!b64) {
-        throw new Error('No image returned');
-      }
-      resultUrl = `data:${mimeType};base64,${b64}`;
+      tokensIn = result.tokensIn;
+      tokensOut = result.tokensOut;
+      resultUrl = result.url;
     }
 
     await logPromptMetric({
@@ -150,6 +134,8 @@ Deno.serve(async (req) => {
       tokens_entrada: tokensIn,
       tokens_salida: tokensOut,
       usuario_id: userId,
+      actividad: ACTIVITY,
+      edge_function: FILE,
     });
 
     await endInflightCall(userId, ACTIVITY);
@@ -170,6 +156,8 @@ Deno.serve(async (req) => {
       tokens_salida: 0,
       usuario_id: userId,
       metadatos: { error: (error as Error).message },
+      actividad: ACTIVITY,
+      edge_function: FILE,
     });
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 400,

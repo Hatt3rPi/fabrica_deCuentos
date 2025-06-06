@@ -193,6 +193,8 @@ export type Database = {
       }
       prompt_metrics: {
         Row: {
+          actividad: string | null
+          edge_function: string | null
           error_type: string | null
           estado: string | null
           id: string
@@ -207,6 +209,8 @@ export type Database = {
           usuario_id: string | null
         }
         Insert: {
+          actividad?: string | null
+          edge_function?: string | null
           error_type?: string | null
           estado?: string | null
           id?: string
@@ -221,6 +225,8 @@ export type Database = {
           usuario_id?: string | null
         }
         Update: {
+          actividad?: string | null
+          edge_function?: string | null
           error_type?: string | null
           estado?: string | null
           id?: string

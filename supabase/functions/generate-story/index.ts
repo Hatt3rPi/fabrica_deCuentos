@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -59,19 +60,21 @@ Deno.serve(async (req) => {
       .replace('{historia}', storyTheme);
 
     start = Date.now();
+    const storyPayload = {
+      model,
+      messages: [{ role: 'user', content: finalPrompt }],
+      response_format: { type: 'json_object' },
+      max_tokens: 1500,
+      temperature: 0.8,
+    };
+    console.log('[generate-story] [REQUEST]', JSON.stringify(storyPayload));
     const resp = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: finalPrompt }],
-        response_format: { type: 'json_object' },
-        max_tokens: 1500,
-        temperature: 0.8,
-      }),
+      body: JSON.stringify(storyPayload),
     });
     const elapsed = Date.now() - start;
     const rawResponse = await resp.text();
@@ -88,6 +91,8 @@ Deno.serve(async (req) => {
         tokens_entrada: 0,
         tokens_salida: 0,
         usuario_id: userId,
+        actividad: 'generar_historia',
+        edge_function: 'generate-story',
       });
       console.error('Respuesta inválida de OpenAI:', rawResponse.slice(0, 100));
       throw new Error('Formato de respuesta de OpenAI inválido');
@@ -102,6 +107,8 @@ Deno.serve(async (req) => {
       tokens_entrada: respData.usage?.prompt_tokens ?? 0,
       tokens_salida: respData.usage?.completion_tokens ?? 0,
       usuario_id: userId,
+      actividad: 'generar_historia',
+      edge_function: 'generate-story',
     });
 
     if (!resp.ok) {
@@ -208,35 +215,47 @@ Deno.serve(async (req) => {
         .replace('{palette}', 'colores vibrantes')
         .replace('{story}', title);
       const cstart = Date.now();
-      const cRes = await fetch(coverEndpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: coverModel,
-          prompt: promptText,
-          size: '1024x1024',
-          quality: 'hd',
-          n: 1,
-          referenced_image_ids: charThumbnails,
-        }),
-      });
-      const coverRes = await cRes.json();
+      const coverPayload = {
+        model: coverModel,
+        prompt: promptText,
+        size: '1024x1024',
+        quality: 'hd',
+        n: 1,
+        referenced_image_ids: charThumbnails,
+      };
+      console.log('[generate-story] [COVER REQUEST]', JSON.stringify(coverPayload));
+      let coverRes: any;
+      if (coverEndpoint.includes('bfl.ai')) {
+        coverUrl = await generateWithFlux(promptText);
+        coverRes = { data: [{ url: coverUrl }] };
+      } else {
+        const cRes = await fetch(coverEndpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(coverPayload),
+        });
+        coverRes = await cRes.json();
+        if (coverRes.data?.[0]?.url) {
+          coverUrl = coverRes.data[0].url;
+        }
+      }
       const celapsed = Date.now() - cstart;
       await logPromptMetric({
         prompt_id: coverPromptId,
         modelo_ia: coverModel,
         tiempo_respuesta_ms: celapsed,
-        estado: coverRes.data?.[0]?.url ? 'success' : 'error',
-        error_type: coverRes.data?.[0]?.url ? null : 'service_error',
+        estado: coverUrl ? 'success' : 'error',
+        error_type: coverUrl ? null : 'service_error',
         tokens_entrada: 0,
         tokens_salida: 0,
         usuario_id: userId,
+        actividad: 'generar_portada',
+        edge_function: 'generate-story',
       });
-      if (coverRes.data?.[0]?.url) {
-        coverUrl = coverRes.data[0].url;
+      if (coverUrl) {
         await supabaseAdmin.from('story_pages')
           .update({ image_url: coverUrl })
           .eq('story_id', story_id)
@@ -274,6 +293,8 @@ Deno.serve(async (req) => {
         tokens_salida: 0,
         usuario_id: userId,
         metadatos: { error: (err as Error).message },
+        actividad: 'generar_historia',
+        edge_function: 'generate-story',
       });
     }
     return new Response(

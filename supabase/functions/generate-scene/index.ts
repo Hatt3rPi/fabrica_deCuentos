@@ -1,4 +1,6 @@
 import { logPromptMetric } from '../_shared/metrics.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
+import { generateWithOpenAI } from '../_shared/openai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,34 +55,39 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
 
     // Generate scene image using max 2 reference images per character
     const start = Date.now();
-    const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: `${identityBlocks}\n${sceneBlock}`,
-        referenced_image_ids: characters.flatMap((char) =>
-          char.referenceUrls.slice(0, 2)
-        ),
-        size: '1024x1024',
-        quality: 'hd',
-        n: 1,
-      }),
-    });
-    const response = await imgRes.json();
+    const payload = {
+      model: 'gpt-image-1',
+      prompt: `${identityBlocks}\n${sceneBlock}`,
+      referenced_image_ids: characters.flatMap((char) =>
+        char.referenceUrls.slice(0, 2)
+      ),
+      size: '1024x1024',
+      quality: 'hd',
+      n: 1,
+    };
+    console.log('[generate-scene] [REQUEST]', JSON.stringify(payload));
+    let imageUrl = '';
+    if (Deno.env.get('FLUX_ENDPOINT')) {
+      imageUrl = await generateWithFlux(`${identityBlocks}\n${sceneBlock}`);
+    } else {
+      const { url } = await generateWithOpenAI({
+        endpoint: 'https://api.openai.com/v1/images/generations',
+        payload,
+      });
+      imageUrl = url;
+    }
     const elapsed = Date.now() - start;
     await logPromptMetric({
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: elapsed,
-      estado: response.data?.[0]?.url ? 'success' : 'error',
-      error_type: response.data?.[0]?.url ? null : 'service_error',
+      estado: imageUrl ? 'success' : 'error',
+      error_type: imageUrl ? null : 'service_error',
+      actividad: 'generar_escena',
+      edge_function: 'generate-scene',
     });
 
     return new Response(
-      JSON.stringify({ imageUrl: response.data[0].url }),
+      JSON.stringify({ imageUrl }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
@@ -91,6 +98,8 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
       estado: 'error',
       error_type: 'service_error',
       metadatos: { error: (error as Error).message },
+      actividad: 'generar_escena',
+      edge_function: 'generate-scene',
     });
     return new Response(
       JSON.stringify({ error: error.message }),

@@ -57,15 +57,19 @@ Cada inserción o eliminación en la tabla dispara una recarga de datos.
 
 ## Componente `StageActivityCard`
 
-El componente `StageActivityCard` muestra el estado de cada actividad, con un toggle para activarla o desactivarla y el número de llamadas activas:
+El componente `StageActivityCard` muestra el estado de cada actividad. Indica si está **activada** o **desactivada**, el número de llamadas activas y un resumen de las métricas de los últimos 10 minutos:
 
 ```tsx
 <StageActivityCard
   label="Generar descripción"
   enabled={settings.personajes.generar_descripcion}
   inflight={inflightCount}
+  stats={{ total: 3, errorRate: 0.33, errors: { service_error: 1 } }}
   onToggle={(value) => toggle('personajes', 'generar_descripcion', value)}
 />
+
+La propiedad `stats` se obtiene consultando `prompt_metrics` para los últimos 10 minutos y
+muestra el número total de llamadas, la tasa de errores y el desglose por tipo de error.
 ```
 
 ## Página `/admin/flujo`
@@ -73,6 +77,10 @@ El componente `StageActivityCard` muestra el estado de cada actividad, con un to
 La página reúne todas las actividades agrupadas por etapa y utiliza `subscribeToInflight` junto con un pequeño _polling_ cada segundo para mantener los números actualizados. Los estados de activación se guardan en `system_settings` bajo la clave `stages_enabled`.
 
 Cada función Edge consulta este ajuste mediante `isActivityEnabled` antes de ejecutarse para respetar los toggles del panel.
+
+## Registro de solicitudes API
+
+Antes de llamar a OpenAI o Flux, las funciones imprimen en consola el JSON de la solicitud para facilitar la depuración. Esto ayuda a verificar que los parámetros enviados sean correctos.
 
 ---
 

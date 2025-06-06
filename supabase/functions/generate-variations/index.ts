@@ -1,4 +1,6 @@
 import { logPromptMetric } from '../_shared/metrics.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
+import { generateWithOpenAI } from '../_shared/openai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,33 +16,39 @@ Deno.serve(async (req) => {
     const { name, description, age } = await req.json();
     
     const start = Date.now();
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: `Clean full-body pencil sketch illustration for a children's book. ` +
-          `Character: ${age}. ${description}. Simple lines, no background, child-friendly.`,
-        size: '1024x1024',
-        quality: 'hd',
-        n: 1,
-      }),
-    });
-    const imageResponse = await res.json();
+    const payload = {
+      model: 'gpt-image-1',
+      prompt:
+        `Clean full-body pencil sketch illustration for a children's book. ` +
+        `Character: ${age}. ${description}. Simple lines, no background, child-friendly.`,
+      size: '1024x1024',
+      quality: 'hd',
+      n: 1,
+    };
+    console.log('[generate-variations] [REQUEST]', JSON.stringify(payload));
+    let imageUrl = '';
+    if (Deno.env.get('FLUX_ENDPOINT')) {
+      imageUrl = await generateWithFlux(payload.prompt);
+    } else {
+      const { url } = await generateWithOpenAI({
+        endpoint: 'https://api.openai.com/v1/images/generations',
+        payload,
+      });
+      imageUrl = url;
+    }
     const elapsed = Date.now() - start;
     await logPromptMetric({
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: elapsed,
-      estado: imageResponse.data?.[0]?.url ? 'success' : 'error',
-      error_type: imageResponse.data?.[0]?.url ? null : 'service_error',
+      estado: imageUrl ? 'success' : 'error',
+      error_type: imageUrl ? null : 'service_error',
+      actividad: 'generar_variacion',
+      edge_function: 'generate-variations',
     });
 
     return new Response(
       JSON.stringify({
-        thumbnailUrl: imageResponse.data[0].url
+        thumbnailUrl: imageUrl
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -52,6 +60,8 @@ Deno.serve(async (req) => {
       estado: 'error',
       error_type: 'service_error',
       metadatos: { error: (error as Error).message },
+      actividad: 'generar_variacion',
+      edge_function: 'generate-variations',
     });
     return new Response(
       JSON.stringify({ error: error.message }),

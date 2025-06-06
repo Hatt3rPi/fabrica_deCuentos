@@ -3,9 +3,16 @@ import StageActivityCard from '../../components/StageActivityCard';
 import { useAdmin } from '../../context/AdminContext';
 import { supabase } from '../../lib/supabase';
 import { subscribeToInflight } from '../../lib/supabase/realtime';
+import { PostgrestSingleResponse } from '@supabase/supabase-js';
 
 interface Inflight {
   actividad: string;
+}
+
+interface ActivityStats {
+  total: number;
+  errorRate: number;
+  errors: Record<string, number>;
 }
 
 const CONFIG = {
@@ -24,6 +31,7 @@ const AdminFlujo: React.FC = () => {
   const isAdmin = useAdmin();
   const [settings, setSettings] = useState<any>({});
   const [inflight, setInflight] = useState<Inflight[]>([]);
+  const [stats, setStats] = useState<Record<string, ActivityStats>>({});
 
   const loadSettings = async () => {
     const { data } = await supabase
@@ -39,12 +47,44 @@ const AdminFlujo: React.FC = () => {
     setInflight(data || []);
   };
 
+  const loadStats = async () => {
+    const activities = Object.values(CONFIG).flat().map((a) => a.key);
+    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data } = await supabase
+      .from('prompt_metrics')
+      .select('actividad, estado, error_type')
+      .in('actividad', activities)
+      .gte('timestamp', since);
+    const result: Record<string, ActivityStats> = {};
+    (data || []).forEach((row) => {
+      const key = row.actividad as string;
+      if (!result[key]) {
+        result[key] = { total: 0, errorRate: 0, errors: {} };
+      }
+      const stat = result[key];
+      stat.total++;
+      if (row.estado === 'error') {
+        const type = row.error_type || 'unknown';
+        stat.errors[type] = (stat.errors[type] || 0) + 1;
+      }
+    });
+    Object.values(result).forEach((s) => {
+      const errors = Object.values(s.errors).reduce((a, b) => a + b, 0);
+      s.errorRate = s.total ? errors / s.total : 0;
+    });
+    setStats(result);
+  };
+
   useEffect(() => {
     if (!isAdmin) return;
     loadSettings();
     loadInflight();
+    loadStats();
     const unsub = subscribeToInflight(loadInflight);
-    const id = setInterval(loadInflight, 1000);
+    const id = setInterval(() => {
+      loadInflight();
+      loadStats();
+    }, 10000);
     return () => {
       unsub();
       clearInterval(id);
@@ -55,8 +95,11 @@ const AdminFlujo: React.FC = () => {
     const updated = { ...settings };
     if (!updated[stage]) updated[stage] = {};
     updated[stage][act] = value;
-    await supabase.from('system_settings').update({ value: updated }).eq('key', 'stages_enabled');
+    await supabase
+      .from('system_settings')
+      .upsert({ key: 'stages_enabled', value: updated }, { onConflict: 'key' });
     setSettings(updated);
+    loadStats();
   };
 
   if (!isAdmin) return <p>No autorizado</p>;
@@ -75,6 +118,7 @@ const AdminFlujo: React.FC = () => {
                 fn={a.fn}
                 enabled={!!settings?.[stage]?.[a.key]}
                 inflight={inflight.filter((f) => f.actividad === a.key).length}
+                stats={stats[a.key]}
                 onToggle={(v) => toggle(stage, a.key, v)}
               />
             ))}

@@ -1,5 +1,7 @@
 
 import { logPromptMetric } from '../_shared/metrics.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
+import { generateWithOpenAI } from '../_shared/openai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,30 +19,35 @@ Deno.serve(async (req) => {
     const images = await Promise.all(
       prompts.map(async (prompt: string) => {
         const start = Date.now();
-        const res = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-image-1',
-            prompt,
-            size: '1024x1024',
-            quality: 'hd',
-            n: 1,
-            referenced_image_ids: referenceImageIds,
-          }),
-        });
-        const response = await res.json();
+        const payload = {
+          model: 'gpt-image-1',
+          prompt,
+          size: '1024x1024',
+          quality: 'hd',
+          n: 1,
+          referenced_image_ids: referenceImageIds,
+        };
+        console.log('[generate-spreads] [REQUEST]', JSON.stringify(payload));
+        let url = '';
+        if (Deno.env.get('FLUX_ENDPOINT')) {
+          url = await generateWithFlux(prompt);
+        } else {
+          const { url: result } = await generateWithOpenAI({
+            endpoint: 'https://api.openai.com/v1/images/generations',
+            payload,
+          });
+          url = result;
+        }
         const elapsed = Date.now() - start;
         await logPromptMetric({
           modelo_ia: 'gpt-image-1',
           tiempo_respuesta_ms: elapsed,
-          estado: response.data?.[0]?.url ? 'success' : 'error',
-          error_type: response.data?.[0]?.url ? null : 'service_error',
+          estado: url ? 'success' : 'error',
+          error_type: url ? null : 'service_error',
+          actividad: 'generar_spread',
+          edge_function: 'generate-spreads',
         });
-        return response.data[0].url;
+        return url;
       })
     );
 
@@ -55,6 +62,8 @@ Deno.serve(async (req) => {
       estado: 'error',
       error_type: 'service_error',
       metadatos: { error: (error as Error).message },
+      actividad: 'generar_spread',
+      edge_function: 'generate-spreads',
     });
     return new Response(
       JSON.stringify({ error: error.message }),
