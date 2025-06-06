@@ -4,15 +4,21 @@ Tarjeta utilizada en el panel de administración para controlar cada actividad d
 
 ## 📋 Descripción
 
-Muestra el nombre de la actividad, la función asociada y un toggle para activarla o desactivarla. Además indica el número de llamadas activas y estadísticas de los últimos 10 minutos.
+Muestra el nombre de la actividad, la función asociada y un toggle para activarla o desactivarla. Además indica el número de llamadas activas y un gráfico del rendimiento de la última hora.
 
 ## 🔧 Props
 
 ```typescript
+interface ActivityPoint {
+  time: string;
+  success: number;
+  error: number;
+}
+
 interface ActivityStats {
   total: number;
   errorRate: number;
-  errors: Record<string, number>;
+  timeline: ActivityPoint[];
 }
 
 interface Props {
@@ -27,4 +33,4 @@ interface Props {
 
 ## 📈 Métricas
 
-El componente recibe `stats` con el total de llamadas registradas en `prompt_metrics` durante los últimos 10 minutos, la tasa de error y un desglose por tipo de error.
+`stats` incluye la serie temporal de la última hora con los éxitos y errores por minuto. El componente utiliza `StackedAreaChart` de `recharts` para mostrar esta información.

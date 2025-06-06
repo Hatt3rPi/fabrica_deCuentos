@@ -9,10 +9,16 @@ interface Inflight {
   actividad: string;
 }
 
+interface ActivityPoint {
+  time: string;
+  success: number;
+  error: number;
+}
+
 interface ActivityStats {
   total: number;
   errorRate: number;
-  errors: Record<string, number>;
+  timeline: ActivityPoint[];
 }
 
 const CONFIG = {
@@ -49,27 +55,43 @@ const AdminFlujo: React.FC = () => {
 
   const loadStats = async () => {
     const activities = Object.values(CONFIG).flat().map((a) => a.key);
-    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const sinceMs = Date.now() - 60 * 60 * 1000;
+    const sinceIso = new Date(sinceMs).toISOString();
     const { data } = await supabase
       .from('prompt_metrics')
-      .select('actividad, estado, error_type')
+      .select('actividad, estado, timestamp')
       .in('actividad', activities)
-      .gte('timestamp', since);
+      .gte('timestamp', sinceIso);
+    const template = () =>
+      Array.from({ length: 60 }, (_, i) => ({
+        time: new Date(sinceMs + i * 60000).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        success: 0,
+        error: 0,
+      }));
     const result: Record<string, ActivityStats> = {};
-    (data || []).forEach((row) => {
+    (data || []).forEach((row: any) => {
       const key = row.actividad as string;
       if (!result[key]) {
-        result[key] = { total: 0, errorRate: 0, errors: {} };
+        result[key] = { total: 0, errorRate: 0, timeline: template() };
       }
       const stat = result[key];
       stat.total++;
-      if (row.estado === 'error') {
-        const type = row.error_type || 'unknown';
-        stat.errors[type] = (stat.errors[type] || 0) + 1;
+      const idx = Math.floor(
+        (new Date(row.timestamp).getTime() - sinceMs) / 60000
+      );
+      if (idx >= 0 && idx < 60) {
+        if (row.estado === 'error') {
+          stat.timeline[idx].error++;
+        } else {
+          stat.timeline[idx].success++;
+        }
       }
     });
     Object.values(result).forEach((s) => {
-      const errors = Object.values(s.errors).reduce((a, b) => a + b, 0);
+      const errors = s.timeline.reduce((a, b) => a + b.error, 0);
       s.errorRate = s.total ? errors / s.total : 0;
     });
     setStats(result);

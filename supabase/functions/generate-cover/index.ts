@@ -1,5 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
+import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
+import { isActivityEnabled } from '../_shared/stages.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
 import { generateWithOpenAI } from '../_shared/openai.ts';
 import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
@@ -14,6 +16,10 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
+
+const FILE = 'generate-cover';
+const STAGE = 'historia';
+const ACTIVITY = 'generar_portada';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000; // 2 segundos entre reintentos
@@ -143,6 +149,13 @@ Deno.serve(async (req) => {
     }
 
     userId = await getUserId(req);
+    const enabled = await isActivityEnabled(STAGE, ACTIVITY);
+    if (!enabled) {
+      return new Response(
+        JSON.stringify({ error: 'Actividad deshabilitada' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Obtener el prompt
     const { data: promptRow } = await supabaseAdmin
@@ -156,6 +169,14 @@ Deno.serve(async (req) => {
     apiModel = promptRow?.model || 'gpt-image-1';
     promptId = promptRow?.id;
     if (!basePrompt) throw new Error('No se encontró el prompt');
+
+    await startInflightCall({
+      user_id: userId,
+      etapa: STAGE,
+      actividad: ACTIVITY,
+      modelo: apiModel,
+      input: { story_id, visual_style, color_palette, reference_image_ids }
+    });
 
     const prompt = basePrompt
       .replace('{style}', visual_style || 'acuarela digital')
@@ -327,6 +348,7 @@ Deno.serve(async (req) => {
       reference_images_used: referenceImages.length
     });
 
+    await endInflightCall(userId, ACTIVITY);
     return new Response(
       JSON.stringify({ coverUrl: publicUrl }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -350,11 +372,13 @@ Deno.serve(async (req) => {
         edge_function: 'generate-cover',
       });
     }
-    
+
+    await endInflightCall(userId, ACTIVITY);
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Error al generar la portada',
-        details: (error as Error).message 
+        details: (error as Error).message
       }),
       { 
         status: 500, 

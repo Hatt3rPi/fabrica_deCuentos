@@ -16,3 +16,5 @@
 - Nuevo helper `generateWithFlux` para conectar con Flux desde las Edge Functions.
 - Todas las funciones de generación de imágenes detectan el uso de Flux y emplean este helper automáticamente.
 - Nuevo helper `generateWithOpenAI` para centralizar las llamadas a la API de imágenes de OpenAI.
+- `generate-story` y `generate-cover` ahora registran llamadas en `inflight_calls` para mostrarse como activas.
+- `StageActivityCard` usa un gráfico de área apilada para visualizar éxitos y errores de la última hora. Ver `docs/components/StageActivityCard.md`.

@@ -1,5 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
+import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
+import { isActivityEnabled } from '../_shared/stages.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
 
 const corsHeaders = {
@@ -12,6 +14,10 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
+
+const FILE = 'generate-story';
+const STAGE = 'historia';
+const ACTIVITY = 'generar_historia';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -31,6 +37,13 @@ Deno.serve(async (req) => {
     }
 
     userId = await getUserId(req);
+    const enabled = await isActivityEnabled(STAGE, ACTIVITY);
+    if (!enabled) {
+      return new Response(
+        JSON.stringify({ error: 'Actividad deshabilitada' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
@@ -58,6 +71,14 @@ Deno.serve(async (req) => {
     const finalPrompt = storyPrompt
       .replace('{personajes}', charNames)
       .replace('{historia}', storyTheme);
+
+    await startInflightCall({
+      user_id: userId,
+      etapa: STAGE,
+      actividad: ACTIVITY,
+      modelo: model,
+      input: { story_id, characters, theme }
+    });
 
     start = Date.now();
     const storyPayload = {
@@ -264,6 +285,7 @@ Deno.serve(async (req) => {
     }
 
     // Devolver la historia generada antes de crear la portada
+    await endInflightCall(userId, ACTIVITY);
     return new Response(
       JSON.stringify({
         story_id,
@@ -297,6 +319,7 @@ Deno.serve(async (req) => {
         edge_function: 'generate-story',
       });
     }
+    await endInflightCall(userId, ACTIVITY);
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
