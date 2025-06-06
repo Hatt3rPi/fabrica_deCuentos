@@ -1,6 +1,7 @@
 import { GenerateIllustrationParams } from "./types.ts";
 import { logPromptMetric } from '../_shared/metrics.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
+import { generateWithOpenAI } from '../_shared/openai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -74,19 +75,11 @@ Deno.serve(async (req) => {
     if (Deno.env.get('FLUX_ENDPOINT')) {
       imageUrl = await generateWithFlux(prompt);
     } else {
-      const res = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+      const { url } = await generateWithOpenAI({
+        endpoint: 'https://api.openai.com/v1/images/generations',
+        payload,
       });
-      const response = await res.json();
-      if (!response.data || !response.data[0] || !response.data[0].url) {
-        throw new Error('Error: No se generó la imagen.');
-      }
-      imageUrl = response.data[0].url;
+      imageUrl = url;
     }
 
     const elapsed = Date.now() - start;

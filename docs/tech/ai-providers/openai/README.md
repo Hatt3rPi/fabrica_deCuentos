@@ -1175,3 +1175,19 @@ Refer to our [pricing page](/pricing#image-generation) for more information abou
 ### Partial images cost
 
 If you want to [stream image generation](#streaming) with the Responses API using the `partial_images` parameter, each partial image will incur an additional 100 image output tokens.
+
+## Helper `generateWithOpenAI`
+
+Para simplificar las llamadas a la API de imágenes de OpenAI se creó el helper `generateWithOpenAI` en `supabase/functions/_shared/openai.ts`.
+
+```ts
+import { generateWithOpenAI } from '../_shared/openai.ts';
+
+const { url } = await generateWithOpenAI({
+  endpoint: 'https://api.openai.com/v1/images/edits',
+  payload: { model: 'gpt-image-1', prompt: 'Un gato', size: '1024x1024', n: 1 },
+  files: { image: referenceBlob }
+});
+```
+
+El método imprime en consola el JSON de la solicitud, maneja la carga de archivos y devuelve la imagen en base64 o la URL generada.

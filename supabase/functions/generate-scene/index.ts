@@ -1,5 +1,6 @@
 import { logPromptMetric } from '../_shared/metrics.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
+import { generateWithOpenAI } from '../_shared/openai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,19 +70,11 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
     if (Deno.env.get('FLUX_ENDPOINT')) {
       imageUrl = await generateWithFlux(`${identityBlocks}\n${sceneBlock}`);
     } else {
-      const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+      const { url } = await generateWithOpenAI({
+        endpoint: 'https://api.openai.com/v1/images/generations',
+        payload,
       });
-      const response = await imgRes.json();
-      if (!response.data?.[0]?.url) {
-        throw new Error('No image generated');
-      }
-      imageUrl = response.data[0].url;
+      imageUrl = url;
     }
     const elapsed = Date.now() - start;
     await logPromptMetric({

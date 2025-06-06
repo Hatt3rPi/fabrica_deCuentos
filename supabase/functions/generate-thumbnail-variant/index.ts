@@ -3,6 +3,7 @@ import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
+import { generateWithOpenAI } from '../_shared/openai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,7 +100,6 @@ Deno.serve(async (req) => {
       console.log('[generate-thumbnail-variant] [OUT]', resultUrl);
     } else {
       const start = Date.now();
-      const openaiKey = Deno.env.get('OPENAI_API_KEY');
       const openaiPayload = {
         model: apiModel,
         prompt: stylePrompt,
@@ -108,24 +108,21 @@ Deno.serve(async (req) => {
         image: imageUrl.split('/').pop()
       };
       console.log('[generate-thumbnail-variant] [REQUEST]', JSON.stringify(openaiPayload));
-      const editRes = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${openaiKey}` },
-        body: formData
+      const result = await generateWithOpenAI({
+        endpoint: apiEndpoint,
+        payload: {
+          model: apiModel,
+          prompt: stylePrompt,
+          size: '1024x1024',
+          n: 1,
+        },
+        files: { image: refBlob },
+        mimeType,
       });
       elapsed = Date.now() - start;
-      const editData = await editRes.json();
-      tokensIn = editData.usage?.input_tokens ?? 0;
-      tokensOut = editData.usage?.output_tokens ?? 0;
-      if (!editRes.ok) {
-        const msg = editData.error?.message || editRes.statusText;
-        throw new Error(msg);
-      }
-      const b64 = editData.data?.[0]?.b64_json;
-      if (!b64) {
-        throw new Error('No image returned');
-      }
-      resultUrl = `data:${mimeType};base64,${b64}`;
+      tokensIn = result.tokensIn;
+      tokensOut = result.tokensOut;
+      resultUrl = result.url;
     }
 
     await logPromptMetric({

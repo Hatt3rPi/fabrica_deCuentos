@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
+import { generateWithOpenAI } from '../_shared/openai.ts';
 import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
 
 const corsHeaders = {
@@ -37,7 +38,6 @@ async function generateImageWithRetry(
   model: string,
   retries = MAX_RETRIES
 ): Promise<{ url: string }> {
-  const openaiKey = Deno.env.get('OPENAI_API_KEY');
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -59,23 +59,11 @@ async function generateImageWithRetry(
       } else if (referenceImages.length === 0) {
         const payload = { model, prompt, size: '1024x1024', n: 1 };
         console.log('[generate-cover] [REQUEST]', JSON.stringify(payload));
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
+        const { url } = await generateWithOpenAI({
+          endpoint,
+          payload,
         });
-        
-        const data = await response.json();
-        
-        // gpt-image-1 siempre devuelve la imagen en base64
-        if (data.data?.[0]?.b64_json) {
-          return { url: `data:image/png;base64,${data.data[0].b64_json}` };
-        }
-        
-        throw new Error(data.error?.message || 'No se pudo generar la imagen');
+        return { url };
       } else {
         // Para gpt-image-1, podemos enviar múltiples imágenes de referencia
         // Deben enviarse usando el parámetro image[]
@@ -84,21 +72,12 @@ async function generateImageWithRetry(
         });
         const payload = { model, prompt, size: '1024x1024', n: 1, references: referenceImages.length };
         console.log('[generate-cover] [REQUEST]', JSON.stringify(payload));
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`,
-          },
-          body: formData
+        const { url } = await generateWithOpenAI({
+          endpoint,
+          payload,
+          files: { 'image[]': referenceImages },
         });
-        
-        const data = await response.json();
-        
-        if (data.data?.[0]?.b64_json) {
-          return { url: `data:image/png;base64,${data.data[0].b64_json}` };
-        }
-        
-        throw new Error(data.error?.message || 'No se pudo generar la imagen con referencia');
+        return { url };
       }
     } catch (error) {
       if (attempt === retries) throw error;

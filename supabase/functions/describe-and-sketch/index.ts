@@ -4,6 +4,7 @@ import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
+import { generateWithOpenAI } from '../_shared/openai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,8 +65,6 @@ function validatePayload(payload: any) {
   };
 }
 
-// Helper: extrae el parámetro ?url=…
-function getQueryUrl(request: Request): string | null {
   try {
     const url = new URL(request.url);
     return url.searchParams.get("url");
@@ -143,32 +142,18 @@ Deno.serve(async (req) => {
       thumbnailUrl = `data:${imgMime};base64,${base64Encode(imgBuf)}`;
       console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbnailUrl);
     }
-    // Si no es data URI ni base64, asumimos que es una URL HTTP/S
-    else {
-      const refRes = await fetch(imageBase64!);
-      if (!refRes.ok) {
-        throw new Error(`No se pudo descargar la imagen de referencia: ${refRes.status}`);
-      }
-      refBuf = await refRes.arrayBuffer();
-    }
-
-    // A partir de refBuf determinamos la extensión y MIME para el Blob
-    let ext = "";
-    let mimeType = "image/png";
-    if (imageBase64!.startsWith("data:image/")) {
-      const match = imageBase64!.match(/^data:(image\/[a-zA-Z]+);base64,/);
-      if (match) {
-        mimeType = match[1];
-        ext = mimeType.split("/")[1];
-      }
-    }
-    if (!ext) {
-      const urlPath = new URL(imageBase64!).pathname;
-      ext = urlPath.split(".").pop()!.toLowerCase();
-      const mimeMap: Record<string, string> = {
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        png: "image/png",
+      const result = await generateWithOpenAI({
+        endpoint: apiEndpoint,
+        payload: {
+          model: apiModel,
+          prompt: imagePrompt,
+          size: '1024x1024',
+          n: 1,
+        files: { image: refBlob },
+        mimeType,
+      thumbnailUrl = result.url;
+      tokensEntrada = result.tokensIn;
+      tokensSalida = result.tokensOut;
         webp: "image/webp"
       };
       mimeType = mimeMap[ext] || "image/png";
