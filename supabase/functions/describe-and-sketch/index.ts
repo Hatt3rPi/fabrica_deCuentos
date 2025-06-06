@@ -1,11 +1,9 @@
-import OpenAI from "npm:openai@4.28.0";
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
-import { generateWithFlux } from '../_shared/flux.ts';
-import { generateWithOpenAI } from '../_shared/openai.ts';
-
+import { encode as base64Encode } from "https://deno.land/std@0.203.0/encoding/base64.ts";
+import { generateWithOpenAI } from "../_shared/openai.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
@@ -65,6 +63,8 @@ function validatePayload(payload: any) {
   };
 }
 
+// Helper: extrae el parámetro ?url=…
+function getQueryUrl(request: Request): string | null {
   try {
     const url = new URL(request.url);
     return url.searchParams.get("url");
@@ -138,22 +138,70 @@ Deno.serve(async (req) => {
       .replace(/\$\{name\}/g, sanitizedName)
       .replace(/\$\{sanitizedAge\}/g, sanitizedAge)
       .replace(/\$\{age\}/g, sanitizedAge)
-      thumbnailUrl = await generateWithFlux(imagePrompt, imageBase64 || undefined);
+      .replace(
+        /\$\{sanitizedNotes(?:\s*\|\|\s*'sin información')?\}/g,
+        notesForPrompt
+      )
+      .replace(/\$\{notes\}/g, notesForPrompt);
+
+    // 5) Descargar referencia y preparar ArrayBuffer/Blob con MIME correcto
+    let refBuf: ArrayBuffer;
+
+    // Si imageBase64 es un data URI (p. ej. "data:image/png;base64,AAA...")
+    if (imageBase64!.startsWith("data:image/")) {
+      const [, b64data] = imageBase64!.split(",");
+      // Decodificamos base64 a binario usando la función global atob de Deno
+      const binaryString = atob(b64data);
+      const arr = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        arr[i] = binaryString.charCodeAt(i);
+      }
+      refBuf = arr.buffer;
+    }
+    // Si imageBase64 parece ser un base64 puro (sin prefijo "data:image/...")
+    else if (/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$/.test(imageBase64!)) {
+      const binaryString = atob(imageBase64!);
+      const arr = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        arr[i] = binaryString.charCodeAt(i);
+      }
+      refBuf = arr.buffer;
+
+      const imgRes = await fetch(thumbnailUrl);
+      if (!imgRes.ok) {
+        throw new Error(`No se pudo descargar la imagen generada: ${imgRes.status}`);
+      }
+      const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
+      const imgMime = imgRes.headers.get('content-type') || 'image/jpeg';
       thumbnailUrl = `data:${imgMime};base64,${base64Encode(imgBuf)}`;
       console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbnailUrl);
     }
-      const result = await generateWithOpenAI({
-        endpoint: apiEndpoint,
-        payload: {
-          model: apiModel,
-          prompt: imagePrompt,
-          size: '1024x1024',
-          n: 1,
-        files: { image: refBlob },
-        mimeType,
-      thumbnailUrl = result.url;
-      tokensEntrada = result.tokensIn;
-      tokensSalida = result.tokensOut;
+    // Si no es data URI ni base64, asumimos que es una URL HTTP/S
+    else {
+      const refRes = await fetch(imageBase64!);
+      if (!refRes.ok) {
+        throw new Error(`No se pudo descargar la imagen de referencia: ${refRes.status}`);
+      }
+      refBuf = await refRes.arrayBuffer();
+    }
+
+    // A partir de refBuf determinamos la extensión y MIME para el Blob
+    let ext = "";
+    let mimeType = "image/png";
+    if (imageBase64!.startsWith("data:image/")) {
+      const match = imageBase64!.match(/^data:(image\/[a-zA-Z]+);base64,/);
+      if (match) {
+        mimeType = match[1];
+        ext = mimeType.split("/")[1];
+      }
+    }
+    if (!ext) {
+      const urlPath = new URL(imageBase64!).pathname;
+      ext = urlPath.split(".").pop()!.toLowerCase();
+      const mimeMap: Record<string, string> = {
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
         webp: "image/webp"
       };
       mimeType = mimeMap[ext] || "image/png";
@@ -257,41 +305,23 @@ Deno.serve(async (req) => {
       elapsed = Date.now() - start;
     }
     else {
-      // En caso de no usar BFL.ai, cae al bloque de OpenAI /images/edits...
-      const formData = new FormData();
-      formData.append('model', apiModel);
-      formData.append('prompt', imagePrompt);
-      formData.append('size', '1024x1024');
-      formData.append('n', '1');
-      formData.append('image', refBlob, `reference.${ext}`);
-
-      const requestJson = {
-        model: apiModel,
-        prompt: imagePrompt,
-        size: '1024x1024',
-        n: 1,
-        image: `reference.${ext}`,
-      };
-      console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(requestJson));
-
-      const editRes = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${openaiKey}` },
-        body: formData,
+      // En caso de no usar BFL.ai, utilizamos OpenAI directamente
+      const startGenerate = Date.now();
+      const result = await generateWithOpenAI({
+        endpoint: apiEndpoint,
+        payload: {
+          model: apiModel,
+          prompt: imagePrompt,
+          size: '1024x1024',
+          n: 1,
+        },
+        files: { image: refBlob },
+        mimeType,
       });
-      elapsed = Date.now() - start;
-      const editData = await editRes.json();
-      tokensEntrada = editData.usage?.input_tokens ?? 0;
-      tokensSalida = editData.usage?.output_tokens ?? 0;
-      if (!editRes.ok) {
-        const msg = editData.error?.message || editRes.statusText;
-        throw new Error(`Error al editar la imagen: ${msg}`);
-      }
-      const b64 = editData.data?.[0]?.b64_json;
-      if (!b64) {
-        throw new Error('No se generó la imagen editada');
-      }
-      thumbnailUrl = `data:${mimeType};base64,${b64}`;
+      elapsed = Date.now() - startGenerate;
+      tokensEntrada = result.tokensIn;
+      tokensSalida = result.tokensOut;
+      thumbnailUrl = result.url;
       console.log('[describe-and-sketch] [Generación de imagen] [OUT]', thumbnailUrl);
     }
 
