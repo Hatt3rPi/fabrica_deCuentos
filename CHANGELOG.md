@@ -10,3 +10,4 @@
 - Nuevas columnas `actividad` y `edge_function` en `prompt_metrics`.
 - Las funciones Edge ahora imprimen en consola el JSON enviado a las APIs de IA.
 - Se corrige `describe-and-sketch` para soportar Flux y definir la constante `FILE`.
+- Corregida la conversión a base64 de la imagen de referencia en `describe-and-sketch`.

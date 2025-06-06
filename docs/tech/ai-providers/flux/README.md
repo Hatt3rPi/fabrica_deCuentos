@@ -363,6 +363,11 @@ To use Kontext for image editing, you'll make a request to the `/flux-kontext-pr
   ```
 </CodeGroup>
 
+<Note>
+Al convertir imágenes a base64 en Deno se recomienda utilizar el helper `encode`
+de `std/encoding/base64.ts` para evitar problemas con `btoa` en buffers grandes.
+</Note>
+
 A successful response will be a json object containing the request's id, that will be used to retrieve the actual result.
 
 ### Poll for Result

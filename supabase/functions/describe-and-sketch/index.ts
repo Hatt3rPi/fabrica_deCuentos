@@ -3,6 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
+import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -162,7 +163,7 @@ Deno.serve(async (req) => {
     const start = Date.now();
     if (apiEndpoint.includes('bfl.ai')) {
       const fluxKey = Deno.env.get('BFL_API_KEY');
-      const base64Image = btoa(String.fromCharCode(...new Uint8Array(refBuf)));
+      const base64Image = base64Encode(new Uint8Array(refBuf));
       const fluxPayload = { prompt: imagePrompt, input_image: base64Image };
       console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(fluxPayload));
       const res = await fetch(apiEndpoint, {
