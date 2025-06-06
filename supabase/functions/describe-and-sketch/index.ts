@@ -129,10 +129,12 @@ Deno.serve(async (req) => {
     let imagePrompt = characterPrompt
       .replace(/\$\{name\}/g, sanitizedName)
       .replace(/\$\{sanitizedAge\}/g, sanitizedAge)
+      .replace(/\$\{age\}/g, sanitizedAge)
       .replace(
-        /\$\{sanitizedNotes\s*\|\|\s*'sin información'\}/g,
+        /\$\{sanitizedNotes(?:\s*\|\|\s*'sin información')?\}/g,
         notesForPrompt
-      );
+      )
+      .replace(/\$\{notes\}/g, notesForPrompt);
     if (imageBase64) {
       imagePrompt += `\n\nReferencia de la imagen: ${imageBase64}`;
     }

@@ -368,6 +368,12 @@ Al convertir imágenes a base64 en Deno se recomienda utilizar el helper `encode
 de `std/encoding/base64.ts` para evitar problemas con `btoa` en buffers grandes.
 </Note>
 
+<Note>
+Si en los prompts se utiliza la variable `${sanitizedNotes}` para incluir notas del usuario,
+asegúrate de que la función `describe-and-sketch` la reemplace correctamente.
+El código actual admite las formas `${sanitizedNotes}` y `${sanitizedNotes || 'sin información'}`.
+</Note>
+
 A successful response will be a json object containing the request's id, that will be used to retrieve the actual result.
 
 ### Poll for Result
