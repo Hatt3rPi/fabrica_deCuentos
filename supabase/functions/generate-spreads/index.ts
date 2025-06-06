@@ -1,5 +1,6 @@
 
 import { logPromptMetric } from '../_shared/metrics.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,25 +27,34 @@ Deno.serve(async (req) => {
           referenced_image_ids: referenceImageIds,
         };
         console.log('[generate-spreads] [REQUEST]', JSON.stringify(payload));
-        const res = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
-        const response = await res.json();
+        let url = '';
+        if (Deno.env.get('FLUX_ENDPOINT')) {
+          url = await generateWithFlux(prompt);
+        } else {
+          const res = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+          const response = await res.json();
+          if (!response.data?.[0]?.url) {
+            throw new Error('No image returned');
+          }
+          url = response.data[0].url;
+        }
         const elapsed = Date.now() - start;
         await logPromptMetric({
           modelo_ia: 'gpt-image-1',
           tiempo_respuesta_ms: elapsed,
-          estado: response.data?.[0]?.url ? 'success' : 'error',
-          error_type: response.data?.[0]?.url ? null : 'service_error',
+          estado: url ? 'success' : 'error',
+          error_type: url ? null : 'service_error',
           actividad: 'generar_spread',
           edge_function: 'generate-spreads',
         });
-        return response.data[0].url;
+        return url;
       })
     );
 

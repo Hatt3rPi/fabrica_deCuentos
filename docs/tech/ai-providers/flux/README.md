@@ -198,6 +198,24 @@ A successful response will be a json object containing the result, and `result['
   Our signed URLs are only valid for 10 minutes. Please retrieve your result within this timeframe.
 </Warning>
 
+## Conexión desde Functions
+
+Para simplificar el uso de Flux en las funciones Edge se creó el helper
+`generateWithFlux` en `supabase/functions/_shared/flux.ts`.
+
+```ts
+import { generateWithFlux } from '../_shared/flux.ts';
+
+const image = await generateWithFlux('Un gato con sombrero', 'https://foo.bar/img.png');
+```
+
+El método descarga la imagen de referencia si se indica, envía el prompt al
+endpoint `/flux-kontext-pro`, hace *polling* a `/v1/get_result` y devuelve la
+imagen resultante en formato `data:image/...;base64`.
+
+Las funciones que generan imágenes detectan si su endpoint contiene `bfl.ai` y
+utilizan este helper de forma automática.
+
 <Note>
   Las URLs firmadas no incluyen cabeceras CORS, por lo que no pueden consumirse directamente desde el navegador con `fetch`. Para evitar errores de "Solicitud desde otro origen bloqueada", descarga la imagen desde una función Edge y conviértela a `data:image/...;base64` antes de enviarla al frontend.
 </Note>

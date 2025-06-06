@@ -1,5 +1,6 @@
 import { GenerateIllustrationParams } from "./types.ts";
 import { logPromptMetric } from '../_shared/metrics.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -68,31 +69,38 @@ Deno.serve(async (req) => {
       referenced_image_ids: referencedImageIds,
     };
     console.log('[generate-illustration] [REQUEST]', JSON.stringify(payload));
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-    const response = await res.json();
+
+    let imageUrl = '';
+    if (Deno.env.get('FLUX_ENDPOINT')) {
+      imageUrl = await generateWithFlux(prompt);
+    } else {
+      const res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const response = await res.json();
+      if (!response.data || !response.data[0] || !response.data[0].url) {
+        throw new Error('Error: No se generó la imagen.');
+      }
+      imageUrl = response.data[0].url;
+    }
+
     const elapsed = Date.now() - start;
     await logPromptMetric({
-      modelo_ia: "gpt-image-1",
+      modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: elapsed,
-      estado: response.data?.[0]?.url ? 'success' : 'error',
-      error_type: response.data?.[0]?.url ? null : 'service_error',
+      estado: imageUrl ? 'success' : 'error',
+      error_type: imageUrl ? null : 'service_error',
       actividad: 'generar_ilustracion',
       edge_function: 'generate-illustration',
     });
 
-    if (!response.data || !response.data[0] || !response.data[0].url) {
-      throw new Error("Error: No se generó la imagen.");
-    }
-
     return new Response(
-      JSON.stringify({ url: response.data[0].url }),
+      JSON.stringify({ url: imageUrl }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

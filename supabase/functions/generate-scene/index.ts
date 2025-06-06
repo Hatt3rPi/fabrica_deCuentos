@@ -1,4 +1,5 @@
 import { logPromptMetric } from '../_shared/metrics.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,27 +65,36 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
       n: 1,
     };
     console.log('[generate-scene] [REQUEST]', JSON.stringify(payload));
-    const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-    const response = await imgRes.json();
+    let imageUrl = '';
+    if (Deno.env.get('FLUX_ENDPOINT')) {
+      imageUrl = await generateWithFlux(`${identityBlocks}\n${sceneBlock}`);
+    } else {
+      const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const response = await imgRes.json();
+      if (!response.data?.[0]?.url) {
+        throw new Error('No image generated');
+      }
+      imageUrl = response.data[0].url;
+    }
     const elapsed = Date.now() - start;
     await logPromptMetric({
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: elapsed,
-      estado: response.data?.[0]?.url ? 'success' : 'error',
-      error_type: response.data?.[0]?.url ? null : 'service_error',
+      estado: imageUrl ? 'success' : 'error',
+      error_type: imageUrl ? null : 'service_error',
       actividad: 'generar_escena',
       edge_function: 'generate-scene',
     });
 
     return new Response(
-      JSON.stringify({ imageUrl: response.data[0].url }),
+      JSON.stringify({ imageUrl }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

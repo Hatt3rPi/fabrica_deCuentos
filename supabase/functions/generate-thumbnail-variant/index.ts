@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
-import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -91,45 +91,11 @@ Deno.serve(async (req) => {
     let tokensIn = 0;
     let tokensOut = 0;
     if (apiEndpoint.includes('bfl.ai')) {
-      const fluxKey = Deno.env.get('BFL_API_KEY');
       const start = Date.now();
-      const fluxPayload = { prompt: stylePrompt };
-      console.log('[generate-thumbnail-variant] [REQUEST]', JSON.stringify(fluxPayload));
-      const req = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'x-key': fluxKey ?? '', 'Content-Type': 'application/json' },
-        body: JSON.stringify(fluxPayload)
-      });
-      const data = await req.json();
-      const requestId = data.id;
-      let status = data.status;
+      resultUrl = await generateWithFlux(stylePrompt);
       elapsed = Date.now() - start;
-      for (let i = 0; i < 20 && requestId; i++) {
-        const poll = await fetch(`https://api.bfl.ai/v1/get_result?id=${requestId}`, {
-          headers: { 'x-key': fluxKey ?? '' }
-        });
-        const pollData = await poll.json();
-        status = pollData.status;
-        if (status === 'Ready') {
-          resultUrl = pollData.result?.sample || '';
-          break;
-        }
-        if (status !== 'Processing' && status !== 'Queued') {
-          throw new Error('Flux error');
-        }
-        await new Promise(r => setTimeout(r, 1500));
-      }
       tokensIn = 0;
       tokensOut = 0;
-      if (!resultUrl) throw new Error('No image returned');
-
-      const imgRes = await fetch(resultUrl);
-      if (!imgRes.ok) {
-        throw new Error(`No se pudo descargar la imagen generada: ${imgRes.status}`);
-      }
-      const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
-      const imgMime = imgRes.headers.get('content-type') || 'image/jpeg';
-      resultUrl = `data:${imgMime};base64,${base64Encode(imgBuf)}`;
       console.log('[generate-thumbnail-variant] [OUT]', resultUrl);
     } else {
       const start = Date.now();

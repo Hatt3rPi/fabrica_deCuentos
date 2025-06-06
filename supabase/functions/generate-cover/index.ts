@@ -1,5 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
+import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,7 +38,7 @@ async function generateImageWithRetry(
   retries = MAX_RETRIES
 ): Promise<{ url: string }> {
   const openaiKey = Deno.env.get('OPENAI_API_KEY');
-  
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const formData = new FormData();
@@ -46,7 +48,15 @@ async function generateImageWithRetry(
       formData.append('n', '1');
       
       // Si no hay imágenes, usar generación estándar
-      if (referenceImages.length === 0) {
+      if (endpoint.includes('bfl.ai')) {
+        let inputUrl: string | undefined;
+        if (referenceImages[0]) {
+          const buf = new Uint8Array(await referenceImages[0].arrayBuffer());
+          const b64 = base64Encode(buf);
+          inputUrl = `data:image/png;base64,${b64}`;
+        }
+        return { url: await generateWithFlux(prompt, inputUrl) };
+      } else if (referenceImages.length === 0) {
         const payload = { model, prompt, size: '1024x1024', n: 1 };
         console.log('[generate-cover] [REQUEST]', JSON.stringify(payload));
         const response = await fetch(endpoint, {

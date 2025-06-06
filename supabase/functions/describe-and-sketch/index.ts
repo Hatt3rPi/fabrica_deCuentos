@@ -3,7 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
-import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -139,42 +139,7 @@ Deno.serve(async (req) => {
       .replace(/\$\{name\}/g, sanitizedName)
       .replace(/\$\{sanitizedAge\}/g, sanitizedAge)
       .replace(/\$\{age\}/g, sanitizedAge)
-      .replace(
-        /\$\{sanitizedNotes(?:\s*\|\|\s*'sin información')?\}/g,
-        notesForPrompt
-      )
-      .replace(/\$\{notes\}/g, notesForPrompt);
-
-
-    // 5) Descargar referencia y preparar ArrayBuffer/Blob con MIME correcto
-    let refBuf: ArrayBuffer;
-
-    // Si imageBase64 es un data URI (p. ej. "data:image/png;base64,AAA...")
-    if (imageBase64!.startsWith("data:image/")) {
-      const [, b64data] = imageBase64!.split(",");
-      // Decodificamos base64 a binario usando la función global atob de Deno
-      const binaryString = atob(b64data);
-      const arr = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        arr[i] = binaryString.charCodeAt(i);
-      }
-      refBuf = arr.buffer;
-    }
-    // Si imageBase64 parece ser un base64 puro (sin prefijo "data:image/...")
-    else if (/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$/.test(imageBase64!)) {
-      const binaryString = atob(imageBase64!);
-      const arr = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        arr[i] = binaryString.charCodeAt(i);
-      }
-      refBuf = arr.buffer;
-
-      const imgRes = await fetch(thumbnailUrl);
-      if (!imgRes.ok) {
-        throw new Error(`No se pudo descargar la imagen generada: ${imgRes.status}`);
-      }
-      const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
-      const imgMime = imgRes.headers.get('content-type') || 'image/jpeg';
+      thumbnailUrl = await generateWithFlux(imagePrompt, imageBase64 || undefined);
       thumbnailUrl = `data:${imgMime};base64,${base64Encode(imgBuf)}`;
       console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbnailUrl);
     }

@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -223,30 +224,38 @@ Deno.serve(async (req) => {
         referenced_image_ids: charThumbnails,
       };
       console.log('[generate-story] [COVER REQUEST]', JSON.stringify(coverPayload));
-      const cRes = await fetch(coverEndpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(coverPayload),
-      });
-      const coverRes = await cRes.json();
+      let coverRes: any;
+      if (coverEndpoint.includes('bfl.ai')) {
+        coverUrl = await generateWithFlux(promptText);
+        coverRes = { data: [{ url: coverUrl }] };
+      } else {
+        const cRes = await fetch(coverEndpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(coverPayload),
+        });
+        coverRes = await cRes.json();
+        if (coverRes.data?.[0]?.url) {
+          coverUrl = coverRes.data[0].url;
+        }
+      }
       const celapsed = Date.now() - cstart;
       await logPromptMetric({
         prompt_id: coverPromptId,
         modelo_ia: coverModel,
         tiempo_respuesta_ms: celapsed,
-        estado: coverRes.data?.[0]?.url ? 'success' : 'error',
-        error_type: coverRes.data?.[0]?.url ? null : 'service_error',
+        estado: coverUrl ? 'success' : 'error',
+        error_type: coverUrl ? null : 'service_error',
         tokens_entrada: 0,
         tokens_salida: 0,
         usuario_id: userId,
         actividad: 'generar_portada',
         edge_function: 'generate-story',
       });
-      if (coverRes.data?.[0]?.url) {
-        coverUrl = coverRes.data[0].url;
+      if (coverUrl) {
         await supabaseAdmin.from('story_pages')
           .update({ image_url: coverUrl })
           .eq('story_id', story_id)

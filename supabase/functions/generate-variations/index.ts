@@ -1,4 +1,5 @@
 import { logPromptMetric } from '../_shared/metrics.ts';
+import { generateWithFlux } from '../_shared/flux.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,28 +25,37 @@ Deno.serve(async (req) => {
       n: 1,
     };
     console.log('[generate-variations] [REQUEST]', JSON.stringify(payload));
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-    const imageResponse = await res.json();
+    let imageUrl = '';
+    if (Deno.env.get('FLUX_ENDPOINT')) {
+      imageUrl = await generateWithFlux(payload.prompt);
+    } else {
+      const res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const imageResponse = await res.json();
+      if (!imageResponse.data?.[0]?.url) {
+        throw new Error('No image returned');
+      }
+      imageUrl = imageResponse.data[0].url;
+    }
     const elapsed = Date.now() - start;
     await logPromptMetric({
       modelo_ia: 'gpt-image-1',
       tiempo_respuesta_ms: elapsed,
-      estado: imageResponse.data?.[0]?.url ? 'success' : 'error',
-      error_type: imageResponse.data?.[0]?.url ? null : 'service_error',
+      estado: imageUrl ? 'success' : 'error',
+      error_type: imageUrl ? null : 'service_error',
       actividad: 'generar_variacion',
       edge_function: 'generate-variations',
     });
 
     return new Response(
       JSON.stringify({
-        thumbnailUrl: imageResponse.data[0].url
+        thumbnailUrl: imageUrl
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
