@@ -177,6 +177,8 @@ Deno.serve(async (req)=>{
       tokens_entrada: responseData.usage?.prompt_tokens ?? 0,
       tokens_salida: responseData.usage?.completion_tokens ?? 0,
       usuario_id: userId,
+      actividad: ACTIVITY,
+      edge_function: FILE,
     });
     console.log(`[${FILE}] [${STAGE}] [OUT] ${JSON.stringify(responseData)}`);
     if (!response.ok) {
@@ -220,6 +222,8 @@ Deno.serve(async (req)=>{
         tokens_salida: 0,
         usuario_id: userId,
         metadatos: { error: (error as Error).message },
+        actividad: ACTIVITY,
+        edge_function: FILE,
       });
     }
     const errResp = handleOpenAIError(error);

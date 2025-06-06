@@ -88,6 +88,8 @@ Deno.serve(async (req) => {
         tokens_entrada: 0,
         tokens_salida: 0,
         usuario_id: userId,
+        actividad: 'generar_historia',
+        edge_function: 'generate-story',
       });
       console.error('Respuesta inválida de OpenAI:', rawResponse.slice(0, 100));
       throw new Error('Formato de respuesta de OpenAI inválido');
@@ -102,6 +104,8 @@ Deno.serve(async (req) => {
       tokens_entrada: respData.usage?.prompt_tokens ?? 0,
       tokens_salida: respData.usage?.completion_tokens ?? 0,
       usuario_id: userId,
+      actividad: 'generar_historia',
+      edge_function: 'generate-story',
     });
 
     if (!resp.ok) {
@@ -234,6 +238,8 @@ Deno.serve(async (req) => {
         tokens_entrada: 0,
         tokens_salida: 0,
         usuario_id: userId,
+        actividad: 'generar_portada',
+        edge_function: 'generate-story',
       });
       if (coverRes.data?.[0]?.url) {
         coverUrl = coverRes.data[0].url;
@@ -274,6 +280,8 @@ Deno.serve(async (req) => {
         tokens_salida: 0,
         usuario_id: userId,
         metadatos: { error: (err as Error).message },
+        actividad: 'generar_historia',
+        edge_function: 'generate-story',
       });
     }
     return new Response(

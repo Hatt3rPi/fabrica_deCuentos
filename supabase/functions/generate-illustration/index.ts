@@ -81,6 +81,8 @@ Deno.serve(async (req) => {
       tiempo_respuesta_ms: elapsed,
       estado: response.data?.[0]?.url ? 'success' : 'error',
       error_type: response.data?.[0]?.url ? null : 'service_error',
+      actividad: 'generar_ilustracion',
+      edge_function: 'generate-illustration',
     });
 
     if (!response.data || !response.data[0] || !response.data[0].url) {
@@ -100,6 +102,8 @@ Deno.serve(async (req) => {
       estado: 'error',
       error_type: 'service_error',
       metadatos: { error: (error as Error).message },
+      actividad: 'generar_ilustracion',
+      edge_function: 'generate-illustration',
     });
     return new Response(
       JSON.stringify({ error: error.message }),

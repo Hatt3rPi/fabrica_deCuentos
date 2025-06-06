@@ -17,6 +17,8 @@ export interface PromptMetric {
   tokens_salida?: number;
   usuario_id?: string | null;
   metadatos?: Record<string, unknown> | null;
+  actividad?: string | null;
+  edge_function?: string | null;
 }
 
 export async function getUserId(req: Request): Promise<string | null> {

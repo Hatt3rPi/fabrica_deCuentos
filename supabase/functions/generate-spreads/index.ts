@@ -39,6 +39,8 @@ Deno.serve(async (req) => {
           tiempo_respuesta_ms: elapsed,
           estado: response.data?.[0]?.url ? 'success' : 'error',
           error_type: response.data?.[0]?.url ? null : 'service_error',
+          actividad: 'generar_spread',
+          edge_function: 'generate-spreads',
         });
         return response.data[0].url;
       })
@@ -55,6 +57,8 @@ Deno.serve(async (req) => {
       estado: 'error',
       error_type: 'service_error',
       metadatos: { error: (error as Error).message },
+      actividad: 'generar_spread',
+      edge_function: 'generate-spreads',
     });
     return new Response(
       JSON.stringify({ error: error.message }),

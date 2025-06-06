@@ -329,6 +329,8 @@ Deno.serve(async (req) => {
       tokens_entrada: 0,
       tokens_salida: 0,
       usuario_id: userId,
+      actividad: 'generar_portada',
+      edge_function: 'generate-cover',
     });
 
     console.log('✅ Portada generada exitosamente', {
@@ -357,6 +359,8 @@ Deno.serve(async (req) => {
         tokens_salida: 0,
         usuario_id: userId,
         metadatos: { error: (error as Error).message },
+        actividad: 'generar_portada',
+        edge_function: 'generate-cover',
       });
     }
     

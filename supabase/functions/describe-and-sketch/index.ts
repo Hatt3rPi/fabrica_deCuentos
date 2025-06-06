@@ -182,6 +182,8 @@ Deno.serve(async (req) => {
       tokens_entrada: tokensEntrada,
       tokens_salida: tokensSalida,
       usuario_id: userId,
+      actividad: ACTIVITY,
+      edge_function: FILE,
     });
     if (!editRes.ok) {
       const msg = editData.error?.message || editRes.statusText;
@@ -213,6 +215,8 @@ Deno.serve(async (req) => {
       tokens_salida: 0,
       usuario_id: userId,
       metadatos: { error: (error as Error).message },
+      actividad: ACTIVITY,
+      edge_function: FILE,
     });
     return new Response(
       JSON.stringify({ error: error.message || 'Error al generar la miniatura' }),

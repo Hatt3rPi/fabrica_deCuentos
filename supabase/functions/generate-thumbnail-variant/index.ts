@@ -150,6 +150,8 @@ Deno.serve(async (req) => {
       tokens_entrada: tokensIn,
       tokens_salida: tokensOut,
       usuario_id: userId,
+      actividad: ACTIVITY,
+      edge_function: FILE,
     });
 
     await endInflightCall(userId, ACTIVITY);
@@ -170,6 +172,8 @@ Deno.serve(async (req) => {
       tokens_salida: 0,
       usuario_id: userId,
       metadatos: { error: (error as Error).message },
+      actividad: ACTIVITY,
+      edge_function: FILE,
     });
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 400,

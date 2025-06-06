@@ -57,15 +57,19 @@ Cada inserción o eliminación en la tabla dispara una recarga de datos.
 
 ## Componente `StageActivityCard`
 
-El componente `StageActivityCard` muestra el estado de cada actividad, con un toggle para activarla o desactivarla y el número de llamadas activas:
+El componente `StageActivityCard` muestra el estado de cada actividad. Indica si está **activada** o **desactivada**, el número de llamadas activas y un resumen de las métricas de los últimos 10 minutos:
 
 ```tsx
 <StageActivityCard
   label="Generar descripción"
   enabled={settings.personajes.generar_descripcion}
   inflight={inflightCount}
+  stats={{ total: 3, errorRate: 0.33, errors: { service_error: 1 } }}
   onToggle={(value) => toggle('personajes', 'generar_descripcion', value)}
 />
+
+La propiedad `stats` se obtiene consultando `prompt_metrics` para los últimos 10 minutos y
+muestra el número total de llamadas, la tasa de errores y el desglose por tipo de error.
 ```
 
 ## Página `/admin/flujo`
