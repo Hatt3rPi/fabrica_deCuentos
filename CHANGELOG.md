@@ -12,3 +12,4 @@
 - Se corrige `describe-and-sketch` para soportar Flux y definir la constante `FILE`.
 - Corregida la conversión a base64 de la imagen de referencia en `describe-and-sketch`.
 - Arreglado el reemplazo del placeholder `${sanitizedNotes}` en el prompt de `describe-and-sketch`.
+- Las funciones que usan Flux ahora devuelven la imagen en base64 para evitar errores CORS al descargar la URL firmada.

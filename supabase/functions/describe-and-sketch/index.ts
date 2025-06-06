@@ -168,6 +168,15 @@ Deno.serve(async (req) => {
         arr[i] = binaryString.charCodeAt(i);
       }
       refBuf = arr.buffer;
+
+      const imgRes = await fetch(thumbnailUrl);
+      if (!imgRes.ok) {
+        throw new Error(`No se pudo descargar la imagen generada: ${imgRes.status}`);
+      }
+      const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
+      const imgMime = imgRes.headers.get('content-type') || 'image/jpeg';
+      thumbnailUrl = `data:${imgMime};base64,${base64Encode(imgBuf)}`;
+      console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbnailUrl);
     }
     // Si no es data URI ni base64, asumimos que es una URL HTTP/S
     else {

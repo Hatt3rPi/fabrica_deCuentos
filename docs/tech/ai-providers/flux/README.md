@@ -198,6 +198,10 @@ A successful response will be a json object containing the result, and `result['
   Our signed URLs are only valid for 10 minutes. Please retrieve your result within this timeframe.
 </Warning>
 
+<Note>
+  Las URLs firmadas no incluyen cabeceras CORS, por lo que no pueden consumirse directamente desde el navegador con `fetch`. Para evitar errores de "Solicitud desde otro origen bloqueada", descarga la imagen desde una función Edge y conviértela a `data:image/...;base64` antes de enviarla al frontend.
+</Note>
+
 ### FLUX.1 Kontext Text-to-Image Parameters
 
 <Tip>

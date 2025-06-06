@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
+import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -121,6 +122,15 @@ Deno.serve(async (req) => {
       tokensIn = 0;
       tokensOut = 0;
       if (!resultUrl) throw new Error('No image returned');
+
+      const imgRes = await fetch(resultUrl);
+      if (!imgRes.ok) {
+        throw new Error(`No se pudo descargar la imagen generada: ${imgRes.status}`);
+      }
+      const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
+      const imgMime = imgRes.headers.get('content-type') || 'image/jpeg';
+      resultUrl = `data:${imgMime};base64,${base64Encode(imgBuf)}`;
+      console.log('[generate-thumbnail-variant] [OUT]', resultUrl);
     } else {
       const start = Date.now();
       const openaiKey = Deno.env.get('OPENAI_API_KEY');
