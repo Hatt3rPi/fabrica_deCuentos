@@ -205,35 +205,45 @@ Deno.serve(async (req) => {
       const fluxKey = Deno.env.get('BFL_API_KEY');
       // 1) Leemos la imagen de referencia y la codificamos en Base64 (sin prefijo data:image/...)
       const base64Image = base64Encode(new Uint8Array(refBuf));
+    
       // 2) Armamos el payload completo, usando valores por defecto donde corresponda
       const fluxPayload: Record<string, unknown> = {
-        prompt: imagePrompt,            // tu prompt ya armado
-        input_image: base64Image,       // base64 puro (el decoder interno detecta el formato)
-        seed: 42,                       // número de semilla (opcional, pero útil para reproducibilidad)
-        aspect_ratio: "square",         // ejemplo: 1:1. Cambia a "portrait", "landscape", "cinematic", etc.
-        output_format: "jpeg",          // jpeg o png
-        prompt_upsampling: false,       // false para no enriquecer el prompt automáticamente
-        safety_tolerance: 2             // nivel medio de moderación de contenido
-        // Si quieres recibir la imagen de forma asíncrona, descomenta:
-        //, webhook_url: "https://tu-dominio.com/mi-webhook-endpoint"
-        //, webhook_secret: "mi-secreto-para-validar-el-webhook"
+        prompt: imagePrompt,
+        input_image: base64Image,
+        seed: 42,
+        aspect_ratio: "square",
+        output_format: "jpeg",
+        prompt_upsampling: false,
+        safety_tolerance: 2
+        // , webhook_url: "https://tu-dominio.com/mi-webhook-endpoint"
+        // , webhook_secret: "mi-secreto-para-validar-el-webhook"
       };
-      console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(fluxPayload));
+      
+      // 3) Creamos una copia para el log, truncando input_image a los primeros 6 caracteres
+      const shortPayload = {
+        ...fluxPayload,
+        input_image: `${(fluxPayload.input_image as string).slice(0, 6)}...`
+      };
+      console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(shortPayload));
+      
+      // 4) Hacemos la llamada real con el payload completo
       const res = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'x-key': fluxKey ?? '', 'Content-Type': 'application/json' },
         body: JSON.stringify(fluxPayload)
       });
+    
       const data = await res.json();
-      const requestId = data.id;
-      let status = data.status;
+      const requestId = data.id as string;
+      let status = data.status as string;
       elapsed = Date.now() - start;
+    
       for (let i = 0; i < 20 && requestId; i++) {
         const poll = await fetch(`https://api.bfl.ai/v1/get_result?id=${requestId}`, {
           headers: { 'x-key': fluxKey ?? '' }
         });
         const pollData = await poll.json();
-        status = pollData.status;
+        status = pollData.status as string;
         if (status === 'Ready') {
           thumbnailUrl = pollData.result?.sample || '';
           break;
