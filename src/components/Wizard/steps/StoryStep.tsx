@@ -15,7 +15,7 @@ const StoryStep: React.FC = () => {
     setGeneratedPages,
     setIsGenerating,
   } = useWizard();
-  const { generateCover } = useStory();
+  const { generateCover, generateCoverVariants } = useStory();
   const { storyId } = useParams();
   const [isLoading, setIsLoading] = React.useState(false);
   const [generated, setGenerated] = React.useState<{ title: string; paragraphs: string[] } | null>(null);
@@ -61,7 +61,7 @@ const StoryStep: React.FC = () => {
           }));
           setGeneratedPages(mapped);
         }
-        await generateCover(
+        const coverUrl = await generateCover(
           storyId!,
           result.title,
           {
@@ -70,6 +70,10 @@ const StoryStep: React.FC = () => {
             refIds: characters.map(c => c.thumbnailUrl || '').filter(Boolean)
           }
         );
+
+        if (coverUrl) {
+          await generateCoverVariants(storyId!, coverUrl);
+        }
 
       } else {
         alert('Respuesta inválida');

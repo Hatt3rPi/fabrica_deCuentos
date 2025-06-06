@@ -143,7 +143,12 @@ const DesignStep: React.FC = () => {
           <div className="aspect-square rounded-lg overflow-hidden bg-white shadow-md flex items-center justify-center">
             {designSettings.visualStyle ? (
               <img
-                src={coverState?.url || images[STYLE_TO_KEY[designSettings.visualStyle]] || FALLBACK_IMAGES[designSettings.visualStyle]}
+                src={
+                  coverState?.variants?.[designSettings.visualStyle] ||
+                  coverState?.url ||
+                  images[STYLE_TO_KEY[designSettings.visualStyle]] ||
+                  FALLBACK_IMAGES[designSettings.visualStyle]
+                }
                 alt="Vista previa"
                 className="w-full h-full object-cover"
               />
