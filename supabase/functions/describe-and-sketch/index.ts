@@ -110,7 +110,6 @@ Deno.serve(async (req) => {
     const rawPayload = await req.json().catch(() => {
       throw new Error('Payload JSON inválido');
     });
-    console.log('[describe-and-sketch] [INIT] rawPayload =', rawPayload);
     const { imageBase64, userNotes, name, age } = validatePayload(rawPayload);
 
     // 3) Sanitización
@@ -135,26 +134,65 @@ Deno.serve(async (req) => {
         notesForPrompt
       )
       .replace(/\$\{notes\}/g, notesForPrompt);
-    if (imageBase64) {
-      imagePrompt += `\n\nReferencia de la imagen: ${imageBase64}`;
-    }
-    console.log('[describe-and-sketch] [Generación de imagen] [IN] ', imagePrompt);
 
-    // 5) Descargar referencia y preparar Blob con MIME correcto
-    const refRes = await fetch(imageBase64!);
-    if (!refRes.ok) {
-      throw new Error(`No se pudo descargar la imagen de referencia: ${refRes.status}`);
+
+    // 5) Descargar referencia y preparar ArrayBuffer/Blob con MIME correcto
+    let refBuf: ArrayBuffer;
+    // Si imageBase64 es un data URI (p. ej. "data:image/png;base64,AAA..."):
+    if (imageBase64!.startsWith("data:image/")) {
+      // Extraemos la parte base64 después de la coma
+      const [, b64data] = imageBase64!.split(",");
+      // Decodificamos base64 a binario
+      const binaryString = atob(b64data);
+      const arr = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        arr[i] = binaryString.charCodeAt(i);
+      }
+      refBuf = arr.buffer;
     }
-    const refBuf = await refRes.arrayBuffer();
-    const urlPath = new URL(imageBase64!).pathname;
-    const ext = urlPath.split('.').pop()!.toLowerCase();
-    const mimeMap: Record<string,string> = {
-      jpg:  'image/jpeg',
-      jpeg: 'image/jpeg',
-      png:  'image/png',
-      webp: 'image/webp'
-    };
-    const mimeType = mimeMap[ext] || 'image/png';
+    // Si imageBase64 parece ser un base64 puro (sin prefijo "data:image/..."):
+    else if (/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$/.test(imageBase64!)) {
+      const binaryString = atob(imageBase64!);
+      const arr = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        arr[i] = binaryString.charCodeAt(i);
+      }
+      refBuf = arr.buffer;
+    }
+    // Si no es data URI ni base64, asumimos que es una URL HTTP/S
+    else {
+      const refRes = await fetch(imageBase64!);
+      if (!refRes.ok) {
+        throw new Error(`No se pudo descargar la imagen de referencia: ${refRes.status}`);
+      }
+      refBuf = await refRes.arrayBuffer();
+    }
+
+    // A partir de refBuf determinamos la extensión y MIME para el Blob
+    let ext = "";
+    let mimeType = "image/png";
+    if (imageBase64!.startsWith("data:image/")) {
+      // Extraemos el tipo MIME directamente del data URI
+      const match = imageBase64!.match(/^data:(image\/[a-zA-Z]+);base64,/);
+      if (match) {
+        mimeType = match[1];
+        ext = mimeType.split("/")[1];
+      }
+    }
+    if (!ext) {
+      // Si venía por URL, extraemos la extensión de la ruta
+      const urlPath = new URL(imageBase64!).pathname;
+      ext = urlPath.split(".").pop()!.toLowerCase();
+      const mimeMap: Record<string, string> = {
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
+        webp: "image/webp"
+      };
+      mimeType = mimeMap[ext] || "image/png";
+    }
+
+    // Creamos el Blob con el MIME correcto
     const refBlob = new Blob([refBuf], { type: mimeType });
 
     let thumbnailUrl = '';
@@ -165,8 +203,21 @@ Deno.serve(async (req) => {
     const start = Date.now();
     if (apiEndpoint.includes('bfl.ai')) {
       const fluxKey = Deno.env.get('BFL_API_KEY');
+      // 1) Leemos la imagen de referencia y la codificamos en Base64 (sin prefijo data:image/...)
       const base64Image = base64Encode(new Uint8Array(refBuf));
-      const fluxPayload = { prompt: imagePrompt, input_image: base64Image };
+      // 2) Armamos el payload completo, usando valores por defecto donde corresponda
+      const fluxPayload: Record<string, unknown> = {
+        prompt: imagePrompt,            // tu prompt ya armado
+        input_image: base64Image,       // base64 puro (el decoder interno detecta el formato)
+        seed: 42,                       // número de semilla (opcional, pero útil para reproducibilidad)
+        aspect_ratio: "square",         // ejemplo: 1:1. Cambia a "portrait", "landscape", "cinematic", etc.
+        output_format: "jpeg",          // jpeg o png
+        prompt_upsampling: false,       // false para no enriquecer el prompt automáticamente
+        safety_tolerance: 2             // nivel medio de moderación de contenido
+        // Si quieres recibir la imagen de forma asíncrona, descomenta:
+        //, webhook_url: "https://tu-dominio.com/mi-webhook-endpoint"
+        //, webhook_secret: "mi-secreto-para-validar-el-webhook"
+      };
       console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(fluxPayload));
       const res = await fetch(apiEndpoint, {
         method: 'POST',
