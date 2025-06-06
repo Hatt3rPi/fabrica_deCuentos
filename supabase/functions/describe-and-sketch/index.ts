@@ -64,6 +64,16 @@ function validatePayload(payload: any) {
   };
 }
 
+// Helper: extrae el parámetro ?url=…
+function getQueryUrl(request: Request): string | null {
+  try {
+    const url = new URL(request.url);
+    return url.searchParams.get("url");
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -138,11 +148,11 @@ Deno.serve(async (req) => {
 
     // 5) Descargar referencia y preparar ArrayBuffer/Blob con MIME correcto
     let refBuf: ArrayBuffer;
-    // Si imageBase64 es un data URI (p. ej. "data:image/png;base64,AAA..."):
+
+    // Si imageBase64 es un data URI (p. ej. "data:image/png;base64,AAA...")
     if (imageBase64!.startsWith("data:image/")) {
-      // Extraemos la parte base64 después de la coma
       const [, b64data] = imageBase64!.split(",");
-      // Decodificamos base64 a binario
+      // Decodificamos base64 a binario usando la función global atob de Deno
       const binaryString = atob(b64data);
       const arr = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -150,7 +160,7 @@ Deno.serve(async (req) => {
       }
       refBuf = arr.buffer;
     }
-    // Si imageBase64 parece ser un base64 puro (sin prefijo "data:image/..."):
+    // Si imageBase64 parece ser un base64 puro (sin prefijo "data:image/...")
     else if (/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$/.test(imageBase64!)) {
       const binaryString = atob(imageBase64!);
       const arr = new Uint8Array(binaryString.length);
@@ -172,7 +182,6 @@ Deno.serve(async (req) => {
     let ext = "";
     let mimeType = "image/png";
     if (imageBase64!.startsWith("data:image/")) {
-      // Extraemos el tipo MIME directamente del data URI
       const match = imageBase64!.match(/^data:(image\/[a-zA-Z]+);base64,/);
       if (match) {
         mimeType = match[1];
@@ -180,7 +189,6 @@ Deno.serve(async (req) => {
       }
     }
     if (!ext) {
-      // Si venía por URL, extraemos la extensión de la ruta
       const urlPath = new URL(imageBase64!).pathname;
       ext = urlPath.split(".").pop()!.toLowerCase();
       const mimeMap: Record<string, string> = {
@@ -192,7 +200,6 @@ Deno.serve(async (req) => {
       mimeType = mimeMap[ext] || "image/png";
     }
 
-    // Creamos el Blob con el MIME correcto
     const refBlob = new Blob([refBuf], { type: mimeType });
 
     let thumbnailUrl = '';
@@ -201,61 +208,97 @@ Deno.serve(async (req) => {
     let tokensSalida = 0;
 
     const start = Date.now();
+
+    // ----------------------------------------------------------------
+    //  Aquí forzamos a usar la URL del ejemplo: https://api.us1.bfl.ai/v1/flux-kontext-pro
+    //const apiEndpoint = 'https://api.bfl.ai/v1/flux-kontext-pro';
+
     if (apiEndpoint.includes('bfl.ai')) {
       const fluxKey = Deno.env.get('BFL_API_KEY');
-      // 1) Leemos la imagen de referencia y la codificamos en Base64 (sin prefijo data:image/...)
+      // 1) Codificamos refBuf a base64 puro
       const base64Image = base64Encode(new Uint8Array(refBuf));
-    
-      // 2) Armamos el payload completo, usando valores por defecto donde corresponda
+
+      // 2) Armamos el payload completo
       const fluxPayload: Record<string, unknown> = {
         prompt: imagePrompt,
         input_image: base64Image,
         seed: 42,
-        aspect_ratio: "square",
+        aspect_ratio: "1:1",       // Igual que "square"
         output_format: "jpeg",
         prompt_upsampling: false,
         safety_tolerance: 2
+        // Para modo webhook, podrías agregar:
         // , webhook_url: "https://tu-dominio.com/mi-webhook-endpoint"
         // , webhook_secret: "mi-secreto-para-validar-el-webhook"
       };
-      
-      // 3) Creamos una copia para el log, truncando input_image a los primeros 6 caracteres
+
+      // 3) Loguear solo los primeros 6 caracteres de input_image
       const shortPayload = {
         ...fluxPayload,
         input_image: `${(fluxPayload.input_image as string).slice(0, 6)}...`
       };
       console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(shortPayload));
-      
-      // 4) Hacemos la llamada real con el payload completo
+
+      // 4) Llamada inicial a Flux-Kontext Pro (usando la URL fija del ejemplo)
       const res = await fetch(apiEndpoint, {
         method: 'POST',
-        headers: { 'x-key': fluxKey ?? '', 'Content-Type': 'application/json' },
+        headers: {
+          'X-Key': fluxKey ?? '',
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(fluxPayload)
       });
-    
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Flux init failed: ${res.status} ${errText}`);
+      }
       const data = await res.json();
-      const requestId = data.id as string;
-      let status = data.status as string;
-      elapsed = Date.now() - start;
-    
-      for (let i = 0; i < 20 && requestId; i++) {
-        const poll = await fetch(`https://api.bfl.ai/v1/get_result?id=${requestId}`, {
-          headers: { 'x-key': fluxKey ?? '' }
+      console.log('[describe-and-sketch] [FLUX INIT RESPONSE]', data);
+
+      // 5) Extraemos y usamos el polling_url que devuelve la API
+      const pollingUrl = data.polling_url as string;
+      if (!pollingUrl) {
+        throw new Error('Flux init no devolvió polling_url');
+      }
+
+      // 6) Hacemos polling usando esa misma polling_url
+      for (let i = 0; i < 20; i++) {
+        const pollRes = await fetch(pollingUrl, {
+          headers: { 'X-Key': fluxKey ?? '' }
         });
-        const pollData = await poll.json();
-        status = pollData.status as string;
+        if (!pollRes.ok) {
+          const errText = await pollRes.text();
+          console.error(`[describe-and-sketch] [POLL ${i}] HTTP ${pollRes.status}: ${errText}`);
+          throw new Error(`Flux poll failed: ${pollRes.status}`);
+        }
+        const pollData = await pollRes.json();
+        console.log(`[describe-and-sketch] [POLL ${i}] pollData:`, pollData);
+
+        const status = pollData.status as string;
         if (status === 'Ready') {
-          thumbnailUrl = pollData.result?.sample || '';
+          thumbnailUrl = pollData.result?.sample as string;
+          console.log('[describe-and-sketch] Imagen lista:', thumbnailUrl);
           break;
         }
-        if (status !== 'Processing' && status !== 'Queued') {
-          throw new Error('Flux error');
+        if (status === 'Failed' || status === 'Cancelled') {
+          console.error('[describe-and-sketch] Flux devolvió estado inesperado:', status, pollData);
+          throw new Error(`Flux error: ${status}`);
         }
+        // Si sigue en "Queued" o "Processing", esperamos antes de volver a intentar
         await new Promise((r) => setTimeout(r, 1500));
       }
-      if (!thumbnailUrl) throw new Error('No image returned');
-    } else {
-      // Enviar a /v1/images/edits vía fetch + FormData
+
+      // 7) Si tras 20 intentos no hay thumbnailUrl, lanzamos error
+      if (!thumbnailUrl) {
+        const elapsedSec = ((Date.now() - start) / 1000).toFixed(1);
+        throw new Error(`No image returned después de ${elapsedSec}s`);
+      }
+
+      elapsed = Date.now() - start;
+    }
+    else {
+      // En caso de no usar BFL.ai, cae al bloque de OpenAI /images/edits...
       const formData = new FormData();
       formData.append('model', apiModel);
       formData.append('prompt', imagePrompt);
@@ -271,11 +314,10 @@ Deno.serve(async (req) => {
         image: `reference.${ext}`,
       };
       console.log('[describe-and-sketch] [REQUEST]', JSON.stringify(requestJson));
+
       const editRes = await fetch(apiEndpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiKey}`,
-        },
+        headers: { 'Authorization': `Bearer ${openaiKey}` },
         body: formData,
       });
       elapsed = Date.now() - start;
@@ -286,13 +328,12 @@ Deno.serve(async (req) => {
         const msg = editData.error?.message || editRes.statusText;
         throw new Error(`Error al editar la imagen: ${msg}`);
       }
-      // GPT-image-1 siempre devuelve b64_json
       const b64 = editData.data?.[0]?.b64_json;
       if (!b64) {
         throw new Error('No se generó la imagen editada');
       }
       thumbnailUrl = `data:${mimeType};base64,${b64}`;
-      console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbnailUrl);
+      console.log('[describe-and-sketch] [Generación de imagen] [OUT]', thumbnailUrl);
     }
 
     await logPromptMetric({
