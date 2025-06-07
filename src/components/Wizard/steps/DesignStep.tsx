@@ -91,6 +91,7 @@ const DesignStep: React.FC = () => {
                       <img
                         src={src}
                         alt={option.label}
+                        loading="lazy"
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -150,6 +151,7 @@ const DesignStep: React.FC = () => {
                   FALLBACK_IMAGES[designSettings.visualStyle]
                 }
                 alt="Vista previa"
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             ) : (
