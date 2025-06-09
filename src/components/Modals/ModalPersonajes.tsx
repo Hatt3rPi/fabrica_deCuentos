@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, X, Loader, Trash2, Edit } from 'lucide-react';
 import { Character } from '../../types';
 import Button from '../UI/Button';
-import { initialFlowState } from '../../stores/wizardFlowStore';
 
 interface ModalPersonajesProps {
   isOpen: boolean;
@@ -106,8 +105,7 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
         .insert({
           user_id: user?.id,
           status: 'draft',
-          title: 'Nuevo cuento',
-          wizard_state: initialFlowState
+          title: 'Nuevo cuento'
         })
         .select()
         .single();

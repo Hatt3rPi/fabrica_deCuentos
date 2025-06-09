@@ -10,6 +10,7 @@
 
 2. **Nuevo Cuento y Personajes**
    - Usuario presiona **Nuevo cuento** en el dashboard
+   - Se crea un registro en `stories` con el `wizard_state` inicial
    - Se abre el asistente (wizard) y un modal para seleccionar personajes
    - Puede crear personajes desde el modal
    - Selecciona hasta 3 personajes para el cuento

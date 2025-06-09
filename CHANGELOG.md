@@ -6,6 +6,8 @@
 - UI now displays generated covers on home.
 - Documentation added at `docs/tech/story-generation.md`.
 - Wizard state now persists in Supabase and localStorage allowing users to resume drafts exactly where they left off. See `docs/flow/wizard-states.md`.
+- Nuevo trigger `enforce_wizard_state_trigger` garantiza la integridad del flujo y establece un valor por defecto para `wizard_state` en la tabla `stories`.
+- La creación de historias desde "Nuevo cuento" usa ese valor por defecto y ya no envía `wizard_state` desde el frontend.
 - Fixed a reference error when initializing `setStoryId` inside `WizardContext`.
 - Admin panel now guarda la configuración de cada actividad y muestra métricas de los últimos 10 minutos.
 - Nuevas columnas `actividad` y `edge_function` en `prompt_metrics`.

@@ -42,6 +42,21 @@ export interface EstadoFlujo {
 4. **Solo avance**
    - Una etapa marcada como `completado` no regresa a `borrador` salvo que el usuario cambie los datos correspondientes.
 
+## Persistencia en Supabase
+
+Al crear una historia (al presionar **Nuevo cuento** en el dashboard) el campo `wizard_state` se inicializa con el siguiente JSON por defecto:
+
+```json
+{
+  "1.personajes": { "estado": "no_iniciada", "personajesAsignados": 0 },
+  "2.cuento": "no_iniciada",
+  "3.diseno": "no_iniciada",
+  "4.vistaPrevia": "no_iniciada"
+}
+```
+
+Un trigger `enforce_wizard_state_trigger` valida cada actualización y evita retrocesos o saltos de etapa. Si una transición no es secuencial la operación se cancela.
+
 ## Uso
 
 El store `useWizardFlowStore` expone acciones para actualizar cada etapa y avanzar o retroceder entre ellas.
