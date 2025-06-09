@@ -121,17 +121,55 @@ export const analyticsService = {
   },
 
   async fetchModelUsage(range?: DateRange): Promise<ModelUsageMetric[]> {
-    let query = supabase
-      .from('prompt_metrics')
-      .select(
-        'modelo_ia, estado, tiempo_respuesta_ms, tokens_entrada, tokens_salida, tokens_entrada_cacheados, tokens_salida_cacheados'
-      );
-    query = applyDateFilter(query, 'timestamp', range);
+    // Función para obtener todos los registros con paginación
+    const fetchAllRecords = async () => {
+      let allRecords: any[] = [];
+      let page = 0;
+      const pageSize = 1000; // Tamaño máximo de página de Supabase
+      let hasMore = true;
 
-    const { data, error } = await query;
-    if (error) throw error;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('prompt_metrics')
+          .select('*')
+          .range(page * pageSize, (page + 1) * pageSize - 1);
 
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allRecords = [...allRecords, ...data];
+          
+          // Si obtuvimos menos registros que el tamaño de la página, es la última página
+          if (data.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allRecords;
+    };
+
+    const allRecords = await fetchAllRecords();
+    
+    // Aplicar filtro de fechas si es necesario
+    let filteredRecords = allRecords;
+    if (range) {
+      filteredRecords = allRecords.filter((record: any) => {
+        const recordDate = new Date(record.timestamp);
+        return (!range.from || recordDate >= range.from) && 
+               (!range.to || recordDate <= range.to);
+      });
+    }
+
+    // Procesar los registros agrupados
     const grouped: Record<string, ModelUsageMetric> = {};
+    
+    // Usar los registros filtrados
+    const data = filteredRecords;
 
     (data || []).forEach((row: any) => {
       const key = row.modelo_ia || 'unknown';
