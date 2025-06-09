@@ -83,7 +83,10 @@ Deno.serve(async (req) => {
     start = Date.now();
     const storyPayload = {
       model,
-      messages: [{ role: 'user', content: finalPrompt }],
+      messages: [{ 
+        role: 'user', 
+        content: finalPrompt 
+      }],
       response_format: { type: 'json_object' },
       max_tokens: 1500,
       temperature: 0.8,
@@ -112,6 +115,8 @@ Deno.serve(async (req) => {
         error_type: 'invalid_json',
         tokens_entrada: 0,
         tokens_salida: 0,
+        tokens_entrada_cacheados: 0,
+        tokens_salida_cacheados: 0,
         usuario_id: userId,
         actividad: 'generar_historia',
         edge_function: 'generate-story',
@@ -128,6 +133,8 @@ Deno.serve(async (req) => {
       error_type: resp.ok ? null : 'service_error',
       tokens_entrada: respData.usage?.prompt_tokens ?? 0,
       tokens_salida: respData.usage?.completion_tokens ?? 0,
+      tokens_entrada_cacheados: respData.usage?.prompt_tokens_details?.cached_tokens ?? 0,
+      tokens_salida_cacheados: 0, // OpenAI no cachea tokens de salida actualmente
       usuario_id: userId,
       actividad: 'generar_historia',
       edge_function: 'generate-story',
@@ -273,6 +280,8 @@ Deno.serve(async (req) => {
         error_type: coverUrl ? null : 'service_error',
         tokens_entrada: 0,
         tokens_salida: 0,
+        tokens_entrada_cacheados: 0,
+        tokens_salida_cacheados: 0,
         usuario_id: userId,
         actividad: 'generar_portada',
         edge_function: 'generate-story',
@@ -314,6 +323,8 @@ Deno.serve(async (req) => {
         error_type: 'service_error',
         tokens_entrada: 0,
         tokens_salida: 0,
+        tokens_entrada_cacheados: 0,
+        tokens_salida_cacheados: 0,
         usuario_id: userId,
         metadatos: { error: (err as Error).message },
         actividad: 'generar_historia',

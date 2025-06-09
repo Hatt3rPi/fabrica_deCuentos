@@ -15,6 +15,8 @@ export interface PromptMetric {
   error_type?: string | null;
   tokens_entrada?: number;
   tokens_salida?: number;
+  tokens_entrada_cacheados?: number;
+  tokens_salida_cacheados?: number;
   usuario_id?: string | null;
   metadatos?: Record<string, unknown> | null;
   actividad?: string | null;
