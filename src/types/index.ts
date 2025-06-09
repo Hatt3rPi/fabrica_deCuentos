@@ -9,6 +9,7 @@ export interface Character {
   } | string;
   age: string;
   images: string[];
+  reference_urls?: string[];
   thumbnailUrl: string | null;
   created_at?: string;
   updated_at?: string;

@@ -66,6 +66,7 @@ export const useAutosave = (
               name: character.name,
               age: character.age,
               description: character.description,
+              reference_urls: character.reference_urls || [],
               thumbnail_url: character.thumbnailUrl,
               updated_at: new Date().toISOString()
             };
