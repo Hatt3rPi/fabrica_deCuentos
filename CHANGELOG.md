@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Integración completa del trigger de validación de flujo del wizard con notificaciones toast. El sistema ahora valida transiciones tanto en frontend como en backend, mostrando mensajes claros al usuario si intenta transiciones inválidas.
+- Nuevo sistema de notificaciones toast global con `useToast` y `ToastProvider` para mostrar errores y mensajes del sistema.
+- `storyService.persistStory()` ahora traduce los mensajes de error del trigger SQL a mensajes comprensibles para el usuario.
 - Portada principal desbloquea el paso de Diseño sin esperar las variantes. Los mensajes de `stories.loader` se muestran cada 5 s durante la generación.
 - Added `generate-story` Edge Function for story creation and cover generation.
 - UI now displays generated covers on home.
