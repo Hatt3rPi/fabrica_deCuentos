@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { WizardState, EstadoFlujo } from '../types';
 import { storyService } from '../services/storyService';
+import { useToast } from './useToast';
 
 const AUTOSAVE_DELAY = 1000; // 1 second delay between saves
 const MAX_RETRIES = 3;
@@ -18,7 +19,8 @@ export const useAutosave = (
   initialStoryId: string | null,
 ) => {
   const { supabase, user } = useAuth();
-  const timeoutRef = useRef<number>();
+  const { showToast } = useToast();
+  const timeoutRef = useRef<NodeJS.Timeout>();
   const retryCountRef = useRef(0);
   const storyIdRef = useRef<string | null>(null);
 
@@ -64,7 +66,6 @@ export const useAutosave = (
               name: character.name,
               age: character.age,
               description: character.description,
-              reference_urls: character.reference_urls || [],
               thumbnail_url: character.thumbnailUrl,
               updated_at: new Date().toISOString()
             };
@@ -98,6 +99,11 @@ export const useAutosave = (
         // Clear localStorage backup after successful save
         localStorage.removeItem(`story_draft_${currentStoryId}_backup`);
       } catch (error) {
+        // Si es un error de validación del trigger, mostrar toast
+        if (error instanceof Error && error.message && !error.message.includes('Invalid storyId')) {
+          showToast('error', error.message);
+        }
+
         if (retryCountRef.current < MAX_RETRIES) {
           // Save to localStorage backup before retrying
           localStorage.setItem(
@@ -126,8 +132,7 @@ export const useAutosave = (
     return () => {
       clearTimeout(timeoutRef.current);
     };
-  }, [state, flow, supabase, user]);
-
+  }, [state, flow, supabase, user, showToast]);
 
   // Expose recovery method
   const recoverFromBackup = async (id: string) => {

@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { AdminProvider } from './context/AdminContext';
 import { WizardProvider } from './context/WizardContext';
 import { StoryProvider } from './context/StoryContext';
+import { ToastProvider } from './hooks/useToast';
 import { useAuth } from './context/AuthContext';
 import StoryCreationWizard from './pages/StoryCreationWizard';
 import Header from './components/Layout/Header';
@@ -148,7 +149,7 @@ function AnimatedRoutes() {
               </Routes>
             </main>
             <footer className="py-4 text-center text-purple-600 text-sm">
-              <p>Customware © {new Date().getFullYear()}</p>
+              <p>Customware {new Date().getFullYear()}</p>
             </footer>
           </div>
           <ToastContainer />
@@ -198,7 +199,9 @@ function App() {
     <Router>
       <AuthProvider>
         <AdminProvider>
-          <AppContent />
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
         </AdminProvider>
       </AuthProvider>
     </Router>

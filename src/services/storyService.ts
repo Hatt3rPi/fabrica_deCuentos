@@ -41,13 +41,39 @@ export const storyService = {
     if (data) await cleanupStorage(data as string[]);
   },
 
-  persistStory(id: string, fields: Partial<import('../types/supabase').Database['public']['Tables']['stories']['Update']>) {
+  async persistStory(id: string, fields: Partial<import('../types/supabase').Database['public']['Tables']['stories']['Update']>) {
     const { estado } = useWizardFlowStore.getState();
-    return supabase
+    const { data, error } = await supabase
       .from('stories')
       .update({ ...fields, wizard_state: estado })
       .eq('id', id)
       .single();
+
+    if (error) {
+      // Traducir mensajes de error del trigger
+      const errorMessages: Record<string, string> = {
+        'Estado de personajes invalido': 'No puedes retroceder en la etapa de personajes',
+        'Estado de cuento invalido': 'No puedes retroceder en la etapa de cuento',
+        'Estado de diseño invalido': 'No puedes retroceder en la etapa de diseño',
+        'Estado de vista previa invalido': 'No puedes retroceder en la etapa de vista previa',
+        'No se puede iniciar cuento sin completar personajes': 'Debes completar la selección de personajes antes de continuar',
+        'No se puede iniciar diseño sin completar cuento': 'Debes completar la generación del cuento antes de continuar',
+        'No se puede iniciar vista previa sin completar diseño': 'Debes completar el diseño antes de ver la vista previa'
+      };
+
+      // Buscar mensaje conocido en el error
+      const errorMessage = error.message || '';
+      for (const [triggerMsg, userMsg] of Object.entries(errorMessages)) {
+        if (errorMessage.includes(triggerMsg)) {
+          throw new Error(userMsg);
+        }
+      }
+
+      // Si no es un error conocido del trigger, lanzar el error original
+      throw error;
+    }
+
+    return { data, error: null };
   },
 
   async generateStory(params: {
