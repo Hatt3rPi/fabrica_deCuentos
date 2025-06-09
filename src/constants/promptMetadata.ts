@@ -6,11 +6,11 @@ export interface PromptMetadata {
 export const promptMetadata: Record<string, PromptMetadata> = {
   PROMPT_DESCRIPCION_PERSONAJE: {
     endpoint: 'https://api.openai.com/v1/chat/completions',
-    model: 'gpt-4-turbo'
+    model: 'gpt-4o'
   },
   PROMPT_GENERADOR_CUENTOS: {
     endpoint: 'https://api.openai.com/v1/chat/completions',
-    model: 'gpt-4-turbo'
+    model: 'gpt-4o'
   },
   PROMPT_CUENTO_PORTADA: {
     endpoint: 'https://api.openai.com/v1/images/generations',

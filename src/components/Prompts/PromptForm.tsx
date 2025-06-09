@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import Button from '../UI/Button';
+import { aiProviderCatalog } from '../../constants/aiProviderCatalog';
+import ModelBadge from '../UI/ModelBadge';
+import { getModelType } from '../../utils/modelHelpers';
 
 interface PromptFormProps {
   isOpen: boolean;
@@ -17,9 +20,27 @@ const PromptForm: React.FC<PromptFormProps> = ({ isOpen, onClose, onSave }) => {
   const [type, setType] = useState('');
   const [content, setContent] = useState('');
   const [endpoint, setEndpoint] = useState('');
-  const [model, setModel] = useState('gpt-image-1');
+  const [model, setModel] = useState('gpt-4o');
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<{ type?: string; content?: string; endpoint?: string }>({});
+
+  // Obtener endpoints disponibles para el modelo seleccionado
+  const getEndpointsForModel = (modelId: string): string[] => {
+    for (const [, info] of Object.entries(aiProviderCatalog)) {
+      if (info.models[modelId]) {
+        return Object.values(info.models[modelId].endpoints).filter(Boolean) as string[];
+      }
+    }
+    return [];
+  };
+
+  const handleModelChange = (newModel: string) => {
+    setModel(newModel);
+    const endpoints = getEndpointsForModel(newModel);
+    if (endpoints.length > 0) {
+      setEndpoint(endpoints[0]);
+    }
+  };
 
   const handleSave = async () => {
     const errs: { type?: string; content?: string; endpoint?: string } = {};
@@ -35,7 +56,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ isOpen, onClose, onSave }) => {
     setType('');
     setContent('');
     setEndpoint('');
-    setModel('gpt-image-1');
+    setModel('gpt-4o');
     onClose();
   };
 
@@ -57,6 +78,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ isOpen, onClose, onSave }) => {
               value={type}
               onChange={e => setType(e.target.value)}
               className="mt-1 w-full border rounded px-2 py-1 text-sm"
+              placeholder="Ej: PROMPT_GENERADOR_CUENTOS"
             />
             {errors.type && <p className="text-xs text-red-500">{errors.type}</p>}
           </div>
@@ -71,27 +93,38 @@ const PromptForm: React.FC<PromptFormProps> = ({ isOpen, onClose, onSave }) => {
             {errors.content && <p className="text-xs text-red-500">{errors.content}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Endpoint</label>
-            <input
-              value={endpoint}
-              onChange={e => setEndpoint(e.target.value)}
-              className="mt-1 w-full border rounded px-2 py-1 text-sm"
-            />
-            {errors.endpoint && <p className="text-xs text-red-500">{errors.endpoint}</p>}
-          </div>
-          <div>
             <label className="block text-sm font-medium text-gray-700">Modelo</label>
             <select
               value={model}
-              onChange={e => setModel(e.target.value)}
+              onChange={e => handleModelChange(e.target.value)}
               className="mt-1 w-full border rounded px-2 py-1 text-sm"
             >
-              <option value="gpt-image-1">GPT-4 Vision</option>
-              <option value="dall-e-3">DALL-E 3</option>
-              <option value="dall-e-2">DALL-E 2</option>
-              <option value="gpt-4-turbo">GPT-4 Turbo</option>
-              <option value="stable-diffusion-3.5">Stable Diffusion 3.5</option>
+              {Object.entries(aiProviderCatalog).map(([provider, info]) => (
+                <optgroup key={provider} label={info.name}>
+                  {Object.entries(info.models).map(([modelId, modelInfo]) => (
+                    <option key={modelId} value={modelId}>
+                      {modelInfo.description}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
+            <div className="mt-1">
+              <ModelBadge type={getModelType(model)} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Endpoint</label>
+            <select
+              value={endpoint}
+              onChange={e => setEndpoint(e.target.value)}
+              className="mt-1 w-full border rounded px-2 py-1 text-sm"
+            >
+              {getEndpointsForModel(model).map(url => (
+                <option key={url} value={url}>{url}</option>
+              ))}
+            </select>
+            {errors.endpoint && <p className="text-xs text-red-500">{errors.endpoint}</p>}
           </div>
         </div>
         <div className="p-4 border-t border-gray-200 flex justify-end gap-2">

@@ -87,6 +87,7 @@ Deno.serve(async (req) => {
       response_format: { type: 'json_object' },
       max_tokens: 1500,
       temperature: 0.8,
+      user: userId, // Agregar user ID para mejorar el prompt caching
     };
     console.log('[generate-story] [REQUEST]', JSON.stringify(storyPayload));
     const resp = await fetch(apiEndpoint, {
