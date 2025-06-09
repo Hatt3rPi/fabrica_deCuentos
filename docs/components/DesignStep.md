@@ -20,4 +20,4 @@ Este componente no recibe props directamente; utiliza los contextos `WizardConte
 4. Cada tarjeta de estilo muestra un pequeño check cuando la portada de ese estilo ya está disponible.
 5. Si la portada aún no se genera, la vista previa mantiene una imagen de respaldo y un mensaje "Se está generando la vista previa, vuelve en un momento".
 6. Se utilizan imágenes fallback cuando no existen miniaturas con estilo para los personajes.
-7. Todas las imágenes se cargan con `getOptimizedImageUrl` para generar URLs eficientes.
+7. Todas las imágenes se cargan con `getOptimizedImageUrl` para generar URLs eficientes (ver [docs/components/OptimizedImage.md](OptimizedImage.md)).
