@@ -28,6 +28,7 @@ Deno.serve(async (req) => {
   let coverPromptId: string | undefined;
   let userId: string | null = null;
   let start = 0;
+  let model: string = 'gpt-4-turbo'; // Definir model con valor por defecto
 
   try {
     const { story_id, characters, theme } = await req.json();
@@ -54,7 +55,7 @@ Deno.serve(async (req) => {
     promptId = promptRow?.id;
     if (!storyPrompt) throw new Error('Prompt not configured');
     const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/chat/completions';
-    const model = promptRow?.model || 'gpt-4-turbo';
+    model = promptRow?.model || 'gpt-4-turbo'; // Asignar el modelo aquí
 
     // Formatear personajes: "Nombre de 99 años, Otro de 5 años"
     const charNames = characters
@@ -81,13 +82,30 @@ Deno.serve(async (req) => {
     });
 
     start = Date.now();
-    const storyPayload = {
+    
+    // Determinar si usar max_tokens o max_completion_tokens según el modelo
+    const isOModel = model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4');
+    const tokenParam = isOModel ? 'max_completion_tokens' : 'max_tokens';
+    
+    // Los modelos serie O necesitan más tokens porque usan muchos para razonamiento interno
+    const maxTokens = isOModel ? 10000 : 1500;
+    
+    const storyPayload: any = {
       model,
-      messages: [{ role: 'user', content: finalPrompt }],
+      messages: [{ 
+        role: 'user', 
+        content: finalPrompt 
+      }],
       response_format: { type: 'json_object' },
-      max_tokens: 1500,
-      temperature: 0.8,
+      [tokenParam]: maxTokens,
+      user: userId, // Agregar user ID para mejorar el prompt caching
     };
+    
+    // Los modelos de la serie O solo soportan temperature = 1 (default)
+    if (!isOModel) {
+      storyPayload.temperature = 0.8;
+    }
+
     console.log('[generate-story] [REQUEST]', JSON.stringify(storyPayload));
     const resp = await fetch(apiEndpoint, {
       method: 'POST',
@@ -111,6 +129,8 @@ Deno.serve(async (req) => {
         error_type: 'invalid_json',
         tokens_entrada: 0,
         tokens_salida: 0,
+        tokens_entrada_cacheados: 0,
+        tokens_salida_cacheados: 0,
         usuario_id: userId,
         actividad: 'generar_historia',
         edge_function: 'generate-story',
@@ -127,6 +147,8 @@ Deno.serve(async (req) => {
       error_type: resp.ok ? null : 'service_error',
       tokens_entrada: respData.usage?.prompt_tokens ?? 0,
       tokens_salida: respData.usage?.completion_tokens ?? 0,
+      tokens_entrada_cacheados: respData.usage?.prompt_tokens_details?.cached_tokens ?? 0,
+      tokens_salida_cacheados: 0, // OpenAI no cachea tokens de salida actualmente
       usuario_id: userId,
       actividad: 'generar_historia',
       edge_function: 'generate-story',
@@ -272,6 +294,8 @@ Deno.serve(async (req) => {
         error_type: coverUrl ? null : 'service_error',
         tokens_entrada: 0,
         tokens_salida: 0,
+        tokens_entrada_cacheados: 0,
+        tokens_salida_cacheados: 0,
         usuario_id: userId,
         actividad: 'generar_portada',
         edge_function: 'generate-story',
@@ -313,6 +337,8 @@ Deno.serve(async (req) => {
         error_type: 'service_error',
         tokens_entrada: 0,
         tokens_salida: 0,
+        tokens_entrada_cacheados: 0,
+        tokens_salida_cacheados: 0,
         usuario_id: userId,
         metadatos: { error: (err as Error).message },
         actividad: 'generar_historia',

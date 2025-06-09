@@ -205,7 +205,9 @@ export type Database = {
           tiempo_respuesta_ms: number | null
           timestamp: string | null
           tokens_entrada: number | null
+          tokens_entrada_cacheados: number | null
           tokens_salida: number | null
+          tokens_salida_cacheados: number | null
           usuario_id: string | null
         }
         Insert: {
@@ -221,7 +223,9 @@ export type Database = {
           tiempo_respuesta_ms?: number | null
           timestamp?: string | null
           tokens_entrada?: number | null
+          tokens_entrada_cacheados?: number | null
           tokens_salida?: number | null
+          tokens_salida_cacheados?: number | null
           usuario_id?: string | null
         }
         Update: {
@@ -237,7 +241,9 @@ export type Database = {
           tiempo_respuesta_ms?: number | null
           timestamp?: string | null
           tokens_entrada?: number | null
+          tokens_entrada_cacheados?: number | null
           tokens_salida?: number | null
+          tokens_salida_cacheados?: number | null
           usuario_id?: string | null
         }
         Relationships: [

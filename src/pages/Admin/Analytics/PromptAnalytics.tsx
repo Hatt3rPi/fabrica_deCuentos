@@ -13,8 +13,12 @@ import { formatNumber } from '../../../lib/formatNumber';
 
 const PromptAnalytics: React.FC = () => {
   const isAdmin = useAdmin();
-  const [from, setFrom] = useState<string>('');
-  const [to, setTo] = useState<string>('');
+  // Establecer rango por defecto: desde 1 de enero de 2025 hasta hoy
+  const defaultFromDate = new Date(2025, 0, 1); // Enero es 0 en JavaScript
+  const defaultToDate = new Date();
+  
+  const [from, setFrom] = useState<string>(defaultFromDate.toISOString().split('T')[0]);
+  const [to, setTo] = useState<string>(defaultToDate.toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [general, setGeneral] = useState<GeneralUsageMetrics | null>(null);
   const [prompts, setPrompts] = useState<PromptPerformanceMetric[]>([]);
@@ -27,10 +31,12 @@ const PromptAnalytics: React.FC = () => {
     if (!isAdmin) return;
     setLoading(true);
     try {
+      // Usar el rango de fechas seleccionado
       const range = {
-        from: from ? new Date(from) : undefined,
-        to: to ? new Date(to) : undefined,
+        from: from ? new Date(from) : defaultFromDate,
+        to: to ? new Date(to) : defaultToDate
       };
+      
       const [g, p, t, m, e, u] = await Promise.all([
         analyticsService.fetchGeneralUsage(range),
         analyticsService.fetchPromptPerformance(range),
@@ -124,23 +130,24 @@ const PromptAnalytics: React.FC = () => {
       )}
       {prompts.length > 0 && (
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Rendimiento de Prompts</h2>
+          <h2 className="text-xl font-semibold">Rendimiento de prompts</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left">
-                  <th className="p-2">Prompt</th>
+                  <th className="p-2">Tipo</th>
                   <th className="p-2">Ejecuciones</th>
                   <th className="p-2">Tasa éxito</th>
                   <th className="p-2">Tokens in</th>
                   <th className="p-2">Tokens out</th>
+                  <th className="p-2">Tokens cacheados</th>
                   <th className="p-2">Prom. respuesta (ms)</th>
                 </tr>
               </thead>
               <tbody>
                 {prompts.map((p) => (
-                  <tr key={p.promptId} className="border-t">
-                    <td className="p-2">{p.promptType || p.promptId}</td>
+                  <tr key={p.promptId || 'unknown'} className="border-t">
+                    <td className="p-2">{p.promptType || 'N/A'}</td>
                     <td className="p-2">{formatNumber(p.totalExecutions)}</td>
                     <td className="p-2">
                       {((p.successCount / p.totalExecutions) * 100).toFixed(0)}%
@@ -150,6 +157,9 @@ const PromptAnalytics: React.FC = () => {
                     </td>
                     <td className="p-2">
                       {formatNumber(p.totalOutputTokens)} ({formatNumber(p.averageOutputTokens)})
+                    </td>
+                    <td className="p-2">
+                      {formatNumber(p.totalCachedInputTokens)} ({formatNumber(p.averageCachedInputTokens)})
                     </td>
                     <td className="p-2">{formatNumber(Math.round(p.averageResponseMs))}</td>
                   </tr>
@@ -171,6 +181,7 @@ const PromptAnalytics: React.FC = () => {
                   <th className="p-2">Tasa éxito</th>
                   <th className="p-2">Tokens in</th>
                   <th className="p-2">Tokens out</th>
+                  <th className="p-2">Tokens cacheados</th>
                   <th className="p-2">Prom. respuesta (ms)</th>
                 </tr>
               </thead>
@@ -187,6 +198,9 @@ const PromptAnalytics: React.FC = () => {
                     </td>
                     <td className="p-2">
                       {formatNumber(m.totalOutputTokens)} ({formatNumber(m.averageOutputTokens)})
+                    </td>
+                    <td className="p-2">
+                      {formatNumber(m.totalCachedInputTokens)}
                     </td>
                     <td className="p-2">{formatNumber(Math.round(m.averageResponseMs))}</td>
                   </tr>
@@ -231,6 +245,7 @@ const PromptAnalytics: React.FC = () => {
                   <th className="p-2">Tasa éxito</th>
                   <th className="p-2">Tokens in</th>
                   <th className="p-2">Tokens out</th>
+                  <th className="p-2">Tokens cacheados</th>
                 </tr>
               </thead>
               <tbody>
@@ -246,6 +261,9 @@ const PromptAnalytics: React.FC = () => {
                     </td>
                     <td className="p-2">
                       {formatNumber(u.totalOutputTokens)} ({formatNumber(u.averageOutputTokens)})
+                    </td>
+                    <td className="p-2">
+                      {formatNumber(u.totalCachedInputTokens)} ({formatNumber(u.averageCachedInputTokens)})
                     </td>
                   </tr>
                 ))}

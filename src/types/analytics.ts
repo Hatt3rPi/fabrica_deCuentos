@@ -19,6 +19,10 @@ export interface PromptPerformanceMetric {
   averageInputTokens: number;
   averageOutputTokens: number;
   averageResponseMs: number;
+  totalCachedInputTokens: number;
+  totalCachedOutputTokens: number;
+  averageCachedInputTokens: number;
+  averageCachedOutputTokens: number;
 }
 
 export interface TokenUsage {
@@ -37,6 +41,10 @@ export interface ModelUsageMetric {
   totalOutputTokens: number;
   averageInputTokens: number;
   averageOutputTokens: number;
+  totalCachedInputTokens: number;
+  totalCachedOutputTokens: number;
+  averageCachedInputTokens: number;
+  averageCachedOutputTokens: number;
 }
 
 export interface ErrorBreakdownMetric {
@@ -56,4 +64,8 @@ export interface UserUsageMetric {
   totalOutputTokens: number;
   averageInputTokens: number;
   averageOutputTokens: number;
+  totalCachedInputTokens: number;
+  totalCachedOutputTokens: number;
+  averageCachedInputTokens: number;
+  averageCachedOutputTokens: number;
 }

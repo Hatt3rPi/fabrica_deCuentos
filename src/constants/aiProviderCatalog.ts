@@ -18,6 +18,7 @@ export const aiProviderCatalog: Record<'openai' | 'flux' | 'stability', Provider
   openai: {
     name: 'openai',
     models: {
+      // Modelos de imagen
       'gpt-image-1': {
         id: 'gpt-image-1',
         description: 'GPT Image 1',
@@ -43,6 +44,193 @@ export const aiProviderCatalog: Record<'openai' | 'flux' | 'stability', Provider
           generate: 'https://api.openai.com/v1/images/generations',
           edit: 'https://api.openai.com/v1/images/edits',
           variations: 'https://api.openai.com/v1/images/variations'
+        }
+      },
+      // Modelos de texto más recientes
+      'gpt-4.1': {
+        id: 'gpt-4.1',
+        description: 'GPT-4.1',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'gpt-4.1-mini': {
+        id: 'gpt-4.1-mini',
+        description: 'GPT-4.1 Mini',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'gpt-4.1-nano': {
+        id: 'gpt-4.1-nano',
+        description: 'GPT-4.1 Nano',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'gpt-4.5-preview': {
+        id: 'gpt-4.5-preview',
+        description: 'GPT-4.5 Preview',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'gpt-4o': {
+        id: 'gpt-4o',
+        description: 'GPT-4o',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'gpt-4o-mini': {
+        id: 'gpt-4o-mini',
+        description: 'GPT-4o Mini',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'o1': {
+        id: 'o1',
+        description: 'O1',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'o1-pro': {
+        id: 'o1-pro',
+        description: 'O1 Pro',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'o3': {
+        id: 'o3',
+        description: 'O3',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'o4-mini': {
+        id: 'o4-mini',
+        description: 'O4 Mini',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'o3-mini': {
+        id: 'o3-mini',
+        description: 'O3 Mini',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'o1-mini': {
+        id: 'o1-mini',
+        description: 'O1 Mini',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'codex-mini-latest': {
+        id: 'codex-mini-latest',
+        description: 'Codex Mini Latest',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      // Modelos GPT-4 anteriores
+      'gpt-4-turbo': {
+        id: 'gpt-4-turbo',
+        description: 'GPT-4 Turbo',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'gpt-4': {
+        id: 'gpt-4',
+        description: 'GPT-4',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'gpt-4-1106-preview': {
+        id: 'gpt-4-1106-preview',
+        description: 'GPT-4 Turbo Preview',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      // Modelos GPT-3.5
+      'gpt-3.5-turbo': {
+        id: 'gpt-3.5-turbo',
+        description: 'GPT-3.5 Turbo',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'gpt-3.5-turbo-instruct': {
+        id: 'gpt-3.5-turbo-instruct',
+        description: 'GPT-3.5 Turbo Instruct',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/completions'
+        }
+      },
+      'gpt-3.5-turbo-16k-0613': {
+        id: 'gpt-3.5-turbo-16k-0613',
+        description: 'GPT-3.5 Turbo 16K',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      'gpt-3.5-turbo-1106': {
+        id: 'gpt-3.5-turbo-1106',
+        description: 'GPT-3.5 Turbo (Latest)',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/chat/completions'
+        }
+      },
+      // Modelos legacy
+      'davinci-002': {
+        id: 'davinci-002',
+        description: 'Davinci 002',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/completions'
+        }
+      },
+      'babbage-002': {
+        id: 'babbage-002',
+        description: 'Babbage 002',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/completions'
+        }
+      },
+      // Modelos de audio
+      'gpt-4o-audio-preview': {
+        id: 'gpt-4o-audio-preview',
+        description: 'GPT-4o Audio Preview',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/audio/speech'
+        }
+      },
+      'gpt-4o-mini-audio-preview': {
+        id: 'gpt-4o-mini-audio-preview',
+        description: 'GPT-4o Mini Audio Preview',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/audio/speech'
+        }
+      },
+      'gpt-4o-realtime-preview': {
+        id: 'gpt-4o-realtime-preview',
+        description: 'GPT-4o Realtime Preview',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/realtime'
+        }
+      },
+      'gpt-4o-mini-realtime-preview': {
+        id: 'gpt-4o-mini-realtime-preview',
+        description: 'GPT-4o Mini Realtime Preview',
+        endpoints: {
+          generate: 'https://api.openai.com/v1/realtime'
         }
       }
     }
