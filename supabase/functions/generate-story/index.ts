@@ -87,6 +87,9 @@ Deno.serve(async (req) => {
     const isOModel = model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4');
     const tokenParam = isOModel ? 'max_completion_tokens' : 'max_tokens';
     
+    // Los modelos serie O necesitan más tokens porque usan muchos para razonamiento interno
+    const maxTokens = isOModel ? 10000 : 1500;
+    
     const storyPayload: any = {
       model,
       messages: [{ 
@@ -94,7 +97,7 @@ Deno.serve(async (req) => {
         content: finalPrompt 
       }],
       response_format: { type: 'json_object' },
-      [tokenParam]: 1500,
+      [tokenParam]: maxTokens,
       user: userId, // Agregar user ID para mejorar el prompt caching
     };
     

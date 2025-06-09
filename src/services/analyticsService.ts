@@ -46,7 +46,7 @@ export const analyticsService = {
     let query = supabase
       .from('prompt_metrics')
       .select(
-        'prompt_id, tiempo_respuesta_ms, estado, tokens_entrada, tokens_salida, prompts(type)'
+        'prompt_id, tiempo_respuesta_ms, estado, tokens_entrada, tokens_salida, tokens_entrada_cacheados, tokens_salida_cacheados, prompts(type)'
       );
     query = applyDateFilter(query, 'timestamp', range);
 
@@ -68,6 +68,10 @@ export const analyticsService = {
           averageInputTokens: 0,
           averageOutputTokens: 0,
           averageResponseMs: 0,
+          totalCachedInputTokens: 0,
+          totalCachedOutputTokens: 0,
+          averageCachedInputTokens: 0,
+          averageCachedOutputTokens: 0,
         };
       }
       const metric = grouped[key];
@@ -75,12 +79,16 @@ export const analyticsService = {
       if (item.estado === 'success') metric.successCount++;
       metric.totalInputTokens += item.tokens_entrada || 0;
       metric.totalOutputTokens += item.tokens_salida || 0;
+      metric.totalCachedInputTokens += item.tokens_entrada_cacheados || 0;
+      metric.totalCachedOutputTokens += item.tokens_salida_cacheados || 0;
       const prevAvg = metric.averageResponseMs;
       metric.averageResponseMs =
         (prevAvg * (metric.totalExecutions - 1) + (item.tiempo_respuesta_ms || 0)) /
         metric.totalExecutions;
       metric.averageInputTokens = metric.totalInputTokens / metric.totalExecutions;
       metric.averageOutputTokens = metric.totalOutputTokens / metric.totalExecutions;
+      metric.averageCachedInputTokens = metric.totalCachedInputTokens / metric.totalExecutions;
+      metric.averageCachedOutputTokens = metric.totalCachedOutputTokens / metric.totalExecutions;
     });
 
     return Object.values(grouped);
@@ -116,7 +124,7 @@ export const analyticsService = {
     let query = supabase
       .from('prompt_metrics')
       .select(
-        'modelo_ia, estado, tiempo_respuesta_ms, tokens_entrada, tokens_salida'
+        'modelo_ia, estado, tiempo_respuesta_ms, tokens_entrada, tokens_salida, tokens_entrada_cacheados, tokens_salida_cacheados'
       );
     query = applyDateFilter(query, 'timestamp', range);
 
@@ -129,7 +137,7 @@ export const analyticsService = {
       const key = row.modelo_ia || 'unknown';
       if (!grouped[key]) {
         grouped[key] = {
-          model: key,
+          model: row.modelo_ia || 'unknown',
           executions: 0,
           successCount: 0,
           averageResponseMs: 0,
@@ -137,6 +145,10 @@ export const analyticsService = {
           totalOutputTokens: 0,
           averageInputTokens: 0,
           averageOutputTokens: 0,
+          totalCachedInputTokens: 0,
+          totalCachedOutputTokens: 0,
+          averageCachedInputTokens: 0,
+          averageCachedOutputTokens: 0,
         };
       }
       const metric = grouped[key];
@@ -145,14 +157,17 @@ export const analyticsService = {
 
       metric.totalInputTokens += row.tokens_entrada || 0;
       metric.totalOutputTokens += row.tokens_salida || 0;
+      metric.totalCachedInputTokens += row.tokens_entrada_cacheados || 0;
+      metric.totalCachedOutputTokens += row.tokens_salida_cacheados || 0;
 
       metric.averageResponseMs =
         (metric.averageResponseMs * (metric.executions - 1) + (row.tiempo_respuesta_ms || 0)) /
         metric.executions;
 
       metric.averageInputTokens = metric.totalInputTokens / metric.executions;
-
       metric.averageOutputTokens = metric.totalOutputTokens / metric.executions;
+      metric.averageCachedInputTokens = metric.totalCachedInputTokens / metric.executions;
+      metric.averageCachedOutputTokens = metric.totalCachedOutputTokens / metric.executions;
     });
 
     return Object.values(grouped);
@@ -182,13 +197,12 @@ export const analyticsService = {
     let query = supabase
       .from('prompt_metrics')
 
-      .select('usuario_id, estado, tokens_entrada, tokens_salida, timestamp');
+      .select('usuario_id, estado, tokens_entrada, tokens_salida, tokens_entrada_cacheados, tokens_salida_cacheados, timestamp');
 
     query = applyDateFilter(query, 'timestamp', range);
 
     const { data: metrics, error } = await query;
     if (error) {
-      console.error('Error al obtener métricas:', error);
       throw error;
     }
     if (!metrics) return [];
@@ -209,7 +223,6 @@ export const analyticsService = {
           });
         
         if (userError) {
-          console.error('Error al obtener correos:', userError);
           throw userError;
         }
         
@@ -222,7 +235,6 @@ export const analyticsService = {
           });
         }
       } catch (err) {
-        console.error('Error al obtener correos electrónicos:', err);
         // Si hay un error, usar el ID como fallback
         userIds.forEach(id => {
           if (id) userEmails[id] = id;
@@ -245,6 +257,10 @@ export const analyticsService = {
           totalOutputTokens: 0,
           averageInputTokens: 0,
           averageOutputTokens: 0,
+          totalCachedInputTokens: 0,
+          totalCachedOutputTokens: 0,
+          averageCachedInputTokens: 0,
+          averageCachedOutputTokens: 0,
         };
       }
       const metric = grouped[key];
@@ -252,8 +268,12 @@ export const analyticsService = {
       if (row.estado === 'success') metric.successCount++;
       metric.totalInputTokens += row.tokens_entrada || 0;
       metric.totalOutputTokens += row.tokens_salida || 0;
+      metric.totalCachedInputTokens += row.tokens_entrada_cacheados || 0;
+      metric.totalCachedOutputTokens += row.tokens_salida_cacheados || 0;
       metric.averageInputTokens = metric.totalInputTokens / metric.executions;
       metric.averageOutputTokens = metric.totalOutputTokens / metric.executions;
+      metric.averageCachedInputTokens = metric.totalCachedInputTokens / metric.executions;
+      metric.averageCachedOutputTokens = metric.totalCachedOutputTokens / metric.executions;
     });
 
     return Object.values(grouped);
