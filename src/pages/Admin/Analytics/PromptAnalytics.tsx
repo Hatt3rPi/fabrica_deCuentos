@@ -129,7 +129,6 @@ const PromptAnalytics: React.FC = () => {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left">
-                  <th className="p-2">Prompt ID</th>
                   <th className="p-2">Tipo</th>
                   <th className="p-2">Ejecuciones</th>
                   <th className="p-2">Tasa éxito</th>
@@ -142,7 +141,6 @@ const PromptAnalytics: React.FC = () => {
               <tbody>
                 {prompts.map((p) => (
                   <tr key={p.promptId || 'unknown'} className="border-t">
-                    <td className="p-2">{p.promptId || 'Desconocido'}</td>
                     <td className="p-2">{p.promptType || 'N/A'}</td>
                     <td className="p-2">{formatNumber(p.totalExecutions)}</td>
                     <td className="p-2">
