@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { useStory } from '../../../context/StoryContext';
 import { useParams } from 'react-router-dom';
-import { visualStyleOptions, colorPaletteOptions } from '../../../types';
+import { visualStyleOptions } from '../../../types';
 import { Palette, Check } from 'lucide-react';
+import { getOptimizedImageUrl } from '../../../lib/image';
 import { characterService } from '../../../services/characterService';
 import { ThumbnailStyle } from '../../../types/character';
 
@@ -33,12 +34,16 @@ const DesignStep: React.FC = () => {
   const coverState = storyId ? covers[storyId] : undefined;
 
   const selectedStyle = designSettings.visualStyle;
-  const previewUrl =
+  const rawPreviewUrl =
     (selectedStyle &&
       (coverState?.variants?.[selectedStyle] ||
         (selectedStyle === 'default' ? coverState?.url : undefined))) ||
     (selectedStyle ? images[STYLE_TO_KEY[selectedStyle]] : undefined) ||
     (selectedStyle ? FALLBACK_IMAGES[selectedStyle] : undefined);
+
+  const previewUrl = rawPreviewUrl
+    ? getOptimizedImageUrl(rawPreviewUrl, { width: 512, quality: 80, format: 'webp' })
+    : undefined;
 
   const previewReady = selectedStyle
     ? selectedStyle === 'default'
@@ -90,7 +95,10 @@ const DesignStep: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               {visualStyleOptions.map((option) => {
                 const key = STYLE_TO_KEY[option.value];
-                const src = images[key] || FALLBACK_IMAGES[option.value];
+                const src = getOptimizedImageUrl(
+                  images[key] || FALLBACK_IMAGES[option.value],
+                  { width: 256, quality: 80, format: 'webp' }
+                );
                 const hasCover =
                   option.value === 'default'
                     ? !!coverState?.url
@@ -125,35 +133,6 @@ const DesignStep: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Paleta de colores
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              {colorPaletteOptions.map((option) => (
-                <div
-                  key={option.value}
-                  onClick={() => handleChange('colorPalette', option.value)}
-                  className={`cursor-pointer p-4 rounded-lg border-2 transition-all ${
-                    designSettings.colorPalette === option.value
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-purple-200'
-                  }`}
-                >
-                  <h3 className="font-medium text-gray-900 mb-2">{option.label}</h3>
-                  <div className="flex gap-1">
-                    {option.colors.map((color, index) => (
-                      <div
-                        key={index}
-                        className="w-6 h-6 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-xl">

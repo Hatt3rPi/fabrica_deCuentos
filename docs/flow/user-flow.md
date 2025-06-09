@@ -70,7 +70,6 @@
    - Organización visual
 
 3. **Personalización**
-   - Ajuste de paleta de colores
    - Selección de estilo visual
    - Configuración de formato
 
