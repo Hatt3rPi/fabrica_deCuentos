@@ -1,6 +1,6 @@
 # 📱 DesignStep
 
-Paso del asistente dedicado a la selección del estilo visual y la paleta de colores de la historia.
+Paso del asistente dedicado a la selección del estilo visual de la historia.
 
 ## 📋 Descripción
 
@@ -14,6 +14,10 @@ Este componente no recibe props directamente; utiliza los contextos `WizardConte
 
 ## 🔄 Funcionalidades
 
-1. Selección de estilo visual y paleta de colores.
+1. Selección de estilo visual.
 2. Vista previa de la portada en el estilo seleccionado.
 3. Las variantes de portada se generan en segundo plano y las imágenes se cargan de forma perezosa para agilizar la navegación.
+4. Cada tarjeta de estilo muestra un pequeño check cuando la portada de ese estilo ya está disponible.
+5. Si la portada aún no se genera, la vista previa mantiene una imagen de respaldo y un mensaje "Se está generando la vista previa, vuelve en un momento".
+6. Se utilizan imágenes fallback cuando no existen miniaturas con estilo para los personajes.
+7. Todas las imágenes se cargan con `getOptimizedImageUrl` para generar URLs eficientes (ver [docs/components/OptimizedImage.md](OptimizedImage.md)).

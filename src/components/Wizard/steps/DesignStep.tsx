@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { useStory } from '../../../context/StoryContext';
 import { useParams } from 'react-router-dom';
-import { visualStyleOptions, colorPaletteOptions } from '../../../types';
-import { Palette, Brush } from 'lucide-react';
+import { visualStyleOptions } from '../../../types';
+import { Palette, Check } from 'lucide-react';
+import { getOptimizedImageUrl } from '../../../lib/image';
 import { characterService } from '../../../services/characterService';
 import { ThumbnailStyle } from '../../../types/character';
 
@@ -31,6 +32,24 @@ const DesignStep: React.FC = () => {
   const { storyId } = useParams();
   const [images, setImages] = useState<Record<string, string>>({});
   const coverState = storyId ? covers[storyId] : undefined;
+
+  const selectedStyle = designSettings.visualStyle;
+  const rawPreviewUrl =
+    (selectedStyle &&
+      (coverState?.variants?.[selectedStyle] ||
+        (selectedStyle === 'default' ? coverState?.url : undefined))) ||
+    (selectedStyle ? images[STYLE_TO_KEY[selectedStyle]] : undefined) ||
+    (selectedStyle ? FALLBACK_IMAGES[selectedStyle] : undefined);
+
+  const previewUrl = rawPreviewUrl
+    ? getOptimizedImageUrl(rawPreviewUrl, { width: 512, quality: 80, format: 'webp' })
+    : undefined;
+
+  const previewReady = selectedStyle
+    ? selectedStyle === 'default'
+      ? !!coverState?.url
+      : !!coverState?.variants?.[selectedStyle]
+    : false;
 
   useEffect(() => {
     const load = async () => {
@@ -76,12 +95,19 @@ const DesignStep: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               {visualStyleOptions.map((option) => {
                 const key = STYLE_TO_KEY[option.value];
-                const src = images[key] || FALLBACK_IMAGES[option.value];
+                const src = getOptimizedImageUrl(
+                  images[key] || FALLBACK_IMAGES[option.value],
+                  { width: 256, quality: 80, format: 'webp' }
+                );
+                const hasCover =
+                  option.value === 'default'
+                    ? !!coverState?.url
+                    : !!coverState?.variants?.[option.value];
                 return (
                   <div
                     key={option.value}
                     onClick={() => handleChange('visualStyle', option.value)}
-                    className={`cursor-pointer p-4 rounded-lg border-2 transition-all flex flex-col items-center ${
+                    className={`cursor-pointer p-4 rounded-lg border-2 transition-all flex flex-col items-center relative ${
                       designSettings.visualStyle === option.value
                         ? 'border-purple-500 bg-purple-50'
                         : 'border-gray-200 hover:border-purple-200'
@@ -94,6 +120,11 @@ const DesignStep: React.FC = () => {
                         loading="lazy"
                         className="w-full h-full object-cover"
                       />
+                      {hasCover && (
+                        <span className="absolute top-1 right-1 text-purple-600 bg-white/80 rounded-full p-0.5">
+                          <Check className="w-4 h-4" />
+                        </span>
+                      )}
                     </div>
                     <h3 className="font-medium text-gray-900 text-center">{option.label}</h3>
                   </div>
@@ -102,35 +133,6 @@ const DesignStep: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Paleta de colores
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              {colorPaletteOptions.map((option) => (
-                <div
-                  key={option.value}
-                  onClick={() => handleChange('colorPalette', option.value)}
-                  className={`cursor-pointer p-4 rounded-lg border-2 transition-all ${
-                    designSettings.colorPalette === option.value
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-purple-200'
-                  }`}
-                >
-                  <h3 className="font-medium text-gray-900 mb-2">{option.label}</h3>
-                  <div className="flex gap-1">
-                    {option.colors.map((color, index) => (
-                      <div
-                        key={index}
-                        className="w-6 h-6 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-xl">
@@ -141,19 +143,23 @@ const DesignStep: React.FC = () => {
             </h3>
           </div>
 
-          <div className="aspect-square rounded-lg overflow-hidden bg-white shadow-md flex items-center justify-center">
-            {designSettings.visualStyle ? (
-              <img
-                src={
-                  coverState?.variants?.[designSettings.visualStyle] ||
-                  coverState?.url ||
-                  images[STYLE_TO_KEY[designSettings.visualStyle]] ||
-                  FALLBACK_IMAGES[designSettings.visualStyle]
-                }
-                alt="Vista previa"
-                loading="lazy"
-                className="w-full h-full object-cover"
-              />
+          <div className="aspect-square rounded-lg overflow-hidden bg-white shadow-md flex items-center justify-center relative">
+            {selectedStyle ? (
+              <>
+                <img
+                  src={previewUrl}
+                  alt="Vista previa"
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
+                {!previewReady && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-4 text-center">
+                    <p className="text-white text-sm">
+                      Se está generando la vista previa, vuelve en un momento
+                    </p>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="w-full h-full flex items-center justify-center p-6 text-center">
                 <p className="text-gray-500">
