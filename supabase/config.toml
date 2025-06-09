@@ -287,78 +287,51 @@ deno_version = 1
 
 [functions.generate-story]
 enabled = true
-# Requiere autenticación JWT
 verify_jwt = true
-# Tiempo máximo de ejecución (en segundos)
-timeout = 300
-# Tamaño máximo del cuerpo de la solicitud (en MB)
-max_request_size = 10
 
 [functions.analyze-character]
 enabled = true
 verify_jwt = true
-timeout = 300
-max_request_size = 10
 
 [functions.delete-test-stories]
 enabled = true
 verify_jwt = true
-timeout = 300
-max_request_size = 10
 
 [functions.describe-and-sketch]
 enabled = true
 verify_jwt = true
-timeout = 300
-max_request_size = 10
 
 [functions.generate-cover]
 enabled = true
 verify_jwt = true
-timeout = 300
-max_request_size = 10
 
 [functions.generate-cover-variant]
 enabled = true
 verify_jwt = true
-timeout = 300
-max_request_size = 10
 
 [functions.generate-illustration]
 enabled = true
 verify_jwt = true
-timeout = 300
-max_request_size = 10
 
 [functions.generate-scene]
 enabled = true
 verify_jwt = true
-timeout = 300
-max_request_size = 10
 
 [functions.generate-spreads]
 enabled = true
 verify_jwt = true
-timeout = 300
-max_request_size = 10
 
 [functions.generate-thumbnail-variant]
 enabled = true
 verify_jwt = true
-timeout = 300
-max_request_size = 10
 
 [functions.generate-variations]
 enabled = true
 verify_jwt = true
-timeout = 300
-max_request_size = 10
 
 [functions.send-reset-email]
 enabled = true
 verify_jwt = false
-timeout = 300
-max_request_size = 10
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
