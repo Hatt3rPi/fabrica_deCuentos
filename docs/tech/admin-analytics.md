@@ -94,3 +94,7 @@ Antes de llamar a OpenAI o Flux, las funciones imprimen en consola el JSON de la
 ---
 
 Con estos elementos se obtiene un panel que permite monitorizar el avance de las funciones de IA y habilitar o deshabilitar partes del flujo según sea necesario.
+
+## Consulta de métricas sin límite
+
+El servicio de analytics ahora pagina internamente las peticiones a Supabase para obtener **todos** los registros. Esto evita el límite de 1000 filas por solicitud y asegura que indicadores como *Rendimiento de prompts* o *Uso por modelo* utilicen el total de datos disponibles.
