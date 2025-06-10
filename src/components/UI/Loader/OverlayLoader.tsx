@@ -8,11 +8,16 @@ export interface OverlayLoaderProps {
   timeoutMs?: number;
   onTimeout?: () => void;
   onCancel?: () => void;
+  /** Callback que se ejecuta cuando se supera el tiempo límite absoluto */
+  onFallback?: () => void;
+  /** Tiempo en milisegundos para activar onFallback. Por defecto 60s */
+  fallbackDelayMs?: number;
   progress?: { current: number; total: number };
 }
 
 const MESSAGE_INTERVAL = 7000;
 const DEFAULT_TIMEOUT = 40000;
+const DEFAULT_FALLBACK_DELAY = 60000;
 
 const OverlayLoader: React.FC<OverlayLoaderProps> = ({
   etapa,
@@ -20,6 +25,8 @@ const OverlayLoader: React.FC<OverlayLoaderProps> = ({
   timeoutMs = DEFAULT_TIMEOUT,
   onTimeout,
   onCancel,
+  onFallback,
+  fallbackDelayMs = DEFAULT_FALLBACK_DELAY,
   progress,
 }) => {
   const [index, setIndex] = useState(0);
@@ -42,6 +49,14 @@ const OverlayLoader: React.FC<OverlayLoaderProps> = ({
     }, timeoutMs);
     return () => clearTimeout(id);
   }, [timeoutMs, onTimeout]);
+
+  useEffect(() => {
+    if (!onFallback) return;
+    const id = setTimeout(() => {
+      onFallback();
+    }, fallbackDelayMs);
+    return () => clearTimeout(id);
+  }, [onFallback, fallbackDelayMs]);
 
   const message = isTimeout
     ? 'Esto está tardando más de lo esperado...' // could also fetch from messages

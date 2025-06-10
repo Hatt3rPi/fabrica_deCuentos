@@ -23,6 +23,11 @@ const StoryStep: React.FC = () => {
   const [loaders, setLoaders] = React.useState<string[]>([]);
   const [loaderIndex, setLoaderIndex] = React.useState(0);
 
+  const handleFallback = () => {
+    setIsLoading(false);
+    setIsGenerating(false);
+  };
+
   React.useEffect(() => {
     if (isLoading && loaders.length > 0) {
       const timer = setInterval(() => {
@@ -224,6 +229,7 @@ const StoryStep: React.FC = () => {
         <OverlayLoader
           etapa="cuento_fase1"
           context={{ personaje: characters[0]?.name || 'tus personajes' }}
+          onFallback={handleFallback}
         />
       )}
     </div>

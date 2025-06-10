@@ -33,6 +33,7 @@ const DesignStep: React.FC = () => {
   const { storyId } = useParams();
   const [images, setImages] = useState<Record<string, string>>({});
   const coverState = storyId ? covers[storyId] : undefined;
+  const [overlayDismissed, setOverlayDismissed] = useState(false);
 
   const selectedStyle = designSettings.visualStyle;
   const rawPreviewUrl =
@@ -165,8 +166,8 @@ const DesignStep: React.FC = () => {
           </div>
         </div>
       </div>
-      {selectedStyle && !previewReady && (
-        <OverlayLoader etapa="cuento_fase2" />
+      {selectedStyle && !previewReady && !overlayDismissed && (
+        <OverlayLoader etapa="cuento_fase2" onFallback={() => setOverlayDismissed(true)} />
       )}
     </div>
   );

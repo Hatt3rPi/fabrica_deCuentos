@@ -45,6 +45,13 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
     thumbnailUrl: null,
   });
 
+  const handleFallback = () => {
+    setIsLoading(false);
+    setIsAnalyzing(false);
+    setIsGeneratingThumbnail(false);
+    setIsRedirecting(false);
+  };
+
   const { currentCharacterId, recoverFromBackup } = useCharacterAutosave(formData, id);
   const { generateAdditionalThumbnails } = useCharacter();
   
@@ -628,6 +635,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
         <OverlayLoader
           etapa="personajes"
           context={{ personaje: formData.name || 'tu personaje' }}
+          onFallback={handleFallback}
         />
       )}
     </div>

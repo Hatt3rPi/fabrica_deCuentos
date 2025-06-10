@@ -8,6 +8,7 @@ const PreviewStep: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [promptText, setPromptText] = useState('');
+  const handleFallback = () => setIsGenerating(false);
 
   useEffect(() => {
     // Simular tiempo de carga inicial
@@ -165,7 +166,9 @@ const PreviewStep: React.FC = () => {
           </div>
         </div>
       </div>
-      {isGenerating && <OverlayLoader etapa="vista_previa" />}
+      {isGenerating && (
+        <OverlayLoader etapa="vista_previa" onFallback={handleFallback} />
+      )}
     </div>
   );
 };
