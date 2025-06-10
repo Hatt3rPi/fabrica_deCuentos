@@ -13,6 +13,7 @@
 - Las funciones Edge ahora imprimen en consola el JSON enviado a las APIs de IA.
 - Se corrige `describe-and-sketch` para soportar Flux y definir la constante `FILE`.
 - Corregida la conversión a base64 de la imagen de referencia en `describe-and-sketch`.
+- El panel de Analytics ahora pagina las consultas a Supabase para considerar todos los registros y no solo los primeros 1000.
 - Arreglado el reemplazo del placeholder `${sanitizedNotes}` en el prompt de `describe-and-sketch`.
 - Las funciones que usan Flux ahora devuelven la imagen en base64 para evitar errores CORS al descargar la URL firmada.
 - Nuevo helper `generateWithFlux` para conectar con Flux desde las Edge Functions.

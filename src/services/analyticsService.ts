@@ -9,6 +9,8 @@ import {
   UserUsageMetric,
 } from '../types/analytics';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 function applyDateFilter(query: any, column: string, range?: DateRange) {
   if (range?.from) {
     query = query.gte(column, range.from.toISOString());
@@ -19,21 +21,53 @@ function applyDateFilter(query: any, column: string, range?: DateRange) {
   return query;
 }
 
+const PAGE_SIZE = 1000;
+
+async function fetchAllRows(builder: (from: number, to: number) => any) {
+  let page = 0;
+  let all: any[] = [];
+  let hasMore = true;
+  while (hasMore) {
+    const { data, error } = await builder(
+      page * PAGE_SIZE,
+      (page + 1) * PAGE_SIZE - 1,
+    );
+    if (error) throw error;
+    if (data && data.length > 0) {
+      all = [...all, ...data];
+      if (data.length < PAGE_SIZE) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+  return all;
+}
+
 export const analyticsService = {
   async fetchGeneralUsage(range?: DateRange): Promise<GeneralUsageMetrics> {
-    let storiesQuery = supabase
-      .from('stories')
-      .select('id,user_id,created_at', { count: 'exact' });
-    storiesQuery = applyDateFilter(storiesQuery, 'created_at', range);
-    const { data: storiesData, count: storiesCount } = await storiesQuery;
+    const stories = await fetchAllRows((from, to) => {
+      let q = supabase.from('stories').select('user_id').range(from, to);
+      q = applyDateFilter(q, 'created_at', range);
+      return q;
+    });
 
-    let charactersQuery = supabase
-      .from('characters')
-      .select('id,created_at', { count: 'exact' });
-    charactersQuery = applyDateFilter(charactersQuery, 'created_at', range);
-    const { count: charactersCount } = await charactersQuery;
+    const { count: storiesCount } = await applyDateFilter(
+      supabase.from('stories').select('*', { count: 'exact', head: true }),
+      'created_at',
+      range,
+    );
 
-    const activeUsers = new Set((storiesData || []).map((s: any) => s.user_id)).size;
+    const { count: charactersCount } = await applyDateFilter(
+      supabase.from('characters').select('*', { count: 'exact', head: true }),
+      'created_at',
+      range,
+    );
+
+    const activeUsers = new Set(stories.map((s: any) => s.user_id)).size;
 
     return {
       activeUsers,
@@ -43,15 +77,16 @@ export const analyticsService = {
   },
 
   async fetchPromptPerformance(range?: DateRange): Promise<PromptPerformanceMetric[]> {
-    let query = supabase
-      .from('prompt_metrics')
-      .select(
-        'prompt_id, tiempo_respuesta_ms, estado, tokens_entrada, tokens_salida, tokens_entrada_cacheados, tokens_salida_cacheados, prompts(type)'
-      );
-    query = applyDateFilter(query, 'timestamp', range);
-
-    const { data, error } = await query;
-    if (error) throw error;
+    const data = await fetchAllRows((from, to) => {
+      let q = supabase
+        .from('prompt_metrics')
+        .select(
+          'prompt_id, tiempo_respuesta_ms, estado, tokens_entrada, tokens_salida, tokens_entrada_cacheados, tokens_salida_cacheados, prompts(type)'
+        )
+        .range(from, to);
+      q = applyDateFilter(q, 'timestamp', range);
+      return q;
+    });
 
     const grouped: Record<string, PromptPerformanceMetric> = {};
 
@@ -95,13 +130,20 @@ export const analyticsService = {
   },
 
   async fetchTokenUsage(range?: DateRange): Promise<TokenUsage> {
-    let query = supabase
-      .from('prompt_metrics')
-      .select('tokens_entrada,tokens_salida', { count: 'exact' });
-    query = applyDateFilter(query, 'timestamp', range);
+    const data = await fetchAllRows((from, to) => {
+      let q = supabase
+        .from('prompt_metrics')
+        .select('tokens_entrada,tokens_salida')
+        .range(from, to);
+      q = applyDateFilter(q, 'timestamp', range);
+      return q;
+    });
 
-    const { data, error, count } = await query;
-    if (error) throw error;
+    const { count } = await applyDateFilter(
+      supabase.from('prompt_metrics').select('*', { count: 'exact', head: true }),
+      'timestamp',
+      range,
+    );
 
     let totalInput = 0;
     let totalOutput = 0;
@@ -213,12 +255,13 @@ export const analyticsService = {
 
   async fetchErrorBreakdown(range?: DateRange): Promise<ErrorBreakdownMetric[]> {
 
-    let query = supabase.from('prompt_metrics').select('estado, error_type');
-
-    query = applyDateFilter(query, 'timestamp', range);
-
-    const { data, error } = await query;
-    if (error) throw error;
+    const data = await fetchAllRows((from, to) => {
+      let q = supabase.from('prompt_metrics')
+        .select('estado, error_type')
+        .range(from, to);
+      q = applyDateFilter(q, 'timestamp', range);
+      return q;
+    });
 
     const counts: Record<string, number> = {};
 
@@ -232,18 +275,14 @@ export const analyticsService = {
 
   async fetchUserUsage(range?: DateRange): Promise<UserUsageMetric[]> {
     // Primero, obtener todas las métricas
-    let query = supabase
-      .from('prompt_metrics')
-
-      .select('usuario_id, estado, tokens_entrada, tokens_salida, tokens_entrada_cacheados, tokens_salida_cacheados, timestamp');
-
-    query = applyDateFilter(query, 'timestamp', range);
-
-    const { data: metrics, error } = await query;
-    if (error) {
-      throw error;
-    }
-    if (!metrics) return [];
+    const metrics = await fetchAllRows((from, to) => {
+      let q = supabase
+        .from('prompt_metrics')
+        .select('usuario_id, estado, tokens_entrada, tokens_salida, tokens_entrada_cacheados, tokens_salida_cacheados, timestamp')
+        .range(from, to);
+      q = applyDateFilter(q, 'timestamp', range);
+      return q;
+    });
 
     // Obtener IDs de usuario únicos
     const userIds = [...new Set(metrics.map(m => m.usuario_id).filter(Boolean))];
@@ -272,7 +311,7 @@ export const analyticsService = {
             }
           });
         }
-      } catch (err) {
+      } catch {
         // Si hay un error, usar el ID como fallback
         userIds.forEach(id => {
           if (id) userEmails[id] = id;
