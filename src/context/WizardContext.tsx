@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useAutosave } from '../hooks/useAutosave';
 import { Character, StorySettings, DesignSettings, WizardState, EstadoFlujo } from '../types';
@@ -63,17 +63,15 @@ const INITIAL_STATE: WizardState = {
 
 export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { storyId } = useParams();
-  const navigate = useNavigate();
   const { supabase, user } = useAuth();
 
   const {
     estado,
+    setStoryId,
     setPersonajes,
     avanzarEtapa,
-    regresarEtapa,
-    resetEstado,
     setEstadoCompleto,
-    setStoryId,
+    resetEstado
   } = useWizardFlowStore();
 
   useEffect(() => {
@@ -114,9 +112,9 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [characters, setPersonajes]);
 
   const stepFromEstado = (estado: EstadoFlujo): WizardStep => {
-    if (estado.personajes.estado !== 'completado') return 'characters';
-    if (estado.cuento !== 'completado') return 'story';
-    if (estado.diseno !== 'completado') return 'design';
+    if (estado['1.personajes'].estado !== 'completado') return 'characters';
+    if (estado['2.cuento'] !== 'completado') return 'story';
+    if (estado['3.diseno'] !== 'completado') return 'design';
     return 'preview';
   };
 
@@ -190,10 +188,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'export'];
   const stepMap: Record<WizardStep, keyof EstadoFlujo | null> = {
-    characters: 'personajes',
-    story: 'cuento',
-    design: 'diseno',
-    preview: 'vistaPrevia',
+    characters: '1.personajes',
+    story: '2.cuento',
+    design: '3.diseno',
+    preview: '4.vistaPrevia',
     export: null,
   };
 

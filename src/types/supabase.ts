@@ -198,7 +198,6 @@ export type Database = {
           error_type: string | null
           estado: string | null
           id: string
-          loaders: Json | null
           metadatos: Json | null
           modelo_ia: string
           prompt_id: string | null
@@ -216,7 +215,6 @@ export type Database = {
           error_type?: string | null
           estado?: string | null
           id?: string
-          loaders?: Json | null
           metadatos?: Json | null
           modelo_ia: string
           prompt_id?: string | null
@@ -234,7 +232,6 @@ export type Database = {
           error_type?: string | null
           estado?: string | null
           id?: string
-          loaders?: Json | null
           metadatos?: Json | null
           modelo_ia?: string
           prompt_id?: string | null
@@ -627,6 +624,10 @@ export type Database = {
       revert_prompt_version: {
         Args: { p_id: string; p_version: number }
         Returns: undefined
+      }
+      wizard_state_rank: {
+        Args: { p_state: string }
+        Returns: number
       }
     }
     Enums: {

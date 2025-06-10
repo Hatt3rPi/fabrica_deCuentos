@@ -151,18 +151,17 @@ export interface WizardState {
   };
 }
 
-
 // --- Wizard Flow State Types ---
 export type EtapaEstado = 'no_iniciada' | 'borrador' | 'completado';
 
 export interface EstadoFlujo {
-  personajes: {
+  '1.personajes': {
     estado: EtapaEstado;
     personajesAsignados: number;
   };
-  cuento: EtapaEstado;
-  diseno: EtapaEstado;
-  vistaPrevia: EtapaEstado;
+  '2.cuento': EtapaEstado;
+  '3.diseno': EtapaEstado;
+  '4.vistaPrevia': EtapaEstado;
 }
 
 // Opciones disponibles para la configuración del cuento

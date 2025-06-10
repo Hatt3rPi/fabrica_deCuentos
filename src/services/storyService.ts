@@ -43,6 +43,7 @@ export const storyService = {
 
   async persistStory(id: string, fields: Partial<import('../types/supabase').Database['public']['Tables']['stories']['Update']>) {
     const { estado } = useWizardFlowStore.getState();
+    
     const { data, error } = await supabase
       .from('stories')
       .update({ ...fields, wizard_state: estado })
