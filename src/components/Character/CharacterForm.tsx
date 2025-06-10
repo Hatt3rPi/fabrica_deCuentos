@@ -8,6 +8,7 @@ import { useNotifications } from '../../hooks/useNotifications';
 import { useCharacter } from '../../hooks/useCharacter';
 import { NotificationType, NotificationPriority } from '../../types/notification';
 import { Character } from '../../types';
+import { OverlayLoader } from '../UI/Loader';
 
 interface CharacterFormProps {
   onSave?: (id: string) => void;
@@ -623,6 +624,12 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
           </button>
         </div>
       </form>
+      {(isLoading || isAnalyzing || isGeneratingThumbnail || isRedirecting) && (
+        <OverlayLoader
+          etapa="personajes"
+          context={{ personaje: formData.name || 'tu personaje' }}
+        />
+      )}
     </div>
   );
 };

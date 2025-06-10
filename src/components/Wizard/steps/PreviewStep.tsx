@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { ChevronLeft, ChevronRight, RefreshCw, Pencil } from 'lucide-react';
+import { OverlayLoader } from '../../UI/Loader';
 
 const PreviewStep: React.FC = () => {
   const { generatedPages, setGeneratedPages, isGenerating, setIsGenerating } = useWizard();
@@ -50,21 +51,6 @@ const PreviewStep: React.FC = () => {
     }
   };
 
-  if (isGenerating) {
-    return (
-      <div className="text-center py-12">
-        <div className="animate-spin mb-4">
-          <RefreshCw className="w-12 h-12 text-purple-600 mx-auto" />
-        </div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">
-          Generando tu cuento mágico
-        </h3>
-        <p className="text-gray-600">
-          Estamos dando vida a tu historia. Este proceso puede tomar unos minutos...
-        </p>
-      </div>
-    );
-  }
 
   if (!generatedPages || generatedPages.length === 0) {
     return (
@@ -179,6 +165,7 @@ const PreviewStep: React.FC = () => {
           </div>
         </div>
       </div>
+      {isGenerating && <OverlayLoader etapa="vista_previa" />}
     </div>
   );
 };

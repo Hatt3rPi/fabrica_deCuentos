@@ -4,6 +4,7 @@ import { useWizard } from '../../../context/WizardContext';
 import { BookOpen } from 'lucide-react';
 import { storyService } from '../../../services/storyService';
 import { useStory } from '../../../context/StoryContext';
+import { OverlayLoader } from '../../UI/Loader';
 
 const StoryStep: React.FC = () => {
   const {
@@ -219,6 +220,12 @@ const StoryStep: React.FC = () => {
           </div>
         )}
       </div>
+      {isLoading && (
+        <OverlayLoader
+          etapa="cuento_fase1"
+          context={{ personaje: characters[0]?.name || 'tus personajes' }}
+        />
+      )}
     </div>
   );
 };
