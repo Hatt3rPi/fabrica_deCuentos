@@ -8,6 +8,8 @@ Componente que muestra un overlay de carga con mensajes rotativos y spinner.
 interface OverlayLoaderProps {
   etapa: Etapa;
   context?: Record<string, string>;
+  /** Lista de mensajes personalizados a rotar */
+  messages?: string[];
   timeoutMs?: number;
   onTimeout?: () => void;
   onCancel?: () => void;
@@ -19,6 +21,7 @@ interface OverlayLoaderProps {
 
 - **etapa**: etapa del flujo para filtrar los mensajes.
 - **context**: variables para interpolar en los mensajes.
+- **messages**: lista de textos personalizados que reemplazan a los de `loaderMessages`.
 - **timeoutMs**: tiempo máximo antes de disparar `onTimeout`.
 - **onCancel**: callback para cancelar la operación.
 - **onFallback**: se ejecuta al superar el tiempo máximo absoluto (60s por defecto).

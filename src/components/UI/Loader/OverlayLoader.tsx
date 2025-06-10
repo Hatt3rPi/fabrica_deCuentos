@@ -5,6 +5,8 @@ import { getLoaderMessages, Etapa } from '../../../config/loaderMessages';
 export interface OverlayLoaderProps {
   etapa: Etapa;
   context?: Record<string, string>;
+  /** Mensajes personalizados para mostrar. Reemplaza a los configurados por etapa */
+  messages?: string[];
   timeoutMs?: number;
   onTimeout?: () => void;
   onCancel?: () => void;
@@ -22,6 +24,7 @@ const DEFAULT_FALLBACK_DELAY = 60000;
 const OverlayLoader: React.FC<OverlayLoaderProps> = ({
   etapa,
   context = {},
+  messages,
   timeoutMs = DEFAULT_TIMEOUT,
   onTimeout,
   onCancel,
@@ -32,15 +35,17 @@ const OverlayLoader: React.FC<OverlayLoaderProps> = ({
   const [index, setIndex] = useState(0);
   const [isTimeout, setIsTimeout] = useState(false);
 
-  const messages = getLoaderMessages(etapa, context);
+  const computedMessages = messages && messages.length > 0
+    ? messages
+    : getLoaderMessages(etapa, context);
 
   useEffect(() => {
-    if (messages.length <= 1) return;
+    if (computedMessages.length <= 1) return;
     const id = setInterval(() => {
-      setIndex(i => (i + 1) % messages.length);
+      setIndex(i => (i + 1) % computedMessages.length);
     }, MESSAGE_INTERVAL);
     return () => clearInterval(id);
-  }, [messages]);
+  }, [computedMessages]);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -59,8 +64,8 @@ const OverlayLoader: React.FC<OverlayLoaderProps> = ({
   }, [onFallback, fallbackDelayMs]);
 
   const message = isTimeout
-    ? 'Esto está tardando más de lo esperado...' // could also fetch from messages
-    : messages[index] || '';
+    ? 'Esto está tardando más de lo esperado...'
+    : computedMessages[index] || '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" aria-live="polite" role="alert">
