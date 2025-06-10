@@ -46,3 +46,4 @@ The function stores the generated title in `stories`, creates nine records in
 If the prompt returns loader messages, they are saved as JSON in the
 `stories.loader` column for future use.
 The frontend muestra estos mensajes desde el `OverlayLoader` mientras se genera la portada, cambiando cada cinco segundos para indicar el avance.
+Cuando se generan varios personajes en paralelo, la columna `stories.loader` puede incluir mensajes con la variante `_multi`, los cuales emplean el placeholder `{personajes}`.

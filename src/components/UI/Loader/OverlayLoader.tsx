@@ -4,7 +4,7 @@ import { getLoaderMessages, Etapa } from '../../../config/loaderMessages';
 
 export interface OverlayLoaderProps {
   etapa: Etapa;
-  context?: Record<string, string>;
+  context?: Record<string, any>;
   /** Mensajes personalizados para mostrar. Reemplaza a los configurados por etapa */
   messages?: string[];
   timeoutMs?: number;
@@ -35,9 +35,20 @@ const OverlayLoader: React.FC<OverlayLoaderProps> = ({
   const [index, setIndex] = useState(0);
   const [isTimeout, setIsTimeout] = useState(false);
 
+  const hasMulti = Array.isArray((context as any).personajes) && (context as any).personajes.length > 1;
+  const etapaFinal = hasMulti
+    ? (etapa === 'cuento_fase1'
+        ? 'cuento_fase1_multi'
+        : etapa === 'cuento_fase2'
+          ? 'cuento_fase2_multi'
+          : etapa === 'vista_previa'
+            ? 'vista_previa_multi'
+            : etapa)
+    : etapa;
+
   const computedMessages = messages && messages.length > 0
     ? messages
-    : getLoaderMessages(etapa, context);
+    : getLoaderMessages(etapaFinal as Etapa, context);
 
   useEffect(() => {
     if (computedMessages.length <= 1) return;
