@@ -7,7 +7,7 @@ Componente que muestra un overlay de carga con mensajes rotativos y spinner.
 ```typescript
 interface OverlayLoaderProps {
   etapa: Etapa;
-  context?: Record<string, any>;
+  context?: Record<string, string>;
   /** Lista de mensajes personalizados a rotar */
   messages?: string[];
   timeoutMs?: number;
@@ -20,7 +20,7 @@ interface OverlayLoaderProps {
 ```
 
 - **etapa**: etapa del flujo para filtrar los mensajes.
-- **context**: variables para interpolar en los mensajes. Si incluye `personajes` como array, se activará la variante `_multi` y se formatearán los nombres de manera adecuada.
+- **context**: variables para interpolar en los mensajes.
 - **messages**: lista de textos personalizados que reemplazan a los de `loaderMessages`.
 - **timeoutMs**: tiempo máximo antes de disparar `onTimeout`.
 - **onCancel**: callback para cancelar la operación.
@@ -29,5 +29,3 @@ interface OverlayLoaderProps {
 - **progress**: objeto con el progreso actual y total.
 
 El componente utiliza `aria-live="polite"` para informar a lectores de pantalla y es totalmente responsive.
-
-Cuando se utilice la variante `_multi`, el placeholder `{personajes}` se reemplazará automáticamente por una lista como `Luna y Sol` o `Luna, Sol y Estrella`.

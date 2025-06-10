@@ -1,52 +1,9 @@
-export type Etapa =
-  | 'personajes'
-  | 'cuento_fase1'
-  | 'cuento_fase1_multi'
-  | 'cuento_fase2'
-  | 'cuento_fase2_multi'
-  | 'vista_previa'
-  | 'vista_previa_multi';
-  {
-    id: 'story_generating_multi',
-    text: 'Tejiendo la trama de {personajes}...',
-    etapa: ['cuento_fase1_multi']
-  },
-  {
-    id: 'story_characters_multi',
-    text: 'Haciendo que {personajes} cobren protagonismo...',
-    etapa: ['cuento_fase1_multi']
-  },
-  {
-    id: 'cover_creating_multi',
-    text: 'Ilustrando la portada para {personajes}...',
-    etapa: ['cuento_fase2_multi']
-  },
-  {
-    id: 'cover_finishing_multi',
-    text: 'Afinando detalles para cada protagonista...',
-    etapa: ['cuento_fase2_multi']
-  },
-  },
-  {
-    id: 'preview_loading_multi',
-    text: 'Preparando la vista previa de la historia de {personajes}...',
-    etapa: ['vista_previa_multi']
-export function formatNames(names: string[]): string {
-  if (names.length <= 1) return names[0] || '';
-  if (names.length === 2) return `${names[0]} y ${names[1]}`;
-  return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
-}
-
-export function getLoaderMessages(etapa: Etapa, context: Record<string, any> = {}): string[] {
-      let msg = m.text;
-      for (const [key, value] of Object.entries(context)) {
-        let val = value;
-        if (key === 'personajes' && Array.isArray(value)) {
-          val = formatNames(value);
-        }
-        msg = msg.replace(`{${key}}`, String(val));
-      }
-      return msg;
+/**
+ * Tipos de etapas del flujo de creación
+ * 
+ * Para soportar múltiples personajes, se pueden agregar variantes con sufijo _multi
+ * Ejemplo: 'personajes_multi' para manejar múltiples personajes
+ */
 export type Etapa = 
   | 'personajes' 
   | 'cuento_fase1' | 'cuento_fase1_multi'
