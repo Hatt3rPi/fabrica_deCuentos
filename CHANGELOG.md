@@ -25,3 +25,4 @@
 - `DesignStep` muestra un check en las tarjetas de estilo con portada disponible y avisa en la vista previa cuando la imagen aún se genera.
 - Eliminada la sección de paleta de colores y se corrigieron las imágenes fallback con un helper para URLs optimizadas.
 - Se corrigió un error de compilación renombrando `src/lib/image.ts` a `image.tsx` y se documentó el componente `OptimizedImage`.
+- Nuevo módulo `wizardManager` para manejar `wizard_state` con cache local y reanudación. Ver `docs/flow/wizard-states.md` y `docs/tech/wizard-manager.md`.

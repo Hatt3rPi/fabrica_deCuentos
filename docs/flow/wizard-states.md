@@ -1,10 +1,10 @@
 # Modelo de Estados del Wizard
 
-Este documento describe el sistema de estados que gestiona el avance del usuario durante la creación de un cuento.
+Este documento explica la estructura del campo `wizard_state` y las reglas que gestiona el avance del usuario durante la creación de un cuento.
 
 ## Estados disponibles
 
-Cada etapa del asistente puede encontrarse en uno de los siguientes estados:
+Cada etapa del asistente se encuentra en uno de los siguientes estados:
 
 - `no_iniciada`
 - `borrador`
@@ -14,43 +14,39 @@ Cada etapa del asistente puede encontrarse en uno de los siguientes estados:
 export type EtapaEstado = 'no_iniciada' | 'borrador' | 'completado';
 ```
 
-La estructura completa del flujo se define mediante la interfaz `EstadoFlujo`:
+La estructura completa del flujo es la siguiente:
 
 ```ts
-export interface EstadoFlujo {
-  personajes: {
-    estado: EtapaEstado;
-    personajesAsignados: number;
-  };
-  cuento: EtapaEstado;
-  diseno: EtapaEstado;
-  vistaPrevia: EtapaEstado;
+export interface WizardState {
+  '1.personajes': { estado: EtapaEstado; personajesAsignados: number };
+  '2.cuento': { estado: EtapaEstado };
+  '3.diseno': { estado: EtapaEstado };
+  '4.vistaPrevia': { estado: EtapaEstado };
 }
 ```
+
+Al crear un cuento se inicializa con todas las etapas en `no_iniciada` y `personajesAsignados` en `0`.
 
 ## Reglas principales
 
 1. **Transiciones válidas**
-   - No se puede avanzar a una etapa si la anterior no está en estado `completado`.
-   - Al asignar los tres personajes se marca automáticamente la etapa de personajes como `completado`.
+   - No se avanza a una etapa si la anterior no está en `completado`.
+   - Asignar personajes cambia la etapa a `borrador` y el botón "Siguiente" la marca como `completado` cuando hay 3 personajes.
 2. **Persistencia**
-   - El flujo se mantiene en el store `zustand` y se sincroniza con la columna `wizard_state` de la tabla `stories`.
-   - Cada actualización del cuento envía el estado completo a Supabase.
-3. **Carga de datos**
-   - Al montar el wizard se intenta restaurar primero desde `localStorage` (backup o borrador principal).
-   - Si no existe información local se consulta la BD y se aplica el `wizard_state` guardado.
+   - El estado se guarda en la columna `wizard_state` de `stories` y opcionalmente se cachea de manera local.
+   - Las funciones `actualizarWizardState` y `continuarCuento` del módulo `wizardManager` son las únicas encargadas de mutar este valor.
+3. **Reanudación**
+   - `continuarCuento(storyId)` consulta la BD y devuelve la primera etapa en `borrador` para redirigir la interfaz.
 4. **Solo avance**
-   - Una etapa marcada como `completado` no regresa a `borrador` salvo que el usuario cambie los datos correspondientes.
+   - Una vez que una etapa queda en `completado` no se puede volver atrás.
 
-## Uso
-
-El store `useWizardFlowStore` expone acciones para actualizar cada etapa y avanzar o retroceder entre ellas.
+## Uso desde código
 
 ```ts
-const { estado, setPersonajes, avanzarEtapa, regresarEtapa, resetEstado } = useWizardFlowStore();
+import { actualizarWizardState, continuarCuento } from '@/services/wizardManager';
+
+await actualizarWizardState(storyId, 'siguiente_cuento');
+const etapa = await continuarCuento(storyId);
 ```
 
-Además, el store mantiene `currentStoryId` para identificar el borrador activo y evitar registros de log sin contexto.
-
-Estas acciones pueden integrarse en los componentes del wizard para mantener el seguimiento del flujo de creación.
-
+La lógica de validación y sincronización está centralizada en el módulo para mantener coherencia entre clientes y evitar saltos de etapa.
