@@ -4,6 +4,7 @@ import { useWizard } from '../../../context/WizardContext';
 import { BookOpen } from 'lucide-react';
 import { storyService } from '../../../services/storyService';
 import { useStory } from '../../../context/StoryContext';
+import { OverlayLoader } from '../../UI/Loader';
 
 const StoryStep: React.FC = () => {
   const {
@@ -20,16 +21,12 @@ const StoryStep: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [generated, setGenerated] = React.useState<{ title: string; paragraphs: string[] } | null>(null);
   const [loaders, setLoaders] = React.useState<string[]>([]);
-  const [loaderIndex, setLoaderIndex] = React.useState(0);
 
-  React.useEffect(() => {
-    if (isLoading && loaders.length > 0) {
-      const timer = setInterval(() => {
-        setLoaderIndex((idx) => (idx + 1) % loaders.length);
-      }, 5000);
-      return () => clearInterval(timer);
-    }
-  }, [isLoading, loaders]);
+  const handleFallback = () => {
+    setIsLoading(false);
+    setIsGenerating(false);
+  };
+
 
   React.useEffect(() => {
     if (!generated && generatedPages && generatedPages.length > 0) {
@@ -53,7 +50,6 @@ const StoryStep: React.FC = () => {
     setIsGenerating(true);
     setGenerated(null);
     setLoaders([]);
-    setLoaderIndex(0);
     try {
       const result = await storyService.generateStory({
         storyId: storyId!,
@@ -200,11 +196,6 @@ const StoryStep: React.FC = () => {
         >
           {isLoading ? 'Generando...' : 'Generar la Historia'}
         </button>
-        {isLoading && loaders.length > 0 && (
-          <p className="text-purple-600 mt-2 min-h-[24px]">
-            {loaders[loaderIndex]}
-          </p>
-        )}
 
         {generated && (
           <div className="text-center">
@@ -219,6 +210,14 @@ const StoryStep: React.FC = () => {
           </div>
         )}
       </div>
+      {isLoading && (
+        <OverlayLoader
+          etapa="cuento_fase1"
+          context={{ personaje: characters[0]?.name || 'tus personajes' }}
+          messages={loaders}
+          onFallback={handleFallback}
+        />
+      )}
     </div>
   );
 };

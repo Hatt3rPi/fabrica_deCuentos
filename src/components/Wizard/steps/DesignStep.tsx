@@ -7,6 +7,7 @@ import { Palette, Check } from 'lucide-react';
 import { getOptimizedImageUrl } from '../../../lib/image';
 import { characterService } from '../../../services/characterService';
 import { ThumbnailStyle } from '../../../types/character';
+import { OverlayLoader } from '../../UI/Loader';
 
 const STYLE_TO_KEY: Record<string, ThumbnailStyle | 'default'> = {
   default: 'default',
@@ -32,6 +33,7 @@ const DesignStep: React.FC = () => {
   const { storyId } = useParams();
   const [images, setImages] = useState<Record<string, string>>({});
   const coverState = storyId ? covers[storyId] : undefined;
+  const [overlayDismissed, setOverlayDismissed] = useState(false);
 
   const selectedStyle = designSettings.visualStyle;
   const rawPreviewUrl =
@@ -152,13 +154,7 @@ const DesignStep: React.FC = () => {
                   loading="lazy"
                   className="w-full h-full object-cover"
                 />
-                {!previewReady && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-4 text-center">
-                    <p className="text-white text-sm">
-                      Se está generando la vista previa, vuelve en un momento
-                    </p>
-                  </div>
-                )}
+                {!previewReady && null}
               </>
             ) : (
               <div className="w-full h-full flex items-center justify-center p-6 text-center">
@@ -170,6 +166,9 @@ const DesignStep: React.FC = () => {
           </div>
         </div>
       </div>
+      {selectedStyle && !previewReady && !overlayDismissed && (
+        <OverlayLoader etapa="cuento_fase2" onFallback={() => setOverlayDismissed(true)} />
+      )}
     </div>
   );
 };

@@ -8,6 +8,7 @@ import { useNotifications } from '../../hooks/useNotifications';
 import { useCharacter } from '../../hooks/useCharacter';
 import { NotificationType, NotificationPriority } from '../../types/notification';
 import { Character } from '../../types';
+import { OverlayLoader } from '../UI/Loader';
 
 interface CharacterFormProps {
   onSave?: (id: string) => void;
@@ -43,6 +44,13 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
     reference_urls: [],
     thumbnailUrl: null,
   });
+
+  const handleFallback = () => {
+    setIsLoading(false);
+    setIsAnalyzing(false);
+    setIsGeneratingThumbnail(false);
+    setIsRedirecting(false);
+  };
 
   const { currentCharacterId, recoverFromBackup } = useCharacterAutosave(formData, id);
   const { generateAdditionalThumbnails } = useCharacter();
@@ -623,6 +631,13 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
           </button>
         </div>
       </form>
+      {(isLoading || isAnalyzing || isGeneratingThumbnail || isRedirecting) && (
+        <OverlayLoader
+          etapa="personajes"
+          context={{ personaje: formData.name || 'tu personaje' }}
+          onFallback={handleFallback}
+        />
+      )}
     </div>
   );
 };

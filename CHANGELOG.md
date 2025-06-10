@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Portada principal desbloquea el paso de Diseño sin esperar las variantes. Los mensajes de `stories.loader` se muestran cada 5 s durante la generación.
+- Portada principal desbloquea el paso de Diseño sin esperar las variantes. Los mensajes de `stories.loader` ahora se usan en el `OverlayLoader` mientras se genera la portada.
 - Added `generate-story` Edge Function for story creation and cover generation.
 - UI now displays generated covers on home.
 - Documentation added at `docs/tech/story-generation.md`.
@@ -10,6 +10,7 @@
 - Admin panel now guarda la configuración de cada actividad y muestra métricas de los últimos 10 minutos.
 - Nuevas columnas `actividad` y `edge_function` en `prompt_metrics`.
 - Nueva función `generate-cover-variant` para crear variantes de portada y mostrarlas en el paso de diseño. Documentado en `docs/tech/generate-cover-variant.md` y `docs/components/DesignStep.md`.
+- Nuevo componente `OverlayLoader` con mensajes rotativos, soporte de timeout y fallback tras un minuto. Integrado en las etapas del asistente. Documentado en `docs/components/OverlayLoader.md`.
 - Las funciones Edge ahora imprimen en consola el JSON enviado a las APIs de IA.
 - Se corrige `describe-and-sketch` para soportar Flux y definir la constante `FILE`.
 - Corregida la conversión a base64 de la imagen de referencia en `describe-and-sketch`.

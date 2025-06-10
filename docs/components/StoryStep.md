@@ -50,7 +50,7 @@ interface StoryStepProps {
  - Mensaje central
 
 4. **Indicadores de Progreso**
-   - Muestra mensajes secuenciales almacenados en `stories.loader` mientras se genera la portada.
+   - Utiliza el `OverlayLoader` para mostrar los textos almacenados en `stories.loader` durante la generación de la portada.
    - Cambia cada 5 segundos hasta que finaliza la generación y se habilita el botón **Siguiente**.
 
 ## 🔗 Dependencias
