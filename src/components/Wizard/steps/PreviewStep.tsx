@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useWizard } from '../../../context/WizardContext';
 import { ChevronLeft, ChevronRight, RefreshCw, Pencil } from 'lucide-react';
 import { OverlayLoader } from '../../UI/Loader';
+import { useNotifications } from '../../../hooks/useNotifications';
+import { NotificationType, NotificationPriority } from '../../../types/notification';
 
 const PreviewStep: React.FC = () => {
-  const { generatedPages, setGeneratedPages, isGenerating, setIsGenerating } = useWizard();
+  const { generatedPages, isGenerating, setIsGenerating, regeneratePageImage } = useWizard();
+  const { createNotification } = useNotifications();
   const [currentPage, setCurrentPage] = useState(0);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [promptText, setPromptText] = useState('');
@@ -33,21 +36,23 @@ const PreviewStep: React.FC = () => {
   };
 
   const handleRegeneratePage = async (pageId: string, prompt: string) => {
-    setIsGenerating(true);
     try {
-      // Simular regeneración de imagen
-      const updatedPages = generatedPages.map((page) =>
-        page.id === pageId
-          ? {
-              ...page,
-              prompt,
-              imageUrl: 'https://images.pexels.com/photos/3662157/pexels-photo-3662157.jpeg',
-            }
-          : page
+      await regeneratePageImage(pageId, prompt);
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Imagen actualizada',
+        'La página se regeneró correctamente',
+        NotificationPriority.LOW
       );
-      setGeneratedPages(updatedPages);
+    } catch (err) {
+      console.error('Error regenerating page', err);
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error al regenerar',
+        'No se pudo generar la nueva imagen',
+        NotificationPriority.HIGH
+      );
     } finally {
-      setIsGenerating(false);
       setEditingPrompt(null);
     }
   };
