@@ -26,3 +26,10 @@ Todos los campos son obligatorios.
 
 La imagen se almacena en el bucket `storage` dentro de `story-images/{story_id}/{page_id}.png`
 y se actualiza el registro correspondiente en `story_pages.image_url`.
+
+## Uso desde el frontend
+
+La función `storyService.regeneratePageImage(storyId, pageId, prompt)` envía esta
+petición incluyendo el identificador de la historia. El `WizardContext` expone
+`regeneratePageImage(pageId, prompt)` para actualizar la imagen de la página
+mostrada en el paso de vista previa.

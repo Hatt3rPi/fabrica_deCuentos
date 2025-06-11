@@ -3,6 +3,7 @@
 ## Unreleased
 - Portada principal desbloquea el paso de Diseño sin esperar las variantes. Los mensajes de `stories.loader` ahora se usan en el `OverlayLoader` mientras se genera la portada.
 - Nueva función `generate-image_pages` para regenerar ilustraciones de páginas y edición en `PreviewStep`. Documentado en `docs/tech/generate-image_pages.md` y `docs/components/PreviewStep.md`.
+- Se corrige `regeneratePageImage` para incluir `story_id` en la solicitud y asegurar la actualización de imágenes de las páginas.
 - Added `generate-story` Edge Function for story creation and cover generation.
 - UI now displays generated covers on home.
 - Documentation added at `docs/tech/story-generation.md`.

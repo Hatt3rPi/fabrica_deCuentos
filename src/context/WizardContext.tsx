@@ -111,7 +111,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!storyId) return;
     setIsGenerating(true);
     try {
-      const imageUrl = await storyService.regeneratePageImage(pageId, prompt);
+      const imageUrl = await storyService.regeneratePageImage(storyId, pageId, prompt);
       setGeneratedPages(prev => prev.map(p =>
         p.id === pageId ? { ...p, imageUrl, prompt } : p
       ));

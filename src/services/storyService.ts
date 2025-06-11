@@ -130,7 +130,7 @@ export const storyService = {
     return { story, characters, design, pages };
   },
 
-  async regeneratePageImage(pageId: string, prompt: string): Promise<string> {
+  async regeneratePageImage(storyId: string, pageId: string, prompt: string): Promise<string> {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image_pages`, {
@@ -139,7 +139,7 @@ export const storyService = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ page_id: pageId, prompt })
+      body: JSON.stringify({ story_id: storyId, page_id: pageId, prompt })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to regenerate page');

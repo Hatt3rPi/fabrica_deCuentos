@@ -6,6 +6,8 @@ Paso del asistente para revisar las páginas generadas y permitir la regeneraci�
 
 El `PreviewStep` muestra cada página del cuento con su imagen. El usuario puede editar el prompt asociado y regenerar la ilustración utilizando la función `generate-image_pages`.
 
+La página **1** corresponde siempre a la portada generada por la función `generate-story`. Las siguientes páginas se numeran de forma secuencial hasta la 9.
+
 ## 🔧 Props
 
 Este componente no recibe props; consume el `WizardContext` para obtener las páginas y el estado de generación.
