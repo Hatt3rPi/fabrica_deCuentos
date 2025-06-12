@@ -62,7 +62,7 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
         char.referenceUrls.slice(0, 2)
       ),
       size: '1024x1024',
-      quality: 'hd',
+      quality: 'high',
       n: 1,
     };
     console.log('[generate-scene] [REQUEST]', JSON.stringify(payload));

@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     model = promptRow?.model || 'gpt-image-1';
     promptId = promptRow?.id;
 
-    const payload = { model, prompt, size: '1024x1024', quality: 'hd', n: 1 };
+    const payload = { model, prompt, size: '1024x1024', quality: 'high', n: 1 };
     console.log('[generate-image-pages] [REQUEST]', JSON.stringify(payload));
 
     let url: string;
