@@ -5,6 +5,7 @@ import { Prompt } from '../../types/prompts';
 import { aiProviderCatalog } from '../../constants/aiProviderCatalog';
 import ModelBadge from '../UI/ModelBadge';
 import { getModelType, isCompatibleModel } from '../../utils/modelHelpers';
+import { promptEdgeMap } from '../../constants/promptEdgeMap';
 
 interface PromptAccordionProps {
   prompt: Prompt;
@@ -32,6 +33,7 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
   const [endpoint, setEndpoint] = useState(prompt.endpoint || '');
   const [model, setModel] = useState(prompt.model || 'gpt-4o');
   const [isSaving, setIsSaving] = useState(false);
+  const edgeFunctions = promptEdgeMap[prompt.type] || [];
 
   const modelToProvider: Record<string, string> = React.useMemo(() => {
     const map: Record<string, string> = {};
@@ -88,12 +90,25 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
         className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
       >
 
-        <span className="text-left">
-          <span className="font-bold">{prompt.type}</span>{' '}
-          <span className="text-sm italic font-normal">
-            (v{prompt.version}, modificado {formatRelativeTime(prompt.updated_at)})
+        <span className="text-left flex flex-col gap-1">
+          <span>
+            <span className="font-bold">{prompt.type}</span>{' '}
+            <span className="text-sm italic font-normal">
+              (v{prompt.version}, modificado {formatRelativeTime(prompt.updated_at)})
+            </span>
           </span>
-
+          {edgeFunctions.length > 0 && (
+            <span className="flex flex-wrap gap-1 mt-1">
+              {edgeFunctions.map((e) => (
+                <span
+                  key={e}
+                  className="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded"
+                >
+                  {e}
+                </span>
+              ))}
+            </span>
+          )}
         </span>
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
