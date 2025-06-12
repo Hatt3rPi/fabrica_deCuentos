@@ -128,5 +128,30 @@ export const storyService = {
       .order('page_number');
 
     return { story, characters, design, pages };
+  },
+
+  async generatePageImage(storyId: string, pageId: string, prompt: string): Promise<string> {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image-pages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ story_id: storyId, page_id: pageId, prompt })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to regenerate page');
+    return data.imageUrl as string;
+  },
+
+  async updateCoverImage(storyId: string, imageUrl: string): Promise<void> {
+    const { error } = await supabase
+      .from('story_pages')
+      .update({ image_url: imageUrl })
+      .eq('story_id', storyId)
+      .eq('page_number', 0);
+    if (error) throw error;
   }
 };

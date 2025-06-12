@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
         model: coverModel,
         prompt: promptText,
         size: '1024x1024',
-        quality: 'hd',
+        quality: 'high',
         n: 1,
         referenced_image_ids: charThumbnails,
       };

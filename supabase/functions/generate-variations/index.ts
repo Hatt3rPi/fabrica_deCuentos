@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
         `Clean full-body pencil sketch illustration for a children's book. ` +
         `Character: ${age}. ${description}. Simple lines, no background, child-friendly.`,
       size: '1024x1024',
-      quality: 'hd',
+      quality: 'high',
       n: 1,
     };
     console.log('[generate-variations] [REQUEST]', JSON.stringify(payload));
