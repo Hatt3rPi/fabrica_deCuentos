@@ -14,7 +14,7 @@ const supabaseAdmin = createClient(
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
 
-const FILE = 'generate-image_pages';
+const FILE = 'generate-image-pages';
 const STAGE = 'historia';
 const ACTIVITY = 'generar_paginas';
 
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     promptId = promptRow?.id;
 
     const payload = { model, prompt, size: '1024x1024', quality: 'hd', n: 1 };
-    console.log('[generate-image_pages] [REQUEST]', JSON.stringify(payload));
+    console.log('[generate-image-pages] [REQUEST]', JSON.stringify(payload));
 
     let url: string;
     if (endpoint.includes('bfl.ai')) {
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error en generate-image_pages:', error);
+    console.error('Error en generate-image-pages:', error);
     await logPromptMetric({
       prompt_id: promptId,
       modelo_ia: model,

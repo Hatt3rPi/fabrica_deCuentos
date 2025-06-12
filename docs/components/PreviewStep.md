@@ -1,10 +1,11 @@
 # 📱 PreviewStep
 
 Paso del asistente para revisar las páginas generadas y permitir la regeneración de imágenes.
+Al avanzar desde el paso de **Diseño**, las ilustraciones de cada página se generan automáticamente.
 
 ## 📋 Descripción
 
-El `PreviewStep` muestra cada página del cuento con su imagen. El usuario puede editar el prompt asociado y regenerar la ilustración utilizando la función `generate-image_pages`.
+El `PreviewStep` muestra cada página del cuento con su imagen. El usuario puede editar el prompt asociado y regenerar la ilustración utilizando la función `generate-image-pages`.
 
 La página **1** corresponde siempre a la portada generada por la función `generate-story`. Las siguientes páginas se numeran de forma secuencial hasta la 9.
 

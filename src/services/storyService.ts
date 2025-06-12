@@ -130,10 +130,10 @@ export const storyService = {
     return { story, characters, design, pages };
   },
 
-  async regeneratePageImage(storyId: string, pageId: string, prompt: string): Promise<string> {
+  async generatePageImage(storyId: string, pageId: string, prompt: string): Promise<string> {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image_pages`, {
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image-pages`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -144,5 +144,14 @@ export const storyService = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to regenerate page');
     return data.imageUrl as string;
+  },
+
+  async updateCoverImage(storyId: string, imageUrl: string): Promise<void> {
+    const { error } = await supabase
+      .from('story_pages')
+      .update({ image_url: imageUrl })
+      .eq('story_id', storyId)
+      .eq('page_number', 0);
+    if (error) throw error;
   }
 };

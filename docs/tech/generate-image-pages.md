@@ -1,10 +1,10 @@
-# generate-image_pages Edge Function
+# generate-image-pages Edge Function
 
 Función que genera o regenera la ilustración de una página del cuento.
 
 ## Endpoint
 
-`POST /functions/v1/generate-image_pages`
+`POST /functions/v1/generate-image-pages`
 
 ## Payload
 
@@ -29,7 +29,7 @@ y se actualiza el registro correspondiente en `story_pages.image_url`.
 
 ## Uso desde el frontend
 
-La función `storyService.regeneratePageImage(storyId, pageId, prompt)` envía esta
+La función `storyService.generatePageImage(storyId, pageId, prompt)` envía esta
 petición incluyendo el identificador de la historia. El `WizardContext` expone
-`regeneratePageImage(pageId, prompt)` para actualizar la imagen de la página
+`generatePageImage(pageId, prompt)` para actualizar o crear la imagen de la página
 mostrada en el paso de vista previa.

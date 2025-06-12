@@ -6,7 +6,7 @@ import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 
 const PreviewStep: React.FC = () => {
-  const { generatedPages, isGenerating, setIsGenerating, regeneratePageImage } = useWizard();
+  const { generatedPages, isGenerating, setIsGenerating, generatePageImage } = useWizard();
   const { createNotification } = useNotifications();
   const [currentPage, setCurrentPage] = useState(0);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
@@ -37,7 +37,7 @@ const PreviewStep: React.FC = () => {
 
   const handleRegeneratePage = async (pageId: string, prompt: string) => {
     try {
-      await regeneratePageImage(pageId, prompt);
+      await generatePageImage(pageId, prompt);
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Imagen actualizada',
