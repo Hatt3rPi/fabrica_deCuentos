@@ -36,7 +36,7 @@ mostrada en el paso de vista previa.
 ### Estilos y referencias
 
 El edge function recupera automáticamente el estilo seleccionado en
-`story_designs` y lo combina con el prompt base `PROMPT_CUENTO_PAGINA`.
+`story_designs` y lo combina con el prompt base `PROMPT_CUENTO_PAGINAS`.
 También descarga las miniaturas de los personajes de la historia para
 enviarlas como referencias si el endpoint elegido soporta imágenes (por
 ejemplo `images/edits` de OpenAI o el modelo de Flux).

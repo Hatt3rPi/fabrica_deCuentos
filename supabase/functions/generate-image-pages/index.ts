@@ -142,9 +142,9 @@ Deno.serve(async (req) => {
     const { data: prompts } = await supabaseAdmin
       .from('prompts')
       .select('id, type, content, endpoint, model')
-      .in('type', ['PROMPT_CUENTO_PAGINA', stylePromptType]);
+      .in('type', ['PROMPT_CUENTO_PAGINAS', stylePromptType]);
 
-    const pagePromptRow = prompts?.find(p => p.type === 'PROMPT_CUENTO_PAGINA');
+    const pagePromptRow = prompts?.find(p => p.type === 'PROMPT_CUENTO_PAGINAS');
     const stylePromptRow = prompts?.find(p => p.type === stylePromptType);
 
     if (!pagePromptRow) {
