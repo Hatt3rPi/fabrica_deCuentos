@@ -49,14 +49,16 @@ async function generateImageWithRetry(
           inputUrl = `data:image/png;base64,${b64}`;
         }
         return { url: await generateWithFlux(prompt, inputUrl) };
-      } else if (referenceImages.length === 0) {
-        const payload = { model, prompt, size: '1024x1024', quality: 'high', n: 1 };
-        console.log('[generate-image-pages] [REQUEST]', JSON.stringify(payload));
-        const { url } = await generateWithOpenAI({ endpoint, payload });
-        return { url };
-      } else {
-        const payload = { model, prompt, size: '1024x1024', quality: 'high', n: 1 };
-        console.log('[generate-image-pages] [REQUEST]', JSON.stringify(payload));
+      }
+
+      const payload = { model, prompt, size: '1024x1024', quality: 'high', n: 1 };
+      console.log('[generate-image-pages] [REQUEST]', JSON.stringify(payload));
+
+      const supportsFiles = endpoint.includes('/images/edits') ||
+        endpoint.includes('/images/variations') ||
+        endpoint.includes('/responses');
+
+      if (supportsFiles && referenceImages.length > 0) {
         const { url } = await generateWithOpenAI({
           endpoint,
           payload,
@@ -64,6 +66,9 @@ async function generateImageWithRetry(
         });
         return { url };
       }
+
+      const { url } = await generateWithOpenAI({ endpoint, payload });
+      return { url };
     } catch (error) {
       if (attempt === retries) throw error;
       console.log(`Intento ${attempt} fallido, reintentando en ${RETRY_DELAY_MS}ms...`);
@@ -142,16 +147,22 @@ Deno.serve(async (req) => {
     const pagePromptRow = prompts?.find(p => p.type === 'PROMPT_CUENTO_PAGINA');
     const stylePromptRow = prompts?.find(p => p.type === stylePromptType);
 
-    const basePrompt = pagePromptRow?.content || '';
+    if (!pagePromptRow) {
+      throw new Error('No existe el prompt base para generar páginas');
+    }
+
+    const basePrompt = pagePromptRow.content;
     const stylePrompt = stylePromptRow?.content || '';
-    const endpoint = pagePromptRow?.endpoint || 'https://api.openai.com/v1/images/generations';
-    model = pagePromptRow?.model || 'gpt-image-1';
-    promptId = pagePromptRow?.id;
+    const endpoint = pagePromptRow.endpoint || 'https://api.openai.com/v1/images/generations';
+    model = pagePromptRow.model || 'gpt-image-1';
+    promptId = pagePromptRow.id;
 
     const prompt = basePrompt
       .replace('{estilo}', stylePrompt)
       .replace('{paleta}', colorPalette || 'colores pasteles vibrantes')
       .replace('{historia}', pagePrompt);
+
+    console.log('[generate-image-pages] prompt:', prompt);
 
     // Obtener miniaturas de personajes relacionados
     const { data: characterRows } = await supabaseAdmin
