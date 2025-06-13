@@ -3,7 +3,7 @@ export const promptEdgeMap: Record<string, string[]> = {
   PROMPT_GENERADOR_CUENTOS: ['generate-story'],
   PROMPT_GENERADOR_PAGINAS: ['generate-image-pages'],
   PROMPT_CUENTO_PORTADA: ['generate-story', 'generate-cover'],
-  PROMPT_CUENTO_PAGINA: ['generate-image-pages'],
+  PROMPT_CUENTO_PAGINAS: ['generate-image-pages'],
   PROMPT_CREAR_MINIATURA_PERSONAJE: ['describe-and-sketch'],
   PROMPT_ESTILO_KAWAII: ['generate-cover-variant', 'generate-thumbnail-variant', 'generate-image-pages'],
   PROMPT_ESTILO_ACUARELADIGITAL: ['generate-cover-variant', 'generate-thumbnail-variant', 'generate-image-pages'],

@@ -37,7 +37,7 @@ const PreviewStep: React.FC = () => {
 
   const handleRegeneratePage = async (pageId: string, prompt: string) => {
     try {
-      await generatePageImage(pageId, prompt);
+      await generatePageImage(pageId);
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Imagen actualizada',
