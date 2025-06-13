@@ -146,13 +146,17 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const localBackup = localStorage.getItem(backupKey);
     const localDraft = !localBackup ? localStorage.getItem(mainKey) : null;
 
-    if (localBackup || localDraft) {
-      const raw = JSON.parse(localBackup || localDraft!);
-      const { state: localState, flow } = raw;
+    const loadFromSource = (source: any, fromDb = false) => {
+      const { state: localState, flow } = source;
+      
+      // Update the wizard flow store with the loaded state
       useWizardFlowStore.getState().setEstadoCompleto(flow);
+      
+      // Update local component state
       setCharacters(localState.characters || []);
       setStorySettings(localState.meta || INITIAL_STATE.meta);
       if (localState.designSettings) setDesignSettings(localState.designSettings);
+      
       if (localState.spreads) {
         const mapped = localState.spreads.map((p: any) => ({
           id: p.id,
@@ -163,41 +167,64 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }));
         setGeneratedPages(mapped);
       }
-      const etapaInicial = stepFromEstado(useWizardFlowStore.getState().estado);
+      
+      // Determine and set the initial step based on the loaded state
+      const etapaInicial = stepFromEstado(flow);
+      console.log('[Wizard] Setting initial step:', etapaInicial, 'from', fromDb ? 'database' : 'local storage');
       setCurrentStep(etapaInicial);
-      return;
+    };
+
+    if (localBackup || localDraft) {
+      try {
+        const raw = JSON.parse(localBackup || localDraft!);
+        loadFromSource(raw, false);
+        return;
+      } catch (e) {
+        console.error('Error parsing local draft:', e);
+        // Continue to load from DB if local parsing fails
+      }
     }
 
+    // Load from database
     storyService.getStoryDraft(storyId).then(draft => {
       const s = draft.story;
-      if (s.wizard_state) {
-        setEstadoCompleto(s.wizard_state);
-      } else {
-        useWizardFlowStore.getState().resetEstado();
-      }
-      if (draft.characters) setCharacters(draft.characters);
-      setStorySettings({
-        theme: s.theme || '',
-        targetAge: s.target_age || '',
-        literaryStyle: s.literary_style || '',
-        centralMessage: s.central_message || '',
-        additionalDetails: s.additional_details || '',
-      });
-      if (draft.design) {
-        setDesignSettings({
-          visualStyle: draft.design.visual_style || '',
-          colorPalette: draft.design.color_palette || '',
-        });
-      }
-      if (draft.pages) {
-        const mapped = draft.pages.map(p => ({
+      const wizardState = s.wizard_state || {
+        personajes: { estado: 'no_iniciada', personajesAsignados: 0 },
+        cuento: 'no_iniciada',
+        diseno: 'no_iniciada',
+        vistaPrevia: 'no_iniciada'
+      };
+
+      // Create a synthetic local state that matches what would be in localStorage
+      const localState = {
+        characters: draft.characters || [],
+        meta: {
+          title: s.title || '',
+          theme: s.theme || '',
+          targetAge: s.target_age || '',
+          literaryStyle: s.literary_style || '',
+          centralMessage: s.central_message || '',
+          additionalDetails: s.additional_details || '',
+          status: s.status || 'draft'
+        },
+        designSettings: draft.design ? {
+          visualStyle: draft.design.visual_style || 'default',
+          colorPalette: draft.design.color_palette || 'pastel_vibrant'
+        } : null,
+        spreads: draft.pages ? draft.pages.map((p: any) => ({
           id: p.id,
           pageNumber: p.page_number,
           text: p.text,
           imageUrl: p.image_url || '',
           prompt: p.prompt || ''
-        }));
-        setGeneratedPages(mapped);
+        })) : []
+      };
+
+      loadFromSource({ state: localState, flow: wizardState }, true);
+      
+      // If we had a wizard state, update the store with it
+      if (s.wizard_state) {
+        setEstadoCompleto(s.wizard_state);
       }
       const etapaInicial = stepFromEstado(useWizardFlowStore.getState().estado);
       setCurrentStep(etapaInicial);
