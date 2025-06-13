@@ -130,9 +130,38 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [characters, setPersonajes]);
 
   const stepFromEstado = (estado: EstadoFlujo): WizardStep => {
-    if (estado.personajes.estado !== 'completado') return 'characters';
-    if (estado.cuento !== 'completado') return 'story';
-    if (estado.diseno !== 'completado') return 'design';
+    console.log('[Wizard] Determining step from estado:', JSON.stringify(estado, null, 2));
+    
+    // Handle case where personajes is a string (old format)
+    const personajesEstado = typeof estado.personajes === 'string' 
+      ? estado.personajes 
+      : estado.personajes.estado;
+    
+    // Handle case where personajes is an object but estado is missing
+    const personajesCompleted = typeof personajesEstado === 'string' 
+      ? personajesEstado === 'completado' 
+      : false;
+    
+    console.log('[Wizard] personajesCompleted:', personajesCompleted);
+    console.log('[Wizard] cuento:', estado.cuento);
+    console.log('[Wizard] diseno:', estado.diseno);
+    
+    if (!personajesCompleted || personajesEstado === 'no_iniciada' || personajesEstado === 'borrador') {
+      console.log('[Wizard] Returning step: characters');
+      return 'characters';
+    }
+    
+    if (estado.cuento !== 'completado') {
+      console.log('[Wizard] Returning step: story');
+      return 'story';
+    }
+    
+    if (estado.diseno !== 'completado') {
+      console.log('[Wizard] Returning step: design');
+      return 'design';
+    }
+    
+    console.log('[Wizard] Returning step: preview');
     return 'preview';
   };
 
@@ -146,11 +175,39 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const localBackup = localStorage.getItem(backupKey);
     const localDraft = !localBackup ? localStorage.getItem(mainKey) : null;
 
+    const normalizeWizardState = (state: any) => {
+      // If state is already in the correct format, return it
+      if (state.personajes && typeof state.personajes === 'object') {
+        return state;
+      }
+      
+      // Convert from flat format to nested format if needed
+      return {
+        personajes: {
+          estado: state.personajes_estado || 'no_iniciada',
+          personajesAsignados: state.personajes_personajesAsignados || 0
+        },
+        cuento: state.cuento || 'no_iniciada',
+        diseno: state.diseno || 'no_iniciada',
+        vistaPrevia: state.vistaPrevia || 'no_iniciada'
+      };
+    };
+
     const loadFromSource = (source: any, fromDb = false) => {
-      const { state: localState, flow } = source;
+      const { state: localState, flow: rawFlow } = source;
+      
+      console.log('[Wizard] Raw flow state from source:', JSON.stringify(rawFlow, null, 2));
+      
+      // Normalize the wizard state structure
+      const normalizedFlow = normalizeWizardState(rawFlow);
+      console.log('[Wizard] Normalized flow state:', JSON.stringify(normalizedFlow, null, 2));
+      
+      // Log the current state before updating
+      console.log('[Wizard] Current store state before update:', 
+        JSON.stringify(useWizardFlowStore.getState().estado, null, 2));
       
       // Update the wizard flow store with the loaded state
-      useWizardFlowStore.getState().setEstadoCompleto(flow);
+      useWizardFlowStore.getState().setEstadoCompleto(normalizedFlow);
       
       // Update local component state
       setCharacters(localState.characters || []);
@@ -169,7 +226,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
       
       // Determine and set the initial step based on the loaded state
-      const etapaInicial = stepFromEstado(flow);
+      const etapaInicial = stepFromEstado(normalizedFlow);
       console.log('[Wizard] Setting initial step:', etapaInicial, 'from', fromDb ? 'database' : 'local storage');
       setCurrentStep(etapaInicial);
     };
