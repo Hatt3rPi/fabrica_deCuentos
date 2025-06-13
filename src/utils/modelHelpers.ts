@@ -27,7 +27,13 @@ export function isCompatibleModel(modelId: string, promptType: string): boolean 
   const modelType = getModelType(modelId);
   
   // Para prompts de imagen, solo permitir modelos de imagen
-  if (promptType === 'PROMPT_CUENTO_PORTADA' || promptType === 'PROMPT_CUENTO_PAGINA') {
+  if (
+    promptType === 'PROMPT_CUENTO_PORTADA' ||
+    promptType === 'PROMPT_CUENTO_PAGINA' ||
+    promptType === 'PROMPT_CREAR_MINIATURA_PERSONAJE' ||
+    promptType.startsWith('PROMPT_ESTILO_') ||
+    promptType.startsWith('PROMPT_VARIANTE_')
+  ) {
     return modelType === 'image';
   }
   

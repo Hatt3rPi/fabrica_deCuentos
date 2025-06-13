@@ -5,6 +5,9 @@ import { Prompt } from '../../types/prompts';
 import { aiProviderCatalog } from '../../constants/aiProviderCatalog';
 import ModelBadge from '../UI/ModelBadge';
 import { getModelType, isCompatibleModel } from '../../utils/modelHelpers';
+import { promptEdgeMap } from '../../constants/promptEdgeMap';
+import { openaiQualityOptions, openaiSizeOptions } from '../../constants/imageOptions';
+import { edgeFunctionColorMap } from '../../constants/edgeFunctionColors';
 
 interface PromptAccordionProps {
   prompt: Prompt;
@@ -32,6 +35,11 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
   const [endpoint, setEndpoint] = useState(prompt.endpoint || '');
   const [model, setModel] = useState(prompt.model || 'gpt-4o');
   const [isSaving, setIsSaving] = useState(false);
+  const [size, setSize] = useState('1024x1024');
+  const [quality, setQuality] = useState('standard');
+  const [width, setWidth] = useState('1024');
+  const [height, setHeight] = useState('1024');
+  const edgeFunctions = promptEdgeMap[prompt.type] || [];
 
   const modelToProvider: Record<string, string> = React.useMemo(() => {
     const map: Record<string, string> = {};
@@ -49,6 +57,17 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
     const modelInfo = aiProviderCatalog[provider as keyof typeof aiProviderCatalog].models[model];
     if (!modelInfo) return [] as string[];
     return Object.values(modelInfo.endpoints).filter(Boolean) as string[];
+  }, [model, modelToProvider]);
+
+  useEffect(() => {
+    const provider = modelToProvider[model];
+    if (provider === 'openai') {
+      setSize(openaiSizeOptions[model]?.[0] || '1024x1024');
+      setQuality(openaiQualityOptions[model]?.[0] || 'standard');
+    } else if (provider === 'flux') {
+      setWidth('1024');
+      setHeight('1024');
+    }
   }, [model, modelToProvider]);
 
   // Filtrar modelos compatibles con el tipo de prompt
@@ -72,6 +91,10 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
     setContent(prompt.content);
     setEndpoint(prompt.endpoint || '');
     setModel(prompt.model || 'gpt-4o');
+    setSize('1024x1024');
+    setQuality('standard');
+    setWidth('1024');
+    setHeight('1024');
   }, [prompt.content, prompt.endpoint, prompt.model]);
 
   const handleSave = async () => {
@@ -88,12 +111,25 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
         className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
       >
 
-        <span className="text-left">
-          <span className="font-bold">{prompt.type}</span>{' '}
-          <span className="text-sm italic font-normal">
-            (v{prompt.version}, modificado {formatRelativeTime(prompt.updated_at)})
+        <span className="text-left flex flex-col gap-1">
+          <span>
+            <span className="font-bold">{prompt.type}</span>{' '}
+            <span className="text-sm italic font-normal">
+              (v{prompt.version}, modificado {formatRelativeTime(prompt.updated_at)})
+            </span>
           </span>
-
+          {edgeFunctions.length > 0 && (
+            <span className="flex flex-wrap gap-1 mt-1">
+              {edgeFunctions.map((e) => (
+                <span
+                  key={e}
+                  className={`${edgeFunctionColorMap[e]?.base || 'bg-indigo-100 text-indigo-800'} text-xs px-2 py-0.5 rounded`}
+                >
+                  {e}
+                </span>
+              ))}
+            </span>
+          )}
         </span>
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
@@ -156,6 +192,59 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
                   </select>
                 </div>
               )}
+              {getModelType(model) === 'image' && (
+                <div className="grid grid-cols-2 gap-2">
+                  {modelToProvider[model] === 'openai' ? (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Tamaño</label>
+                        <select
+                          value={size}
+                          onChange={e => setSize(e.target.value)}
+                          className="w-full border rounded px-2 py-1 text-sm"
+                        >
+                          {openaiSizeOptions[model]?.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Calidad</label>
+                        <select
+                          value={quality}
+                          onChange={e => setQuality(e.target.value)}
+                          className="w-full border rounded px-2 py-1 text-sm"
+                        >
+                          {openaiQualityOptions[model]?.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Ancho</label>
+                        <input
+                          type="number"
+                          value={width}
+                          onChange={e => setWidth(e.target.value)}
+                          className="w-full border rounded px-2 py-1 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Alto</label>
+                        <input
+                          type="number"
+                          value={height}
+                          onChange={e => setHeight(e.target.value)}
+                          className="w-full border rounded px-2 py-1 text-sm"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -173,16 +262,20 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
               <>
                 <Button
                   variant="secondary"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setContent(prompt.content);
-                    setEndpoint(prompt.endpoint || '');
-                    setModel(prompt.model || 'gpt-4o');
-                  }}
-                  disabled={isSaving}
-                >
-                  Cancelar
-                </Button>
+                onClick={() => {
+                  setIsEditing(false);
+                  setContent(prompt.content);
+                  setEndpoint(prompt.endpoint || '');
+                  setModel(prompt.model || 'gpt-4o');
+                  setSize('1024x1024');
+                  setQuality('standard');
+                  setWidth('1024');
+                  setHeight('1024');
+                }}
+                disabled={isSaving}
+              >
+                Cancelar
+              </Button>
                 <Button onClick={handleSave} isLoading={isSaving}>
                   Guardar
                 </Button>
