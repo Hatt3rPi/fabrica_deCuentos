@@ -21,7 +21,7 @@ interface WizardContextType {
   setGeneratedPages: (pages: GeneratedPage[]) => void;
   isGenerating: boolean;
   setIsGenerating: (value: boolean) => void;
-  generatePageImage: (pageId: string, prompt: string) => Promise<void>;
+  generatePageImage: (pageId: string) => Promise<void>;
   nextStep: () => void;
   prevStep: () => void;
   canProceed: () => boolean;
@@ -107,13 +107,13 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [generatedPages, setGeneratedPages] = useState<GeneratedPage[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-  const generatePageImage = async (pageId: string, prompt: string) => {
+  const generatePageImage = async (pageId: string) => {
     if (!storyId) return;
     setIsGenerating(true);
     try {
-      const imageUrl = await storyService.generatePageImage(storyId, pageId, prompt);
+      const imageUrl = await storyService.generatePageImage(storyId, pageId);
       setGeneratedPages(prev => prev.map(p =>
-        p.id === pageId ? { ...p, imageUrl, prompt } : p
+        p.id === pageId ? { ...p, imageUrl } : p
       ));
     } catch (err) {
       console.error('Error regenerating page image:', err);

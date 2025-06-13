@@ -11,12 +11,11 @@ Función que genera o regenera la ilustración de una página del cuento.
 ```json
 {
   "story_id": "<uuid>",
-  "page_id": "<uuid>",
-  "prompt": "Escena detallada de la página"
+  "page_id": "<uuid>"
 }
 ```
-
-Todos los campos son obligatorios.
+Todos los campos son obligatorios. El texto de la página y el estilo se obtienen
+automáticamente desde la base de datos.
 
 ## Response
 
@@ -29,7 +28,7 @@ y se actualiza el registro correspondiente en `story_pages.image_url`.
 
 ## Uso desde el frontend
 
-La función `storyService.generatePageImage(storyId, pageId, prompt)` envía esta
+La función `storyService.generatePageImage(storyId, pageId)` envía esta
 petición incluyendo el identificador de la historia. El `WizardContext` expone
-`generatePageImage(pageId, prompt)` para actualizar o crear la imagen de la página
+`generatePageImage(pageId)` para actualizar o crear la imagen de la página
 mostrada en el paso de vista previa.

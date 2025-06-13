@@ -39,8 +39,7 @@ const WizardNav: React.FC = () => {
         if (page.pageNumber === 0) continue;
         const url = await storyService.generatePageImage(
           storyId,
-          page.id,
-          page.prompt
+          page.id
         );
         setGeneratedPages(prev =>
           prev.map(p => (p.id === page.id ? { ...p, imageUrl: url } : p))
