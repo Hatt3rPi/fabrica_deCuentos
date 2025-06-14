@@ -12,6 +12,43 @@ trigger: always_on
 - Formato de nombre del archivo: `{timestamp} {Categoría} {Nombre}.md`  
   Ejemplo: `20250520T1400 feature/Selector de edad.md`
 
+## 🔄 Carga Automática de Issues en Linear
+
+### Regla de Carga Automática
+1. **Al crear un issue**:
+   - Generar automáticamente en Linear al mismo tiempo que se crea el archivo local
+   - Usar el título del archivo como título del issue
+   - Incluir todo el contenido del archivo en la descripción
+   - Asignar el equipo "Lacuenteria" por defecto
+   - Establecer estado "Todo" como predeterminado
+
+2. **Estructura de la descripción**:
+   - Incluir encabezados claros (Contexto, Objetivo, Criterios, etc.)
+   - Mantener el formato markdown
+   - Incluir secciones de archivos afectados
+   - Agregar etiquetas de contexto (feature, bug, improvement)
+
+3. **Metadatos**:
+   - Incluir enlace al issue de Linear en el archivo local
+   - Agregar ID de Linear al nombre del archivo local
+   - Registrar fecha de creación y última actualización
+
+4. **Manejo de errores**:
+   - Si falla la carga a Linear, notificar al usuario
+   - Mantener el archivo local en caso de error
+   - Proporcionar instrucciones para carga manual
+
+5. **Comandos útiles**:
+   - `npx linear-cli issues list` - Ver issues existentes
+   - `npx linear-cli issues create` - Crear issue manualmente
+   - `npx linear-cli issues update` - Actualizar issue existente
+
+6. **Variables de entorno requeridas**:
+   ```bash
+   LINEAR_API_KEY=lin_api_...
+   LINEAR_TEAM_ID=c840ac05-fafa-438c-8a98-c44c61a74002
+   LINEAR_DEFAULT_STATE=45f4cf5a-c2b9-41de-a70c-9629c438ff95
+
 ---
 
 ## 🗂 Categorías disponibles
@@ -132,4 +169,3 @@ EXTRAS:
 ---
 
 Este archivo define las reglas base y el formato que debe seguir el agente para generar issues limpios, claros y alineados a las necesidades del equipo de desarrollo.
-
