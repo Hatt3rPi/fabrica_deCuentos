@@ -34,6 +34,8 @@ const { skipCleanup, setSkipCleanup } = useWizardFlowStore();
 
 Al navegar para editar un personaje se llama `setSkipCleanup(true)` y al volver se restablece a `false`.
 
+El componente `Wizard` establece el identificador de la historia con `setStoryId(storyId)` usando el parámetro de la ruta. Así los registros en consola siempre incluyen el ID correcto.
+
 ## Registro de operaciones
 
 Las funciones de autosave y limpieza escriben mensajes en la consola para

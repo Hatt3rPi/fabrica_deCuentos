@@ -8,6 +8,7 @@
 - Nueva función `generate-image-pages` para generar o regenerar ilustraciones de páginas y edición en `PreviewStep`. Documentado en `docs/tech/generate-image-pages.md` y `docs/components/PreviewStep.md`.
 - Se agregó registro por consola en autosave y funciones de limpieza para conocer el resultado de las operaciones en Supabase.
 - Los mensajes del flujo del wizard ahora incluyen el `story_id` (últimos seis caracteres) en lugar de `------`.
+- El componente `Wizard` asigna el `storyId` del parámetro de ruta al store para que los registros siempre muestren ese identificador.
 - `generate-image-pages` ahora aplica automáticamente el estilo seleccionado y las imágenes de referencia de los personajes.
 - Corregido el parámetro `quality` de OpenAI cambiando `hd` por `high` en las funciones de generación de imágenes.
 - Al editar prompts de imagen se pueden ajustar tamaño y calidad (OpenAI) o ancho y alto (Flux).

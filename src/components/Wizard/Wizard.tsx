@@ -16,7 +16,13 @@ const Wizard: React.FC = () => {
   const { storyId } = useParams();
   const navigate = useNavigate();
   const { supabase } = useAuth();
-  const { skipCleanup, setSkipCleanup } = useWizardFlowStore();
+  const { skipCleanup, setSkipCleanup, setStoryId } = useWizardFlowStore();
+
+  useEffect(() => {
+    if (storyId) {
+      setStoryId(storyId);
+    }
+  }, [storyId, setStoryId]);
 
   useEffect(() => {
     setSkipCleanup(false);
