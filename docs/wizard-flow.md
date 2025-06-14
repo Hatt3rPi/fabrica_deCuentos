@@ -38,4 +38,6 @@ Al navegar para editar un personaje se llama `setSkipCleanup(true)` y al volver 
 
 Las funciones de autosave y limpieza escriben mensajes en la consola para
 informar cuándo se envían datos a Supabase y si la operación fue exitosa
-o produjo un error. Esto facilita depurar problemas de sincronización.
+o produjo un error. En cada mensaje se muestra el identificador de la
+historia (los últimos seis caracteres) para distinguir fácilmente qué
+borrador está en uso. Esto facilita depurar problemas de sincronización.

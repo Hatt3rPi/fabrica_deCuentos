@@ -7,6 +7,7 @@
 - Portada principal desbloquea el paso de Diseño sin esperar las variantes. Los mensajes de `stories.loader` ahora se usan en el `OverlayLoader` mientras se genera la portada.
 - Nueva función `generate-image-pages` para generar o regenerar ilustraciones de páginas y edición en `PreviewStep`. Documentado en `docs/tech/generate-image-pages.md` y `docs/components/PreviewStep.md`.
 - Se agregó registro por consola en autosave y funciones de limpieza para conocer el resultado de las operaciones en Supabase.
+- Los mensajes del flujo del wizard ahora incluyen el `story_id` (últimos seis caracteres) en lugar de `------`.
 - `generate-image-pages` ahora aplica automáticamente el estilo seleccionado y las imágenes de referencia de los personajes.
 - Corregido el parámetro `quality` de OpenAI cambiando `hd` por `high` en las funciones de generación de imágenes.
 - Al editar prompts de imagen se pueden ajustar tamaño y calidad (OpenAI) o ancho y alto (Flux).

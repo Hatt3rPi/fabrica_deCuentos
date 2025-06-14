@@ -13,7 +13,7 @@ export interface EstadoFlujo {
 }
 
 const logEstado = (estado: EstadoFlujo, accion: string, id?: string | null) => {
-  const suffix = id?.slice(-6) || '------';
+  const suffix = id ? id.slice(-6) : 'no-id';
   console.log(`[WizardFlow:${suffix}] ${accion}`, {
     personajes: estado.personajes.estado,
     cuento: estado.cuento,
