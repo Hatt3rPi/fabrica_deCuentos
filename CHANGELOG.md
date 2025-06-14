@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Estado `skipCleanup` en `wizardFlowStore` reemplaza el uso de `sessionStorage.skipWizardCleanup` y evita limpiar el borrador al editar personajes. Documentado en `docs/wizard-flow.md`.
 - Vista de Prompts muestra badges con las Edge Functions que utilizan cada template y permite filtrarlos por función. Documentado en `docs/components/PromptAccordion.md`.
 - Los badges de Edge Function utilizan colores pasteles distintos para cada tipo.
 - Portada principal desbloquea el paso de Diseño sin esperar las variantes. Los mensajes de `stories.loader` ahora se usan en el `OverlayLoader` mientras se genera la portada.

@@ -25,7 +25,9 @@ const logEstado = (estado: EstadoFlujo, accion: string, id?: string | null) => {
 interface WizardFlowStore {
   currentStoryId: string | null;
   estado: EstadoFlujo;
+  skipCleanup: boolean;
   setStoryId: (id: string | null) => void;
+  setSkipCleanup: (value: boolean) => void;
   setPersonajes: (count: number) => void;
   avanzarEtapa: (etapa: keyof EstadoFlujo) => void;
   regresarEtapa: (etapa: keyof EstadoFlujo) => void;
@@ -44,9 +46,11 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
   (set, get) => ({
       currentStoryId: null,
       estado: initialFlowState,
+      skipCleanup: false,
       setStoryId: (id) => {
         set({ currentStoryId: id });
       },
+      setSkipCleanup: (value) => set({ skipCleanup: value }),
       setPersonajes: (count) =>
         set((state) => {
           const nuevoEstado = { ...state.estado };
@@ -110,7 +114,7 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
         }),
       resetEstado: () => {
         logEstado(initialFlowState, 'resetEstado', get().currentStoryId);
-        set({ estado: initialFlowState });
+        set({ estado: initialFlowState, skipCleanup: false });
       }
     })
 );

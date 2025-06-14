@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWizard } from '../../context/WizardContext';
 import { useAuth } from '../../context/AuthContext';
+import { useWizardFlowStore } from '../../stores/wizardFlowStore';
 import CharactersStep from './steps/CharactersStep';
 import StoryStep from './steps/StoryStep';
 import DesignStep from './steps/DesignStep';
@@ -15,9 +16,10 @@ const Wizard: React.FC = () => {
   const { storyId } = useParams();
   const navigate = useNavigate();
   const { supabase } = useAuth();
+  const { skipCleanup, setSkipCleanup } = useWizardFlowStore();
 
   useEffect(() => {
-    sessionStorage.removeItem('skipWizardCleanup');
+    setSkipCleanup(false);
   }, []);
 
   useEffect(() => {
@@ -30,9 +32,7 @@ const Wizard: React.FC = () => {
     return () => {
       const cleanup = async () => {
         if (!storyId) return;
-        const skip = sessionStorage.getItem('skipWizardCleanup');
-        sessionStorage.removeItem('skipWizardCleanup');
-        if (skip === 'true') return;
+        if (skipCleanup) return;
         const { data } = await supabase
           .from('story_characters')
           .select('character_id')
@@ -43,11 +43,11 @@ const Wizard: React.FC = () => {
       };
       cleanup();
     };
-  }, [storyId, supabase]);
+  }, [storyId, supabase, skipCleanup]);
 
   useEffect(() => {
     const handleBeforeUnload = async () => {
-      if (!storyId) return;
+      if (!storyId || skipCleanup) return;
       const { data } = await supabase
         .from('story_characters')
         .select('character_id')
@@ -61,7 +61,7 @@ const Wizard: React.FC = () => {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [storyId, supabase]);
+  }, [storyId, supabase, skipCleanup]);
 
   const renderStep = () => {
     switch (currentStep) {

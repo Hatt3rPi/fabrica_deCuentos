@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useWizard } from '../../../context/WizardContext';
+import { useWizardFlowStore } from '../../../stores/wizardFlowStore';
 import { useCharacterStore } from '../../../stores/characterStore';
 import CharacterCard from '../../Character/CharacterCard';
 import CharacterSelectionModal from '../../Modal/CharacterSelectionModal';
@@ -14,6 +15,7 @@ const CharactersStep: React.FC = () => {
   const navigate = useNavigate();
   const { characters, setCharacters } = useWizard();
   const { setCharacters: setStoreCharacters } = useCharacterStore();
+  const { setSkipCleanup } = useWizardFlowStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -69,7 +71,7 @@ const CharactersStep: React.FC = () => {
   };
 
   const handleEdit = (id: string) => {
-    sessionStorage.setItem('skipWizardCleanup', 'true');
+    setSkipCleanup(true);
     navigate(`/nuevo-cuento/personaje/${id}/editar`);
   };
 
