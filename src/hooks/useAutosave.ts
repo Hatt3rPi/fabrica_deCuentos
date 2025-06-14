@@ -73,8 +73,11 @@ export const useAutosave = (
               .from('characters')
               .upsert(characterData)
               .eq('id', character.id);
-
-            if (characterError) throw characterError;
+            if (characterError) {
+              console.error('[useAutosave] upsert character error:', characterError);
+              throw characterError;
+            }
+            console.log('[useAutosave] character saved:', character.id);
           }
         }
 
@@ -89,8 +92,11 @@ export const useAutosave = (
           updated_at: new Date().toISOString(),
           status: 'draft'
         });
-
-        if (storyError) throw storyError;
+        if (storyError) {
+          console.error('[useAutosave] persistStory error:', storyError);
+          throw storyError;
+        }
+        console.log('[useAutosave] story persisted:', currentStoryId);
 
         // Reset retry count on successful save
         retryCountRef.current = 0;
