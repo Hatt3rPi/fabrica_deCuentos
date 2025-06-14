@@ -31,6 +31,8 @@ interface WizardFlowStore {
   regresarEtapa: (etapa: keyof EstadoFlujo) => void;
   setEstadoCompleto: (estado: EstadoFlujo) => void;
   resetEstado: () => void;
+  skipCleanup: boolean;
+  setSkipCleanup: (value: boolean) => void;
 }
 
 export const initialFlowState: EstadoFlujo = {
@@ -44,6 +46,7 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
   (set, get) => ({
       currentStoryId: null,
       estado: initialFlowState,
+      skipCleanup: false,
       setStoryId: (id) => {
         set({ currentStoryId: id });
       },
@@ -111,7 +114,8 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
       resetEstado: () => {
         logEstado(initialFlowState, 'resetEstado', get().currentStoryId);
         set({ estado: initialFlowState });
-      }
+      },
+      setSkipCleanup: (value) => set({ skipCleanup: value })
     })
 );
 

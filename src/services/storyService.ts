@@ -41,13 +41,23 @@ export const storyService = {
     if (data) await cleanupStorage(data as string[]);
   },
 
-  persistStory(id: string, fields: Partial<import('../types/supabase').Database['public']['Tables']['stories']['Update']>) {
+  async persistStory(
+    id: string,
+    fields: Partial<import('../types/supabase').Database['public']['Tables']['stories']['Update']>
+  ) {
     const { estado } = useWizardFlowStore.getState();
-    return supabase
+    console.log('[storyService] persistStory ->', id);
+    const result = await supabase
       .from('stories')
       .update({ ...fields, wizard_state: estado })
       .eq('id', id)
       .single();
+    if (result.error) {
+      console.error('[storyService] persistStory error:', result.error);
+    } else {
+      console.log('[storyService] persistStory success');
+    }
+    return result;
   },
 
   async generateStory(params: {
