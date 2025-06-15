@@ -85,11 +85,11 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   useEffect(() => {
     return () => {
-      resetEstado();
+      // resetEstado(); // REMOVED: Don't reset wizard state on unmount to preserve character assignments
       setStoryId(null);
       localStorage.removeItem('current_story_draft_id');
     };
-  }, [resetEstado, setStoryId]);
+  }, [setStoryId]);
   const [state, setState] = useState<WizardState>(INITIAL_STATE);
   const [currentStep, setCurrentStep] = useState<WizardStep>('characters');
   const [characters, setCharacters] = useState<Character[]>([]);
