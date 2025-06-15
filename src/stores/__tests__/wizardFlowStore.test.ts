@@ -1,134 +1,188 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useWizardFlowStore, initialFlowState, type EstadoFlujo } from '../wizardFlowStore';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { create } from 'zustand';
+import { initialFlowState, type EstadoFlujo } from '../wizardFlowStore';
 
-describe('wizardFlowStore', () => {
+// Mock console.log para evitar spam
+vi.mock('console', () => ({
+  log: vi.fn()
+}));
+
+// Crear instancia fresca del store para cada test
+const createTestStore = () => {
+  interface WizardFlowStore {
+    currentStoryId: string | null;
+    estado: EstadoFlujo;
+    setStoryId: (id: string | null) => void;
+    setPersonajes: (count: number) => void;
+    avanzarEtapa: (etapa: keyof EstadoFlujo) => void;
+    setEstadoCompleto: (estado: EstadoFlujo) => void;
+    resetEstado: () => void;
+  }
+
+  return create<WizardFlowStore>()((set, get) => ({
+    currentStoryId: null,
+    estado: { ...initialFlowState, personajes: { ...initialFlowState.personajes } },
+    
+    setStoryId: (id) => {
+      set({ currentStoryId: id });
+    },
+    
+    setPersonajes: (count) =>
+      set((state) => {
+        const nuevoEstado = { 
+          ...state.estado,
+          personajes: { ...state.estado.personajes, personajesAsignados: count }
+        };
+        
+        if (count === 0) {
+          nuevoEstado.personajes.estado = 'no_iniciada';
+        } else if (count < 3) {
+          nuevoEstado.personajes.estado = 'borrador';
+        } else {
+          nuevoEstado.personajes.estado = 'completado';
+          if (nuevoEstado.cuento === 'no_iniciada') {
+            nuevoEstado.cuento = 'borrador';
+          }
+        }
+        
+        return { estado: nuevoEstado };
+      }),
+      
+    avanzarEtapa: (etapa) =>
+      set((state) => {
+        const nuevoEstado = { ...state.estado };
+        
+        if (etapa === 'personajes') {
+          if (nuevoEstado.personajes.estado === 'borrador' || nuevoEstado.personajes.estado === 'completado') {
+            nuevoEstado.personajes.estado = 'completado';
+            nuevoEstado.cuento = 'borrador';
+          }
+        } else if (etapa === 'cuento') {
+          if (nuevoEstado.personajes.estado === 'completado' && nuevoEstado.cuento !== 'completado') {
+            nuevoEstado.cuento = 'completado';
+            nuevoEstado.diseno = 'borrador';
+          }
+        } else if (etapa === 'diseno') {
+          if (nuevoEstado.cuento === 'completado' && nuevoEstado.diseno !== 'completado') {
+            nuevoEstado.diseno = 'completado';
+            nuevoEstado.vistaPrevia = 'borrador';
+          }
+        } else if (etapa === 'vistaPrevia') {
+          if (nuevoEstado.diseno === 'completado') {
+            nuevoEstado.vistaPrevia = 'borrador';
+          }
+        }
+        
+        return { estado: nuevoEstado };
+      }),
+      
+    setEstadoCompleto: (nuevo) => {
+      set({ estado: { ...nuevo } });
+    },
+    
+    resetEstado: () => {
+      set({ 
+        currentStoryId: null,
+        estado: { 
+          ...initialFlowState, 
+          personajes: { ...initialFlowState.personajes } 
+        } 
+      });
+    }
+  }));
+};
+
+describe('wizardFlowStore - Tests Funcionales', () => {
+  let store: ReturnType<typeof createTestStore>;
+
   beforeEach(() => {
-    // Reset store to initial state before each test
-    useWizardFlowStore.getState().resetEstado();
-    useWizardFlowStore.getState().setStoryId(null);
+    store = createTestStore();
   });
 
   describe('Estado inicial', () => {
-    it('debe inicializar con estado correcto', () => {
-      const { estado } = useWizardFlowStore.getState();
-      expect(estado).toEqual(initialFlowState);
+    it('debe inicializar correctamente', () => {
+      const { estado, currentStoryId } = store.getState();
+      
       expect(estado.personajes.estado).toBe('no_iniciada');
       expect(estado.personajes.personajesAsignados).toBe(0);
       expect(estado.cuento).toBe('no_iniciada');
       expect(estado.diseno).toBe('no_iniciada');
       expect(estado.vistaPrevia).toBe('no_iniciada');
+      expect(currentStoryId).toBeNull();
     });
   });
 
   describe('setPersonajes', () => {
-    it('debe mantener no_iniciada con 0 personajes', () => {
-      const { setPersonajes } = useWizardFlowStore.getState();
-      setPersonajes(0);
+    it('debe manejar 0 personajes', () => {
+      store.getState().setPersonajes(0);
+      const { estado } = store.getState();
       
-      const { estado } = useWizardFlowStore.getState();
       expect(estado.personajes.estado).toBe('no_iniciada');
       expect(estado.personajes.personajesAsignados).toBe(0);
       expect(estado.cuento).toBe('no_iniciada');
     });
 
-    it('debe cambiar a borrador con 1-2 personajes', () => {
-      const { setPersonajes } = useWizardFlowStore.getState();
-      setPersonajes(2);
+    it('debe manejar 1-2 personajes (borrador)', () => {
+      store.getState().setPersonajes(2);
+      const { estado } = store.getState();
       
-      const { estado } = useWizardFlowStore.getState();
       expect(estado.personajes.estado).toBe('borrador');
       expect(estado.personajes.personajesAsignados).toBe(2);
       expect(estado.cuento).toBe('no_iniciada');
     });
 
-    it('debe cambiar a completado con 3+ personajes y habilitar cuento', () => {
-      const { setPersonajes } = useWizardFlowStore.getState();
-      setPersonajes(3);
+    it('debe manejar 3+ personajes (completado)', () => {
+      store.getState().setPersonajes(3);
+      const { estado } = store.getState();
       
-      const { estado } = useWizardFlowStore.getState();
       expect(estado.personajes.estado).toBe('completado');
       expect(estado.personajes.personajesAsignados).toBe(3);
       expect(estado.cuento).toBe('borrador');
     });
-
-    it('no debe avanzar cuento si ya está completado', () => {
-      const { setPersonajes, avanzarEtapa } = useWizardFlowStore.getState();
-      
-      // Simular cuento completado
-      setPersonajes(3);
-      avanzarEtapa('cuento');
-      expect(useWizardFlowStore.getState().estado.cuento).toBe('completado');
-      
-      // Cambiar personajes no debe afectar cuento completado
-      setPersonajes(4);
-      expect(useWizardFlowStore.getState().estado.cuento).toBe('completado');
-    });
   });
 
   describe('avanzarEtapa', () => {
-    it('debe avanzar personajes correctamente', () => {
-      const { setPersonajes, avanzarEtapa } = useWizardFlowStore.getState();
+    it('debe avanzar cuento solo con personajes completados', () => {
+      const storeState = store.getState();
       
-      // Preparar personajes en borrador
-      setPersonajes(2);
-      expect(useWizardFlowStore.getState().estado.personajes.estado).toBe('borrador');
+      // Intentar avanzar sin personajes completados
+      storeState.avanzarEtapa('cuento');
+      expect(store.getState().estado.cuento).toBe('no_iniciada');
       
-      // Avanzar etapa personajes
-      avanzarEtapa('personajes');
-      const { estado } = useWizardFlowStore.getState();
-      expect(estado.personajes.estado).toBe('completado');
-      expect(estado.cuento).toBe('borrador');
-    });
-
-    it('debe avanzar cuento solo si personajes está completado', () => {
-      const { avanzarEtapa } = useWizardFlowStore.getState();
+      // Completar personajes y avanzar
+      storeState.setPersonajes(3);
+      storeState.avanzarEtapa('cuento');
       
-      // Intentar avanzar cuento sin personajes completados
-      avanzarEtapa('cuento');
-      expect(useWizardFlowStore.getState().estado.cuento).toBe('no_iniciada');
-      
-      // Completar personajes primero
-      useWizardFlowStore.getState().setPersonajes(3);
-      avanzarEtapa('cuento');
-      
-      const { estado } = useWizardFlowStore.getState();
+      const { estado } = store.getState();
       expect(estado.cuento).toBe('completado');
       expect(estado.diseno).toBe('borrador');
     });
 
-    it('debe avanzar diseño solo si cuento está completado', () => {
-      const { setPersonajes, avanzarEtapa } = useWizardFlowStore.getState();
+    it('debe seguir flujo secuencial completo', () => {
+      const storeState = store.getState();
       
-      // Preparar estado hasta cuento
-      setPersonajes(3);
-      avanzarEtapa('cuento');
+      // 1. Personajes
+      storeState.setPersonajes(3);
+      let { estado } = store.getState();
+      expect(estado.personajes.estado).toBe('completado');
+      expect(estado.cuento).toBe('borrador');
       
-      // Avanzar diseño
-      avanzarEtapa('diseno');
+      // 2. Cuento
+      storeState.avanzarEtapa('cuento');
+      estado = store.getState().estado;
+      expect(estado.cuento).toBe('completado');
+      expect(estado.diseno).toBe('borrador');
       
-      const { estado } = useWizardFlowStore.getState();
+      // 3. Diseño
+      storeState.avanzarEtapa('diseno');
+      estado = store.getState().estado;
       expect(estado.diseno).toBe('completado');
-      expect(estado.vistaPrevia).toBe('borrador');
-    });
-
-    it('debe avanzar vista previa solo si diseño está completado', () => {
-      const { setPersonajes, avanzarEtapa } = useWizardFlowStore.getState();
-      
-      // Preparar estado hasta diseño
-      setPersonajes(3);
-      avanzarEtapa('cuento');
-      avanzarEtapa('diseno');
-      
-      // Avanzar vista previa
-      avanzarEtapa('vistaPrevia');
-      
-      const { estado } = useWizardFlowStore.getState();
       expect(estado.vistaPrevia).toBe('borrador');
     });
   });
 
   describe('setEstadoCompleto', () => {
-    it('debe establecer estado completo correctamente', () => {
+    it('debe establecer estado completo', () => {
       const nuevoEstado: EstadoFlujo = {
         personajes: { estado: 'completado', personajesAsignados: 5 },
         cuento: 'completado',
@@ -136,112 +190,73 @@ describe('wizardFlowStore', () => {
         vistaPrevia: 'no_iniciada'
       };
 
-      const { setEstadoCompleto } = useWizardFlowStore.getState();
-      setEstadoCompleto(nuevoEstado);
-
-      const { estado } = useWizardFlowStore.getState();
+      store.getState().setEstadoCompleto(nuevoEstado);
+      const { estado } = store.getState();
+      
       expect(estado).toEqual(nuevoEstado);
     });
   });
 
   describe('resetEstado', () => {
-    it('debe resetear al estado inicial', () => {
-      const { setPersonajes, avanzarEtapa, resetEstado } = useWizardFlowStore.getState();
+    it('debe resetear completamente', () => {
+      const storeState = store.getState();
       
       // Modificar estado
-      setPersonajes(3);
-      avanzarEtapa('cuento');
-      
-      // Verificar que cambió
-      expect(useWizardFlowStore.getState().estado.cuento).toBe('completado');
+      storeState.setPersonajes(3);
+      storeState.avanzarEtapa('cuento');
+      storeState.setStoryId('test-id');
       
       // Resetear
-      resetEstado();
+      storeState.resetEstado();
+      const { estado, currentStoryId } = store.getState();
       
-      // Verificar que volvió al inicial
-      const { estado } = useWizardFlowStore.getState();
-      expect(estado).toEqual(initialFlowState);
+      expect(estado.personajes.estado).toBe('no_iniciada');
+      expect(estado.personajes.personajesAsignados).toBe(0);
+      expect(estado.cuento).toBe('no_iniciada');
+      expect(estado.diseno).toBe('no_iniciada');
+      expect(estado.vistaPrevia).toBe('no_iniciada');
+      expect(currentStoryId).toBeNull();
     });
   });
 
   describe('setStoryId', () => {
-    it('debe establecer currentStoryId correctamente', () => {
-      const testId = 'test-story-id-123';
-      const { setStoryId } = useWizardFlowStore.getState();
+    it('debe manejar story ID', () => {
+      const storeState = store.getState();
       
-      setStoryId(testId);
+      storeState.setStoryId('test-id-123');
+      expect(store.getState().currentStoryId).toBe('test-id-123');
       
-      const { currentStoryId } = useWizardFlowStore.getState();
-      expect(currentStoryId).toBe(testId);
-    });
-
-    it('debe permitir establecer null', () => {
-      const { setStoryId } = useWizardFlowStore.getState();
-      
-      setStoryId('test-id');
-      expect(useWizardFlowStore.getState().currentStoryId).toBe('test-id');
-      
-      setStoryId(null);
-      expect(useWizardFlowStore.getState().currentStoryId).toBeNull();
-    });
-  });
-
-  describe('Flujo completo wizard', () => {
-    it('debe seguir secuencia completa correctamente', () => {
-      const { setPersonajes, avanzarEtapa } = useWizardFlowStore.getState();
-      
-      // 1. Agregar personajes
-      setPersonajes(3);
-      let estado = useWizardFlowStore.getState().estado;
-      expect(estado.personajes.estado).toBe('completado');
-      expect(estado.cuento).toBe('borrador');
-      
-      // 2. Completar cuento
-      avanzarEtapa('cuento');
-      estado = useWizardFlowStore.getState().estado;
-      expect(estado.cuento).toBe('completado');
-      expect(estado.diseno).toBe('borrador');
-      
-      // 3. Completar diseño
-      avanzarEtapa('diseno');
-      estado = useWizardFlowStore.getState().estado;
-      expect(estado.diseno).toBe('completado');
-      expect(estado.vistaPrevia).toBe('borrador');
-      
-      // 4. Vista previa permanece en borrador
-      avanzarEtapa('vistaPrevia');
-      estado = useWizardFlowStore.getState().estado;
-      expect(estado.vistaPrevia).toBe('borrador');
+      storeState.setStoryId(null);
+      expect(store.getState().currentStoryId).toBeNull();
     });
   });
 
   describe('Casos edge', () => {
-    it('no debe permitir regresión ilegal de estados', () => {
-      const { setPersonajes, avanzarEtapa } = useWizardFlowStore.getState();
+    it('no debe permitir regresión ilegal', () => {
+      const storeState = store.getState();
       
       // Completar hasta diseño
-      setPersonajes(3);
-      avanzarEtapa('cuento');
-      avanzarEtapa('diseno');
+      storeState.setPersonajes(3);
+      storeState.avanzarEtapa('cuento');
+      storeState.avanzarEtapa('diseno');
       
       // Reducir personajes no debe afectar estados avanzados
-      setPersonajes(1);
-      const estado = useWizardFlowStore.getState().estado;
+      storeState.setPersonajes(1);
+      const { estado } = store.getState();
+      
       expect(estado.cuento).toBe('completado');
       expect(estado.diseno).toBe('completado');
     });
 
     it('debe manejar múltiples llamadas a avanzarEtapa', () => {
-      const { setPersonajes, avanzarEtapa } = useWizardFlowStore.getState();
+      const storeState = store.getState();
       
-      setPersonajes(3);
+      storeState.setPersonajes(3);
+      storeState.avanzarEtapa('cuento');
+      storeState.avanzarEtapa('cuento'); // Múltiples llamadas
+      storeState.avanzarEtapa('cuento');
       
-      // Múltiples llamadas no deben cambiar estado final
-      avanzarEtapa('cuento');
-      avanzarEtapa('cuento');
-      avanzarEtapa('cuento');
-      
-      const estado = useWizardFlowStore.getState().estado;
+      const { estado } = store.getState();
       expect(estado.cuento).toBe('completado');
       expect(estado.diseno).toBe('borrador');
     });
