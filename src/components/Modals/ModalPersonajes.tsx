@@ -17,6 +17,7 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isContinuing, setIsContinuing] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -97,8 +98,9 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
   };
 
   const handleContinue = async () => {
-    if (selectedCharacters.length === 0) return;
+    if (selectedCharacters.length === 0 || isContinuing) return;
 
+    setIsContinuing(true);
     try {
       // Create new story draft
       const { data: story, error: storyError } = await supabase
@@ -114,22 +116,27 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
 
       if (storyError) throw storyError;
 
-      // Link selected characters to story
-      const { error: linkError } = await supabase
-        .from('story_characters')
-        .insert(
-          selectedCharacters.map(characterId => ({
-            story_id: story.id,
-            character_id: characterId
-          }))
-        );
-
-      if (linkError) throw linkError;
+      // Link selected characters to story using safe database function
+      for (const characterId of selectedCharacters) {
+        const { error: linkError } = await supabase.rpc('link_character_to_story', {
+          p_story_id: story.id,
+          p_character_id: characterId,
+          p_user_id: user?.id
+        });
+        
+        if (linkError) {
+          console.error('Error linking character:', linkError);
+          throw linkError;
+        }
+      }
 
       onClose();
       navigate(`/wizard/${story.id}`);
     } catch (error) {
       console.error('Error creating story:', error);
+      alert('Error al crear la historia. Por favor, inténtalo de nuevo.');
+    } finally {
+      setIsContinuing(false);
     }
   };
 
@@ -233,10 +240,17 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
         <div className="p-6 border-t border-gray-200">
           <Button
             onClick={handleContinue}
-            disabled={selectedCharacters.length === 0}
+            disabled={selectedCharacters.length === 0 || isContinuing}
             className="w-full"
           >
-            Continuar
+            {isContinuing ? (
+              <div className="flex items-center gap-2">
+                <Loader className="w-4 h-4 animate-spin" />
+                Creando historia...
+              </div>
+            ) : (
+              'Continuar'
+            )}
           </Button>
         </div>
       </div>

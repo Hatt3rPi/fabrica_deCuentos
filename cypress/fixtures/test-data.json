@@ -7,6 +7,9 @@
     "name": "Sheldon el tester",
     "age": "5 años",
     "description": "Joven genio que se encarga de probar la aplicación"
+  },
+  "story": {
+    "theme": "Una aventura mágica en un bosque encantado donde Sheldon descubre poderes especiales para resolver problemas matemáticos y ayuda a los animales del bosque con sus conocimientos científicos."
   }
 }
 

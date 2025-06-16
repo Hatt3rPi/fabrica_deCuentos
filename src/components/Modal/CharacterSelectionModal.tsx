@@ -48,26 +48,34 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
     setIsLoading(false);
   };
 
+  const [isLinking, setIsLinking] = useState<string | null>(null);
+
   const linkCharacter = async (characterId: string) => {
+    if (isLinking) return false; // Prevent multiple simultaneous requests
+    
+    setIsLinking(characterId);
     try {
-      // Insertar directamente en la tabla de relación
-      const { error } = await supabase
-        .from('story_characters')
-        .insert({ 
-          story_id: storyId, 
-          character_id: characterId 
-        });
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      console.log('Linking character:', { storyId, characterId, userId: user.id });
+
+      // Usar función segura de base de datos que maneja duplicados
+      const { error } = await supabase.rpc('link_character_to_story', {
+        p_story_id: storyId,
+        p_character_id: characterId,
+        p_user_id: user.id
+      });
 
       if (error) {
-        // Si es un error de duplicado, no es un error crítico
-        if (error.code === '23505') {
-          console.log('El personaje ya está asociado a esta historia');
-          onCharacterAdded();
-          onClose();
-          return true;
-        }
+        console.error('Error al asociar personaje:', error);
         throw error;
       }
+
+      console.log('Character linked successfully');
 
       // Notificar éxito
       onCharacterAdded();
@@ -78,6 +86,8 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
       console.error('Error al asociar personaje:', error);
       alert('No se pudo asociar el personaje. Por favor, inténtalo de nuevo.');
       return false;
+    } finally {
+      setIsLinking(null);
     }
   };
 
@@ -180,16 +190,22 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
                   <span className="text-sm">Crear nuevo</span>
                 </motion.button>
                 {characters.map((character) => (
-                  <CharacterCard
-                    key={character.id}
-                    character={character}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onClick={() => linkCharacter(character.id)}
-                    isSelected={false}
-                    showDescription={false}
-                    actionsIconOnly
-                  />
+                  <div key={character.id} className="relative">
+                    <CharacterCard
+                      character={character}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onClick={() => linkCharacter(character.id)}
+                      isSelected={false}
+                      showDescription={false}
+                      actionsIconOnly
+                    />
+                    {isLinking === character.id && (
+                      <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center rounded-lg">
+                        <Loader className="w-6 h-6 text-purple-600 animate-spin" />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
