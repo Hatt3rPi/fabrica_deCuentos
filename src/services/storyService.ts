@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { Character } from '../types';
-import { useWizardFlowStore } from '../stores/wizardFlowStore';
 
 /**
  * Deletes a story and optionally its orphan characters using Supabase RPCs.
@@ -42,16 +41,14 @@ export const storyService = {
   },
 
   persistStory(id: string, fields: Partial<import('../types/supabase').Database['public']['Tables']['stories']['Update']>) {
-    const { estado } = useWizardFlowStore.getState();
-    console.log('[StoryService] persistStory LLAMADO', {
+    console.log('[StoryService] persistStory LLAMADO (SOLO CONTENIDO)', {
       storyId: id,
-      wizard_state_actual: estado,
       fields: Object.keys(fields)
     });
     
     const result = supabase
       .from('stories')
-      .update({ ...fields, wizard_state: estado })
+      .update(fields)
       .eq('id', id)
       .single();
       

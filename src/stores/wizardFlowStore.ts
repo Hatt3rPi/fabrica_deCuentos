@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { wizardStateService } from '../services/wizardStateService';
 
 export type EtapaEstado = 'no_iniciada' | 'borrador' | 'completado';
 
@@ -63,26 +64,10 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
           }
           logEstado(nuevoEstado, 'setPersonajes', get().currentStoryId);
           
-          // RAMA B: Forzar persistencia inmediata después de setPersonajes
+          // Persistir wizard_state inmediatamente en cambios críticos
           const currentStoryId = get().currentStoryId;
-          if (currentStoryId && count >= 3) {
-            console.log('[WizardFlow] FORZANDO PERSISTENCIA INMEDIATA', {
-              storyId: currentStoryId,
-              nuevoEstado: nuevoEstado
-            });
-            
-            // Importar storyService dinámicamente para evitar imports circulares
-            import('../services/storyService').then(({ storyService }) => {
-              storyService.persistStory(currentStoryId, {
-                updated_at: new Date().toISOString()
-              }).then(({ error }) => {
-                if (error) {
-                  console.error('[WizardFlow] ERROR PERSISTENCIA INMEDIATA:', error);
-                } else {
-                  console.log('[WizardFlow] ✅ PERSISTENCIA INMEDIATA EXITOSA');
-                }
-              });
-            });
+          if (currentStoryId) {
+            wizardStateService.updateWizardState(currentStoryId, nuevoEstado);
           }
           
           return { estado: nuevoEstado };
@@ -116,6 +101,13 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
             }
           }
           logEstado(nuevoEstado, 'avanzarEtapa', get().currentStoryId);
+          
+          // Persistir wizard_state en avances de etapa
+          const currentStoryId = get().currentStoryId;
+          if (currentStoryId) {
+            wizardStateService.updateWizardState(currentStoryId, nuevoEstado);
+          }
+          
           return { estado: nuevoEstado };
         }),
       regresarEtapa: (etapa) =>
