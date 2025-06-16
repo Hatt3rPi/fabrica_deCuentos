@@ -46,13 +46,6 @@ const DesignStep: React.FC = () => {
     ? getOptimizedImageUrl(rawPreviewUrl, { width: 512, quality: 80, format: 'webp' })
     : undefined;
 
-  const previewReady = selectedStyle
-    ? selectedStyle === 'default'
-      ? !!coverState?.url
-      : !!coverState?.variants?.[selectedStyle]
-    : false;
-
-
   // Get individual variant status for each style
   const getVariantStatus = (styleValue: string) => {
     if (styleValue === 'default') {
