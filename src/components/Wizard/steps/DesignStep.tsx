@@ -6,6 +6,7 @@ import { visualStyleOptions } from '../../../types';
 import { Palette, Check, Loader } from 'lucide-react';
 import { getOptimizedImageUrl } from '../../../lib/image';
 import { characterService } from '../../../services/characterService';
+import { storyService } from '../../../services/storyService';
 import { ThumbnailStyle } from '../../../types/character';
 
 const STYLE_TO_KEY: Record<string, ThumbnailStyle | 'default'> = {
@@ -82,11 +83,22 @@ const DesignStep: React.FC = () => {
     load();
   }, [characters]);
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = async (field: string, value: string) => {
     setDesignSettings({
       ...designSettings,
       [field]: value,
     });
+
+    if (field === 'visualStyle' && storyId) {
+      try {
+        await storyService.upsertStoryDesign(storyId, {
+          visualStyle: value,
+          colorPalette: designSettings.colorPalette
+        });
+      } catch (error) {
+        console.error('Error persisting visual style:', error);
+      }
+    }
   };
 
   return (
