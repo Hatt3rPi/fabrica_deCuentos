@@ -89,5 +89,74 @@ VITE_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key (for tests)
 ```
 
 Demo credentials:
-- Email: tester@lacuenteria.com
+- Email: tester@lacuenteria.cl
 - Password: test123
+
+## Claude Code Best Practices
+
+### Task Management
+- **Always use TodoWrite/TodoRead tools** for complex tasks (3+ steps)
+- Mark todos as `in_progress` BEFORE starting work
+- Complete todos IMMEDIATELY after finishing each task
+- Only have ONE task `in_progress` at any time
+- Break large tasks into specific, actionable items
+
+### Database Operations
+- **Use RPC functions for complex operations** (e.g., `link_character_to_story`)
+- Handle duplicates with `ON CONFLICT DO NOTHING` pattern
+- Always verify user permissions in database functions
+- Use `supabase.rpc()` for safer database operations than direct inserts
+
+### Error Handling & Race Conditions
+- Add loading states to prevent multiple simultaneous requests
+- Implement proper error handling with user-friendly messages
+- Use `try/catch/finally` blocks for async operations
+- Log errors with context for debugging
+
+### Testing Strategy
+- **Run tests before every commit**: `npm run cypress:run`
+- Use descriptive test names that explain the user flow
+- Include cleanup at the beginning of comprehensive tests
+- Update test credentials to match current demo user
+- Use `data-testid` attributes for reliable test selectors
+
+### Code Quality
+- **Run linting before commits**: `npm run lint`
+- Follow existing code patterns and conventions
+- Use TypeScript types consistently
+- Keep functions focused and single-purpose
+
+### State Management
+- **Separate concerns**: auto-save (content) vs wizard state (flow)
+- Use direct persistence for critical state changes
+- Implement backup strategies (localStorage + database)
+- Clean up state properly on component unmount
+
+### Git Workflow
+- **NEVER make changes directly to main branch**
+- Always create feature/fix branches for any changes
+- Use descriptive commit messages following the established pattern
+- Include context about WHY changes were made
+- Test functionality before committing
+- Create PRs for all changes, even documentation
+
+### Development Commands Priority
+1. **Before starting**: `npm run dev` (check app works)
+2. **During development**: `npm run lint` (check code quality)
+3. **Before committing**: `npm run cypress:run` (verify tests pass)
+4. **For database changes**: `npm run supabase:pull` (sync schema)
+
+### Common Pitfalls to Avoid
+- Don't skip wizard flow validation rules
+- Don't mix auto-save with wizard state persistence
+- Don't create commits without running tests
+- Don't use direct database inserts for complex operations
+- Don't forget to handle race conditions in UI interactions
+- **NEVER commit directly to main** - always use branches and PRs
+
+### File Organization
+- Place new test files in appropriate directories
+- Back up old tests before major changes
+- Keep database functions in `supabase/migrations/`
+- Use clear, descriptive filenames
+- Document new patterns in this file
