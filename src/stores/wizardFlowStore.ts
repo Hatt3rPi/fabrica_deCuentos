@@ -62,6 +62,29 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
             }
           }
           logEstado(nuevoEstado, 'setPersonajes', get().currentStoryId);
+          
+          // RAMA B: Forzar persistencia inmediata después de setPersonajes
+          const currentStoryId = get().currentStoryId;
+          if (currentStoryId && count >= 3) {
+            console.log('[WizardFlow] FORZANDO PERSISTENCIA INMEDIATA', {
+              storyId: currentStoryId,
+              nuevoEstado: nuevoEstado
+            });
+            
+            // Importar storyService dinámicamente para evitar imports circulares
+            import('../services/storyService').then(({ storyService }) => {
+              storyService.persistStory(currentStoryId, {
+                updated_at: new Date().toISOString()
+              }).then(({ error }) => {
+                if (error) {
+                  console.error('[WizardFlow] ERROR PERSISTENCIA INMEDIATA:', error);
+                } else {
+                  console.log('[WizardFlow] ✅ PERSISTENCIA INMEDIATA EXITOSA');
+                }
+              });
+            });
+          }
+          
           return { estado: nuevoEstado };
         }),
       setEstadoCompleto: (nuevo) =>
