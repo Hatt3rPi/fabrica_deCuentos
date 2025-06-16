@@ -11,8 +11,8 @@ describe('Wizard State Persistence', () => {
     
     // Login y crear nueva historia
     cy.visit('/');
-    cy.get('[data-testid="email-input"]').type('demo@lacuenteria.com');
-    cy.get('[data-testid="password-input"]').type('demo123');
+    cy.get('[data-testid="email-input"]').type('tester@lacuenteria.cl');
+    cy.get('[data-testid="password-input"]').type('test123');
     cy.get('[data-testid="login-button"]').click();
     
     // Esperar redirección y crear nueva historia

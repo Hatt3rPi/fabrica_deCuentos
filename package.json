@@ -13,6 +13,7 @@
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
     "test:e2e": "cypress run",
+    "test:complete-flow": "npx cypress run --spec \"cypress/e2e/complete_story_flow.cy.js\"",
     "supabase:pull": "supabase functions pull && supabase db pull",
     "supabase:start": "supabase start"
   },

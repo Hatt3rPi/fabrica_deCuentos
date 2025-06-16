@@ -26,8 +26,12 @@ Cypress.on('uncaught:exception', (err, runnable) => {
   return false
 })
 
-// Limpiar datos de prueba después de cada test
+// Limpiar datos de prueba después de cada test (excepto tests específicos)
 afterEach(() => {
-  cy.cleanupTestData()
+  // No ejecutar cleanup automático en el test completo del flujo
+  // ya que maneja su propia limpieza al inicio
+  if (!Cypress.currentTest?.title?.includes('completar el flujo desde limpieza')) {
+    cy.cleanupTestData()
+  }
 })
 

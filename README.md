@@ -86,8 +86,8 @@ npm run dev
 ## 📝 Uso
 
 1. Inicia sesión con las credenciales de prueba:
-   - Email: demo@lacuenteria.com
-   - Contraseña: demo123
+   - Email: tester@lacuenteria.cl
+   - Contraseña: test123
 
 2. Sigue el asistente paso a paso:
    - Crea y personaliza los personajes
