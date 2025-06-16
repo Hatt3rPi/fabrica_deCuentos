@@ -6,6 +6,7 @@ interface CoverInfo {
   status: 'idle' | 'generating' | 'ready' | 'error';
   url?: string;
   variants?: Record<string, string>;
+  variantStatus?: Record<string, 'idle' | 'generating' | 'ready' | 'error'>;
   error?: string;
 }
 
@@ -79,12 +80,29 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const types = STYLE_MAP.map(s => s.type);
       const prompts = await promptService.getPromptsByTypes(types);
 
+      // Initialize all variant statuses as generating
+      const initialVariantStatus: Record<string, 'generating'> = {};
+      STYLE_MAP.forEach(style => {
+        if (prompts[style.type]) {
+          initialVariantStatus[style.key] = 'generating';
+        }
+      });
+
+      setCovers(prev => ({
+        ...prev,
+        [storyId]: { 
+          ...(prev[storyId] || { status: 'ready', url: imageUrl }), 
+          variantStatus: { ...(prev[storyId]?.variantStatus || {}), ...initialVariantStatus }
+        }
+      }));
+
       const variants: Record<string, string> = {};
 
       await Promise.all(
         STYLE_MAP.map(async (style) => {
           const prompt = prompts[style.type];
           if (!prompt) return;
+          
           try {
             const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-cover-variant`, {
               method: 'POST',
@@ -97,16 +115,45 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'failed');
             const url = data.coverUrl || data.url;
-            if (url) variants[style.key] = url;
+            
+            if (url) {
+              variants[style.key] = url;
+              // Update individual variant status to ready
+              setCovers(prev => ({
+                ...prev,
+                [storyId]: {
+                  ...prev[storyId],
+                  variantStatus: {
+                    ...prev[storyId]?.variantStatus,
+                    [style.key]: 'ready'
+                  }
+                }
+              }));
+            }
           } catch (err) {
             console.error('Error generating cover variant', err);
+            // Update individual variant status to error
+            setCovers(prev => ({
+              ...prev,
+              [storyId]: {
+                ...prev[storyId],
+                variantStatus: {
+                  ...prev[storyId]?.variantStatus,
+                  [style.key]: 'error'
+                }
+              }
+            }));
           }
         })
       );
 
+      // Update variants after all are processed
       setCovers(prev => ({
         ...prev,
-        [storyId]: { ...(prev[storyId] || { status: 'ready', url: imageUrl }), variants }
+        [storyId]: { 
+          ...(prev[storyId] || { status: 'ready', url: imageUrl }), 
+          variants: { ...(prev[storyId]?.variants || {}), ...variants }
+        }
       }));
     } catch (err) {
       console.error('Error generating cover variants', err);
