@@ -48,6 +48,12 @@ export const useAutosave = (
         return;
       }
 
+      console.log('[AutoSave] INICIANDO SAVE', {
+        storyId: currentStoryId,
+        flow: flow,
+        timestamp: new Date().toISOString()
+      });
+
       try {
         // Save to localStorage first as backup
         localStorage.setItem(
@@ -79,6 +85,11 @@ export const useAutosave = (
         }
 
         // Save story metadata
+        console.log('[AutoSave] PERSISTIENDO STORY CON WIZARD_STATE', {
+          storyId: currentStoryId,
+          wizard_state_que_se_guarda: flow
+        });
+
         const { error: storyError } = await storyService.persistStory(currentStoryId, {
           title: state.meta.title,
           theme: state.meta.theme,
@@ -90,7 +101,12 @@ export const useAutosave = (
           status: 'draft'
         });
 
-        if (storyError) throw storyError;
+        if (storyError) {
+          console.error('[AutoSave] ERROR AL PERSISTIR STORY:', storyError);
+          throw storyError;
+        }
+
+        console.log('[AutoSave] ✅ SAVE COMPLETADO EXITOSAMENTE');
 
         // Reset retry count on successful save
         retryCountRef.current = 0;
