@@ -35,6 +35,11 @@ const DesignStep: React.FC = () => {
   const coverState = storyId ? covers[storyId] : undefined;
   const [overlayDismissed, setOverlayDismissed] = useState(false);
 
+  // Reset overlay state when component mounts
+  useEffect(() => {
+    setOverlayDismissed(false);
+  }, []);
+
   const selectedStyle = designSettings.visualStyle;
   const rawPreviewUrl =
     (selectedStyle &&
@@ -52,6 +57,13 @@ const DesignStep: React.FC = () => {
       ? !!coverState?.url
       : !!coverState?.variants?.[selectedStyle]
     : false;
+
+  // No mostrar loader si hay imagen de fallback o thumbnails disponibles
+  const hasVisualContent = selectedStyle && (
+    previewReady || 
+    !!rawPreviewUrl || 
+    !!FALLBACK_IMAGES[selectedStyle]
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -166,7 +178,7 @@ const DesignStep: React.FC = () => {
           </div>
         </div>
       </div>
-      {selectedStyle && !previewReady && !overlayDismissed && (
+      {selectedStyle && !hasVisualContent && !overlayDismissed && (
         <OverlayLoader etapa="cuento_fase2" onFallback={() => setOverlayDismissed(true)} />
       )}
     </div>
