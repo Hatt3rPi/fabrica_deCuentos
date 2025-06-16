@@ -30,11 +30,17 @@ const StoryStep: React.FC = () => {
 
   React.useEffect(() => {
     if (!generated && generatedPages && generatedPages.length > 0) {
-      const paragraphs = generatedPages
-        .filter(p => p.pageNumber > 0)
-        .map(p => p.text);
+      // Obtener todos los párrafos ordenados por número de página
+      const allParagraphs = generatedPages
+        .sort((a, b) => a.pageNumber - b.pageNumber)
+        .map(p => p.text)
+        .filter(text => text && text.trim().length > 0);
+      
       const cover = generatedPages.find(p => p.pageNumber === 0);
-      setGenerated({ title: cover ? cover.text : '', paragraphs });
+      setGenerated({ 
+        title: cover ? cover.text : (allParagraphs[0] || ''), 
+        paragraphs: allParagraphs 
+      });
     }
   }, [generatedPages, generated]);
 
@@ -164,12 +170,15 @@ const StoryStep: React.FC = () => {
             </h3>
           </div>
           {generated ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <h3 className="text-xl font-bold text-purple-700">{generated.title}</h3>
+              <div className="text-sm text-gray-600 mb-2">
+                📖 Cuento completo ({generated.paragraphs.length} párrafos)
+              </div>
               <textarea
                 readOnly
                 value={generated.paragraphs.join('\n\n')}
-                className="w-full h-[450px] px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 resize-none"
+                className="w-full h-[450px] px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 resize-none leading-relaxed"
               />
             </div>
           ) : (

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { wizardStateService } from '../services/wizardStateService';
 
 export type EtapaEstado = 'no_iniciada' | 'borrador' | 'completado';
 
@@ -62,6 +63,13 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
             }
           }
           logEstado(nuevoEstado, 'setPersonajes', get().currentStoryId);
+          
+          // Persistir wizard_state inmediatamente en cambios críticos
+          const currentStoryId = get().currentStoryId;
+          if (currentStoryId) {
+            wizardStateService.updateWizardState(currentStoryId, nuevoEstado);
+          }
+          
           return { estado: nuevoEstado };
         }),
       setEstadoCompleto: (nuevo) =>
@@ -93,6 +101,13 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
             }
           }
           logEstado(nuevoEstado, 'avanzarEtapa', get().currentStoryId);
+          
+          // Persistir wizard_state en avances de etapa
+          const currentStoryId = get().currentStoryId;
+          if (currentStoryId) {
+            wizardStateService.updateWizardState(currentStoryId, nuevoEstado);
+          }
+          
           return { estado: nuevoEstado };
         }),
       regresarEtapa: (etapa) =>

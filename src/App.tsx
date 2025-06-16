@@ -52,8 +52,7 @@ function AnimatedRoutes() {
   }
 
   return (
-    <WizardProvider>
-      <StoryProvider>
+    <StoryProvider>
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}
@@ -76,7 +75,9 @@ function AnimatedRoutes() {
                   path="/wizard/:storyId"
                   element={
                     <PrivateRoute>
-                      <StoryCreationWizard />
+                      <WizardProvider>
+                        <StoryCreationWizard />
+                      </WizardProvider>
                     </PrivateRoute>
                   }
                 />
@@ -155,7 +156,6 @@ function AnimatedRoutes() {
         </motion.div>
       </AnimatePresence>
       </StoryProvider>
-    </WizardProvider>
   );
 }
 

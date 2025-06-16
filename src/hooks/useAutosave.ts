@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { WizardState, EstadoFlujo } from '../types';
-import { storyService } from '../services/storyService';
 
 const AUTOSAVE_DELAY = 1000; // 1 second delay between saves
 const MAX_RETRIES = 3;
@@ -48,6 +47,12 @@ export const useAutosave = (
         return;
       }
 
+      console.log('[AutoSave] INICIANDO SAVE', {
+        storyId: currentStoryId,
+        flow: flow,
+        timestamp: new Date().toISOString()
+      });
+
       try {
         // Save to localStorage first as backup
         localStorage.setItem(
@@ -78,19 +83,32 @@ export const useAutosave = (
           }
         }
 
-        // Save story metadata
-        const { error: storyError } = await storyService.persistStory(currentStoryId, {
-          title: state.meta.title,
-          theme: state.meta.theme,
-          target_age: state.meta.targetAge,
-          literary_style: state.meta.literaryStyle,
-          central_message: state.meta.centralMessage,
-          additional_details: state.meta.additionalDetails,
-          updated_at: new Date().toISOString(),
-          status: 'draft'
+        // Save story metadata (content only, NOT wizard_state)
+        console.log('[AutoSave] PERSISTIENDO CONTENIDO DE STORY', {
+          storyId: currentStoryId,
+          fields: ['title', 'theme', 'target_age', 'literary_style', 'central_message', 'additional_details']
         });
 
-        if (storyError) throw storyError;
+        const { error: storyError } = await supabase
+          .from('stories')
+          .update({
+            title: state.meta.title,
+            theme: state.meta.theme,
+            target_age: state.meta.targetAge,
+            literary_style: state.meta.literaryStyle,
+            central_message: state.meta.centralMessage,
+            additional_details: state.meta.additionalDetails,
+            updated_at: new Date().toISOString(),
+            status: 'draft'
+          })
+          .eq('id', currentStoryId);
+
+        if (storyError) {
+          console.error('[AutoSave] ERROR AL PERSISTIR STORY:', storyError);
+          throw storyError;
+        }
+
+        console.log('[AutoSave] ✅ SAVE COMPLETADO EXITOSAMENTE');
 
         // Reset retry count on successful save
         retryCountRef.current = 0;
