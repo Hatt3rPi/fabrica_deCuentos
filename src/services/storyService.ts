@@ -166,5 +166,32 @@ export const storyService = {
       .eq('story_id', storyId)
       .eq('page_number', 0);
     if (error) throw error;
+  },
+
+  async upsertStoryDesign(storyId: string, designData: { visualStyle?: string; colorPalette?: string }): Promise<void> {
+    const { data: existing } = await supabase
+      .from('story_designs')
+      .select('id')
+      .eq('story_id', storyId)
+      .maybeSingle();
+
+    const payload = {
+      story_id: storyId,
+      visual_style: designData.visualStyle || 'default',
+      color_palette: designData.colorPalette || 'default'
+    };
+
+    if (existing) {
+      const { error } = await supabase
+        .from('story_designs')
+        .update(payload)
+        .eq('story_id', storyId);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('story_designs')
+        .insert(payload);
+      if (error) throw error;
+    }
   }
 };

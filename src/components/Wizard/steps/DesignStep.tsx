@@ -3,11 +3,11 @@ import { useWizard } from '../../../context/WizardContext';
 import { useStory } from '../../../context/StoryContext';
 import { useParams } from 'react-router-dom';
 import { visualStyleOptions } from '../../../types';
-import { Palette, Check } from 'lucide-react';
+import { Palette, Check, Loader } from 'lucide-react';
 import { getOptimizedImageUrl } from '../../../lib/image';
 import { characterService } from '../../../services/characterService';
+import { storyService } from '../../../services/storyService';
 import { ThumbnailStyle } from '../../../types/character';
-import { OverlayLoader } from '../../UI/Loader';
 
 const STYLE_TO_KEY: Record<string, ThumbnailStyle | 'default'> = {
   default: 'default',
@@ -33,12 +33,6 @@ const DesignStep: React.FC = () => {
   const { storyId } = useParams();
   const [images, setImages] = useState<Record<string, string>>({});
   const coverState = storyId ? covers[storyId] : undefined;
-  const [overlayDismissed, setOverlayDismissed] = useState(false);
-
-  // Reset overlay state when component mounts
-  useEffect(() => {
-    setOverlayDismissed(false);
-  }, []);
 
   const selectedStyle = designSettings.visualStyle;
   const rawPreviewUrl =
@@ -52,18 +46,16 @@ const DesignStep: React.FC = () => {
     ? getOptimizedImageUrl(rawPreviewUrl, { width: 512, quality: 80, format: 'webp' })
     : undefined;
 
-  const previewReady = selectedStyle
-    ? selectedStyle === 'default'
-      ? !!coverState?.url
-      : !!coverState?.variants?.[selectedStyle]
-    : false;
+  // Get individual variant status for each style
+  const getVariantStatus = (styleValue: string) => {
+    if (styleValue === 'default') {
+      return coverState?.status || 'idle';
+    }
+    return coverState?.variantStatus?.[styleValue] || 'idle';
+  };
 
-  // No mostrar loader si hay imagen de fallback o thumbnails disponibles
-  const hasVisualContent = selectedStyle && (
-    previewReady || 
-    !!rawPreviewUrl || 
-    !!FALLBACK_IMAGES[selectedStyle]
-  );
+  // Check if selected style is currently generating
+  const isSelectedStyleGenerating = selectedStyle && getVariantStatus(selectedStyle) === 'generating';
 
   useEffect(() => {
     const load = async () => {
@@ -84,11 +76,22 @@ const DesignStep: React.FC = () => {
     load();
   }, [characters]);
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = async (field: string, value: string) => {
     setDesignSettings({
       ...designSettings,
       [field]: value,
     });
+
+    if (field === 'visualStyle' && storyId) {
+      try {
+        await storyService.upsertStoryDesign(storyId, {
+          visualStyle: value,
+          colorPalette: designSettings.colorPalette
+        });
+      } catch (error) {
+        console.error('Error persisting visual style:', error);
+      }
+    }
   };
 
   return (
@@ -117,6 +120,10 @@ const DesignStep: React.FC = () => {
                   option.value === 'default'
                     ? !!coverState?.url
                     : !!coverState?.variants?.[option.value];
+                const variantStatus = getVariantStatus(option.value);
+                const isGenerating = variantStatus === 'generating';
+                const hasError = variantStatus === 'error';
+                
                 return (
                   <div
                     key={option.value}
@@ -127,16 +134,34 @@ const DesignStep: React.FC = () => {
                         : 'border-gray-200 hover:border-purple-200'
                     }`}
                   >
-                    <div className="w-full aspect-square mb-2 overflow-hidden rounded-md bg-gray-100">
+                    <div className="w-full aspect-square mb-2 overflow-hidden rounded-md bg-gray-100 relative">
                       <img
                         src={src}
                         alt={option.label}
                         loading="lazy"
                         className="w-full h-full object-cover"
                       />
-                      {hasCover && (
+                      
+                      {/* Individual loading state for this style */}
+                      {isGenerating && (
+                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+                          <Loader className="w-6 h-6 text-purple-600 animate-spin" />
+                        </div>
+                      )}
+                      
+                      {/* Success indicator */}
+                      {hasCover && !isGenerating && (
                         <span className="absolute top-1 right-1 text-purple-600 bg-white/80 rounded-full p-0.5">
                           <Check className="w-4 h-4" />
+                        </span>
+                      )}
+                      
+                      {/* Error indicator */}
+                      {hasError && (
+                        <span className="absolute top-1 right-1 text-red-600 bg-white/80 rounded-full p-0.5">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
                         </span>
                       )}
                     </div>
@@ -166,7 +191,16 @@ const DesignStep: React.FC = () => {
                   loading="lazy"
                   className="w-full h-full object-cover"
                 />
-                {!previewReady && null}
+                
+                {/* Loading state for selected style in preview */}
+                {isSelectedStyleGenerating && (
+                  <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+                    <Loader className="w-8 h-8 text-purple-600 animate-spin" />
+                    <p className="text-sm text-purple-600 font-medium">
+                      Generando portada...
+                    </p>
+                  </div>
+                )}
               </>
             ) : (
               <div className="w-full h-full flex items-center justify-center p-6 text-center">
@@ -178,9 +212,6 @@ const DesignStep: React.FC = () => {
           </div>
         </div>
       </div>
-      {selectedStyle && !hasVisualContent && !overlayDismissed && (
-        <OverlayLoader etapa="cuento_fase2" onFallback={() => setOverlayDismissed(true)} />
-      )}
     </div>
   );
 };
