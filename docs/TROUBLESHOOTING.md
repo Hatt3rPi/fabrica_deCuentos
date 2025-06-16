@@ -26,7 +26,13 @@ Todos los issues identificados han sido creados en GitHub con el prefijo `[auto]
 
 ## 📝 Agregar Nuevos Issues
 
-Para identificar nuevos problemas, usar el proceso documentado en [ISSUE_TEMPLATE.md](./ISSUE_TEMPLATE.md):
+Para identificar nuevos problemas, usar el proceso documentado en [ISSUE_TEMPLATE.md](./ISSUE_TEMPLATE.md).
+
+**Convención de títulos:**
+- Issues manuales: `[CATEGORÍA]: Descripción`
+- Issues auto-generados: `[auto][prioridad] Descripción`
+
+Cuando se identifiquen nuevos problemas en este documento, se crearán automáticamente en GitHub con el formato `[auto][alta/media/baja]`.
 
 ## 📋 Patrones de Problemas Identificados
 

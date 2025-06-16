@@ -57,11 +57,18 @@
 - **test:** "test", "prueba", "cypress", "cobertura"
 
 ### ✅ **Sugerir nombre del issue si falta**
-**Formato:** `[CATEGORÍA]: Descripción breve y técnica`
-- Ejemplos:
+**Formato para issues manuales:** `[CATEGORÍA]: Descripción breve y técnica`
+**Formato para issues auto-generados:** `[auto][prioridad] Descripción breve y técnica`
+
+- Ejemplos manuales:
   - `FEATURE: Add age selector to story wizard`
   - `BUG: Character association fails with POST 409`
   - `IMPROVEMENT: Standardize modal loading states`
+
+- Ejemplos auto-generados:
+  - `[auto][alta] Modal Loading States Inconsistency`
+  - `[auto][media] Database Function Coverage`
+  - `[auto][baja] Console Logs Cleanup`
 
 ### ✅ **Formato del código**
 - Todo bloque debe estar delimitado por ``` y especificar el lenguaje (js, ts, py, html…)
