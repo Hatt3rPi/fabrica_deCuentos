@@ -4,61 +4,29 @@ Este documento mantiene un registro de **problemas activos** identificados y el 
 
 > 📌 **Nota:** Los problemas resueltos se documentan en los issues de GitHub correspondientes con sus commits y soluciones detalladas.
 
-## 🚨 Issues Pendientes
+## 🎯 Issues Activos en GitHub
 
-### Alto Prioridad
+Todos los issues identificados han sido creados en GitHub con el prefijo `[auto]`:
 
-#### ISSUE-001: Modal Loading States Inconsistency
-**Descripción:** Los modales no muestran estados de carga consistentes durante operaciones async  
-**Impacto:** UX confusa, posibles race conditions  
-**Archivos sugeridos:** `src/components/Modal/`, `src/components/Modals/`  
-**Estimación:** 2-3 horas
+### 🔴 Alta Prioridad
+- **#179** - [auto] Modal Loading States Inconsistency
+- **#180** - [auto] Test Selector Reliability  
+- **#181** - [auto] Error Handling Standardization
 
-#### ISSUE-002: Test Selector Reliability
-**Descripción:** Tests fallan por falta de `data-testid` consistentes en componentes  
-**Impacto:** CI/CD inestable, desarrollo lento  
-**Archivos sugeridos:** `src/components/Character/CharacterCard.tsx`, tests en `cypress/e2e/`  
-**Estimación:** 1-2 horas
+### 🟡 Media Prioridad
+- **#182** - [auto] Database Function Coverage
+- **#183** - [auto] Test Data Management
+- **#184** - [auto] Loading State Race Conditions
 
-#### ISSUE-003: Error Handling Standardization
-**Descripción:** Manejo de errores inconsistente entre componentes (algunos usan alert, otros console.error)  
-**Impacto:** UX inconsistente, debugging difícil  
-**Archivos sugeridos:** Crear `src/utils/errorHandler.ts`, actualizar componentes  
-**Estimación:** 4-5 horas
+### 🟢 Baja Prioridad
+- **#185** - [auto] Console Logs Cleanup
+- **#186** - [auto] TypeScript Strict Mode
 
-### Media Prioridad
+👉 **Ver todos los issues:** [GitHub Issues](https://github.com/Customware-cl/Lacuenteria/issues?q=is%3Aissue+is%3Aopen+%5Bauto%5D)
 
-#### ISSUE-004: Database Function Coverage
-**Descripción:** Otras operaciones DB podrían beneficiarse de funciones RPC seguras  
-**Impacto:** Potenciales errores similares al 409 en otras operaciones  
-**Archivos sugeridos:** Revisar todos los `.from().insert()` y `.from().update()`  
-**Estimación:** 3-4 horas
+## 📝 Agregar Nuevos Issues
 
-#### ISSUE-005: Test Data Management
-**Descripción:** Limpieza de datos de prueba no es consistente entre tests  
-**Impacto:** Tests pueden fallar por datos residuales  
-**Archivos sugeridos:** `cypress/support/commands.js`, tests individuales  
-**Estimación:** 2-3 horas
-
-#### ISSUE-006: Loading State Race Conditions
-**Descripción:** Múltiples requests simultáneos pueden causar estados inconsistentes  
-**Impacto:** Datos duplicados o estados UI incorrectos  
-**Archivos sugeridos:** Todos los componentes con operaciones async  
-**Estimación:** 3-4 horas
-
-### Baja Prioridad
-
-#### ISSUE-007: Console Logs Cleanup
-**Descripción:** Muchos console.log dejados en código de producción  
-**Impacto:** Ruido en consola, potencial leak de información  
-**Archivos sugeridos:** Búsqueda global de console.log  
-**Estimación:** 1 hora
-
-#### ISSUE-008: TypeScript Strict Mode
-**Descripción:** Algunos tipos están como `any` o sin definir completamente  
-**Impacto:** Pérdida de type safety, bugs potenciales  
-**Archivos sugeridos:** `src/types/`, componentes con tipos loose  
-**Estimación:** 4-6 horas
+Para identificar nuevos problemas, usar el proceso documentado en [ISSUE_TEMPLATE.md](./ISSUE_TEMPLATE.md):
 
 ## 📋 Patrones de Problemas Identificados
 
