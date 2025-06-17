@@ -23,35 +23,35 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
   const isLoading = state?.status === 'generating';
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-[1.02]">
-      <div className="aspect-video bg-gray-100 relative">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform hover:scale-[1.02]">
+      <div className="aspect-video bg-gray-100 dark:bg-gray-700 relative">
         {imageUrl ? (
           <img src={imageUrl} alt={story.title} loading="lazy" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full bg-gray-200" />
+          <div className="w-full h-full bg-gray-200 dark:bg-gray-600" />
         )}
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+          <div className="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-gray-800/60">
             <Loader className="w-6 h-6 animate-spin text-purple-600" />
           </div>
         )}
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
-          <h3 className="text-lg font-semibold text-gray-800">{story.title}</h3>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{story.title}</h3>
           {story.status === 'draft' && (
-            <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+            <span className="px-2 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-full">
               Borrador
             </span>
           )}
         </div>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           {new Date(story.created_at).toLocaleDateString()}
         </p>
         <div className="flex gap-2">
           <button
             onClick={() => onRead(story.id)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-800 transition-colors"
           >
             <BookOpen className="w-4 h-4" />
             <span>Leer</span>
@@ -59,7 +59,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
           {story.status === 'draft' && (
             <button
               onClick={() => onContinue(story.id)}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
             >
               <Pencil className="w-4 h-4" />
               <span>Continuar</span>
@@ -67,7 +67,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
           )}
           <button
             onClick={() => onDelete(story)}
-            className="flex items-center justify-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="flex items-center justify-center px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
           >
             <Trash2 className="w-4 h-4" />
           </button>

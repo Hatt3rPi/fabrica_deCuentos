@@ -164,9 +164,9 @@ const MyStories: React.FC = () => {
   const cancelDelete = () => setStoryToDelete(null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 p-6">
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-purple-800 mb-8">Mis Cuentos</h1>
+        <h1 className="text-3xl font-bold text-purple-800 dark:text-purple-300 mb-8">Mis Cuentos</h1>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {stories.map((story) => (
@@ -182,7 +182,7 @@ const MyStories: React.FC = () => {
 
       <button
         onClick={handleNewStory}
-        className="fixed bottom-8 right-8 flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-full shadow-lg hover:bg-purple-700 transition-colors"
+        className="fixed bottom-8 right-8 flex items-center gap-2 px-6 py-3 bg-purple-600 dark:bg-purple-700 text-white rounded-full shadow-lg hover:bg-purple-700 dark:hover:bg-purple-800 transition-colors"
       >
         <Plus className="w-5 h-5" />
         <span>Nuevo cuento</span>
@@ -197,7 +197,7 @@ const MyStories: React.FC = () => {
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
       >
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
           <input
             type="checkbox"
             checked={deleteCharacters}
