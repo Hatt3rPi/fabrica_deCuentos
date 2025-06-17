@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "cp .env.local .env && vite",
+    "dev:remote": "cp .env.remote .env && vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

@@ -33,11 +33,20 @@ const Wizard: React.FC = () => {
         const skip = sessionStorage.getItem('skipWizardCleanup');
         sessionStorage.removeItem('skipWizardCleanup');
         if (skip === 'true') return;
+        
+        // Check if user has interacted with character selection
+        const hasInteractedWithCharacters = sessionStorage.getItem(`character_interaction_${storyId}`);
+        if (!hasInteractedWithCharacters) {
+          console.log('[Wizard] Skipping cleanup - user hasn\'t interacted with character selection yet');
+          return;
+        }
+        
         const { data } = await supabase
           .from('story_characters')
           .select('character_id')
           .eq('story_id', storyId);
         if (!data || data.length === 0) {
+          console.log('[Wizard] Cleaning up story with no characters:', storyId);
           await supabase.rpc('delete_full_story', { story_id: storyId });
         }
       };
@@ -48,11 +57,20 @@ const Wizard: React.FC = () => {
   useEffect(() => {
     const handleBeforeUnload = async () => {
       if (!storyId) return;
+      
+      // Check if user has interacted with character selection
+      const hasInteractedWithCharacters = sessionStorage.getItem(`character_interaction_${storyId}`);
+      if (!hasInteractedWithCharacters) {
+        console.log('[Wizard] Skipping beforeunload cleanup - user hasn\'t interacted with character selection yet');
+        return;
+      }
+      
       const { data } = await supabase
         .from('story_characters')
         .select('character_id')
         .eq('story_id', storyId);
       if (!data || data.length === 0) {
+        console.log('[Wizard] Cleaning up story on beforeunload:', storyId);
         await supabase.rpc('delete_full_story', { story_id: storyId });
       }
     };

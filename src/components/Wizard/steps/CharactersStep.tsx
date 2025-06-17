@@ -27,6 +27,14 @@ const CharactersStep: React.FC = () => {
     }
   }, [characters]);
 
+  // Mark that user has interacted with character selection when modal opens
+  useEffect(() => {
+    if (isModalOpen && storyId) {
+      sessionStorage.setItem(`character_interaction_${storyId}`, 'true');
+      console.log('[CharactersStep] User interacting with character selection for story:', storyId);
+    }
+  }, [isModalOpen, storyId]);
+
   const loadStoryCharacters = async () => {
     if (!storyId) return;
 

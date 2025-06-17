@@ -60,7 +60,12 @@ const MyStories: React.FC = () => {
   };
 
   const handleNewStory = async () => {
+    console.log('🚀 INICIANDO CREACIÓN DE HISTORIA');
+    console.log('User:', user);
+    console.log('Supabase client:', supabase);
+    
     try {
+      console.log('📝 INSERTANDO EN BD...');
       const { data: story, error } = await supabase
         .from('stories')
         .insert({
@@ -72,11 +77,15 @@ const MyStories: React.FC = () => {
         .select()
         .single();
 
+      console.log('📊 RESULTADO:', { data: story, error });
+
       if (error) throw error;
 
+      console.log('✅ HISTORIA CREADA, NAVEGANDO A:', `/wizard/${story.id}`);
       navigate(`/wizard/${story.id}`);
     } catch (err) {
-      console.error('Error creating story:', err);
+      console.error('❌ ERROR CREATING STORY:', err);
+      alert('Error al crear la historia: ' + err.message);
     }
   };
 
