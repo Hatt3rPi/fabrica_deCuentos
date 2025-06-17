@@ -89,6 +89,7 @@ export const useAutosave = (
           fields: ['title', 'theme', 'target_age', 'literary_style', 'central_message', 'additional_details']
         });
 
+        console.log('💾 [AutoSave] Guardando story con título:', state.meta.title);
         const { error: storyError } = await supabase
           .from('stories')
           .update({

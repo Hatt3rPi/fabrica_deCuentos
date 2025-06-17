@@ -233,13 +233,18 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const updateStoryTitle = (title: string) => {
-    setState(prevState => ({
-      ...prevState,
-      meta: {
-        ...prevState.meta,
-        title
-      }
-    }));
+    console.log('🏷️ [WizardContext] updateStoryTitle called with:', title);
+    setState(prevState => {
+      const newState = {
+        ...prevState,
+        meta: {
+          ...prevState.meta,
+          title
+        }
+      };
+      console.log('🏷️ [WizardContext] New state meta.title:', newState.meta.title);
+      return newState;
+    });
   };
 
   const resetWizard = () => {
@@ -282,8 +287,11 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         literaryStyle: storySettings.literaryStyle,
         centralMessage: storySettings.centralMessage,
         additionalDetails: storySettings.additionalDetails,
+        // IMPORTANTE: preservar el título si ya existe
+        title: state.meta.title || ''
       },
     };
+    console.log('🔄 [WizardContext] useEffect reconstruyendo estado, título preservado:', state.meta.title);
     setState(newState);
     // El estado del wizard se mantiene en memoria y se sincroniza mediante autosave
   }, [storyId, characters, storySettings, designSettings, generatedPages, currentStep]);
