@@ -84,15 +84,50 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       try {
         console.log('🎨 Actualizando tema en BD:', newTheme, 'para usuario:', user.id);
         
-        const { error } = await supabase
+        // First, ensure user profile exists
+        const { data: existingProfile, error: selectError } = await supabase
           .from('user_profiles')
-          .update({ theme_preference: newTheme })
-          .eq('user_id', user.id);
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (selectError && selectError.code === 'PGRST116') {
+          // Profile doesn't exist, create it
+          console.log('👤 Perfil no existe, creando uno nuevo...');
           
-        if (error) {
-          console.error('❌ Error actualizando tema en BD:', error);
+          const { error: insertError } = await supabase
+            .from('user_profiles')
+            .insert({
+              user_id: user.id,
+              theme_preference: newTheme,
+              shipping_address: null,
+              shipping_comuna: null,
+              shipping_city: null,
+              shipping_region: null,
+              shipping_phone: null,
+              contact_person: null,
+              additional_notes: null
+            });
+            
+          if (insertError) {
+            console.error('❌ Error creando perfil:', insertError);
+          } else {
+            console.log('✅ Perfil creado con tema:', newTheme);
+          }
+        } else if (existingProfile) {
+          // Profile exists, update theme
+          const { error: updateError } = await supabase
+            .from('user_profiles')
+            .update({ theme_preference: newTheme })
+            .eq('user_id', user.id);
+            
+          if (updateError) {
+            console.error('❌ Error actualizando tema en BD:', updateError);
+          } else {
+            console.log('✅ Tema actualizado correctamente en BD:', newTheme);
+          }
         } else {
-          console.log('✅ Tema actualizado correctamente en BD:', newTheme);
+          console.error('❌ Error verificando perfil:', selectError);
         }
       } catch (error) {
         console.error('❌ Error en setTheme:', error);
