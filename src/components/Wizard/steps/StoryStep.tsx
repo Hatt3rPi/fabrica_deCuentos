@@ -15,6 +15,7 @@ const StoryStep: React.FC = () => {
     setStorySettings,
     setGeneratedPages,
     setIsGenerating,
+    updateStoryTitle,
   } = useWizard();
   const { generateCover, generateCoverVariants } = useStory();
   const { storyId } = useParams();
@@ -65,6 +66,8 @@ const StoryStep: React.FC = () => {
       });
       if (result && result.title && Array.isArray(result.paragraphs)) {
         setGenerated(result);
+        // Actualizar el título en el estado del wizard para que se persista correctamente
+        updateStoryTitle(result.title);
         const draft = await storyService.getStoryDraft(storyId!);
         if (draft.pages) {
           const mapped = draft.pages.map(p => ({

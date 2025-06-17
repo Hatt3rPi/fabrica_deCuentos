@@ -22,6 +22,7 @@ interface WizardContextType {
   isGenerating: boolean;
   setIsGenerating: (value: boolean) => void;
   generatePageImage: (pageId: string) => Promise<void>;
+  updateStoryTitle: (title: string) => void;
   nextStep: () => void;
   prevStep: () => void;
   canProceed: () => boolean;
@@ -231,6 +232,16 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
+  const updateStoryTitle = (title: string) => {
+    setState(prevState => ({
+      ...prevState,
+      meta: {
+        ...prevState.meta,
+        title
+      }
+    }));
+  };
+
   const resetWizard = () => {
     setState(INITIAL_STATE);
     setCurrentStep('characters');
@@ -319,6 +330,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         isGenerating,
         setIsGenerating,
         generatePageImage,
+        updateStoryTitle,
         nextStep,
         prevStep,
         canProceed,
