@@ -6,6 +6,22 @@
 - **[ISSUE_TEMPLATE.md](./ISSUE_TEMPLATE.md)** - Template estandarizado para crear issues de calidad
 - **[../CLAUDE.md](../CLAUDE.md)** - Guía para trabajar con Claude Code
 
+### 🔧 Documentación Técnica
+
+#### Performance & Optimization:
+- **[tech/parallel-image-generation.md](./tech/parallel-image-generation.md)** - Sistema de generación paralela de imágenes (Issue #194)
+- **[tech/story-generation.md](./tech/story-generation.md)** - Generación de cuentos y portadas
+- **[tech/generate-image-pages.md](./tech/generate-image-pages.md)** - Edge Function para imágenes de páginas
+
+#### Componentes UI:
+- **[components/PreviewStep.md](./components/PreviewStep.md)** - Vista previa con generación paralela
+- **[components/WizardNav.md](./components/WizardNav.md)** - Navegación del wizard
+- **[components/OverlayLoader.md](./components/OverlayLoader.md)** - Loader con progress tracking
+
+#### Flujo de Trabajo:
+- **[flow/wizard-states.md](./flow/wizard-states.md)** - Estados del wizard
+- **[flow/user-flow.md](./flow/user-flow.md)** - Flujo completo del usuario
+
 ## 🔄 Ciclo de Desarrollo
 
 ### 1. Identificación de Problemas

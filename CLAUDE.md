@@ -161,3 +161,9 @@ Demo credentials:
 - Keep database functions in `supabase/migrations/`
 - Use clear, descriptive filenames
 - Document new patterns in this file
+
+### Issue Generation Guidelines
+- Cuando crees issues, genéralos en español y en el título pon [auto][prioridad alta/media/baja]
+
+### Documentation Practices
+- siempre documenta los cambios en CHANGELOG.md y en el readme que corresponda

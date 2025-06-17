@@ -13,17 +13,17 @@ const WizardNav: React.FC = () => {
     canProceed,
     isGenerating,
     designSettings,
-    generatedPages,
     setGeneratedPages,
-    setIsGenerating,
+    generateAllImagesParallel,
   } = useWizard();
   const { covers } = useStory();
   const { storyId } = useParams();
 
   const generateAllImages = async () => {
     if (!storyId) return;
-    setIsGenerating(true);
+    
     try {
+      // First, handle cover image synchronously
       const coverUrl =
         covers[storyId]?.variants?.[designSettings.visualStyle] ||
         covers[storyId]?.url;
@@ -35,20 +35,12 @@ const WizardNav: React.FC = () => {
           )
         );
       }
-      for (const page of generatedPages) {
-        if (page.pageNumber === 0) continue;
-        const url = await storyService.generatePageImage(
-          storyId,
-          page.id
-        );
-        setGeneratedPages(prev =>
-          prev.map(p => (p.id === page.id ? { ...p, imageUrl: url } : p))
-        );
-      }
+      
+      // Then trigger parallel generation for all other pages
+      await generateAllImagesParallel();
+      
     } catch (err) {
       console.error('Error generating page images', err);
-    } finally {
-      setIsGenerating(false);
     }
   };
 
