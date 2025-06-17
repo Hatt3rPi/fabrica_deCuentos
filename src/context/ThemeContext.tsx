@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
+import { useAuth } from './AuthContext';
 
 type Theme = 'light' | 'dark';
 
@@ -25,6 +26,7 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const { profile, updateTheme } = useProfileStore();
+  const { supabase, user } = useAuth();
   const [theme, setThemeState] = useState<Theme>('light');
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -73,11 +75,33 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     localStorage.setItem('theme_preference', newTheme);
   };
 
-  const setTheme = (newTheme: Theme) => {
+  const setTheme = async (newTheme: Theme) => {
     setThemeState(newTheme);
     applyTheme(newTheme);
     
-    // Update profile store (which will sync to database)
+    // Update database directly with proper auth context
+    if (user && supabase) {
+      try {
+        console.log('🎨 Actualizando tema en BD:', newTheme, 'para usuario:', user.id);
+        
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ theme_preference: newTheme })
+          .eq('user_id', user.id);
+          
+        if (error) {
+          console.error('❌ Error actualizando tema en BD:', error);
+        } else {
+          console.log('✅ Tema actualizado correctamente en BD:', newTheme);
+        }
+      } catch (error) {
+        console.error('❌ Error en setTheme:', error);
+      }
+    } else {
+      console.warn('⚠️ Usuario o supabase no disponible para actualizar tema');
+    }
+    
+    // También actualizar el store local para consistencia
     updateTheme(newTheme);
   };
 
