@@ -99,7 +99,7 @@ const Wizard: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 mb-8">
+    <div className="w-full max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 mb-8">
       <StepIndicator />
       <div className="p-6">
         {renderStep()}

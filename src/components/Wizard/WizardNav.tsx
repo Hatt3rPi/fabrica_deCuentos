@@ -67,14 +67,14 @@ const WizardNav: React.FC = () => {
   };
 
   return (
-    <div className="border-t border-gray-200 bg-gray-50 p-4 flex justify-between">
+    <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-4 flex justify-between">
       <button
         onClick={prevStep}
         disabled={currentStep === 'characters' || isGenerating}
         className={`px-5 py-2 rounded-lg flex items-center gap-2 ${
           currentStep === 'characters' || isGenerating
-            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            : 'bg-white text-purple-700 hover:bg-purple-50 border border-purple-300 shadow-sm'
+            ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+            : 'bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 border border-purple-300 dark:border-purple-600 shadow-sm'
         }`}
       >
         <ArrowLeft className="w-4 h-4" />
@@ -87,8 +87,8 @@ const WizardNav: React.FC = () => {
           disabled={isGenerating}
           className={`px-5 py-2 rounded-lg flex items-center gap-2 ${
             isGenerating
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-purple-600 text-white hover:bg-purple-700 shadow-md transition-colors'
+              ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              : 'bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-800 shadow-md transition-colors'
           }`}
         >
           <Download className="w-4 h-4" />
@@ -100,8 +100,8 @@ const WizardNav: React.FC = () => {
           disabled={!canProceed() || isGenerating}
           className={`px-5 py-2 rounded-lg flex items-center gap-2 ${
             !canProceed() || isGenerating
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-purple-600 text-white hover:bg-purple-700 shadow-md transition-colors'
+              ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              : 'bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-800 shadow-md transition-colors'
           }`}
         >
           <span>Siguiente</span>

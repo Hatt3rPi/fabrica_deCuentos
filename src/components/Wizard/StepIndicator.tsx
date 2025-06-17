@@ -15,7 +15,7 @@ const StepIndicator: React.FC = () => {
   const getCurrentStepIndex = () => steps.findIndex((step) => step.id === currentStep);
 
   return (
-    <div className="bg-gradient-to-r from-purple-100 to-blue-100 p-4">
+    <div className="bg-gradient-to-r from-purple-100 to-blue-100 dark:from-gray-700 dark:to-gray-600 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between">
           {steps.map((step, index) => {
@@ -33,17 +33,17 @@ const StepIndicator: React.FC = () => {
                       className={`h-1 flex-1 ${
                         isCompleted || (isCurrent && index > 0)
                           ? 'bg-purple-500'
-                          : 'bg-gray-300'
+                          : 'bg-gray-300 dark:bg-gray-600'
                       }`}
                     />
                   )}
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${
                       isCurrent
-                        ? 'bg-purple-600 ring-4 ring-purple-200'
+                        ? 'bg-purple-600 ring-4 ring-purple-200 dark:ring-purple-800'
                         : isCompleted
                         ? 'bg-purple-500'
-                        : 'bg-gray-300'
+                        : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
                     {step.icon}
@@ -51,7 +51,7 @@ const StepIndicator: React.FC = () => {
                   {index < steps.length - 1 && (
                     <div
                       className={`h-1 flex-1 ${
-                        isCompleted ? 'bg-purple-500' : 'bg-gray-300'
+                        isCompleted ? 'bg-purple-500' : 'bg-gray-300 dark:bg-gray-600'
                       }`}
                     />
                   )}
@@ -59,10 +59,10 @@ const StepIndicator: React.FC = () => {
                 <span
                   className={`mt-2 text-xs sm:text-sm font-medium ${
                     isCurrent
-                      ? 'text-purple-700'
+                      ? 'text-purple-700 dark:text-purple-300'
                       : isCompleted
-                      ? 'text-purple-600'
-                      : 'text-gray-500'
+                      ? 'text-purple-600 dark:text-purple-400'
+                      : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >
                   {step.label}
