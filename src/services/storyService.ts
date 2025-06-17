@@ -52,7 +52,7 @@ export const storyService = {
       .eq('id', id)
       .single();
       
-    result.then(({ data, error }) => {
+    result.then(({ error }) => {
       if (error) {
         console.error('[StoryService] ERROR EN persistStory:', error);
       } else {
@@ -193,5 +193,73 @@ export const storyService = {
         .insert(payload);
       if (error) throw error;
     }
+  },
+
+  // Story completion functionality
+  async completeStory(storyId: string, saveToLibrary: boolean = true): Promise<import('../types').CompletionResult> {
+    try {
+      // 1. Update story status and set completion timestamp
+      const { error: updateError } = await supabase
+        .from('stories')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', storyId);
+
+      if (updateError) throw updateError;
+
+      // 2. Generate export URL (mock for now, will be replaced with real Edge Function)
+      const downloadUrl = await this.generateMockExport(storyId, saveToLibrary);
+
+      return { 
+        success: true, 
+        downloadUrl 
+      };
+    } catch (error) {
+      console.error('[StoryService] Error completing story:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Error desconocido al finalizar el cuento'
+      };
+    }
+  },
+
+  async generateMockExport(storyId: string, saveToLibrary: boolean): Promise<string> {
+    // TODO: Replace with real Edge Function call
+    // For MVP, return a mock URL that simulates the export
+    const timestamp = Date.now();
+    const mockUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/exports/story-${storyId}-${timestamp}.pdf`;
+    
+    console.log(`[StoryService] Mock export generated for story ${storyId}, saveToLibrary: ${saveToLibrary}`);
+    console.log(`[StoryService] Mock download URL: ${mockUrl}`);
+    
+    // Simulate async operation
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return mockUrl;
+  },
+
+  async generateRealExport(storyId: string, saveToLibrary: boolean): Promise<string> {
+    // TODO: Implement in Phase 2 - Real Edge Function integration
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/story-export`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        story_id: storyId, 
+        save_to_library: saveToLibrary 
+      })
+    });
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to export story');
+    
+    return data.downloadUrl as string;
   }
 };

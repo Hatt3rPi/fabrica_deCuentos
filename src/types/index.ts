@@ -219,3 +219,22 @@ export const colorPaletteOptions = [
     colors: ['#FF0000', '#00FF00', '#0000FF', '#FF00FF', '#FFFF00']
   }
 ];
+
+// Tipos para finalización de cuentos
+export interface StoryCompletion {
+  storyId: string;
+  completedAt: string;
+  saveToLibrary: boolean;
+}
+
+export interface CompletionResult {
+  success: boolean;
+  downloadUrl?: string;
+  error?: string;
+}
+
+export interface ExportOptions {
+  saveToLibrary: boolean;
+  format?: 'pdf' | 'epub' | 'web';
+  includeMetadata?: boolean;
+}

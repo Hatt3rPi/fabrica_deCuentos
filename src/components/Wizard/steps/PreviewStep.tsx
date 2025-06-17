@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
-import { ChevronLeft, ChevronRight, RefreshCw, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Pencil, Download, BookOpen, CheckCircle } from 'lucide-react';
 import { OverlayLoader } from '../../UI/Loader';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
@@ -13,12 +13,18 @@ const PreviewStep: React.FC = () => {
     generatePageImage,
     bulkGenerationProgress,
     pageStates,
-    retryFailedPages 
+    retryFailedPages,
+    // Story completion functionality
+    completeStory,
+    isCompleting,
+    completionResult
   } = useWizard();
   const { createNotification } = useNotifications();
   const [currentPage, setCurrentPage] = useState(0);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [promptText, setPromptText] = useState('');
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [saveToLibrary, setSaveToLibrary] = useState(true);
   const handleFallback = () => setIsGenerating(false);
 
   // Removed simulated loading - now using real progress from parallel generation
@@ -36,7 +42,7 @@ const PreviewStep: React.FC = () => {
     setPromptText(currentPrompt);
   };
 
-  const handleRegeneratePage = async (pageId: string, prompt: string) => {
+  const handleRegeneratePage = async (pageId: string) => {
     try {
       await generatePageImage(pageId);
       createNotification(
@@ -58,6 +64,38 @@ const PreviewStep: React.FC = () => {
     }
   };
 
+  const handleCompleteStory = async () => {
+    try {
+      const result = await completeStory(saveToLibrary);
+      if (result.success) {
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Cuento finalizado',
+          'Tu cuento se ha completado exitosamente',
+          NotificationPriority.HIGH
+        );
+        setShowCompletionModal(false);
+      } else {
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Error al finalizar',
+          result.error || 'No se pudo finalizar el cuento',
+          NotificationPriority.HIGH
+        );
+      }
+    } catch {
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error al finalizar',
+        'Ocurrió un error inesperado',
+        NotificationPriority.HIGH
+      );
+    }
+  };
+
+  const allPagesCompleted = generatedPages.every(page => 
+    page.imageUrl && pageStates[page.id] !== 'error' && pageStates[page.id] !== 'generating'
+  );
 
   if (!generatedPages || generatedPages.length === 0) {
     return (
@@ -224,6 +262,134 @@ const PreviewStep: React.FC = () => {
             <RefreshCw className="w-4 h-4" />
             Reintentar {bulkGenerationProgress.failed} página{bulkGenerationProgress.failed > 1 ? 's' : ''} fallida{bulkGenerationProgress.failed > 1 ? 's' : ''}
           </button>
+        </div>
+      )}
+
+      {/* Story Completion Section */}
+      <div className="mt-12 max-w-2xl mx-auto">
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+          <div className="text-center mb-6">
+            <h3 className="text-xl font-bold text-purple-800 mb-2">
+              ¡Tu cuento está listo!
+            </h3>
+            <p className="text-gray-600">
+              {allPagesCompleted 
+                ? 'Todas las páginas se han generado correctamente. Puedes finalizar tu cuento.'
+                : 'Algunas páginas aún están en proceso. Puedes finalizar cuando estén listas.'
+              }
+            </p>
+          </div>
+
+          <div className="flex justify-center">
+            <button
+              onClick={() => setShowCompletionModal(true)}
+              disabled={isGenerating || isCompleting || !allPagesCompleted}
+              className={`px-8 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                allPagesCompleted && !isGenerating && !isCompleting
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {isCompleting ? (
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  Finalizando cuento...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  Finalizar Cuento
+                </>
+              )}
+            </button>
+          </div>
+
+          {completionResult?.success && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 text-green-800 mb-2">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-semibold">¡Cuento completado exitosamente!</span>
+              </div>
+              {completionResult.downloadUrl && (
+                <a
+                  href={completionResult.downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-green-700 hover:text-green-800 underline"
+                >
+                  <Download className="w-4 h-4" />
+                  Descargar cuento
+                </a>
+              )}
+            </div>
+          )}
+
+          {completionResult?.error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800">
+                <span className="font-semibold">Error:</span> {completionResult.error}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Completion Modal */}
+      {showCompletionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">
+              Finalizar Cuento
+            </h3>
+            
+            <p className="text-gray-600 mb-6">
+              Tu cuento será marcado como completado y se generará un archivo descargable.
+            </p>
+
+            <div className="mb-6">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={saveToLibrary}
+                  onChange={(e) => setSaveToLibrary(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                />
+                <span className="text-gray-700">
+                  Guardar en mi biblioteca personal
+                </span>
+              </label>
+              <p className="text-sm text-gray-500 mt-1 ml-7">
+                Podrás acceder a tu cuento desde tu perfil en cualquier momento
+              </p>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowCompletionModal(false)}
+                disabled={isCompleting}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:text-gray-400"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCompleteStory}
+                disabled={isCompleting}
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg disabled:bg-gray-400 flex items-center gap-2"
+              >
+                {isCompleting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <BookOpen className="w-4 h-4" />
+                    Finalizar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
