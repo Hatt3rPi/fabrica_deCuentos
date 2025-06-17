@@ -12,8 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Testing
 - `npm run cypress:open` - Open Cypress GUI for interactive testing
-- `npm run cypress:run` - Run all Cypress tests in headless mode
+- `npm run cypress:run` - Run all Cypress tests in headless mode (26 tests)
 - `npm run test:e2e` - Run end-to-end tests (alias for cypress:run)
+- `npm run test:complete-flow` - Run ONLY the complete story flow test (recommended)
 - `npx cypress run --spec "cypress/e2e/flows/3_creacion_personaje.cy.js"` - Run specific test
 
 ### Supabase
