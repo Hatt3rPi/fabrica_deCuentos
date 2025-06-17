@@ -114,10 +114,10 @@ const CharactersStep: React.FC = () => {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-purple-800 mb-2">
+        <h2 className="text-2xl font-bold text-purple-800 dark:text-purple-300 mb-2">
           Personajes de tu Historia
         </h2>
-        <p className="text-gray-600">Crea hasta 3 personajes para tu cuento</p>
+        <p className="text-gray-600 dark:text-gray-300">Crea hasta 3 personajes para tu cuento</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -139,7 +139,7 @@ const CharactersStep: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             onClick={handleAddCharacter}
-            className="h-full min-h-[400px] border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-colors"
+            className="h-full min-h-[400px] border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
             aria-label="Añadir nuevo personaje"
           >
             <Plus className="w-12 h-12" />

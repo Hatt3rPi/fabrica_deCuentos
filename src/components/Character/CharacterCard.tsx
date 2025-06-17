@@ -38,7 +38,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       onClick={onClick}
-      className={`bg-white rounded-lg shadow-md overflow-hidden ${onClick ? 'cursor-pointer' : ''}`}
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className="aspect-square relative">
         {character.thumbnailUrl ? (
@@ -48,8 +48,8 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-            <span className="text-gray-400">Sin imagen</span>
+          <div className="w-full h-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            <span className="text-gray-400 dark:text-gray-500">Sin imagen</span>
           </div>
         )}
         {isSelected && (
@@ -60,12 +60,12 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       </div>
 
       <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-800 mb-1">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">
           {character.name}
         </h3>
-        <p className="text-sm text-gray-600 mb-2">{character.age} años</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{character.age} años</p>
         {showDescription && (
-          <p className="text-sm text-gray-600 line-clamp-2 mb-4">
+          <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-4">
             {typeof character.description === 'object'
               ? character.description.es
               : character.description}
@@ -80,7 +80,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                   e.stopPropagation();
                   onEdit(character.id);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-md transition-colors"
                 aria-label="Editar personaje"
               >
                 <Edit2 className="w-4 h-4" />
@@ -93,7 +93,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                   e.stopPropagation();
                   onDelete(character.id);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
                 aria-label="Eliminar personaje"
               >
                 <Trash2 className="w-4 h-4" />

@@ -61,14 +61,15 @@ const ToastContainer: React.FC = () => {
   };
 
   return (
-    <div className="toast-container">
-      {toasts.map(toast => (
-        <Toast
-          key={toast.id}
-          type={toast.type}
-          message={toast.message}
-          onClose={() => removeToast(toast.id)}
-        />
+    <div className="fixed top-[calc(var(--header-height,4rem)+1rem)] right-4 z-50 space-y-2">
+      {toasts.map((toast, index) => (
+        <div key={toast.id} style={{ marginTop: `${index * 80}px` }}>
+          <Toast
+            type={toast.type}
+            message={toast.message}
+            onClose={() => removeToast(toast.id)}
+          />
+        </div>
       ))}
     </div>
   );
