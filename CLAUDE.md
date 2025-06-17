@@ -164,3 +164,6 @@ Demo credentials:
 
 ### Issue Generation Guidelines
 - Cuando crees issues, genéralos en español y en el título pon [auto][prioridad alta/media/baja]
+
+### Documentation Practices
+- siempre documenta los cambios en CHANGELOG.md y en el readme que corresponda
