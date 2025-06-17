@@ -1,14 +1,10 @@
 import React from 'react';
 import { Moon, Sun } from 'lucide-react';
-import { useProfileStore } from '../../stores/profileStore';
+import { useTheme } from '../../context/ThemeContext';
 
 const ThemeToggle: React.FC = () => {
-  const { profile, updateTheme } = useProfileStore();
-  const isDarkMode = profile?.theme_preference === 'dark';
-  
-  const toggleTheme = () => {
-    updateTheme(isDarkMode ? 'light' : 'dark');
-  };
+  const { theme, toggleTheme } = useTheme();
+  const isDarkMode = theme === 'dark';
   
   return (
     <div className="flex flex-col gap-4">

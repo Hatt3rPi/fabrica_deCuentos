@@ -45,36 +45,36 @@ const Toast: React.FC<ToastProps> = ({
   const getBgColor = () => {
     switch (type) {
       case 'success':
-        return 'bg-green-50 border-green-200';
+        return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
       case 'error':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
       case 'info':
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
       case 'notification':
-        return 'bg-purple-50 border-purple-200';
+        return 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800';
       default:
-        return 'bg-gray-50 border-gray-200';
+        return 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700';
     }
   };
 
   const getTextColor = () => {
     switch (type) {
       case 'success':
-        return 'text-green-800';
+        return 'text-green-800 dark:text-green-200';
       case 'error':
-        return 'text-red-800';
+        return 'text-red-800 dark:text-red-200';
       case 'info':
-        return 'text-blue-800';
+        return 'text-blue-800 dark:text-blue-200';
       case 'notification':
-        return 'text-purple-800';
+        return 'text-purple-800 dark:text-purple-200';
       default:
-        return 'text-gray-800';
+        return 'text-gray-800 dark:text-gray-200';
     }
   };
 
   return (
     <div 
-      className={`fixed bottom-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg border ${getBgColor()} transition-opacity duration-300 ${
+      className={`max-w-md p-4 rounded-lg shadow-lg border ${getBgColor()} transition-opacity duration-300 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
     >
@@ -90,7 +90,7 @@ const Toast: React.FC<ToastProps> = ({
             setIsVisible(false);
             setTimeout(onClose, 300);
           }}
-          className="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-600"
+          className="ml-4 flex-shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
         >
           <X className="w-4 h-4" />
         </button>

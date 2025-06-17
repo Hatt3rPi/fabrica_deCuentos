@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { AdminProvider } from './context/AdminContext';
 import { WizardProvider } from './context/WizardContext';
 import { StoryProvider } from './context/StoryContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { useAuth } from './context/AuthContext';
 import StoryCreationWizard from './pages/StoryCreationWizard';
 import Header from './components/Layout/Header';
@@ -18,7 +19,6 @@ import ProfileSettings from './pages/ProfileSettings';
 import PromptsManager from './pages/Admin/Prompts/PromptsManager';
 import PromptAnalytics from './pages/Admin/Analytics/PromptAnalytics';
 import AdminFlujo from './pages/Admin/Flujo';
-import { useProfileStore } from './stores/profileStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -184,22 +184,15 @@ function App() {
   React.useEffect(() => {
     registerServiceWorker();
   }, []);
-  
-  React.useEffect(() => {
-    const profileStore = useProfileStore.getState();
-    if (profileStore.profile?.theme_preference === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
 
   return (
     <Router>
       <AuthProvider>
-        <AdminProvider>
-          <AppContent />
-        </AdminProvider>
+        <ThemeProvider>
+          <AdminProvider>
+            <AppContent />
+          </AdminProvider>
+        </ThemeProvider>
       </AuthProvider>
     </Router>
   );

@@ -3,7 +3,6 @@ import { useNotifications } from '../../hooks/useNotifications';
 import { 
   Notification, 
   NotificationType, 
-  NotificationGroup,
   NotificationFilterOptions
 } from '../../types/notification';
 
@@ -20,7 +19,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
     fetchNotifications,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
     deleteMultipleNotifications,
     groupNotificationsByDate
   } = useNotifications();
@@ -173,14 +171,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-h-[80vh] flex flex-col max-w-[calc(100vw-2rem)]" data-testid="notification-center">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-[80vh] flex flex-col max-w-[calc(100vw-2rem)]" data-testid="notification-center">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-gray-800">Notificaciones</h2>
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Notificaciones</h2>
         <div className="flex space-x-2">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
             aria-label="Filtrar"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -189,7 +187,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
           </button>
           <button
             onClick={onClose}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full"
+            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
             aria-label="Cerrar"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -201,17 +199,17 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
 
       {/* Filter panel */}
       {isFilterOpen && (
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
           <div className="flex flex-col space-y-3">
             <div className="relative">
               <input
                 type="text"
                 placeholder="Buscar notificaciones..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <div className="absolute left-3 top-2.5 text-gray-400">
+              <div className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                 </svg>
@@ -219,7 +217,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
             </div>
             <div className="flex flex-wrap gap-2">
               <select
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value as NotificationType | '')}
               >
@@ -236,12 +234,12 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-gray-200 dark:border-gray-700">
         <button
           className={`flex-1 py-3 text-sm font-medium ${
             activeTab === 'all'
               ? 'text-purple-600 border-b-2 border-purple-500'
-              : 'text-gray-500 hover:text-gray-700'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
           onClick={() => setActiveTab('all')}
         >
@@ -251,7 +249,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
           className={`flex-1 py-3 text-sm font-medium ${
             activeTab === 'unread'
               ? 'text-purple-600 border-b-2 border-purple-500'
-              : 'text-gray-500 hover:text-gray-700'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
           onClick={() => setActiveTab('unread')}
         >
@@ -260,7 +258,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
       </div>
 
       {/* Actions */}
-      <div className="p-3 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+      <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700">
         <div className="flex items-center">
           <input
             type="checkbox"
@@ -268,7 +266,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
             onChange={toggleSelectAll}
             className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
           />
-          <span className="ml-2 text-sm text-gray-600">
+          <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
             {selectedNotifications.length > 0
               ? `${selectedNotifications.length} seleccionadas`
               : 'Seleccionar todas'}
@@ -278,7 +276,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
           {selectedNotifications.length > 0 && (
             <button
               onClick={handleDeleteSelected}
-              className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded-md"
+              className="px-3 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
             >
               Eliminar
             </button>
@@ -286,7 +284,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
-              className="px-3 py-1 text-xs text-purple-600 hover:bg-purple-50 rounded-md"
+              className="px-3 py-1 text-xs text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-md"
             >
               Marcar todas como leídas
             </button>
@@ -301,9 +299,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
           </div>
         ) : error ? (
-          <div className="p-4 text-center text-red-500">{error}</div>
+          <div className="p-4 text-center text-red-500 dark:text-red-400">{error}</div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-12 w-12 mx-auto text-gray-300 mb-4"
@@ -324,7 +322,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
           <div>
             {groupedNotifications.map((group) => (
               <div key={group.date} className="mb-2">
-                <div className="px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500">
+                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-xs font-medium text-gray-500 dark:text-gray-400">
                   {group.date}
                 </div>
                 {group.notifications
@@ -335,8 +333,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
                   .map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 ${
-                        !notification.read ? 'bg-purple-50' : ''
+                      className={`p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 ${
+                        !notification.read ? 'bg-purple-50 dark:bg-purple-900/20' : ''
                       }`}
                     >
                       <div className="flex items-start">
@@ -354,14 +352,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
                         </div>
                         <div className="flex-1" onClick={() => handleNotificationClick(notification)}>
                           <div className="flex justify-between items-start">
-                            <h3 className={`text-sm font-medium ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>
+                            <h3 className={`text-sm font-medium ${!notification.read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
                               {notification.title}
                             </h3>
                             <div className="flex items-center">
                               {!notification.read && (
                                 <span className="h-2 w-2 bg-purple-500 rounded-full mr-2"></span>
                               )}
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
                                 {new Date(notification.createdAt).toLocaleTimeString([], {
                                   hour: '2-digit',
                                   minute: '2-digit',
@@ -369,7 +367,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
                               </span>
                             </div>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
                           {notification.actions && notification.actions.length > 0 && (
                             <div className="mt-2 flex space-x-2">
                               {notification.actions.map((action, index) => (
@@ -404,10 +402,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
       </div>
 
       {/* Footer */}
-      <div className="p-3 border-t border-gray-200 bg-gray-50 text-center">
+      <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-center">
         <a
           href="/configuracion/notificaciones"
-          className="text-sm text-purple-600 hover:text-purple-800"
+          className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
           onClick={(e) => {
             e.preventDefault();
             // Navigate to notification settings
