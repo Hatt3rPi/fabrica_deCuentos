@@ -171,10 +171,10 @@ const Sidebar: React.FC = () => {
   return (
     <div className="h-full flex flex-col">
       {/* Logo section */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
-          <BookOpen className="w-8 h-8 text-purple-600" />
-          <span className="font-semibold text-gray-900">CuenterIA</span>
+          <BookOpen className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+          <span className="font-semibold text-gray-900 dark:text-white">CuenterIA</span>
         </div>
       </div>
 
@@ -227,10 +227,10 @@ const Sidebar: React.FC = () => {
       </nav>
 
       {/* Footer actions */}
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <button
           onClick={() => signOut()}
-          className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg"
+          className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg"
         >
           <LogOut className="w-5 h-5" />
           <span>Cerrar Sesión</span>
