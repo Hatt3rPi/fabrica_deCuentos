@@ -8,7 +8,7 @@ export type Etapa =
   | 'personajes' 
   | 'cuento_fase1' | 'cuento_fase1_multi'
   | 'cuento_fase2' | 'cuento_fase2_multi'
-  | 'vista_previa' | 'vista_previa_multi';
+  | 'vista_previa' | 'vista_previa_multi' | 'vista_previa_parallel';
 
 export interface LoaderMessage {
   /** Identificador único del mensaje */
@@ -113,6 +113,32 @@ const loaderMessages: LoaderMessage[] = [
     id: 'b.6_multi',
     text: 'Preparando la vista previa de tu cuento...',
     etapa: ['vista_previa_multi']
+  },
+  // New parallel generation messages
+  {
+    id: 'c.1_parallel',
+    text: 'Generando todas las páginas en paralelo... ⚡',
+    etapa: ['vista_previa_parallel']
+  },
+  {
+    id: 'c.2_parallel',
+    text: 'Progreso: {current} de {total} páginas completadas',
+    etapa: ['vista_previa_parallel']
+  },
+  {
+    id: 'c.3_parallel',
+    text: 'Aplicando el estilo {estilo} a cada página...',
+    etapa: ['vista_previa_parallel']
+  },
+  {
+    id: 'c.4_parallel',
+    text: 'Cada página está cobrando vida simultáneamente... ✨',
+    etapa: ['vista_previa_parallel']
+  },
+  {
+    id: 'c.5_parallel',
+    text: 'Optimizando tiempos con generación inteligente...',
+    etapa: ['vista_previa_parallel']
   }
 ];
 

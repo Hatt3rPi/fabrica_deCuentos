@@ -6,21 +6,22 @@ import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 
 const PreviewStep: React.FC = () => {
-  const { generatedPages, isGenerating, setIsGenerating, generatePageImage } = useWizard();
+  const { 
+    generatedPages, 
+    isGenerating, 
+    setIsGenerating, 
+    generatePageImage,
+    bulkGenerationProgress,
+    pageStates,
+    retryFailedPages 
+  } = useWizard();
   const { createNotification } = useNotifications();
   const [currentPage, setCurrentPage] = useState(0);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [promptText, setPromptText] = useState('');
   const handleFallback = () => setIsGenerating(false);
 
-  useEffect(() => {
-    // Simular tiempo de carga inicial
-    setIsGenerating(true);
-    const timer = setTimeout(() => {
-      setIsGenerating(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [setIsGenerating]);
+  // Removed simulated loading - now using real progress from parallel generation
 
   const handlePrevPage = () => {
     setCurrentPage((prev) => Math.max(0, prev - 1));
@@ -98,10 +99,36 @@ const PreviewStep: React.FC = () => {
         <div className="relative w-[600px] aspect-square bg-white rounded-lg shadow-lg overflow-hidden">
           {currentPageData && (
             <>
+              {/* Show page state indicator */}
+              {pageStates[currentPageData.id] === 'generating' && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+                  <div className="bg-white rounded-lg p-4 text-center">
+                    <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-purple-600" />
+                    <p className="text-sm text-gray-600">Generando página {currentPage + 1}...</p>
+                  </div>
+                </div>
+              )}
+              
+              {pageStates[currentPageData.id] === 'error' && (
+                <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs z-10">
+                  Error en generación
+                </div>
+              )}
+              
+              {pageStates[currentPageData.id] === 'completed' && currentPageData.imageUrl && (
+                <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs z-10">
+                  ✓ Completada
+                </div>
+              )}
+              
               <img
-                src={currentPageData.imageUrl}
+                src={currentPageData.imageUrl || '/placeholder-image.png'}
                 alt={`Página ${currentPage + 1}`}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback para imágenes rotas
+                  (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                }}
               />
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
                 <p className="text-white text-lg">{currentPageData.text}</p>
@@ -172,7 +199,32 @@ const PreviewStep: React.FC = () => {
         </div>
       </div>
       {isGenerating && (
-        <OverlayLoader etapa="vista_previa" onFallback={handleFallback} />
+        <OverlayLoader 
+          etapa="vista_previa_parallel" 
+          progress={{ 
+            current: bulkGenerationProgress.completed, 
+            total: bulkGenerationProgress.total 
+          }}
+          context={{ 
+            current: bulkGenerationProgress.completed.toString(),
+            total: bulkGenerationProgress.total.toString(),
+            estilo: 'artístico'
+          }}
+          onFallback={handleFallback} 
+        />
+      )}
+      
+      {/* Show retry button if there are failed pages and not currently generating */}
+      {!isGenerating && bulkGenerationProgress.failed > 0 && (
+        <div className="fixed bottom-4 right-4 z-40">
+          <button
+            onClick={retryFailedPages}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Reintentar {bulkGenerationProgress.failed} página{bulkGenerationProgress.failed > 1 ? 's' : ''} fallida{bulkGenerationProgress.failed > 1 ? 's' : ''}
+          </button>
+        </div>
       )}
     </div>
   );
