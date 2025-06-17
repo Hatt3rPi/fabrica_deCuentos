@@ -40,6 +40,7 @@ jobs:
           record: false
           command-timeout: 10000
           default-command-timeout: 10000
+          spec: cypress/e2e/complete_story_flow.cy.js
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
