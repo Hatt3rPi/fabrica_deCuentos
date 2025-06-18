@@ -536,8 +536,8 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
 
     console.log('[story-export] Enviando HTML a Browserless.io API...');
     
-    // Usar API REST de Browserless.io en lugar de WebSocket
-    const response = await fetch(`https://chrome.browserless.io/pdf?token=${browserlessToken}`, {
+    // Usar API REST de Browserless.io (endpoint moderno)
+    const response = await fetch(`https://production-sfo.browserless.io/pdf?token=${browserlessToken}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
