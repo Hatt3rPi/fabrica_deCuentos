@@ -525,26 +525,25 @@ function generateHTMLContent(
 }
 
 async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
-  console.log('[story-export] Iniciando generación real de PDF con Puppeteer...');
+  console.log('[story-export] Iniciando generación real de PDF con Puppeteer remoto...');
   
   let browser;
   try {
-    // Lanzar navegador
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu'
-      ]
+    // Obtener token de Browserless.io
+    const browserlessToken = Deno.env.get('BROWSERLESS_TOKEN');
+    if (!browserlessToken) {
+      throw new Error('BROWSERLESS_TOKEN no configurado en variables de entorno');
+    }
+
+    // Conectar a browser remoto en Browserless.io
+    const browserWSEndpoint = `wss://chrome.browserless.io?token=${browserlessToken}`;
+    console.log('[story-export] Conectando a browser remoto...');
+    
+    browser = await puppeteer.connect({
+      browserWSEndpoint
     });
 
-    console.log('[story-export] Navegador iniciado, creando página...');
+    console.log('[story-export] Conectado exitosamente, creando página...');
     
     // Crear nueva página
     const page = await browser.newPage();
@@ -581,13 +580,13 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
     console.error('[story-export] Error en generación de PDF:', error);
     throw new Error(`Error generando PDF: ${error.message}`);
   } finally {
-    // Cerrar navegador siempre
+    // Cerrar conexión al browser remoto
     if (browser) {
       try {
-        await browser.close();
-        console.log('[story-export] Navegador cerrado correctamente');
+        await browser.disconnect();
+        console.log('[story-export] Desconectado del browser remoto correctamente');
       } catch (closeError) {
-        console.error('[story-export] Error cerrando navegador:', closeError);
+        console.error('[story-export] Error desconectando browser remoto:', closeError);
       }
     }
   }
