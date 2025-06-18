@@ -167,3 +167,6 @@ Demo credentials:
 
 ### Documentation Practices
 - siempre documenta los cambios en CHANGELOG.md y en el readme que corresponda
+
+### Supabase Migrations
+- Las Migrations de supabase deben tener el siguiente formato aaaaMMddhhmmss_
