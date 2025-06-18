@@ -535,12 +535,14 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
       throw new Error('BROWSERLESS_TOKEN no configurado en variables de entorno');
     }
 
-    // Conectar a browser remoto en Browserless.io
-    const browserWSEndpoint = `wss://chrome.browserless.io?token=${browserlessToken}`;
-    console.log('[story-export] Conectando a browser remoto...');
+    // Conectar a browser remoto en Browserless.io 
+    // Probando con parámetros adicionales para evitar ALPN issues
+    const browserWSEndpoint = `wss://chrome.browserless.io?token=${browserlessToken}&launch={"headless":true}`;
+    console.log('[story-export] Conectando a browser remoto...', browserWSEndpoint.replace(browserlessToken, '[TOKEN_HIDDEN]'));
     
     browser = await puppeteer.connect({
-      browserWSEndpoint
+      browserWSEndpoint,
+      ignoreHTTPSErrors: true
     });
 
     console.log('[story-export] Conectado exitosamente, creando página...');
