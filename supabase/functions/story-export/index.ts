@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     const pdfBuffer = await generateStoryPDF(storyData, format, include_metadata);
     
     // 3. Subir a Supabase Storage
-    const downloadUrl = await uploadPDFToStorage(story_id, pdfBuffer, userId);
+    const downloadUrl = await uploadPDFToStorage(story_id, pdfBuffer, userId, storyData.story.title);
     
     // 4. Actualizar estado del cuento
     await markStoryAsCompleted(story_id, downloadUrl, save_to_library);
@@ -720,12 +720,43 @@ async function generatePDFFromHTML(htmlContent: string, aspectRatio: string = 'p
   }
 }
 
-async function uploadPDFToStorage(storyId: string, pdfBuffer: Uint8Array, userId: string): Promise<string> {
+async function uploadPDFToStorage(storyId: string, pdfBuffer: Uint8Array, userId: string, storyTitle: string): Promise<string> {
   console.log('[story-export] Subiendo PDF a storage...');
   
+  // Limpiar título para usar como nombre de archivo
+  const cleanTitle = storyTitle
+    .toLowerCase()
+    // Reemplazar caracteres especiales del español
+    .replace(/[áàäâ]/g, 'a')
+    .replace(/[éèëê]/g, 'e')
+    .replace(/[íìïî]/g, 'i')
+    .replace(/[óòöô]/g, 'o')
+    .replace(/[úùüû]/g, 'u')
+    .replace(/ñ/g, 'n')
+    .replace(/ç/g, 'c')
+    // Remover caracteres especiales restantes
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    // Reemplazar múltiples espacios con uno solo
+    .replace(/\s+/g, ' ')
+    // Reemplazar espacios con guiones
+    .replace(/\s/g, '-')
+    // Limitar longitud
+    .substring(0, 50)
+    // Asegurar que no termine en guión
+    .replace(/-+$/, '');
+  
   const timestamp = Date.now();
-  const fileName = `story-${storyId}-${timestamp}.pdf`;
+  // Fallback si el título queda vacío después de limpieza
+  const finalTitle = cleanTitle || 'cuento';
+  const fileName = `${finalTitle}-${timestamp}.pdf`;
   const filePath = `exports/${userId}/${fileName}`;
+  
+  console.log(`[story-export] 📚 Nombre del archivo: "${fileName}"`);
+  console.log(`[story-export] 📝 Título original: "${storyTitle}"`);
+  console.log(`[story-export] 🧹 Título limpio: "${cleanTitle}"`);
+  console.log(`[story-export] 📁 Título final: "${finalTitle}"`);
+  
   
   const { data, error } = await supabaseAdmin.storage
     .from('exports')
