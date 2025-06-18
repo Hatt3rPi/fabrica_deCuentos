@@ -15,6 +15,7 @@ const WizardNav: React.FC = () => {
     designSettings,
     setGeneratedPages,
     generateAllImagesParallel,
+    completionResult,
   } = useWizard();
   const { covers } = useStory();
   const { storyId } = useParams();
@@ -53,10 +54,7 @@ const WizardNav: React.FC = () => {
     }
   };
 
-  const handleDownloadPDF = () => {
-    // Simulación de descarga de PDF
-    alert('Descargando PDF...');
-  };
+  // Función eliminada - la descarga se maneja en PreviewStep
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-4 flex justify-between">
@@ -74,18 +72,19 @@ const WizardNav: React.FC = () => {
       </button>
 
       {currentStep === 'preview' ? (
-        <button
-          onClick={handleDownloadPDF}
-          disabled={isGenerating}
-          className={`px-5 py-2 rounded-lg flex items-center gap-2 ${
-            isGenerating
-              ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              : 'bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-800 shadow-md transition-colors'
-          }`}
-        >
-          <Download className="w-4 h-4" />
-          <span>Descargar PDF</span>
-        </button>
+        completionResult?.success && completionResult.downloadUrl ? (
+          <a
+            href={completionResult.downloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-5 py-2 rounded-lg flex items-center gap-2 bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-800 shadow-md transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span>Descargar cuento</span>
+          </a>
+        ) : (
+          <div></div>
+        )
       ) : (
         <button
           onClick={handleNextClick}

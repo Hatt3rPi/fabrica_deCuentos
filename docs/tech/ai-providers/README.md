@@ -25,6 +25,17 @@ Este documento proporciona una visión general de los proveedores de IA disponib
   - Control de calidad (baja, media, alta)
   - Modo de moderación ajustable
 
+**Dimensiones soportadas:**
+- `1024x1024` (cuadrada - aspect ratio 1:1)
+- `1536x1024` (landscape - aspect ratio 3:2)
+- `1024x1536` (portrait - aspect ratio 2:3)
+
+**Integración con PDF dinámico:**
+El sistema de exportación de PDF detecta automáticamente las dimensiones de las imágenes generadas y adapta el tamaño de página del PDF:
+- Imágenes cuadradas (1024x1024) → PDF con páginas cuadradas (21cm x 21cm)
+- Imágenes landscape (1536x1024) → PDF en formato A4 horizontal (29.7cm x 21cm)
+- Imágenes portrait (1024x1536) → PDF en formato A4 vertical (21cm x 29.7cm)
+
 #### DALL·E 3
 - **ID del modelo**: `dall-e-3`
 - **Descripción**: Última generación de DALL·E con mejoras en la calidad y detalle de las imágenes.

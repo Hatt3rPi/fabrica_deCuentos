@@ -25,6 +25,7 @@ const PreviewStep: React.FC = () => {
   const [promptText, setPromptText] = useState('');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [saveToLibrary, setSaveToLibrary] = useState(true);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const handleFallback = () => setIsGenerating(false);
 
   // Removed simulated loading - now using real progress from parallel generation
@@ -75,6 +76,12 @@ const PreviewStep: React.FC = () => {
           NotificationPriority.HIGH
         );
         setShowCompletionModal(false);
+        setShowSuccessNotification(true);
+        
+        // Auto-cerrar notificación después de 8 segundos
+        setTimeout(() => {
+          setShowSuccessNotification(false);
+        }, 8000);
       } else {
         createNotification(
           NotificationType.SYSTEM_UPDATE,
@@ -304,50 +311,36 @@ const PreviewStep: React.FC = () => {
             )}
           </div>
 
-          <div className="flex justify-center">
-            <button
-              onClick={() => setShowCompletionModal(true)}
-              disabled={isGenerating || isCompleting || !allPagesCompleted}
-              className={`px-8 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                allPagesCompleted && !isGenerating && !isCompleting
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isCompleting ? (
-                <>
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                  Finalizando cuento...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-5 h-5" />
-                  Finalizar Cuento
-                </>
-              )}
-            </button>
+          {/* Botones centrados */}
+          <div className="flex justify-center gap-4">
+            {/* Botón Finalizar Cuento - solo visible si no se ha completado */}
+            {!completionResult?.success && (
+              <button
+                onClick={() => setShowCompletionModal(true)}
+                disabled={isGenerating || isCompleting || !allPagesCompleted}
+                className={`px-8 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                  allPagesCompleted && !isGenerating && !isCompleting
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isCompleting ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Finalizando cuento...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    Finalizar Cuento
+                  </>
+                )}
+              </button>
+            )}
+
           </div>
 
-          {completionResult?.success && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center gap-2 text-green-800 mb-2">
-                <CheckCircle className="w-5 h-5" />
-                <span className="font-semibold">¡Cuento completado exitosamente!</span>
-              </div>
-              {completionResult.downloadUrl && (
-                <a
-                  href={completionResult.downloadUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-green-700 hover:text-green-800 underline"
-                >
-                  <Download className="w-4 h-4" />
-                  Descargar cuento
-                </a>
-              )}
-            </div>
-          )}
-
+          {/* Error state */}
           {completionResult?.error && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-800">
@@ -357,6 +350,36 @@ const PreviewStep: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Notificación de éxito - reemplaza el contenedor verde */}
+      {completionResult?.success && showSuccessNotification && (
+        <div className="fixed top-4 right-4 z-50 max-w-md">
+          <div className="bg-white border border-green-200 rounded-lg shadow-lg p-4 animate-slide-in-right">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="flex-grow">
+                <h4 className="font-semibold text-green-800 mb-1">
+                  ¡Cuento completado exitosamente!
+                </h4>
+                <p className="text-sm text-green-700">
+                  Tu cuento ha sido generado y está listo para descargar.
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowSuccessNotification(false)}
+                className="flex-shrink-0 text-green-600 hover:text-green-800 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Completion Modal */}
       {showCompletionModal && (

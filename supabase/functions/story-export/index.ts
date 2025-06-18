@@ -71,6 +71,9 @@ Deno.serve(async (req) => {
     const requestData: StoryExportRequest = await req.json();
     const { story_id, save_to_library = true, format = 'pdf', include_metadata = true } = requestData;
 
+    console.log(`[story-export] 🚀 Iniciando export para story: ${story_id}`);
+    console.log(`[story-export] 📋 Parámetros:`, { story_id, save_to_library, format, include_metadata });
+
     if (!story_id) {
       throw new Error('story_id es requerido');
     }
@@ -79,6 +82,8 @@ Deno.serve(async (req) => {
     if (!userId) {
       throw new Error('Usuario no autenticado');
     }
+    
+    console.log(`[story-export] 👤 User ID: ${userId}`);
 
     const enabled = await isActivityEnabled(STAGE, ACTIVITY);
     if (!enabled) {
@@ -105,10 +110,17 @@ Deno.serve(async (req) => {
     const pdfBuffer = await generateStoryPDF(storyData, format, include_metadata);
     
     // 3. Subir a Supabase Storage
-    const downloadUrl = await uploadPDFToStorage(story_id, pdfBuffer, userId);
+    const downloadUrl = await uploadPDFToStorage(story_id, pdfBuffer, userId, storyData.story.title);
     
     // 4. Actualizar estado del cuento
-    await markStoryAsCompleted(story_id, downloadUrl, save_to_library);
+    try {
+      await markStoryAsCompleted(story_id, downloadUrl, save_to_library);
+      console.log('[story-export] ✅ Estado del cuento actualizado exitosamente');
+    } catch (markError) {
+      console.error('[story-export] ❌ Error marcando cuento como completado:', markError);
+      // No lanzar el error para que el PDF se pueda descargar igual
+      console.log('[story-export] ⚠️ Continuando con descarga a pesar del error de estado');
+    }
     
     const elapsed = Date.now() - start;
 
@@ -249,17 +261,218 @@ async function generateStoryPDF(
 ): Promise<Uint8Array> {
   console.log('[story-export] Generando PDF...');
   
-  // Por ahora generamos un PDF simple con texto
-  // En una implementación real usarías una librería como Puppeteer, jsPDF, etc.
   const { story, pages, characters, design } = storyData;
   
-  // Crear contenido HTML para convertir a PDF
-  const htmlContent = generateHTMLContent(story, pages, characters, design, includeMetadata);
+  // Detectar aspect ratio de la primera imagen disponible
+  const storyPages = pages.filter(p => p.page_number > 0);
+  const coverPage = pages.find(p => p.page_number === 0);
   
-  // Simular generación de PDF (en una implementación real usarías Puppeteer o similar)
-  const pdfContent = await generatePDFFromHTML(htmlContent);
+  let aspectRatio = 'portrait'; // Por defecto
+  
+  if (coverPage?.image_url) {
+    aspectRatio = await detectImageAspectRatio(coverPage.image_url);
+  } else if (storyPages.length > 0 && storyPages[0].image_url) {
+    aspectRatio = await detectImageAspectRatio(storyPages[0].image_url);
+  }
+  
+  console.log(`[story-export] 🎯 Aspect ratio final para PDF: ${aspectRatio}`);
+  
+  // Crear contenido HTML para convertir a PDF
+  const htmlContent = generateHTMLContent(story, pages, characters, design, includeMetadata, aspectRatio);
+  
+  // Generar PDF usando Browserless.io con aspect ratio específico
+  const pdfContent = await generatePDFFromHTML(htmlContent, aspectRatio);
   
   return pdfContent;
+}
+
+// Función para detectar aspect ratio de imagen desde URL
+async function detectImageAspectRatio(imageUrl: string): Promise<string> {
+  try {
+    console.log(`[story-export] 🔍 Iniciando detección de aspect ratio para: ${imageUrl}`);
+    
+    // Hacer descarga completa para analizar dimensiones
+    console.log(`[story-export] 📥 Descargando imagen para análisis...`);
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+    }
+    
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const uint8Array = new Uint8Array(imageBuffer);
+    
+    console.log(`[story-export] 📊 Imagen descargada, tamaño: ${uint8Array.length} bytes`);
+    console.log(`[story-export] 🔬 Primeros 12 bytes: ${Array.from(uint8Array.slice(0, 12)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+    
+    // Detectar dimensiones desde los primeros bytes de la imagen
+    const aspectRatio = analyzeImageDimensions(uint8Array);
+    
+    console.log(`[story-export] ✅ Aspect ratio detectado: ${aspectRatio}`);
+    
+    return aspectRatio;
+    
+  } catch (error) {
+    console.error(`[story-export] ❌ Error en detección de aspect ratio:`, error);
+    console.log(`[story-export] 🔄 Usando portrait por defecto`);
+    return 'portrait';
+  }
+}
+
+// Función para analizar dimensiones de imagen desde bytes
+function analyzeImageDimensions(buffer: Uint8Array): string {
+  try {
+    console.log(`[story-export] 🔍 Analizando tipo de imagen...`);
+    
+    // Detectar tipo de imagen y extraer dimensiones
+    // PNG signature: 89 50 4E 47
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+      console.log(`[story-export] 🖼️ Formato detectado: PNG`);
+      
+      // PNG - las dimensiones están en bytes 16-23
+      const width = (buffer[16] << 24) | (buffer[17] << 16) | (buffer[18] << 8) | buffer[19];
+      const height = (buffer[20] << 24) | (buffer[21] << 16) | (buffer[22] << 8) | buffer[23];
+      
+      console.log(`[story-export] 📏 Dimensiones PNG extraídas: ${width}x${height}`);
+      
+      return classifyAspectRatio(width, height);
+    }
+    
+    // JPEG signature: FF D8 FF
+    if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+      console.log(`[story-export] 🖼️ Formato detectado: JPEG`);
+      
+      // Para JPEG es más complejo, buscar en segmentos SOF
+      const dimensions = extractJPEGDimensions(buffer);
+      if (dimensions) {
+        console.log(`[story-export] 📏 Dimensiones JPEG extraídas: ${dimensions.width}x${dimensions.height}`);
+        return classifyAspectRatio(dimensions.width, dimensions.height);
+      } else {
+        console.warn(`[story-export] ⚠️ No se pudieron extraer dimensiones de JPEG`);
+      }
+    }
+    
+    // WebP signature: RIFF...WEBP
+    if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+        buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+      console.log(`[story-export] 🖼️ Formato detectado: WebP`);
+      console.log(`[story-export] ⚠️ WebP no soportado completamente, usando portrait por defecto`);
+      return 'portrait'; // Por defecto
+    }
+    
+    console.warn(`[story-export] ⚠️ Formato de imagen no reconocido`);
+    
+  } catch (error) {
+    console.error('[story-export] ❌ Error analizando dimensiones de imagen:', error);
+  }
+  
+  console.log(`[story-export] 🔄 Fallback a portrait por defecto`);
+  return 'portrait'; // Por defecto
+}
+
+// Función para extraer dimensiones de JPEG (básica)
+function extractJPEGDimensions(buffer: Uint8Array): { width: number; height: number } | null {
+  let i = 2; // Skip FF D8
+  
+  while (i < buffer.length - 1) {
+    if (buffer[i] === 0xFF) {
+      const marker = buffer[i + 1];
+      
+      // SOF0, SOF1, SOF2 markers contienen dimensiones
+      if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
+        if (i + 9 < buffer.length) {
+          const height = (buffer[i + 5] << 8) | buffer[i + 6];
+          const width = (buffer[i + 7] << 8) | buffer[i + 8];
+          return { width, height };
+        }
+      }
+      
+      // Skip this segment
+      if (i + 3 < buffer.length) {
+        const segmentLength = (buffer[i + 2] << 8) | buffer[i + 3];
+        i += 2 + segmentLength;
+      } else {
+        break;
+      }
+    } else {
+      i++;
+    }
+  }
+  
+  return null;
+}
+
+// Función para clasificar aspect ratio basado en dimensiones
+function classifyAspectRatio(width: number, height: number): string {
+  const ratio = width / height;
+  
+  console.log(`[story-export] 📐 Clasificando aspect ratio:`);
+  console.log(`[story-export] 📏 Dimensiones: ${width}x${height}`);
+  console.log(`[story-export] 📊 Ratio calculado: ${ratio.toFixed(3)}`);
+  
+  // Clasificar según ratios conocidos de GPT-image-1
+  if (Math.abs(ratio - 1.0) < 0.1) {
+    console.log(`[story-export] ⬛ Clasificado como: SQUARE (ratio ≈ 1.0)`);
+    return 'square'; // 1024x1024 (ratio ≈ 1.0)
+  } else if (ratio > 1.3) {
+    console.log(`[story-export] ⬜ Clasificado como: LANDSCAPE (ratio > 1.3)`);
+    return 'landscape'; // 1536x1024 (ratio = 1.5)
+  } else {
+    console.log(`[story-export] 📱 Clasificado como: PORTRAIT (ratio < 1.3)`);
+    return 'portrait'; // 1024x1536 (ratio ≈ 0.67)
+  }
+}
+
+// Función para generar CSS dinámico basado en aspect ratio
+function generateDynamicPageCSS(aspectRatio: string): string {
+  console.log(`[story-export] 🎨 Generando CSS dinámico para formato: ${aspectRatio}`);
+  
+  switch (aspectRatio) {
+    case 'square': // 1024x1024
+      console.log(`[story-export] ⬛ Aplicando CSS para páginas cuadradas (21cm x 21cm)`);
+      return `
+        @page {
+          size: 21cm 21cm; /* Página cuadrada */
+          margin: 0;
+          padding: 0;
+        }
+        
+        .story-page, .cover-page {
+          width: 21cm;
+          height: 21cm;
+        }
+      `;
+      
+    case 'landscape': // 1536x1024
+      console.log(`[story-export] ⬜ Aplicando CSS para páginas landscape (29.7cm x 21cm)`);
+      return `
+        @page {
+          size: 29.7cm 21cm; /* A4 landscape */
+          margin: 0;
+          padding: 0;
+        }
+        
+        .story-page, .cover-page {
+          width: 29.7cm;
+          height: 21cm;
+        }
+      `;
+      
+    case 'portrait': // 1024x1536
+    default:
+      console.log(`[story-export] 📱 Aplicando CSS para páginas portrait (21cm x 29.7cm)`);
+      return `
+        @page {
+          size: 21cm 29.7cm; /* A4 portrait */
+          margin: 0;
+          padding: 0;
+        }
+        
+        .story-page, .cover-page {
+          width: 21cm;
+          height: 29.7cm;
+        }
+      `;
+  }
 }
 
 function generateHTMLContent(
@@ -267,13 +480,19 @@ function generateHTMLContent(
   pages: StoryPage[],
   characters: Character[],
   design: DesignSettings | null,
-  includeMetadata: boolean
+  includeMetadata: boolean,
+  aspectRatio: string = 'portrait'
 ): string {
   // Para cuentos infantiles, generamos un diseño visual atractivo
   // con imágenes de fondo y texto superpuesto
   
   const storyPages = pages.filter(p => p.page_number > 0); // Excluir portada
   const coverPage = pages.find(p => p.page_number === 0);
+  
+  console.log(`[story-export] 🎨 Generando HTML con aspect ratio: ${aspectRatio}`);
+  
+  // Generar CSS dinámico basado en aspect ratio
+  const dynamicCSS = generateDynamicPageCSS(aspectRatio);
   
   const pagesContent = storyPages
     .map(page => `
@@ -294,11 +513,7 @@ function generateHTMLContent(
       <meta charset="UTF-8">
       <title>${story.title}</title>
       <style>
-        @page {
-          size: A4;
-          margin: 0;
-          padding: 0;
-        }
+        ${dynamicCSS}
         
         * {
           box-sizing: border-box;
@@ -314,28 +529,27 @@ function generateHTMLContent(
         
         /* PORTADA - Imagen de fondo con título superpuesto */
         .cover-page {
-          width: 100%;
-          height: 100vh;
           background-size: cover;
           background-position: center;
           background-repeat: no-repeat;
           page-break-after: always;
           position: relative;
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           justify-content: center;
+          padding-top: 3rem;
           ${coverPage?.image_url ? `background-image: url('${coverPage.image_url}');` : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'}
         }
         
         .cover-overlay {
-          background: rgba(255, 255, 255, 0.85);
+          background: rgba(255, 255, 255, 0.9);
           padding: 2rem 3rem;
           border-radius: 20px;
           text-align: center;
           box-shadow: 0 10px 30px rgba(0,0,0,0.3);
           backdrop-filter: blur(5px);
           border: 3px solid #fff;
-          max-width: 80%;
+          max-width: 85%;
         }
         
         .cover-title {
@@ -345,6 +559,8 @@ function generateHTMLContent(
           margin: 0;
           text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
           line-height: 1.2;
+          text-transform: uppercase;
+          letter-spacing: 2px;
         }
         
         .cover-subtitle {
@@ -356,8 +572,6 @@ function generateHTMLContent(
         
         /* PÁGINAS DEL CUENTO - Imagen de fondo con texto superpuesto */
         .story-page {
-          width: 100%;
-          height: 100vh;
           background-size: cover;
           background-position: center;
           background-repeat: no-repeat;
@@ -449,8 +663,9 @@ function generateHTMLContent(
   `;
 }
 
-async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
+async function generatePDFFromHTML(htmlContent: string, aspectRatio: string = 'portrait'): Promise<Uint8Array> {
   console.log('[story-export] Iniciando generación de PDF con Browserless.io API...');
+  console.log(`[story-export] 📐 Formato de PDF solicitado: ${aspectRatio}`);
   
   try {
     // Obtener token de Browserless.io
@@ -459,7 +674,33 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
       throw new Error('BROWSERLESS_TOKEN no configurado en variables de entorno');
     }
 
+    // Configurar opciones de PDF según aspect ratio
+    let pdfOptions: any = {
+      printBackground: true,
+      margin: { top: '0', right: '0', bottom: '0', left: '0' }
+    };
+
+    switch (aspectRatio) {
+      case 'square':
+        console.log('[story-export] ⬛ Configurando PDF cuadrado...');
+        pdfOptions.width = '21cm';
+        pdfOptions.height = '21cm';
+        break;
+      case 'landscape':
+        console.log('[story-export] ⬜ Configurando PDF landscape...');
+        pdfOptions.format = 'A4';
+        pdfOptions.landscape = true;
+        break;
+      case 'portrait':
+      default:
+        console.log('[story-export] 📱 Configurando PDF portrait...');
+        pdfOptions.format = 'A4';
+        pdfOptions.landscape = false;
+        break;
+    }
+
     console.log('[story-export] Enviando HTML a Browserless.io API...');
+    console.log('[story-export] 🔧 Opciones PDF:', JSON.stringify(pdfOptions));
     
     // Usar API REST de Browserless.io (endpoint moderno)
     const response = await fetch(`https://production-sfo.browserless.io/pdf?token=${browserlessToken}`, {
@@ -469,16 +710,7 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
       },
       body: JSON.stringify({
         html: htmlContent,
-        options: {
-          format: 'A4',
-          printBackground: true,
-          margin: {
-            top: '1cm',
-            right: '1cm',
-            bottom: '1cm',
-            left: '1cm'
-          }
-        }
+        options: pdfOptions
       })
     });
 
@@ -500,12 +732,43 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
   }
 }
 
-async function uploadPDFToStorage(storyId: string, pdfBuffer: Uint8Array, userId: string): Promise<string> {
+async function uploadPDFToStorage(storyId: string, pdfBuffer: Uint8Array, userId: string, storyTitle: string): Promise<string> {
   console.log('[story-export] Subiendo PDF a storage...');
   
+  // Limpiar título para usar como nombre de archivo
+  const cleanTitle = storyTitle
+    .toLowerCase()
+    // Reemplazar caracteres especiales del español
+    .replace(/[áàäâ]/g, 'a')
+    .replace(/[éèëê]/g, 'e')
+    .replace(/[íìïî]/g, 'i')
+    .replace(/[óòöô]/g, 'o')
+    .replace(/[úùüû]/g, 'u')
+    .replace(/ñ/g, 'n')
+    .replace(/ç/g, 'c')
+    // Remover caracteres especiales restantes
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    // Reemplazar múltiples espacios con uno solo
+    .replace(/\s+/g, ' ')
+    // Reemplazar espacios con guiones
+    .replace(/\s/g, '-')
+    // Limitar longitud
+    .substring(0, 50)
+    // Asegurar que no termine en guión
+    .replace(/-+$/, '');
+  
   const timestamp = Date.now();
-  const fileName = `story-${storyId}-${timestamp}.pdf`;
+  // Fallback si el título queda vacío después de limpieza
+  const finalTitle = cleanTitle || 'cuento';
+  const fileName = `${finalTitle}-${timestamp}.pdf`;
   const filePath = `exports/${userId}/${fileName}`;
+  
+  console.log(`[story-export] 📚 Nombre del archivo: "${fileName}"`);
+  console.log(`[story-export] 📝 Título original: "${storyTitle}"`);
+  console.log(`[story-export] 🧹 Título limpio: "${cleanTitle}"`);
+  console.log(`[story-export] 📁 Título final: "${finalTitle}"`);
+  
   
   const { data, error } = await supabaseAdmin.storage
     .from('exports')
@@ -528,7 +791,10 @@ async function uploadPDFToStorage(storyId: string, pdfBuffer: Uint8Array, userId
 }
 
 async function markStoryAsCompleted(storyId: string, downloadUrl: string, saveToLibrary: boolean): Promise<void> {
-  console.log('[story-export] Marcando cuento como completado...');
+  console.log('[story-export] 🔄 Marcando cuento como completado...');
+  console.log(`[story-export] 📋 Story ID: ${storyId}`);
+  console.log(`[story-export] 🔗 Download URL: ${downloadUrl}`);
+  console.log(`[story-export] 📚 Save to Library: ${saveToLibrary}`);
   
   const updateData: any = {
     status: 'completed',
@@ -541,13 +807,23 @@ async function markStoryAsCompleted(storyId: string, downloadUrl: string, saveTo
     updateData.exported_at = new Date().toISOString();
   }
 
-  const { error } = await supabaseAdmin
+  console.log(`[story-export] 📝 Update data:`, JSON.stringify(updateData, null, 2));
+
+  const { data, error } = await supabaseAdmin
     .from('stories')
     .update(updateData)
-    .eq('id', storyId);
+    .eq('id', storyId)
+    .select(); // Agregar select para ver qué se actualizó
 
   if (error) {
-    console.error('[story-export] Error updating story:', error);
+    console.error('[story-export] ❌ Error updating story:', error);
     throw new Error('Error al actualizar el estado del cuento');
+  }
+
+  console.log(`[story-export] ✅ Story actualizado exitosamente:`, data);
+  console.log(`[story-export] 🎯 Filas afectadas: ${data?.length || 0}`);
+  
+  if (!data || data.length === 0) {
+    console.warn(`[story-export] ⚠️ ADVERTENCIA: No se encontró story con ID ${storyId} para actualizar`);
   }
 }
