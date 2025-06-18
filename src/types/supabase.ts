@@ -325,7 +325,10 @@ export type Database = {
         Row: {
           additional_details: string | null
           central_message: string | null
+          completed_at: string | null
           created_at: string | null
+          export_url: string | null
+          exported_at: string | null
           id: string
           literary_style: string | null
           loader: Json | null
@@ -341,7 +344,10 @@ export type Database = {
         Insert: {
           additional_details?: string | null
           central_message?: string | null
+          completed_at?: string | null
           created_at?: string | null
+          export_url?: string | null
+          exported_at?: string | null
           id?: string
           literary_style?: string | null
           loader?: Json | null
@@ -357,7 +363,10 @@ export type Database = {
         Update: {
           additional_details?: string | null
           central_message?: string | null
+          completed_at?: string | null
           created_at?: string | null
+          export_url?: string | null
+          exported_at?: string | null
           id?: string
           literary_style?: string | null
           loader?: Json | null

@@ -9,6 +9,7 @@ Esta sección contiene la documentación detallada de todas las soluciones imple
 
 ### 🔧 System Features  
 - [story-completion/](./story-completion/) - Sistema completo end-to-end de finalización con exportación PDF
+- [real-pdf-generation/](./real-pdf-generation/) - Implementación real de generación de PDFs con Puppeteer
 
 ### 🚀 Performance Improvements
 - *Documentación por agregar* - Generación paralela de imágenes (ver `/docs/tech/parallel-image-generation.md`)

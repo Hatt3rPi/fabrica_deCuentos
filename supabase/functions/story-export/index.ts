@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
+import puppeteer from 'puppeteer';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -292,83 +293,194 @@ function generateHTMLContent(
       <meta charset="UTF-8">
       <title>${story.title}</title>
       <style>
+        @page {
+          size: A4;
+          margin: 2cm 1.5cm;
+        }
+        
+        * {
+          box-sizing: border-box;
+        }
+        
         body { 
-          font-family: 'Georgia', serif; 
+          font-family: 'Georgia', 'Times New Roman', serif; 
           margin: 0; 
-          padding: 20px;
+          padding: 0;
           line-height: 1.6;
           color: #333;
+          font-size: 12pt;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
+        
         .cover {
           text-align: center;
           page-break-after: always;
-          min-height: 80vh;
+          height: 100vh;
           display: flex;
           flex-direction: column;
           justify-content: center;
+          align-items: center;
+          padding: 2cm;
         }
+        
         .cover h1 {
-          font-size: 2.5em;
+          font-size: 2.8em;
           color: #4a154b;
-          margin-bottom: 1em;
+          margin-bottom: 0.8em;
+          font-weight: bold;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
+        
         ${coverPage?.image_url ? `
         .cover-image {
-          max-width: 400px;
+          max-width: 350px;
+          max-height: 400px;
+          width: auto;
           height: auto;
-          margin: 20px auto;
-          border-radius: 10px;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+          margin: 1.5em auto;
+          border-radius: 12px;
+          box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+          object-fit: contain;
         }` : ''}
-        .metadata {
-          margin-top: 2em;
-          padding: 20px;
-          background: #f8f9fa;
-          border-left: 4px solid #4a154b;
-          page-break-after: always;
+        
+        .cover p {
+          font-size: 1.1em;
+          color: #666;
+          margin: 0.5em 0;
+          font-style: italic;
         }
+        
+        .metadata {
+          padding: 1.5em;
+          background: #f8f9fa;
+          border-left: 6px solid #4a154b;
+          page-break-after: always;
+          margin-bottom: 0;
+        }
+        
         .metadata h2 {
           color: #4a154b;
           margin-top: 0;
+          margin-bottom: 1em;
+          font-size: 1.5em;
+          border-bottom: 2px solid #e9ecef;
+          padding-bottom: 0.5em;
         }
+        
+        .metadata p {
+          margin: 0.8em 0;
+          font-size: 1em;
+        }
+        
+        .metadata strong {
+          color: #4a154b;
+          font-weight: bold;
+        }
+        
+        .characters-list {
+          margin: 1em 0;
+          padding-left: 1.5em;
+          background: #fff;
+          padding: 1em 1.5em;
+          border-radius: 6px;
+          border: 1px solid #e9ecef;
+        }
+        
         .page {
           page-break-before: always;
-          min-height: 80vh;
-          padding: 20px 0;
+          min-height: 85vh;
+          padding: 1em 0;
+          position: relative;
         }
+        
+        .page:first-of-type {
+          page-break-before: auto;
+        }
+        
         .page-number {
           text-align: center;
           font-style: italic;
-          color: #666;
+          color: #888;
           margin-bottom: 2em;
+          font-size: 0.9em;
+          text-transform: uppercase;
+          letter-spacing: 1px;
         }
+        
         .page-content {
-          max-width: 600px;
-          margin: 0 auto;
-        }
-        .page-content p {
-          font-size: 1.2em;
-          text-align: justify;
-          margin-bottom: 2em;
-        }
-        .page-content img {
           max-width: 100%;
+          margin: 0 auto;
+          padding: 0 1em;
+        }
+        
+        .page-content p {
+          font-size: 1.15em;
+          text-align: justify;
+          margin-bottom: 1.5em;
+          line-height: 1.7;
+          text-indent: 1.5em;
+          orphans: 3;
+          widows: 3;
+        }
+        
+        .page-content p:first-of-type {
+          text-indent: 0;
+        }
+        
+        .page-content img {
+          max-width: 80%;
+          max-height: 50vh;
+          width: auto;
           height: auto;
           display: block;
-          margin: 20px auto;
-          border-radius: 8px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          margin: 1.5em auto;
+          border-radius: 10px;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+          object-fit: contain;
+          page-break-inside: avoid;
         }
-        .characters-list {
-          margin: 1em 0;
-          padding-left: 20px;
-        }
+        
         .footer {
           position: fixed;
-          bottom: 20px;
-          right: 20px;
-          font-size: 0.8em;
-          color: #666;
+          bottom: 1cm;
+          right: 1.5cm;
+          font-size: 0.75em;
+          color: #999;
+          font-style: italic;
+        }
+        
+        /* Optimizaciones para impresión */
+        @media print {
+          body {
+            font-size: 11pt;
+          }
+          
+          .cover h1 {
+            font-size: 2.5em;
+          }
+          
+          .page-content p {
+            font-size: 1.1em;
+          }
+          
+          img {
+            max-width: 75% !important;
+          }
+        }
+        
+        /* Evitar saltos de página dentro de elementos */
+        h1, h2, h3, .page-number, .metadata h2 {
+          page-break-after: avoid;
+        }
+        
+        p, .page-content p {
+          page-break-inside: avoid;
+        }
+        
+        .page-content img {
+          page-break-before: avoid;
+          page-break-after: avoid;
         }
       </style>
     </head>
@@ -413,29 +525,72 @@ function generateHTMLContent(
 }
 
 async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
-  // En una implementación real, aquí usarías Puppeteer para generar PDF desde HTML
-  // Por ahora, creamos un PDF simulado con el contenido HTML como texto
+  console.log('[story-export] Iniciando generación real de PDF con Puppeteer...');
   
-  console.log('[story-export] Convirtiendo HTML a PDF...');
-  
-  // Simular delay de procesamiento
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Por ahora devolvemos el HTML como texto en un "PDF" simulado
-  // En producción reemplazar con: await page.pdf({ format: 'A4', printBackground: true });
-  const encoder = new TextEncoder();
-  const htmlBytes = encoder.encode(htmlContent);
-  
-  // Agregar header PDF simple para que sea reconocido como PDF
-  const pdfHeader = encoder.encode('%PDF-1.4\n');
-  const pdfFooter = encoder.encode('\n%%EOF');
-  
-  const pdfBuffer = new Uint8Array(pdfHeader.length + htmlBytes.length + pdfFooter.length);
-  pdfBuffer.set(pdfHeader, 0);
-  pdfBuffer.set(htmlBytes, pdfHeader.length);
-  pdfBuffer.set(pdfFooter, pdfHeader.length + htmlBytes.length);
-  
-  return pdfBuffer;
+  let browser;
+  try {
+    // Lanzar navegador
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ]
+    });
+
+    console.log('[story-export] Navegador iniciado, creando página...');
+    
+    // Crear nueva página
+    const page = await browser.newPage();
+    
+    // Configurar viewport para PDF
+    await page.setViewport({ width: 1200, height: 800 });
+    
+    // Cargar contenido HTML
+    await page.setContent(htmlContent, {
+      waitUntil: ['load', 'networkidle0'],
+      timeout: 30000
+    });
+
+    console.log('[story-export] Contenido cargado, generando PDF...');
+    
+    // Generar PDF
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '1cm',
+        right: '1cm',
+        bottom: '1cm',
+        left: '1cm'
+      },
+      preferCSSPageSize: false
+    });
+
+    console.log('[story-export] PDF generado exitosamente, tamaño:', pdfBuffer.length, 'bytes');
+    
+    return new Uint8Array(pdfBuffer);
+    
+  } catch (error) {
+    console.error('[story-export] Error en generación de PDF:', error);
+    throw new Error(`Error generando PDF: ${error.message}`);
+  } finally {
+    // Cerrar navegador siempre
+    if (browser) {
+      try {
+        await browser.close();
+        console.log('[story-export] Navegador cerrado correctamente');
+      } catch (closeError) {
+        console.error('[story-export] Error cerrando navegador:', closeError);
+      }
+    }
+  }
 }
 
 async function uploadPDFToStorage(storyId: string, pdfBuffer: Uint8Array, userId: string): Promise<string> {
