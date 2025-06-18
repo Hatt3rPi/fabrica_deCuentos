@@ -71,6 +71,9 @@ Deno.serve(async (req) => {
     const requestData: StoryExportRequest = await req.json();
     const { story_id, save_to_library = true, format = 'pdf', include_metadata = true } = requestData;
 
+    console.log(`[story-export] 🚀 Iniciando export para story: ${story_id}`);
+    console.log(`[story-export] 📋 Parámetros:`, { story_id, save_to_library, format, include_metadata });
+
     if (!story_id) {
       throw new Error('story_id es requerido');
     }
@@ -79,6 +82,8 @@ Deno.serve(async (req) => {
     if (!userId) {
       throw new Error('Usuario no autenticado');
     }
+    
+    console.log(`[story-export] 👤 User ID: ${userId}`);
 
     const enabled = await isActivityEnabled(STAGE, ACTIVITY);
     if (!enabled) {
@@ -779,7 +784,10 @@ async function uploadPDFToStorage(storyId: string, pdfBuffer: Uint8Array, userId
 }
 
 async function markStoryAsCompleted(storyId: string, downloadUrl: string, saveToLibrary: boolean): Promise<void> {
-  console.log('[story-export] Marcando cuento como completado...');
+  console.log('[story-export] 🔄 Marcando cuento como completado...');
+  console.log(`[story-export] 📋 Story ID: ${storyId}`);
+  console.log(`[story-export] 🔗 Download URL: ${downloadUrl}`);
+  console.log(`[story-export] 📚 Save to Library: ${saveToLibrary}`);
   
   const updateData: any = {
     status: 'completed',
@@ -792,13 +800,23 @@ async function markStoryAsCompleted(storyId: string, downloadUrl: string, saveTo
     updateData.exported_at = new Date().toISOString();
   }
 
-  const { error } = await supabaseAdmin
+  console.log(`[story-export] 📝 Update data:`, JSON.stringify(updateData, null, 2));
+
+  const { data, error } = await supabaseAdmin
     .from('stories')
     .update(updateData)
-    .eq('id', storyId);
+    .eq('id', storyId)
+    .select(); // Agregar select para ver qué se actualizó
 
   if (error) {
-    console.error('[story-export] Error updating story:', error);
+    console.error('[story-export] ❌ Error updating story:', error);
     throw new Error('Error al actualizar el estado del cuento');
+  }
+
+  console.log(`[story-export] ✅ Story actualizado exitosamente:`, data);
+  console.log(`[story-export] 🎯 Filas afectadas: ${data?.length || 0}`);
+  
+  if (!data || data.length === 0) {
+    console.warn(`[story-export] ⚠️ ADVERTENCIA: No se encontró story con ID ${storyId} para actualizar`);
   }
 }
