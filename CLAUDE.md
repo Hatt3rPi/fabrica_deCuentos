@@ -166,7 +166,41 @@ Demo credentials:
 - Cuando crees issues, genéralos en español y en el título pon [auto][prioridad alta/media/baja]
 
 ### Documentation Practices
+- **NUNCA crear archivos de documentación aislados en root** (ej: SOLUTION.md, FIX.md, etc.)
+- **SIEMPRE usar sistema centralizado** en `/docs/` con templates estandarizados
 - siempre documenta los cambios en CHANGELOG.md y en el readme que corresponda
+
+#### Sistema de Documentación Centralizado
+
+**Para Soluciones Implementadas:**
+```
+"Documenta esta solución en /docs/solutions/[nombre-solucion]/ siguiendo el template establecido."
+```
+
+**Para Componentes:**
+```
+"Actualiza la documentación del componente [ComponentName] en /docs/components/[ComponentName].md siguiendo el template establecido."
+```
+
+**Para Edge Functions:**
+```
+"Documenta la Edge Function [function-name] en /docs/tech/[function-name].md siguiendo el template establecido."
+```
+
+#### Templates Disponibles:
+- `/docs/templates/solution.md` - Para documentar soluciones implementadas
+- `/docs/templates/component.md` - Para documentar componentes React  
+- `/docs/templates/edge-function.md` - Para documentar Edge Functions
+
+#### Estructura de Documentación:
+```
+docs/
+├── solutions/          # Soluciones implementadas (NO archivos aislados)
+├── components/         # Documentación de componentes React
+├── tech/              # Documentación técnica (Edge Functions, arquitectura)
+├── maintenance/       # Guías operacionales y troubleshooting
+└── templates/         # Templates estandarizados
+```
 
 ### Supabase Migrations
 - Las Migrations de supabase deben tener el siguiente formato aaaaMMddhhmmss_

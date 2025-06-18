@@ -1,10 +1,31 @@
-# Documentación del Proyecto
+# 📚 Sistema de Documentación Centralizado
 
-## 📚 Guías Disponibles
+Este directorio contiene toda la documentación técnica del proyecto, organizada por categorías para facilitar navegación y mantenimiento.
+
+## 🗂️ Estructura del Sistema
+
+### 📋 [Solutions](./solutions/) - Soluciones Implementadas
+Documentación detallada de todas las soluciones y fixes implementados en el proyecto.
+- [preview-corrections/](./solutions/preview-corrections/) - Correcciones UI/UX en vista previa
+- [story-completion/](./solutions/story-completion/) - Sistema completo de finalización
+
+### 🧩 [Components](./components/) - Documentación de Componentes
+Documentación técnica de componentes React clave del proyecto.
+
+### ⚙️ [Tech](./tech/) - Documentación Técnica  
+Arquitectura, Edge Functions, y documentación técnica avanzada.
+
+### 🔧 [Maintenance](./maintenance/) - Guías Operacionales
+Procedimientos de deployment, troubleshooting y monitoreo del sistema.
+
+### 📄 [Templates](./templates/) - Templates Estandarizados
+Templates para mantener consistencia en la documentación.
+
+## 📚 Guías de Referencia Rápida
 
 - **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Issues activos y backlog de problemas pendientes
 - **[ISSUE_TEMPLATE.md](./ISSUE_TEMPLATE.md)** - Template estandarizado para crear issues de calidad
-- **[../CLAUDE.md](../CLAUDE.md)** - Guía para trabajar con Claude Code
+- **[../CLAUDE.md](../CLAUDE.md)** - Guía para trabajar con Claude Code (incluye protocolo de documentación)
 
 ### 🔧 Documentación Técnica
 
