@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+
+## 2025-06-17 - Finalización y Exportación de Cuentos
+- **Finalización de Cuentos con Exportación PDF**: Implementación completa de funcionalidad para finalizar cuentos y generar archivos PDF descargables. Incluye 3 fases: MVP Core, Edge Function Real, y Testing & Polish.
+- **Edge Function `story-export`**: Nueva función para generar PDFs profesionales con HTML styling, metadatos completos, información de personajes, y todas las páginas del cuento. Integrada con Supabase Storage.
+- **Base de Datos Expandida**: Nuevos campos `completed_at`, `export_url`, `exported_at` en tabla `stories` con índices optimizados. Bucket `exports` con políticas RLS para almacenamiento seguro.
+- **UI Mejorada en Vista Previa**: Sección de finalización con indicadores de progreso dinámicos, modal rediseñado con feedback visual profesional, y validación de páginas completas.
+- **Testing Comprehensivo**: Suite completa de tests Cypress para flujo end-to-end desde creación hasta exportación, incluyendo manejo de errores y persistencia de estado.
+- **Sistema de Fallback**: Mecanismo robusto que usa mock export si Edge Function falla, garantizando funcionalidad siempre disponible.
+- **Opciones de Biblioteca**: Funcionalidad "guardar en biblioteca personal" con persistencia y acceso desde perfil de usuario.
+- Documentado en Issue #193 y PR #197.
+
 - **Generación Paralela de Imágenes**: Implementada generación asíncrona concurrente para todas las páginas de Vista Previa con indicador de progreso en tiempo real. Reduce el tiempo total de generación en 60-80% y mejora significativamente la UX con feedback granular ("3 de 8 páginas completadas"). Incluye sistema de reintento inteligente para páginas fallidas y estados visuales por página individual. Documentado en Issue #194 y PR #195.
 - Vista de Prompts muestra badges con las Edge Functions que utilizan cada template y permite filtrarlos por función. Documentado en `docs/components/PromptAccordion.md`.
 - Los badges de Edge Function utilizan colores pasteles distintos para cada tipo.
