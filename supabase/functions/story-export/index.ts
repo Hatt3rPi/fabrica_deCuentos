@@ -517,20 +517,21 @@ async function generateHTMLContent(
           page-break-after: always;
           position: relative;
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           justify-content: center;
+          padding-top: 3rem;
           ${coverPage?.image_url ? `background-image: url('${coverPage.image_url}');` : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'}
         }
         
         .cover-overlay {
-          background: rgba(255, 255, 255, 0.85);
+          background: rgba(255, 255, 255, 0.9);
           padding: 2rem 3rem;
           border-radius: 20px;
           text-align: center;
           box-shadow: 0 10px 30px rgba(0,0,0,0.3);
           backdrop-filter: blur(5px);
           border: 3px solid #fff;
-          max-width: 80%;
+          max-width: 85%;
         }
         
         .cover-title {
@@ -540,6 +541,8 @@ async function generateHTMLContent(
           margin: 0;
           text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
           line-height: 1.2;
+          text-transform: uppercase;
+          letter-spacing: 2px;
         }
         
         .cover-subtitle {
