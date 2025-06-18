@@ -263,16 +263,10 @@ async function generateStoryPDF(
 // Función para detectar aspect ratio de imagen desde URL
 async function detectImageAspectRatio(imageUrl: string): Promise<string> {
   try {
-    console.log(`[story-export] Detectando aspect ratio para: ${imageUrl}`);
+    console.log(`[story-export] 🔍 Iniciando detección de aspect ratio para: ${imageUrl}`);
     
-    // Intentar obtener dimensiones reales de la imagen
-    const response = await fetch(imageUrl, { method: 'HEAD' });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image headers: ${response.status}`);
-    }
-    
-    // Algunos proveedores incluyen dimensiones en headers, pero no siempre disponible
-    // Hacer una pequeña descarga para analizar dimensiones
+    // Hacer descarga completa para analizar dimensiones
+    console.log(`[story-export] 📥 Descargando imagen para análisis...`);
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       throw new Error(`Failed to fetch image: ${imageResponse.status}`);
@@ -281,15 +275,19 @@ async function detectImageAspectRatio(imageUrl: string): Promise<string> {
     const imageBuffer = await imageResponse.arrayBuffer();
     const uint8Array = new Uint8Array(imageBuffer);
     
+    console.log(`[story-export] 📊 Imagen descargada, tamaño: ${uint8Array.length} bytes`);
+    console.log(`[story-export] 🔬 Primeros 12 bytes: ${Array.from(uint8Array.slice(0, 12)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+    
     // Detectar dimensiones desde los primeros bytes de la imagen
     const aspectRatio = analyzeImageDimensions(uint8Array);
     
-    console.log(`[story-export] Aspect ratio detectado: ${aspectRatio}`);
+    console.log(`[story-export] ✅ Aspect ratio detectado: ${aspectRatio}`);
     
     return aspectRatio;
     
   } catch (error) {
-    console.warn(`[story-export] No se pudo detectar aspect ratio, usando portrait por defecto:`, error);
+    console.error(`[story-export] ❌ Error en detección de aspect ratio:`, error);
+    console.log(`[story-export] 🔄 Usando portrait por defecto`);
     return 'portrait';
   }
 }
@@ -297,37 +295,51 @@ async function detectImageAspectRatio(imageUrl: string): Promise<string> {
 // Función para analizar dimensiones de imagen desde bytes
 function analyzeImageDimensions(buffer: Uint8Array): string {
   try {
+    console.log(`[story-export] 🔍 Analizando tipo de imagen...`);
+    
     // Detectar tipo de imagen y extraer dimensiones
     // PNG signature: 89 50 4E 47
     if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+      console.log(`[story-export] 🖼️ Formato detectado: PNG`);
+      
       // PNG - las dimensiones están en bytes 16-23
       const width = (buffer[16] << 24) | (buffer[17] << 16) | (buffer[18] << 8) | buffer[19];
       const height = (buffer[20] << 24) | (buffer[21] << 16) | (buffer[22] << 8) | buffer[23];
+      
+      console.log(`[story-export] 📏 Dimensiones PNG extraídas: ${width}x${height}`);
       
       return classifyAspectRatio(width, height);
     }
     
     // JPEG signature: FF D8 FF
     if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+      console.log(`[story-export] 🖼️ Formato detectado: JPEG`);
+      
       // Para JPEG es más complejo, buscar en segmentos SOF
       const dimensions = extractJPEGDimensions(buffer);
       if (dimensions) {
+        console.log(`[story-export] 📏 Dimensiones JPEG extraídas: ${dimensions.width}x${dimensions.height}`);
         return classifyAspectRatio(dimensions.width, dimensions.height);
+      } else {
+        console.warn(`[story-export] ⚠️ No se pudieron extraer dimensiones de JPEG`);
       }
     }
     
     // WebP signature: RIFF...WEBP
     if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
         buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
-      // WebP - estructura más compleja, simplificamos
-      // En general GPT-image-1 genera PNG, por lo que es raro llegar aquí
+      console.log(`[story-export] 🖼️ Formato detectado: WebP`);
+      console.log(`[story-export] ⚠️ WebP no soportado completamente, usando portrait por defecto`);
       return 'portrait'; // Por defecto
     }
     
+    console.warn(`[story-export] ⚠️ Formato de imagen no reconocido`);
+    
   } catch (error) {
-    console.warn('[story-export] Error analizando dimensiones de imagen:', error);
+    console.error('[story-export] ❌ Error analizando dimensiones de imagen:', error);
   }
   
+  console.log(`[story-export] 🔄 Fallback a portrait por defecto`);
   return 'portrait'; // Por defecto
 }
 
@@ -367,22 +379,30 @@ function extractJPEGDimensions(buffer: Uint8Array): { width: number; height: num
 function classifyAspectRatio(width: number, height: number): string {
   const ratio = width / height;
   
-  console.log(`[story-export] Dimensiones: ${width}x${height}, ratio: ${ratio.toFixed(2)}`);
+  console.log(`[story-export] 📐 Clasificando aspect ratio:`);
+  console.log(`[story-export] 📏 Dimensiones: ${width}x${height}`);
+  console.log(`[story-export] 📊 Ratio calculado: ${ratio.toFixed(3)}`);
   
   // Clasificar según ratios conocidos de GPT-image-1
   if (Math.abs(ratio - 1.0) < 0.1) {
+    console.log(`[story-export] ⬛ Clasificado como: SQUARE (ratio ≈ 1.0)`);
     return 'square'; // 1024x1024 (ratio ≈ 1.0)
   } else if (ratio > 1.3) {
+    console.log(`[story-export] ⬜ Clasificado como: LANDSCAPE (ratio > 1.3)`);
     return 'landscape'; // 1536x1024 (ratio = 1.5)
   } else {
+    console.log(`[story-export] 📱 Clasificado como: PORTRAIT (ratio < 1.3)`);
     return 'portrait'; // 1024x1536 (ratio ≈ 0.67)
   }
 }
 
 // Función para generar CSS dinámico basado en aspect ratio
 function generateDynamicPageCSS(aspectRatio: string): string {
+  console.log(`[story-export] 🎨 Generando CSS dinámico para formato: ${aspectRatio}`);
+  
   switch (aspectRatio) {
     case 'square': // 1024x1024
+      console.log(`[story-export] ⬛ Aplicando CSS para páginas cuadradas (21cm x 21cm)`);
       return `
         @page {
           size: 21cm 21cm; /* Página cuadrada */
@@ -397,6 +417,7 @@ function generateDynamicPageCSS(aspectRatio: string): string {
       `;
       
     case 'landscape': // 1536x1024
+      console.log(`[story-export] ⬜ Aplicando CSS para páginas landscape (29.7cm x 21cm)`);
       return `
         @page {
           size: 29.7cm 21cm; /* A4 landscape */
@@ -412,6 +433,7 @@ function generateDynamicPageCSS(aspectRatio: string): string {
       
     case 'portrait': // 1024x1536
     default:
+      console.log(`[story-export] 📱 Aplicando CSS para páginas portrait (21cm x 29.7cm)`);
       return `
         @page {
           size: 21cm 29.7cm; /* A4 portrait */
