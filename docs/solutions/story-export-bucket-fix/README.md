@@ -25,9 +25,11 @@ Corregir la configuración de bucket en la Edge Function `story-export` para usa
 **Problema:** Edge Function intentaba usar bucket `'stories'` que no existe.
 
 **Buckets disponibles verificados en Supabase Storage:**
-- ✅ `exports` (Public) 
 - ✅ `storage` (Public)
+- ✅ `exports` (Public) 
 - ✅ `covers`
+- ✅ `fallback-images`
+- ✅ `reference-images`
 - ✅ `story-images`
 - ✅ `thumbnails`
 - ❌ `stories` (NO EXISTE)
