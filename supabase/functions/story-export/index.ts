@@ -525,9 +525,8 @@ function generateHTMLContent(
 }
 
 async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
-  console.log('[story-export] Iniciando generación real de PDF con Puppeteer remoto...');
+  console.log('[story-export] Iniciando generación de PDF con Browserless.io API...');
   
-  let browser;
   try {
     // Obtener token de Browserless.io
     const browserlessToken = Deno.env.get('BROWSERLESS_TOKEN');
@@ -535,62 +534,44 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
       throw new Error('BROWSERLESS_TOKEN no configurado en variables de entorno');
     }
 
-    // Conectar a browser remoto en Browserless.io 
-    // Probando con parámetros adicionales para evitar ALPN issues
-    const browserWSEndpoint = `wss://chrome.browserless.io?token=${browserlessToken}&launch={"headless":true}`;
-    console.log('[story-export] Conectando a browser remoto...', browserWSEndpoint.replace(browserlessToken, '[TOKEN_HIDDEN]'));
+    console.log('[story-export] Enviando HTML a Browserless.io API...');
     
-    browser = await puppeteer.connect({
-      browserWSEndpoint,
-      ignoreHTTPSErrors: true
-    });
-
-    console.log('[story-export] Conectado exitosamente, creando página...');
-    
-    // Crear nueva página
-    const page = await browser.newPage();
-    
-    // Configurar viewport para PDF
-    await page.setViewport({ width: 1200, height: 800 });
-    
-    // Cargar contenido HTML
-    await page.setContent(htmlContent, {
-      waitUntil: ['load', 'networkidle0'],
-      timeout: 30000
-    });
-
-    console.log('[story-export] Contenido cargado, generando PDF...');
-    
-    // Generar PDF
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '1cm',
-        right: '1cm',
-        bottom: '1cm',
-        left: '1cm'
+    // Usar API REST de Browserless.io en lugar de WebSocket
+    const response = await fetch(`https://chrome.browserless.io/pdf?token=${browserlessToken}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      preferCSSPageSize: false
+      body: JSON.stringify({
+        html: htmlContent,
+        options: {
+          format: 'A4',
+          printBackground: true,
+          margin: {
+            top: '1cm',
+            right: '1cm',
+            bottom: '1cm',
+            left: '1cm'
+          }
+        }
+      })
     });
 
-    console.log('[story-export] PDF generado exitosamente, tamaño:', pdfBuffer.length, 'bytes');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Browserless.io API error: ${response.status} - ${errorText}`);
+    }
+
+    console.log('[story-export] PDF generado por Browserless.io, descargando...');
+    
+    const pdfBuffer = await response.arrayBuffer();
+    console.log('[story-export] PDF descargado exitosamente, tamaño:', pdfBuffer.byteLength, 'bytes');
     
     return new Uint8Array(pdfBuffer);
     
   } catch (error) {
     console.error('[story-export] Error en generación de PDF:', error);
     throw new Error(`Error generando PDF: ${error.message}`);
-  } finally {
-    // Cerrar conexión al browser remoto
-    if (browser) {
-      try {
-        await browser.disconnect();
-        console.log('[story-export] Desconectado del browser remoto correctamente');
-      } catch (closeError) {
-        console.error('[story-export] Error desconectando browser remoto:', closeError);
-      }
-    }
   }
 }
 
