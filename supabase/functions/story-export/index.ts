@@ -113,7 +113,14 @@ Deno.serve(async (req) => {
     const downloadUrl = await uploadPDFToStorage(story_id, pdfBuffer, userId, storyData.story.title);
     
     // 4. Actualizar estado del cuento
-    await markStoryAsCompleted(story_id, downloadUrl, save_to_library);
+    try {
+      await markStoryAsCompleted(story_id, downloadUrl, save_to_library);
+      console.log('[story-export] ✅ Estado del cuento actualizado exitosamente');
+    } catch (markError) {
+      console.error('[story-export] ❌ Error marcando cuento como completado:', markError);
+      // No lanzar el error para que el PDF se pueda descargar igual
+      console.log('[story-export] ⚠️ Continuando con descarga a pesar del error de estado');
+    }
     
     const elapsed = Date.now() - start;
 
