@@ -249,31 +249,210 @@ async function generateStoryPDF(
 ): Promise<Uint8Array> {
   console.log('[story-export] Generando PDF...');
   
-  // Por ahora generamos un PDF simple con texto
-  // En una implementación real usarías una librería como Puppeteer, jsPDF, etc.
   const { story, pages, characters, design } = storyData;
   
-  // Crear contenido HTML para convertir a PDF
-  const htmlContent = generateHTMLContent(story, pages, characters, design, includeMetadata);
+  // Crear contenido HTML para convertir a PDF (ahora es async por detección de aspect ratio)
+  const htmlContent = await generateHTMLContent(story, pages, characters, design, includeMetadata);
   
-  // Simular generación de PDF (en una implementación real usarías Puppeteer o similar)
+  // Generar PDF usando Puppeteer via Browserless.io
   const pdfContent = await generatePDFFromHTML(htmlContent);
   
   return pdfContent;
 }
 
-function generateHTMLContent(
+// Función para detectar aspect ratio de imagen desde URL
+async function detectImageAspectRatio(imageUrl: string): Promise<string> {
+  try {
+    console.log(`[story-export] Detectando aspect ratio para: ${imageUrl}`);
+    
+    // Intentar obtener dimensiones reales de la imagen
+    const response = await fetch(imageUrl, { method: 'HEAD' });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image headers: ${response.status}`);
+    }
+    
+    // Algunos proveedores incluyen dimensiones en headers, pero no siempre disponible
+    // Hacer una pequeña descarga para analizar dimensiones
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+    }
+    
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const uint8Array = new Uint8Array(imageBuffer);
+    
+    // Detectar dimensiones desde los primeros bytes de la imagen
+    const aspectRatio = analyzeImageDimensions(uint8Array);
+    
+    console.log(`[story-export] Aspect ratio detectado: ${aspectRatio}`);
+    
+    return aspectRatio;
+    
+  } catch (error) {
+    console.warn(`[story-export] No se pudo detectar aspect ratio, usando portrait por defecto:`, error);
+    return 'portrait';
+  }
+}
+
+// Función para analizar dimensiones de imagen desde bytes
+function analyzeImageDimensions(buffer: Uint8Array): string {
+  try {
+    // Detectar tipo de imagen y extraer dimensiones
+    // PNG signature: 89 50 4E 47
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+      // PNG - las dimensiones están en bytes 16-23
+      const width = (buffer[16] << 24) | (buffer[17] << 16) | (buffer[18] << 8) | buffer[19];
+      const height = (buffer[20] << 24) | (buffer[21] << 16) | (buffer[22] << 8) | buffer[23];
+      
+      return classifyAspectRatio(width, height);
+    }
+    
+    // JPEG signature: FF D8 FF
+    if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+      // Para JPEG es más complejo, buscar en segmentos SOF
+      const dimensions = extractJPEGDimensions(buffer);
+      if (dimensions) {
+        return classifyAspectRatio(dimensions.width, dimensions.height);
+      }
+    }
+    
+    // WebP signature: RIFF...WEBP
+    if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+        buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+      // WebP - estructura más compleja, simplificamos
+      // En general GPT-image-1 genera PNG, por lo que es raro llegar aquí
+      return 'portrait'; // Por defecto
+    }
+    
+  } catch (error) {
+    console.warn('[story-export] Error analizando dimensiones de imagen:', error);
+  }
+  
+  return 'portrait'; // Por defecto
+}
+
+// Función para extraer dimensiones de JPEG (básica)
+function extractJPEGDimensions(buffer: Uint8Array): { width: number; height: number } | null {
+  let i = 2; // Skip FF D8
+  
+  while (i < buffer.length - 1) {
+    if (buffer[i] === 0xFF) {
+      const marker = buffer[i + 1];
+      
+      // SOF0, SOF1, SOF2 markers contienen dimensiones
+      if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
+        if (i + 9 < buffer.length) {
+          const height = (buffer[i + 5] << 8) | buffer[i + 6];
+          const width = (buffer[i + 7] << 8) | buffer[i + 8];
+          return { width, height };
+        }
+      }
+      
+      // Skip this segment
+      if (i + 3 < buffer.length) {
+        const segmentLength = (buffer[i + 2] << 8) | buffer[i + 3];
+        i += 2 + segmentLength;
+      } else {
+        break;
+      }
+    } else {
+      i++;
+    }
+  }
+  
+  return null;
+}
+
+// Función para clasificar aspect ratio basado en dimensiones
+function classifyAspectRatio(width: number, height: number): string {
+  const ratio = width / height;
+  
+  console.log(`[story-export] Dimensiones: ${width}x${height}, ratio: ${ratio.toFixed(2)}`);
+  
+  // Clasificar según ratios conocidos de GPT-image-1
+  if (Math.abs(ratio - 1.0) < 0.1) {
+    return 'square'; // 1024x1024 (ratio ≈ 1.0)
+  } else if (ratio > 1.3) {
+    return 'landscape'; // 1536x1024 (ratio = 1.5)
+  } else {
+    return 'portrait'; // 1024x1536 (ratio ≈ 0.67)
+  }
+}
+
+// Función para generar CSS dinámico basado en aspect ratio
+function generateDynamicPageCSS(aspectRatio: string): string {
+  switch (aspectRatio) {
+    case 'square': // 1024x1024
+      return `
+        @page {
+          size: 21cm 21cm; /* Página cuadrada */
+          margin: 0;
+          padding: 0;
+        }
+        
+        .story-page, .cover-page {
+          width: 21cm;
+          height: 21cm;
+        }
+      `;
+      
+    case 'landscape': // 1536x1024
+      return `
+        @page {
+          size: 29.7cm 21cm; /* A4 landscape */
+          margin: 0;
+          padding: 0;
+        }
+        
+        .story-page, .cover-page {
+          width: 29.7cm;
+          height: 21cm;
+        }
+      `;
+      
+    case 'portrait': // 1024x1536
+    default:
+      return `
+        @page {
+          size: 21cm 29.7cm; /* A4 portrait */
+          margin: 0;
+          padding: 0;
+        }
+        
+        .story-page, .cover-page {
+          width: 21cm;
+          height: 29.7cm;
+        }
+      `;
+  }
+}
+
+async function generateHTMLContent(
   story: StoryData,
   pages: StoryPage[],
   characters: Character[],
   design: DesignSettings | null,
   includeMetadata: boolean
-): string {
+): Promise<string> {
   // Para cuentos infantiles, generamos un diseño visual atractivo
   // con imágenes de fondo y texto superpuesto
   
   const storyPages = pages.filter(p => p.page_number > 0); // Excluir portada
   const coverPage = pages.find(p => p.page_number === 0);
+  
+  // Detectar aspect ratio de la primera imagen disponible para definir formato del PDF
+  let aspectRatio = 'portrait'; // Por defecto
+  
+  if (coverPage?.image_url) {
+    aspectRatio = await detectImageAspectRatio(coverPage.image_url);
+  } else if (storyPages.length > 0 && storyPages[0].image_url) {
+    aspectRatio = await detectImageAspectRatio(storyPages[0].image_url);
+  }
+  
+  console.log(`[story-export] Aspect ratio detectado: ${aspectRatio}`);
+  
+  // Generar CSS dinámico basado en aspect ratio
+  const dynamicCSS = generateDynamicPageCSS(aspectRatio);
   
   const pagesContent = storyPages
     .map(page => `
@@ -294,11 +473,7 @@ function generateHTMLContent(
       <meta charset="UTF-8">
       <title>${story.title}</title>
       <style>
-        @page {
-          size: A4;
-          margin: 0;
-          padding: 0;
-        }
+        ${dynamicCSS}
         
         * {
           box-sizing: border-box;
@@ -314,8 +489,6 @@ function generateHTMLContent(
         
         /* PORTADA - Imagen de fondo con título superpuesto */
         .cover-page {
-          width: 100%;
-          height: 100vh;
           background-size: cover;
           background-position: center;
           background-repeat: no-repeat;
@@ -356,8 +529,6 @@ function generateHTMLContent(
         
         /* PÁGINAS DEL CUENTO - Imagen de fondo con texto superpuesto */
         .story-page {
-          width: 100%;
-          height: 100vh;
           background-size: cover;
           background-position: center;
           background-repeat: no-repeat;
