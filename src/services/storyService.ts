@@ -236,13 +236,14 @@ export const storyService = {
   },
 
   async generateMockExport(storyId: string, saveToLibrary: boolean): Promise<string> {
-    // TODO: Replace with real Edge Function call
-    // For MVP, return a mock URL that simulates the export
-    const timestamp = Date.now();
-    const mockUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/exports/story-${storyId}-${timestamp}.pdf`;
+    console.log(`[StoryService] CORRECCIÓN 2: Usando fallback para export de story ${storyId}`);
     
-    console.log(`[StoryService] Mock export generated for story ${storyId}, saveToLibrary: ${saveToLibrary}`);
-    console.log(`[StoryService] Mock download URL: ${mockUrl}`);
+    // En lugar de generar URL ficticia, crear un enlace de descarga temporal
+    // que funcione hasta que se despliegue la Edge Function
+    const timestamp = Date.now();
+    const mockUrl = `data:text/plain;charset=utf-8,CUENTO EXPORTADO - ID: ${storyId}%0AGenerado: ${new Date().toLocaleString()}%0A%0AEste es un archivo temporal hasta que se complete el despliegue.%0APor favor contacta al administrador para obtener tu cuento en PDF.`;
+    
+    console.log(`[StoryService] Fallback export generado para story ${storyId}, saveToLibrary: ${saveToLibrary}`);
     
     // Simulate async operation
     await new Promise(resolve => setTimeout(resolve, 1000));

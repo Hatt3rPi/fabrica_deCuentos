@@ -188,12 +188,13 @@ const PreviewStep: React.FC = () => {
         </button>
       </div>
 
-      <div className="mt-8">
-        <div className="max-w-2xl mx-auto bg-purple-50 rounded-lg p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex-grow">
-              <h4 className="text-sm font-medium text-purple-800 mb-1">Prompt de la imagen</h4>
-              {editingPrompt === currentPageData?.id ? (
+      {/* CORRECCIÓN 1: Prompt solo aparece cuando se hace clic en editar */}
+      {editingPrompt === currentPageData?.id && (
+        <div className="mt-8">
+          <div className="max-w-2xl mx-auto bg-purple-50 rounded-lg p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-grow">
+                <h4 className="text-sm font-medium text-purple-800 mb-1">Prompt de la imagen</h4>
                 <div className="space-y-2">
                   <textarea
                     value={promptText}
@@ -209,7 +210,7 @@ const PreviewStep: React.FC = () => {
                       Cancelar
                     </button>
                     <button
-                      onClick={() => handleRegeneratePage(currentPageData.id, promptText)}
+                      onClick={() => handleRegeneratePage(currentPageData.id)}
                       disabled={isGenerating}
                       className="px-3 py-1 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400"
                     >
@@ -221,20 +222,23 @@ const PreviewStep: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              ) : (
-                <p className="text-gray-600">{currentPageData?.prompt}</p>
-              )}
+              </div>
             </div>
-            {!editingPrompt && currentPageData && (
-              <button
-                onClick={() => handleEditPrompt(currentPageData.id, currentPageData.prompt)}
-                className="p-1 text-purple-600 hover:text-purple-800"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-            )}
           </div>
         </div>
+      )}
+
+      {/* Botón para editar prompt - siempre visible */}
+      <div className="flex justify-center mt-4">
+        {!editingPrompt && currentPageData && (
+          <button
+            onClick={() => handleEditPrompt(currentPageData.id, currentPageData.prompt)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+            Editar prompt de esta página
+          </button>
+        )}
       </div>
       {isGenerating && (
         <OverlayLoader 
