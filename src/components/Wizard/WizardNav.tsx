@@ -15,6 +15,7 @@ const WizardNav: React.FC = () => {
     designSettings,
     setGeneratedPages,
     generateAllImagesParallel,
+    completionResult,
   } = useWizard();
   const { covers } = useStory();
   const { storyId } = useParams();
@@ -71,7 +72,19 @@ const WizardNav: React.FC = () => {
       </button>
 
       {currentStep === 'preview' ? (
-        <div></div>
+        completionResult?.success && completionResult.downloadUrl ? (
+          <a
+            href={completionResult.downloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-5 py-2 rounded-lg flex items-center gap-2 bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-800 shadow-md transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span>Descargar cuento</span>
+          </a>
+        ) : (
+          <div></div>
+        )
       ) : (
         <button
           onClick={handleNextClick}

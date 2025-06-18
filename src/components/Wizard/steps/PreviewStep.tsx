@@ -338,18 +338,6 @@ const PreviewStep: React.FC = () => {
               </button>
             )}
 
-            {/* Botón Descargar cuento - solo visible después de completar exitosamente */}
-            {completionResult?.success && completionResult.downloadUrl && (
-              <a
-                href={completionResult.downloadUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
-              >
-                <Download className="w-5 h-5" />
-                Descargar cuento
-              </a>
-            )}
           </div>
 
           {/* Error state */}
