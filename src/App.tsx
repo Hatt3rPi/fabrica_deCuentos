@@ -41,7 +41,7 @@ function AnimatedRoutes() {
           transition={{ duration: 0.3, ease: 'easeInOut' }}
           className="w-full h-full"
         >
-          <Routes location={location} key={location.pathname}>
+          <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -52,32 +52,34 @@ function AnimatedRoutes() {
   }
 
   return (
-    <StoryProvider>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={location.pathname}
-          initial={{ opacity: 0, x: 100 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -100 }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
-          className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex flex-col lg:flex-row"
-        >
-          <div className="hidden lg:block lg:w-60 lg:flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-            <Sidebar />
-          </div>
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex flex-col lg:flex-row">
+      <div className="hidden lg:block lg:w-60 lg:flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+        <Sidebar />
+      </div>
 
-          <div className="flex-1 flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-grow p-4 md:p-6 lg:p-8">
-              <Routes location={location} key={location.pathname}>
+      <div className="flex-1 flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-grow p-4 md:p-6 lg:p-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="h-full"
+            >
+              <Routes location={location}>
                 <Route path="/" element={<Navigate to="/home" replace />} />
                 <Route
                   path="/wizard/:storyId"
                   element={
                     <PrivateRoute>
-                      <WizardProvider>
-                        <StoryCreationWizard />
-                      </WizardProvider>
+                      <StoryProvider>
+                        <WizardProvider>
+                          <StoryCreationWizard />
+                        </WizardProvider>
+                      </StoryProvider>
                     </PrivateRoute>
                   }
                 />
@@ -85,7 +87,9 @@ function AnimatedRoutes() {
                   path="/nuevo-cuento/personajes"
                   element={
                     <PrivateRoute>
-                      <CharactersGrid />
+                      <StoryProvider>
+                        <CharactersGrid />
+                      </StoryProvider>
                     </PrivateRoute>
                   }
                 />
@@ -93,7 +97,9 @@ function AnimatedRoutes() {
                   path="/nuevo-cuento/personaje/nuevo"
                   element={
                     <PrivateRoute>
-                      <CharacterForm />
+                      <StoryProvider>
+                        <CharacterForm />
+                      </StoryProvider>
                     </PrivateRoute>
                   }
                 />
@@ -101,7 +107,9 @@ function AnimatedRoutes() {
                   path="/nuevo-cuento/personaje/:id/editar"
                   element={
                     <PrivateRoute>
-                      <CharacterForm />
+                      <StoryProvider>
+                        <CharacterForm />
+                      </StoryProvider>
                     </PrivateRoute>
                   }
                 />
@@ -109,7 +117,9 @@ function AnimatedRoutes() {
                   path="/home"
                   element={
                     <PrivateRoute>
-                      <MyStories />
+                      <StoryProvider>
+                        <MyStories />
+                      </StoryProvider>
                     </PrivateRoute>
                   }
                 />
@@ -147,15 +157,15 @@ function AnimatedRoutes() {
                 />
                 <Route path="*" element={<Navigate to="/home" replace />} />
               </Routes>
-            </main>
-            <footer className="py-4 text-center text-purple-600 dark:text-purple-400 text-sm">
-              <p>Customware © {new Date().getFullYear()}</p>
-            </footer>
-          </div>
-          <ToastContainer />
-        </motion.div>
-      </AnimatePresence>
-      </StoryProvider>
+            </motion.div>
+          </AnimatePresence>
+        </main>
+        <footer className="py-4 text-center text-purple-600 dark:text-purple-400 text-sm">
+          <p>Customware © {new Date().getFullYear()}</p>
+        </footer>
+      </div>
+      <ToastContainer />
+    </div>
   );
 }
 
