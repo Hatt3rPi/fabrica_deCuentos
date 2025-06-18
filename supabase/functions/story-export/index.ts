@@ -269,22 +269,23 @@ function generateHTMLContent(
   design: DesignSettings | null,
   includeMetadata: boolean
 ): string {
-  const charactersList = characters.map(c => `• ${c.name} (${c.age} años)`).join('\n');
+  // Para cuentos infantiles, generamos un diseño visual atractivo
+  // con imágenes de fondo y texto superpuesto
   
-  const pagesContent = pages
-    .filter(p => p.page_number > 0) // Excluir portada
+  const storyPages = pages.filter(p => p.page_number > 0); // Excluir portada
+  const coverPage = pages.find(p => p.page_number === 0);
+  
+  const pagesContent = storyPages
     .map(page => `
-      <div class="page">
-        <div class="page-number">Página ${page.page_number}</div>
-        <div class="page-content">
-          <p>${page.text}</p>
-          ${page.image_url ? `<img src="${page.image_url}" alt="Ilustración página ${page.page_number}" />` : ''}
+      <div class="story-page" style="background-image: url('${page.image_url || ''}')">
+        <div class="page-overlay">
+          <div class="story-text">
+            ${page.text}
+          </div>
         </div>
       </div>
     `)
     .join('');
-
-  const coverPage = pages.find(p => p.page_number === 0);
   
   return `
     <!DOCTYPE html>
@@ -295,7 +296,8 @@ function generateHTMLContent(
       <style>
         @page {
           size: A4;
-          margin: 2cm 1.5cm;
+          margin: 0;
+          padding: 0;
         }
         
         * {
@@ -303,222 +305,145 @@ function generateHTMLContent(
         }
         
         body { 
-          font-family: 'Georgia', 'Times New Roman', serif; 
           margin: 0; 
           padding: 0;
-          line-height: 1.6;
-          color: #333;
-          font-size: 12pt;
+          font-family: 'Comic Sans MS', 'Comic Sans', cursive;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
         
-        .cover {
-          text-align: center;
-          page-break-after: always;
+        /* PORTADA - Imagen de fondo con título superpuesto */
+        .cover-page {
+          width: 100%;
           height: 100vh;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          padding: 2cm;
-        }
-        
-        .cover h1 {
-          font-size: 2.8em;
-          color: #4a154b;
-          margin-bottom: 0.8em;
-          font-weight: bold;
-          text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-        }
-        
-        ${coverPage?.image_url ? `
-        .cover-image {
-          max-width: 350px;
-          max-height: 400px;
-          width: auto;
-          height: auto;
-          margin: 1.5em auto;
-          border-radius: 12px;
-          box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-          object-fit: contain;
-        }` : ''}
-        
-        .cover p {
-          font-size: 1.1em;
-          color: #666;
-          margin: 0.5em 0;
-          font-style: italic;
-        }
-        
-        .metadata {
-          padding: 1.5em;
-          background: #f8f9fa;
-          border-left: 6px solid #4a154b;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
           page-break-after: always;
-          margin-bottom: 0;
-        }
-        
-        .metadata h2 {
-          color: #4a154b;
-          margin-top: 0;
-          margin-bottom: 1em;
-          font-size: 1.5em;
-          border-bottom: 2px solid #e9ecef;
-          padding-bottom: 0.5em;
-        }
-        
-        .metadata p {
-          margin: 0.8em 0;
-          font-size: 1em;
-        }
-        
-        .metadata strong {
-          color: #4a154b;
-          font-weight: bold;
-        }
-        
-        .characters-list {
-          margin: 1em 0;
-          padding-left: 1.5em;
-          background: #fff;
-          padding: 1em 1.5em;
-          border-radius: 6px;
-          border: 1px solid #e9ecef;
-        }
-        
-        .page {
-          page-break-before: always;
-          min-height: 85vh;
-          padding: 1em 0;
           position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          ${coverPage?.image_url ? `background-image: url('${coverPage.image_url}');` : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'}
         }
         
-        .page:first-of-type {
-          page-break-before: auto;
-        }
-        
-        .page-number {
+        .cover-overlay {
+          background: rgba(255, 255, 255, 0.85);
+          padding: 2rem 3rem;
+          border-radius: 20px;
           text-align: center;
-          font-style: italic;
-          color: #888;
-          margin-bottom: 2em;
-          font-size: 0.9em;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        
-        .page-content {
-          max-width: 100%;
-          margin: 0 auto;
-          padding: 0 1em;
-        }
-        
-        .page-content p {
-          font-size: 1.15em;
-          text-align: justify;
-          margin-bottom: 1.5em;
-          line-height: 1.7;
-          text-indent: 1.5em;
-          orphans: 3;
-          widows: 3;
-        }
-        
-        .page-content p:first-of-type {
-          text-indent: 0;
-        }
-        
-        .page-content img {
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          backdrop-filter: blur(5px);
+          border: 3px solid #fff;
           max-width: 80%;
-          max-height: 50vh;
-          width: auto;
-          height: auto;
-          display: block;
-          margin: 1.5em auto;
-          border-radius: 10px;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.12);
-          object-fit: contain;
-          page-break-inside: avoid;
         }
         
-        .footer {
-          position: fixed;
-          bottom: 1cm;
-          right: 1.5cm;
-          font-size: 0.75em;
-          color: #999;
+        .cover-title {
+          font-size: 3.5rem;
+          font-weight: bold;
+          color: #2c3e50;
+          margin: 0;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+          line-height: 1.2;
+        }
+        
+        .cover-subtitle {
+          font-size: 1.2rem;
+          color: #7f8c8d;
+          margin: 1rem 0 0 0;
           font-style: italic;
+        }
+        
+        /* PÁGINAS DEL CUENTO - Imagen de fondo con texto superpuesto */
+        .story-page {
+          width: 100%;
+          height: 100vh;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          page-break-after: always;
+          position: relative;
+          display: flex;
+          align-items: flex-end;
+          padding: 0;
+          margin: 0;
+        }
+        
+        .page-overlay {
+          width: 100%;
+          background: linear-gradient(transparent 0%, rgba(0,0,0,0.1) 40%, rgba(255,255,255,0.95) 70%, rgba(255,255,255,0.98) 100%);
+          padding: 3rem 4rem 4rem 4rem;
+          min-height: 40%;
+          display: flex;
+          align-items: center;
+        }
+        
+        .story-text {
+          font-size: 1.8rem;
+          line-height: 1.6;
+          color: #2c3e50;
+          text-align: center;
+          width: 100%;
+          font-weight: 500;
+          text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+          background: rgba(255, 255, 255, 0.9);
+          padding: 2rem;
+          border-radius: 15px;
+          box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+          border: 2px solid rgba(255,255,255,0.8);
+        }
+        
+        /* Páginas sin imagen - diseño alternativo */
+        .story-page:not([style*="background-image"]) {
+          background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+        }
+        
+        .story-page:nth-child(even):not([style*="background-image"]) {
+          background: linear-gradient(135deg, #a8e6cf 0%, #88d8c0 100%);
+        }
+        
+        .story-page:nth-child(3n):not([style*="background-image"]) {
+          background: linear-gradient(135deg, #ffd3e1 0%, #c44569 100%);
         }
         
         /* Optimizaciones para impresión */
         @media print {
-          body {
-            font-size: 11pt;
+          .cover-title {
+            font-size: 3rem;
           }
           
-          .cover h1 {
-            font-size: 2.5em;
+          .story-text {
+            font-size: 1.6rem;
           }
           
-          .page-content p {
-            font-size: 1.1em;
-          }
-          
-          img {
-            max-width: 75% !important;
+          .page-overlay {
+            padding: 2rem 3rem 3rem 3rem;
           }
         }
         
         /* Evitar saltos de página dentro de elementos */
-        h1, h2, h3, .page-number, .metadata h2 {
-          page-break-after: avoid;
-        }
-        
-        p, .page-content p {
+        .cover-page, .story-page {
           page-break-inside: avoid;
         }
         
-        .page-content img {
-          page-break-before: avoid;
-          page-break-after: avoid;
+        .story-text {
+          orphans: 3;
+          widows: 3;
         }
       </style>
     </head>
     <body>
-      <!-- Portada -->
-      <div class="cover">
-        <h1>${story.title}</h1>
-        ${coverPage?.image_url ? `<img src="${coverPage.image_url}" alt="Portada" class="cover-image" />` : ''}
-        <p><em>Creado con La CuenteAI</em></p>
-        <p>Generado el ${new Date().toLocaleDateString('es-ES')}</p>
-      </div>
-
-      ${includeMetadata ? `
-      <!-- Metadatos -->
-      <div class="metadata">
-        <h2>Información del Cuento</h2>
-        <p><strong>Título:</strong> ${story.title}</p>
-        <p><strong>Edad objetivo:</strong> ${story.target_age}</p>
-        <p><strong>Estilo literario:</strong> ${story.literary_style}</p>
-        <p><strong>Mensaje central:</strong> ${story.central_message}</p>
-        ${story.additional_details ? `<p><strong>Detalles adicionales:</strong> ${story.additional_details}</p>` : ''}
-        <p><strong>Estilo visual:</strong> ${design?.visual_style || 'Por defecto'}</p>
-        <p><strong>Paleta de colores:</strong> ${design?.color_palette || 'Por defecto'}</p>
-        <p><strong>Personajes:</strong></p>
-        <div class="characters-list">
-          ${charactersList || 'Sin personajes específicos'}
+      <!-- PORTADA -->
+      <div class="cover-page">
+        <div class="cover-overlay">
+          <h1 class="cover-title">${story.title}</h1>
+          <p class="cover-subtitle">Cuento mágico</p>
         </div>
-        <p><strong>Creado:</strong> ${new Date(story.created_at).toLocaleDateString('es-ES')}</p>
-        <p><strong>Completado:</strong> ${new Date(story.completed_at).toLocaleDateString('es-ES')}</p>
       </div>
-      ` : ''}
 
-      <!-- Páginas del cuento -->
+      <!-- PÁGINAS DEL CUENTO -->
       ${pagesContent}
-
-      <div class="footer">
-        Generado con La CuenteAI - ${new Date().toLocaleDateString('es-ES')}
-      </div>
+      
     </body>
     </html>
   `;

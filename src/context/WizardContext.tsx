@@ -380,6 +380,11 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         centralMessage: s.central_message || '',
         additionalDetails: s.additional_details || '',
       });
+      
+      // CRÍTICO: Preservar el título al cargar desde base de datos
+      if (s.title) {
+        updateStoryTitle(s.title);
+      }
       if (draft.design) {
         setDesignSettings({
           visualStyle: draft.design.visual_style || '',
