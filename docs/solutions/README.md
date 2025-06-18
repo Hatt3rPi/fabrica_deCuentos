@@ -9,6 +9,7 @@ Esta sección contiene la documentación detallada de todas las soluciones imple
 
 ### 🔧 System Features  
 - [story-completion/](./story-completion/) - Sistema completo end-to-end de finalización con exportación PDF
+- [story-export-bucket-fix/](./story-export-bucket-fix/) - Fix crítico: corrección de bucket en Edge Function story-export
 
 ### 🚀 Performance Improvements
 - *Documentación por agregar* - Generación paralela de imágenes (ver `/docs/tech/parallel-image-generation.md`)
