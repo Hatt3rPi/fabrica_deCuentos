@@ -270,14 +270,34 @@ const PreviewStep: React.FC = () => {
         <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
           <div className="text-center mb-6">
             <h3 className="text-xl font-bold text-purple-800 mb-2">
-              ¡Tu cuento está listo!
+              {allPagesCompleted ? '🎉 ¡Tu cuento está listo!' : '⏳ Preparando tu cuento...'}
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-4">
               {allPagesCompleted 
                 ? 'Todas las páginas se han generado correctamente. Puedes finalizar tu cuento.'
                 : 'Algunas páginas aún están en proceso. Puedes finalizar cuando estén listas.'
               }
             </p>
+            
+            {/* Progress indicator when pages are still generating */}
+            {!allPagesCompleted && (
+              <div className="mb-4">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-2">
+                  <span>Progreso:</span>
+                  <span className="font-semibold">
+                    {generatedPages.filter(p => p.imageUrl && pageStates[p.id] === 'completed').length} / {generatedPages.length} páginas
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${(generatedPages.filter(p => p.imageUrl && pageStates[p.id] === 'completed').length / generatedPages.length) * 100}%`
+                    }}
+                  ></div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-center">
@@ -337,44 +357,64 @@ const PreviewStep: React.FC = () => {
       {/* Completion Modal */}
       {showCompletionModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">
-              Finalizar Cuento
-            </h3>
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-4">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <BookOpen className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">
+                Finalizar Cuento
+              </h3>
+            </div>
             
-            <p className="text-gray-600 mb-6">
-              Tu cuento será marcado como completado y se generará un archivo descargable.
+            <p className="text-gray-600 mb-6 text-center">
+              Tu cuento será marcado como completado y se generará un archivo PDF descargable con todas las páginas e ilustraciones.
             </p>
 
-            <div className="mb-6">
-              <label className="flex items-center gap-3">
+            <div className="mb-6 p-4 bg-purple-50 rounded-lg">
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
                   checked={saveToLibrary}
                   onChange={(e) => setSaveToLibrary(e.target.checked)}
-                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 mt-1"
+                  disabled={isCompleting}
                 />
-                <span className="text-gray-700">
-                  Guardar en mi biblioteca personal
-                </span>
+                <div>
+                  <span className="text-gray-700 font-medium">
+                    Guardar en mi biblioteca personal
+                  </span>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Podrás acceder a tu cuento desde tu perfil en cualquier momento y descargarlo nuevamente.
+                  </p>
+                </div>
               </label>
-              <p className="text-sm text-gray-500 mt-1 ml-7">
-                Podrás acceder a tu cuento desde tu perfil en cualquier momento
-              </p>
             </div>
+
+            {isCompleting && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span className="text-sm font-medium">Generando PDF...</span>
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  Esto puede tomar unos momentos mientras se procesa tu cuento.
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowCompletionModal(false)}
                 disabled={isCompleting}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:text-gray-400"
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:text-gray-400 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCompleteStory}
                 disabled={isCompleting}
-                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg disabled:bg-gray-400 flex items-center gap-2"
+                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg disabled:bg-gray-400 flex items-center gap-2 transition-all transform hover:scale-105 disabled:transform-none"
               >
                 {isCompleting ? (
                   <>
@@ -383,8 +423,8 @@ const PreviewStep: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <BookOpen className="w-4 h-4" />
-                    Finalizar
+                    <Download className="w-4 h-4" />
+                    Finalizar y Descargar
                   </>
                 )}
               </button>
