@@ -219,3 +219,11 @@ export const colorPaletteOptions = [
     colors: ['#FF0000', '#00FF00', '#0000FF', '#FF00FF', '#FFFF00']
   }
 ];
+
+// Story completion result type
+export interface CompletionResult {
+  success: boolean;
+  downloadUrl?: string;
+  message?: string;
+  error?: string;
+}

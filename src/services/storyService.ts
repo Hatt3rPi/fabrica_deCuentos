@@ -193,5 +193,55 @@ export const storyService = {
         .insert(payload);
       if (error) throw error;
     }
+  },
+
+  async completeStory(storyId: string, saveToLibrary: boolean = true): Promise<import('../types').CompletionResult> {
+    try {
+      // Update story status to completed
+      const { error: updateError } = await supabase
+        .from('stories')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          save_to_library: saveToLibrary
+        })
+        .eq('id', storyId);
+
+      if (updateError) {
+        throw new Error(`Failed to update story status: ${updateError.message}`);
+      }
+
+      // Call export edge function
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/story-export/${storyId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Export failed');
+      }
+
+      const exportResult = await response.json();
+      
+      return {
+        success: true,
+        downloadUrl: exportResult.downloadUrl,
+        message: exportResult.message || 'Story completed successfully'
+      };
+
+    } catch (error) {
+      console.error('Story completion failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
   }
 };

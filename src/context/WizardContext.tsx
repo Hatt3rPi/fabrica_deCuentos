@@ -26,6 +26,16 @@ interface WizardContextType {
   prevStep: () => void;
   canProceed: () => boolean;
   resetWizard: () => void;
+  // New parallel generation functionality
+  bulkGenerationProgress: BulkGenerationProgress;
+  pageStates: Record<string, PageGenerationState>;
+  generateAllImagesParallel: () => Promise<void>;
+  updatePageState: (pageId: string, state: PageGenerationState) => void;
+  retryFailedPages: () => Promise<void>;
+  // Story completion functionality
+  completeStory: (saveToLibrary?: boolean) => Promise<import('../types').CompletionResult>;
+  isCompleting: boolean;
+  completionResult: import('../types').CompletionResult | null;
 }
 
 export interface GeneratedPage {
@@ -34,6 +44,15 @@ export interface GeneratedPage {
   text: string;
   imageUrl: string;
   prompt: string;
+}
+
+export type PageGenerationState = 'pending' | 'generating' | 'completed' | 'error';
+
+export interface BulkGenerationProgress {
+  total: number;
+  completed: number;
+  failed: number;
+  inProgress: string[]; // IDs de páginas generándose
 }
 
 const WizardContext = createContext<WizardContextType | undefined>(undefined);
@@ -106,6 +125,19 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   });
   const [generatedPages, setGeneratedPages] = useState<GeneratedPage[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  
+  // New states for parallel generation
+  const [bulkGenerationProgress, setBulkGenerationProgress] = useState<BulkGenerationProgress>({
+    total: 0,
+    completed: 0,
+    failed: 0,
+    inProgress: []
+  });
+  const [pageStates, setPageStates] = useState<Record<string, PageGenerationState>>({});
+  
+  // Story completion states
+  const [isCompleting, setIsCompleting] = useState<boolean>(false);
+  const [completionResult, setCompletionResult] = useState<import('../types').CompletionResult | null>(null);
 
   const generatePageImage = async (pageId: string) => {
     if (!storyId) return;
@@ -119,6 +151,158 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       console.error('Error regenerating page image:', err);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // Helper function to update individual page state
+  const updatePageState = (pageId: string, state: PageGenerationState) => {
+    setPageStates(prev => ({ ...prev, [pageId]: state }));
+  };
+
+  // Main parallel generation function
+  const generateAllImagesParallel = async () => {
+    if (!storyId) return;
+    
+    const pagesToGenerate = generatedPages.filter(p => p.pageNumber !== 0 && !p.imageUrl);
+    const totalPages = pagesToGenerate.length;
+    
+    if (totalPages === 0) return;
+
+    // Initialize progress state
+    setBulkGenerationProgress({
+      total: totalPages,
+      completed: 0,
+      failed: 0,
+      inProgress: pagesToGenerate.map(p => p.id)
+    });
+
+    // Initialize all pages as generating
+    const initialStates: Record<string, PageGenerationState> = {};
+    pagesToGenerate.forEach(page => {
+      initialStates[page.id] = 'generating';
+    });
+    setPageStates(initialStates);
+    
+    setIsGenerating(true);
+
+    try {
+      // Generate all images in parallel using Promise.allSettled
+      const generationPromises = pagesToGenerate.map(async (page) => {
+        try {
+          const url = await storyService.generatePageImage(storyId, page.id);
+          
+          // Update page with new image URL
+          setGeneratedPages(prev =>
+            prev.map(p => (p.id === page.id ? { ...p, imageUrl: url } : p))
+          );
+          
+          // Update state and progress
+          updatePageState(page.id, 'completed');
+          setBulkGenerationProgress(prev => ({ 
+            ...prev, 
+            completed: prev.completed + 1,
+            inProgress: prev.inProgress.filter(id => id !== page.id)
+          }));
+          
+          return { pageId: page.id, success: true, url };
+        } catch (error) {
+          updatePageState(page.id, 'error');
+          setBulkGenerationProgress(prev => ({ 
+            ...prev, 
+            failed: prev.failed + 1,
+            inProgress: prev.inProgress.filter(id => id !== page.id)
+          }));
+          return { pageId: page.id, success: false, error };
+        }
+      });
+
+      // Wait for all generations to complete (successful or failed)
+      await Promise.allSettled(generationPromises);
+      
+    } catch (error) {
+      console.error('[Parallel Generation] Unexpected error:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Function to retry only failed pages
+  const retryFailedPages = async () => {
+    if (!storyId) return;
+    
+    const failedPageIds = Object.entries(pageStates)
+      .filter(([, state]) => state === 'error')
+      .map(([pageId]) => pageId);
+    
+    const failedPages = generatedPages.filter(p => failedPageIds.includes(p.id));
+    
+    if (failedPages.length === 0) return;
+
+    // Reset failed pages to generating state
+    failedPages.forEach(page => updatePageState(page.id, 'generating'));
+    
+    // Reset counters
+    setBulkGenerationProgress(prev => ({
+      ...prev,
+      failed: prev.failed - failedPages.length,
+      inProgress: [...prev.inProgress, ...failedPageIds]
+    }));
+
+    setIsGenerating(true);
+
+    try {
+      const retryPromises = failedPages.map(async (page) => {
+        try {
+          const url = await storyService.generatePageImage(storyId, page.id);
+          setGeneratedPages(prev =>
+            prev.map(p => (p.id === page.id ? { ...p, imageUrl: url } : p))
+          );
+          updatePageState(page.id, 'completed');
+          setBulkGenerationProgress(prev => ({ 
+            ...prev, 
+            completed: prev.completed + 1,
+            inProgress: prev.inProgress.filter(id => id !== page.id)
+          }));
+          return { pageId: page.id, success: true, url };
+        } catch (error) {
+          updatePageState(page.id, 'error');
+          setBulkGenerationProgress(prev => ({ 
+            ...prev, 
+            failed: prev.failed + 1,
+            inProgress: prev.inProgress.filter(id => id !== page.id)
+          }));
+          return { pageId: page.id, success: false, error };
+        }
+      });
+
+      await Promise.allSettled(retryPromises);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Story completion function
+  const completeStory = async (saveToLibrary: boolean = true): Promise<import('../types').CompletionResult> => {
+    if (!storyId) {
+      return { success: false, error: 'No hay ID de cuento disponible' };
+    }
+
+    setIsCompleting(true);
+    setCompletionResult(null);
+
+    try {
+      const result = await storyService.completeStory(storyId, saveToLibrary);
+      setCompletionResult(result);
+      return result;
+    } catch (error) {
+      const errorResult = { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Error desconocido al finalizar el cuento' 
+      };
+      setCompletionResult(errorResult);
+      return errorResult;
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -323,6 +507,16 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         prevStep,
         canProceed,
         resetWizard,
+        // New parallel generation functionality
+        bulkGenerationProgress,
+        pageStates,
+        generateAllImagesParallel,
+        updatePageState,
+        retryFailedPages,
+        // Story completion functionality
+        completeStory,
+        isCompleting,
+        completionResult,
       }}
     >
       {children}
