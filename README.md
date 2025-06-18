@@ -40,7 +40,14 @@ Plataforma web interactiva para crear cuentos infantiles personalizados con ilus
   - Visualización tipo libro
   - Edición de prompts por página
   - Regeneración de imágenes en tiempo real
-  - Exportación a PDF
+  - Generación paralela de imágenes con progreso en tiempo real
+
+- **Finalización y Exportación**
+  - Finalización automática de cuentos completados
+  - Exportación a PDF con metadatos completos
+  - Descarga inmediata desde Supabase Storage
+  - Opción "guardar en biblioteca personal"
+  - Sistema de fallback robusto para garantizar funcionalidad
 
 ## 🚀 Tecnologías
 
@@ -53,7 +60,9 @@ Plataforma web interactiva para crear cuentos infantiles personalizados con ilus
 
 - **Backend**
   - Supabase para autenticación y base de datos
-  - API de IA para generación de imágenes
+  - Edge Functions para lógica de servidor
+  - API de IA para generación de imágenes y texto
+  - Supabase Storage para archivos y exports
   
 - **Testing**
   - Cypress para pruebas E2E
@@ -149,6 +158,8 @@ cypress/
 3. **Creación de personaje**: Flujo completo de creación con validación de miniatura dentro del modal
 4. **Validación de campos**: Verificación de campos obligatorios
 5. **Independencia**: Verificación de que las pruebas no interfieren entre sí
+6. **Flujo completo de historia**: Desde creación hasta generación con verificación de progreso
+7. **Finalización de cuentos**: Testing completo de exportación PDF y descarga
 
 ### ⚙️ Configuración
 
@@ -200,9 +211,11 @@ npx cypress open
    - Personalizar mensajes
 
 4. **Visualización y Exportación**
-   - Previsualización tipo libro
-   - Ajustes finales
-   - Exportación a PDF
+   - Previsualización tipo libro con navegación
+   - Generación paralela de todas las imágenes
+   - Finalización automática con validación
+   - Exportación profesional a PDF con metadatos
+   - Descarga inmediata y biblioteca personal
 
 ## 🔧 Contextos
 
