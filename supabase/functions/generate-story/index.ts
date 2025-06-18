@@ -186,11 +186,31 @@ Deno.serve(async (req) => {
     const loaderMessages = result.loader || result.loaders || null;
     const coverPromptBase = result.portada?.prompt || '';
 
+    // Función para limpiar y formatear texto
+    function cleanStoryText(text: string): string {
+      if (!text || typeof text !== 'string') return '';
+      
+      return text
+        // Remover caracteres problemáticos como / al final de líneas
+        .replace(/\s*\/\s*$/gm, '')
+        .replace(/\s*\/\s*\n/g, '\n')
+        // Normalizar saltos de línea
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        // Remover múltiples saltos de línea consecutivos
+        .replace(/\n{3,}/g, '\n\n')
+        // Limpiar espacios en blanco al inicio y final de líneas
+        .replace(/^[ \t]+/gm, '')
+        .replace(/[ \t]+$/gm, '')
+        // Remover espacios en blanco al inicio y final del texto completo
+        .trim();
+    }
+
     // Extraer texto y prompt por página en orden
     const pages = Object.entries(paginas)
       .sort(([a], [b]) => parseInt(a) - parseInt(b))
       .map(([_, page]: [string, any]) => ({
-        texto: page?.texto,
+        texto: cleanStoryText(page?.texto),
         prompt: page?.prompt || '',
       }))
       .filter(p => !!p.texto);

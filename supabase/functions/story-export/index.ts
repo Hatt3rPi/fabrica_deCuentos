@@ -494,12 +494,32 @@ function generateHTMLContent(
   // Generar CSS dinámico basado en aspect ratio
   const dynamicCSS = generateDynamicPageCSS(aspectRatio);
   
+  // Función para convertir texto a HTML preservando saltos de línea
+  function textToHTML(text: string): string {
+    if (!text) return '';
+    
+    return text
+      // Escape HTML characters
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      // Convert line breaks to HTML
+      .replace(/\n\n+/g, '</p><p>')  // Multiple line breaks become paragraph breaks
+      .replace(/\n/g, '<br>')        // Single line breaks become <br>
+      // Wrap in paragraph tags if not empty
+      .replace(/^(.+)$/, '<p>$1</p>')
+      // Clean up empty paragraphs
+      .replace(/<p><\/p>/g, '');
+  }
+
   const pagesContent = storyPages
     .map(page => `
       <div class="story-page" style="background-image: url('${page.image_url || ''}')">
         <div class="page-overlay">
           <div class="story-text">
-            ${page.text}
+            ${textToHTML(page.text)}
           </div>
         </div>
       </div>
