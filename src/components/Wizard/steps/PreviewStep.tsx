@@ -392,20 +392,6 @@ const PreviewStep: React.FC = () => {
         </div>
       )}
 
-      {/* Botón adicional "Descargar PDF" en la parte inferior */}
-      {completionResult?.success && completionResult.downloadUrl && (
-        <div className="fixed bottom-4 right-4 z-40">
-          <a
-            href={completionResult.downloadUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 transition-all transform hover:scale-105"
-          >
-            <Download className="w-5 h-5" />
-            Descargar PDF
-          </a>
-        </div>
-      )}
 
       {/* Completion Modal */}
       {showCompletionModal && (
