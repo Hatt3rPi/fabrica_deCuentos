@@ -33,6 +33,10 @@ interface WizardContextType {
   generateAllImagesParallel: () => Promise<void>;
   updatePageState: (pageId: string, state: PageGenerationState) => void;
   retryFailedPages: () => Promise<void>;
+  // Story completion functionality
+  completeStory: (saveToLibrary?: boolean) => Promise<import('../types').CompletionResult>;
+  isCompleting: boolean;
+  completionResult: import('../types').CompletionResult | null;
 }
 
 export interface GeneratedPage {
@@ -131,6 +135,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     inProgress: []
   });
   const [pageStates, setPageStates] = useState<Record<string, PageGenerationState>>({});
+  
+  // Story completion states
+  const [isCompleting, setIsCompleting] = useState<boolean>(false);
+  const [completionResult, setCompletionResult] = useState<import('../types').CompletionResult | null>(null);
 
   const generatePageImage = async (pageId: string) => {
     if (!storyId) return;
@@ -283,6 +291,31 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       await Promise.allSettled(retryPromises);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // Story completion function
+  const completeStory = async (saveToLibrary: boolean = true): Promise<import('../types').CompletionResult> => {
+    if (!storyId) {
+      return { success: false, error: 'No hay ID de cuento disponible' };
+    }
+
+    setIsCompleting(true);
+    setCompletionResult(null);
+
+    try {
+      const result = await storyService.completeStory(storyId, saveToLibrary);
+      setCompletionResult(result);
+      return result;
+    } catch (error) {
+      const errorResult = { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Error desconocido al finalizar el cuento' 
+      };
+      setCompletionResult(errorResult);
+      return errorResult;
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -512,6 +545,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         generateAllImagesParallel,
         updatePageState,
         retryFailedPages,
+        // Story completion functionality
+        completeStory,
+        isCompleting,
+        completionResult,
       }}
     >
       {children}
