@@ -602,7 +602,7 @@ async function uploadPDFToStorage(storyId: string, pdfBuffer: Uint8Array, userId
   const filePath = `exports/${userId}/${fileName}`;
   
   const { data, error } = await supabaseAdmin.storage
-    .from('stories')
+    .from('exports')
     .upload(filePath, pdfBuffer, {
       contentType: 'application/pdf',
       upsert: false
@@ -615,7 +615,7 @@ async function uploadPDFToStorage(storyId: string, pdfBuffer: Uint8Array, userId
 
   // Obtener URL pública
   const { data: urlData } = supabaseAdmin.storage
-    .from('stories')
+    .from('exports')
     .getPublicUrl(filePath);
 
   return urlData.publicUrl;
