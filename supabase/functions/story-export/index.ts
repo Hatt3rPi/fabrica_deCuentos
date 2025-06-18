@@ -251,11 +251,25 @@ async function generateStoryPDF(
   
   const { story, pages, characters, design } = storyData;
   
-  // Crear contenido HTML para convertir a PDF (ahora es async por detección de aspect ratio)
-  const htmlContent = await generateHTMLContent(story, pages, characters, design, includeMetadata);
+  // Detectar aspect ratio de la primera imagen disponible
+  const storyPages = pages.filter(p => p.page_number > 0);
+  const coverPage = pages.find(p => p.page_number === 0);
   
-  // Generar PDF usando Puppeteer via Browserless.io
-  const pdfContent = await generatePDFFromHTML(htmlContent);
+  let aspectRatio = 'portrait'; // Por defecto
+  
+  if (coverPage?.image_url) {
+    aspectRatio = await detectImageAspectRatio(coverPage.image_url);
+  } else if (storyPages.length > 0 && storyPages[0].image_url) {
+    aspectRatio = await detectImageAspectRatio(storyPages[0].image_url);
+  }
+  
+  console.log(`[story-export] 🎯 Aspect ratio final para PDF: ${aspectRatio}`);
+  
+  // Crear contenido HTML para convertir a PDF
+  const htmlContent = generateHTMLContent(story, pages, characters, design, includeMetadata, aspectRatio);
+  
+  // Generar PDF usando Browserless.io con aspect ratio específico
+  const pdfContent = await generatePDFFromHTML(htmlContent, aspectRatio);
   
   return pdfContent;
 }
@@ -449,29 +463,21 @@ function generateDynamicPageCSS(aspectRatio: string): string {
   }
 }
 
-async function generateHTMLContent(
+function generateHTMLContent(
   story: StoryData,
   pages: StoryPage[],
   characters: Character[],
   design: DesignSettings | null,
-  includeMetadata: boolean
-): Promise<string> {
+  includeMetadata: boolean,
+  aspectRatio: string = 'portrait'
+): string {
   // Para cuentos infantiles, generamos un diseño visual atractivo
   // con imágenes de fondo y texto superpuesto
   
   const storyPages = pages.filter(p => p.page_number > 0); // Excluir portada
   const coverPage = pages.find(p => p.page_number === 0);
   
-  // Detectar aspect ratio de la primera imagen disponible para definir formato del PDF
-  let aspectRatio = 'portrait'; // Por defecto
-  
-  if (coverPage?.image_url) {
-    aspectRatio = await detectImageAspectRatio(coverPage.image_url);
-  } else if (storyPages.length > 0 && storyPages[0].image_url) {
-    aspectRatio = await detectImageAspectRatio(storyPages[0].image_url);
-  }
-  
-  console.log(`[story-export] Aspect ratio detectado: ${aspectRatio}`);
+  console.log(`[story-export] 🎨 Generando HTML con aspect ratio: ${aspectRatio}`);
   
   // Generar CSS dinámico basado en aspect ratio
   const dynamicCSS = generateDynamicPageCSS(aspectRatio);
@@ -645,8 +651,9 @@ async function generateHTMLContent(
   `;
 }
 
-async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
+async function generatePDFFromHTML(htmlContent: string, aspectRatio: string = 'portrait'): Promise<Uint8Array> {
   console.log('[story-export] Iniciando generación de PDF con Browserless.io API...');
+  console.log(`[story-export] 📐 Formato de PDF solicitado: ${aspectRatio}`);
   
   try {
     // Obtener token de Browserless.io
@@ -655,7 +662,33 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
       throw new Error('BROWSERLESS_TOKEN no configurado en variables de entorno');
     }
 
+    // Configurar opciones de PDF según aspect ratio
+    let pdfOptions: any = {
+      printBackground: true,
+      margin: { top: '0', right: '0', bottom: '0', left: '0' }
+    };
+
+    switch (aspectRatio) {
+      case 'square':
+        console.log('[story-export] ⬛ Configurando PDF cuadrado...');
+        pdfOptions.width = '21cm';
+        pdfOptions.height = '21cm';
+        break;
+      case 'landscape':
+        console.log('[story-export] ⬜ Configurando PDF landscape...');
+        pdfOptions.format = 'A4';
+        pdfOptions.landscape = true;
+        break;
+      case 'portrait':
+      default:
+        console.log('[story-export] 📱 Configurando PDF portrait...');
+        pdfOptions.format = 'A4';
+        pdfOptions.landscape = false;
+        break;
+    }
+
     console.log('[story-export] Enviando HTML a Browserless.io API...');
+    console.log('[story-export] 🔧 Opciones PDF:', JSON.stringify(pdfOptions));
     
     // Usar API REST de Browserless.io (endpoint moderno)
     const response = await fetch(`https://production-sfo.browserless.io/pdf?token=${browserlessToken}`, {
@@ -665,16 +698,7 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
       },
       body: JSON.stringify({
         html: htmlContent,
-        options: {
-          format: 'A4',
-          printBackground: true,
-          margin: {
-            top: '1cm',
-            right: '1cm',
-            bottom: '1cm',
-            left: '1cm'
-          }
-        }
+        options: pdfOptions
       })
     });
 
