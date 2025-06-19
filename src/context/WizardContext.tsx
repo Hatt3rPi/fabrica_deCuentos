@@ -23,6 +23,7 @@ interface WizardContextType {
   isGenerating: boolean;
   setIsGenerating: (value: boolean) => void;
   generatePageImage: (pageId: string) => Promise<void>;
+  generateCoverImage: (customPrompt?: string) => Promise<void>;
   updateStoryTitle: (title: string) => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -38,6 +39,7 @@ interface WizardContextType {
   completeStory: (saveToLibrary?: boolean) => Promise<import('../types').CompletionResult>;
   isCompleting: boolean;
   completionResult: import('../types').CompletionResult | null;
+  isPdfOutdated: boolean;
 }
 
 export interface GeneratedPage {
@@ -140,6 +142,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   // Story completion states
   const [isCompleting, setIsCompleting] = useState<boolean>(false);
   const [completionResult, setCompletionResult] = useState<import('../types').CompletionResult | null>(null);
+  const [isPdfOutdated, setIsPdfOutdated] = useState<boolean>(false);
 
   const generatePageImage = async (pageId: string) => {
     if (!storyId) return;
@@ -149,8 +152,31 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setGeneratedPages(prev => prev.map(p =>
         p.id === pageId ? { ...p, imageUrl } : p
       ));
+      // Mark PDF as outdated since page has changed
+      if (completionResult?.success) {
+        setIsPdfOutdated(true);
+      }
     } catch (err) {
       logger.error('Error regenerating page image:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const generateCoverImage = async (customPrompt?: string) => {
+    if (!storyId) return;
+    setIsGenerating(true);
+    try {
+      const imageUrl = await storyService.generateCoverImage(storyId, customPrompt);
+      setGeneratedPages(prev => prev.map(p =>
+        p.pageNumber === 0 ? { ...p, imageUrl, prompt: customPrompt || p.prompt } : p
+      ));
+      // Mark PDF as outdated since cover has changed
+      if (completionResult?.success) {
+        setIsPdfOutdated(true);
+      }
+    } catch (err) {
+      logger.error('Error regenerating cover image:', err);
     } finally {
       setIsGenerating(false);
     }
@@ -307,6 +333,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     try {
       const result = await storyService.completeStory(storyId, saveToLibrary);
       setCompletionResult(result);
+      // Reset PDF outdated flag if successful
+      if (result.success) {
+        setIsPdfOutdated(false);
+      }
       return result;
     } catch (error) {
       const errorResult = { 
@@ -540,6 +570,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         isGenerating,
         setIsGenerating,
         generatePageImage,
+        generateCoverImage,
         updateStoryTitle,
         nextStep,
         prevStep,
@@ -555,6 +586,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         completeStory,
         isCompleting,
         completionResult,
+        isPdfOutdated,
       }}
     >
       {children}

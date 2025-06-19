@@ -37,6 +37,8 @@ async function generateImageWithRetry(
   referenceImages: Blob[],
   endpoint: string,
   model: string,
+  size: string = '1024x1024',
+  quality: string = 'high',
   retries = MAX_RETRIES,
 ): Promise<{ url: string }> {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -51,7 +53,7 @@ async function generateImageWithRetry(
         return { url: await generateWithFlux(prompt, inputUrl) };
       }
 
-      const payload = { model, prompt, size: '1024x1024', quality: 'high', n: 1 };
+      const payload = { model, prompt, size, quality, n: 1 };
       console.log('[generate-image-pages] [REQUEST]', JSON.stringify(payload));
 
       const supportsFiles = endpoint.includes('/images/edits') ||
@@ -141,7 +143,7 @@ Deno.serve(async (req) => {
 
     const { data: prompts } = await supabaseAdmin
       .from('prompts')
-      .select('id, type, content, endpoint, model')
+      .select('id, type, content, endpoint, model, size, quality')
       .in('type', ['PROMPT_CUENTO_PAGINAS', stylePromptType]);
 
     const pagePromptRow = prompts?.find(p => p.type === 'PROMPT_CUENTO_PAGINAS');
@@ -204,7 +206,10 @@ Deno.serve(async (req) => {
       referenceImages = results.filter((b): b is Blob => b !== null);
     }
 
-    const { url } = await generateImageWithRetry(prompt, referenceImages, endpoint, model);
+    const size = pagePromptRow.size || '1024x1024';
+    const quality = pagePromptRow.quality || 'high';
+    
+    const { url } = await generateImageWithRetry(prompt, referenceImages, endpoint, model, size, quality);
 
     let blob: Blob;
     if (url.startsWith('data:')) {

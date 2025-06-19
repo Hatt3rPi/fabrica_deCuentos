@@ -139,6 +139,27 @@ const loaderMessages: LoaderMessage[] = [
     id: 'c.5_parallel',
     text: 'Optimizando tiempos con generación inteligente...',
     etapa: ['vista_previa_parallel']
+  },
+  // Individual regeneration messages
+  {
+    id: 'd.1_regeneration',
+    text: 'Regenerando imagen con tu nuevo prompt... 🎨',
+    etapa: ['vista_previa']
+  },
+  {
+    id: 'd.2_regeneration',
+    text: 'Aplicando los cambios artísticos solicitados...',
+    etapa: ['vista_previa']
+  },
+  {
+    id: 'd.3_regeneration',
+    text: 'Creando una nueva versión mejorada...',
+    etapa: ['vista_previa']
+  },
+  {
+    id: 'd.4_regeneration',
+    text: 'Dando los toques finales a tu imagen... ✨',
+    etapa: ['vista_previa']
   }
 ];
 

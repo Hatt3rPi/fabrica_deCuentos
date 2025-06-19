@@ -573,28 +573,35 @@ function generateHTMLContent(
         }
         
         .cover-overlay {
+          background: transparent;
           padding: 2rem 3rem;
+          border-radius: 0;
           text-align: center;
+          box-shadow: none;
+          backdrop-filter: none;
+          border: none;
           max-width: 85%;
         }
         
         .cover-title {
-          font-size: 3.5rem;
+          font-family: "Indie Flower", cursive;
+          font-size: 4rem;
           font-weight: bold;
           color: white;
           margin: 0;
           text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
           line-height: 1.2;
-          text-transform: uppercase;
-          letter-spacing: 2px;
+          text-transform: none;
+          letter-spacing: 1px;
         }
         
         .cover-subtitle {
-          font-size: 1.2rem;
+          font-family: "Indie Flower", cursive;
+          font-size: 1.5rem;
           color: white;
           margin: 1rem 0 0 0;
-          font-style: italic;
-          text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+          font-style: normal;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
         
         /* PÁGINAS DEL CUENTO - Imagen de fondo con texto superpuesto */
@@ -612,22 +619,27 @@ function generateHTMLContent(
         
         .page-overlay {
           width: 100%;
-          background: linear-gradient(transparent 0%, rgba(0,0,0,0.1) 40%, rgba(255,255,255,0.95) 70%, rgba(255,255,255,0.98) 100%);
-          padding: 3rem 4rem 4rem 4rem;
-          min-height: 40%;
+          background: transparent;
+          padding: 1rem 2rem 6rem 2rem;
+          min-height: 25%;
           display: flex;
-          align-items: center;
+          align-items: flex-end;
         }
         
         .story-text {
-          font-size: 1.8rem;
-          line-height: 1.6;
+          font-family: "Indie Flower", cursive;
+          font-size: 2.2rem;
+          line-height: 1.4;
           color: white;
           text-align: center;
           width: 100%;
-          font-weight: 500;
+          font-weight: 600;
           text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
-          padding: 2rem;
+          background: transparent;
+          padding: 1.5rem;
+          border-radius: 0;
+          box-shadow: none;
+          border: none;
         }
         
         /* Páginas sin imagen - diseño alternativo */
@@ -683,7 +695,6 @@ function generateHTMLContent(
       <div class="cover-page">
         <div class="cover-overlay">
           <h1 class="cover-title">${story.title}</h1>
-          <p class="cover-subtitle">Cuento mágico</p>
         </div>
       </div>
 
