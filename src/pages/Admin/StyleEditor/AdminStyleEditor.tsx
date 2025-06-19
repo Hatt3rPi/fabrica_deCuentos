@@ -520,8 +520,8 @@ const AdminStyleEditor: React.FC = () => {
               config={activeConfig}
               pageType={currentPageType}
               sampleImage={currentPageType === 'cover' 
-                ? (customCoverImage || previewImage)
-                : (customPageImage || previewImage)
+                ? (customCoverImage || activeConfig.coverBackgroundUrl || previewImage)
+                : (customPageImage || activeConfig.pageBackgroundUrl || previewImage)
               }
               sampleText={currentPageType === 'cover' ? SAMPLE_TEXTS.cover : SAMPLE_TEXTS.page}
               showGrid={showGrid}
