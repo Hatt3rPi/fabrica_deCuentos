@@ -12,6 +12,7 @@ import Sidebar from './components/Layout/Sidebar';
 import LoginForm from './components/Auth/LoginForm';
 import LandingPage from './pages/LandingPage';
 import MyStories from './pages/MyStories';
+import StoryReader from './pages/StoryReader';
 import CharacterForm from './components/Character/CharacterForm';
 import CharactersGrid from './components/Character/CharactersGrid';
 import ToastContainer from './components/UI/ToastContainer';
@@ -120,6 +121,14 @@ function AnimatedRoutes() {
                       <StoryProvider>
                         <MyStories />
                       </StoryProvider>
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/story/:id/read"
+                  element={
+                    <PrivateRoute>
+                      <StoryReader />
                     </PrivateRoute>
                   }
                 />

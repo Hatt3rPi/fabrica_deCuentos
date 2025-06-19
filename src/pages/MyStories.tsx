@@ -129,7 +129,7 @@ const MyStories: React.FC = () => {
   };
 
   const handleReadStory = (storyId: string) => {
-    navigate(`/story/${storyId}`);
+    navigate(`/story/${storyId}/read`);
   };
 
   const handleDeleteClick = (story: Story) => {

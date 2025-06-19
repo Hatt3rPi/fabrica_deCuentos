@@ -12,7 +12,13 @@ interface StoryCardProps {
   };
   onContinue: (id: string) => void;
   onRead: (id: string) => void;
-  onDelete: (story: any) => void;
+  onDelete: (story: {
+    id: string;
+    title: string;
+    created_at: string;
+    status: 'draft' | 'completed';
+    cover_url: string;
+  }) => void;
 }
 
 const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDelete }) => {
@@ -49,17 +55,18 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
           {new Date(story.created_at).toLocaleDateString()}
         </p>
         <div className="flex gap-2">
-          <button
-            onClick={() => onRead(story.id)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-800 transition-colors"
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Leer</span>
-          </button>
-          {story.status === 'draft' && (
+          {story.status === 'completed' ? (
+            <button
+              onClick={() => onRead(story.id)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-800 transition-colors"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Leer</span>
+            </button>
+          ) : (
             <button
               onClick={() => onContinue(story.id)}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-800 transition-colors"
             >
               <Pencil className="w-4 h-4" />
               <span>Continuar</span>
