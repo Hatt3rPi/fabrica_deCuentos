@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
-import puppeteer from 'puppeteer';
+import puppeteer from 'npm:puppeteer';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

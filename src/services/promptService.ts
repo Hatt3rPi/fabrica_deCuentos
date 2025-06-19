@@ -8,6 +8,12 @@ export interface Prompt {
   model?: string | null;
   version: number;
   updated_at: string;
+  updated_by?: string | null;
+  // Image generation preferences
+  size?: string | null;
+  quality?: string | null;
+  width?: number | null;
+  height?: number | null;
 }
 
 export const promptService = {
@@ -48,11 +54,23 @@ export const promptService = {
     type: string,
     content: string,
     endpoint: string,
-    model: string
+    model: string,
+    size?: string | null,
+    quality?: string | null,
+    width?: number | null,
+    height?: number | null
   ): Promise<Prompt> {
+    const promptData: Record<string, any> = { type, content, endpoint, model };
+    
+    // Only include image preferences if they are provided
+    if (size !== undefined) promptData.size = size;
+    if (quality !== undefined) promptData.quality = quality;
+    if (width !== undefined) promptData.width = width;
+    if (height !== undefined) promptData.height = height;
+    
     const { data, error } = await supabase
       .from('prompts')
-      .upsert({ type, content, endpoint, model }, { onConflict: 'type' })
+      .upsert(promptData, { onConflict: 'type' })
       .select('*')
       .single();
     if (error) throw error;

@@ -7,6 +7,11 @@ export interface Prompt {
   version: number;
   updated_at: string;
   updated_by?: string | null;
+  // Image generation preferences
+  size?: string | null;
+  quality?: string | null;
+  width?: number | null;
+  height?: number | null;
 }
 
 export interface PromptVersion {
