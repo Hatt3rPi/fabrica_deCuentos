@@ -14,7 +14,8 @@ import {
   Eye,
   EyeOff,
   RotateCcw,
-  Image
+  Image,
+  X
 } from 'lucide-react';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
@@ -60,6 +61,7 @@ const AdminStyleEditor: React.FC = () => {
   const [showRulers, setShowRulers] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   // Cargar configuración activa y imagen de muestra
   useEffect(() => {
@@ -258,6 +260,14 @@ const AdminStyleEditor: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Mobile Sidebar Toggle */}
+      <button
+        onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+        className="md:hidden fixed bottom-4 right-4 z-50 p-3 bg-purple-600 text-white rounded-full shadow-lg hover:bg-purple-700 transition-colors"
+      >
+        <Settings className="w-6 h-6" />
+      </button>
+
       {/* Toolbar */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="flex items-center justify-between">
@@ -277,22 +287,22 @@ const AdminStyleEditor: React.FC = () => {
               Templates
             </button>
             
-            <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2" />
+            <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2 hidden sm:block" />
             
             <button
               onClick={handleZoomOut}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors hidden sm:block"
             >
               <ZoomOut className="w-4 h-4" />
             </button>
             
-            <span className="text-sm text-gray-600 dark:text-gray-400 min-w-[3rem] text-center">
+            <span className="text-sm text-gray-600 dark:text-gray-400 min-w-[3rem] text-center hidden sm:block">
               {zoomLevel}%
             </span>
             
             <button
               onClick={handleZoomIn}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors hidden sm:block"
             >
               <ZoomIn className="w-4 h-4" />
             </button>
@@ -349,10 +359,31 @@ const AdminStyleEditor: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex h-[calc(100vh-4rem)] relative">
+        {/* Mobile Sidebar Overlay */}
+        {showMobileSidebar && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+            onClick={() => setShowMobileSidebar(false)}
+          />
+        )}
+
         {/* Control Panels */}
-        <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+        <div className={`
+          ${showMobileSidebar ? 'translate-x-0' : '-translate-x-full'}
+          md:translate-x-0 fixed md:relative z-40 md:z-auto
+          w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 
+          overflow-y-auto transition-transform duration-300 h-full
+        `}>
           <div className="p-4">
+            {/* Close button for mobile */}
+            <button
+              onClick={() => setShowMobileSidebar(false)}
+              className="md:hidden absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
             {/* Panel Tabs */}
             <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
               <button
@@ -487,14 +518,14 @@ const AdminStyleEditor: React.FC = () => {
         </div>
 
         {/* Preview Area */}
-        <div className="flex-1 bg-gray-100 dark:bg-gray-900 p-8 overflow-auto">
-          <div className="max-w-4xl mx-auto">
+        <div className="flex-1 bg-gray-100 dark:bg-gray-900 p-4 md:p-8 overflow-auto">
+          <div className="w-full mx-auto">
             {/* Page Type Switcher */}
-            <div className="flex justify-center mb-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex">
+            <div className="flex justify-center mb-4 md:mb-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex w-full max-w-xs md:w-auto">
                 <button
                   onClick={() => setCurrentPageType('cover')}
-                  className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPageType === 'cover'
                       ? 'bg-purple-600 text-white'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
@@ -504,13 +535,14 @@ const AdminStyleEditor: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setCurrentPageType('page')}
-                  className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPageType === 'page'
                       ? 'bg-purple-600 text-white'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                   }`}
                 >
-                  Página Interior
+                  <span className="hidden sm:inline">Página Interior</span>
+                  <span className="sm:hidden">Interior</span>
                 </button>
               </div>
             </div>
@@ -530,7 +562,7 @@ const AdminStyleEditor: React.FC = () => {
             />
 
             {/* Info */}
-            <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            <div className="mt-4 md:mt-6 text-center text-xs md:text-sm text-gray-500 dark:text-gray-400 px-4">
               <p>Los cambios se aplican en tiempo real. Guarda para aplicar a todos los cuentos.</p>
             </div>
           </div>
