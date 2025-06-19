@@ -532,17 +532,28 @@ function generateHTMLContent(
     <head>
       <meta charset="UTF-8">
       <title>${story.title}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
       <style>
+        @import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');
+        
         ${dynamicCSS}
         
         * {
           box-sizing: border-box;
         }
         
+        .indie-flower-regular {
+          font-family: "Indie Flower", cursive;
+          font-weight: 400;
+          font-style: normal;
+        }
+        
         body { 
           margin: 0; 
           padding: 0;
-          font-family: 'Comic Sans MS', 'Comic Sans', cursive;
+          font-family: "Indie Flower", cursive;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
@@ -562,22 +573,17 @@ function generateHTMLContent(
         }
         
         .cover-overlay {
-          background: rgba(255, 255, 255, 0.9);
           padding: 2rem 3rem;
-          border-radius: 20px;
           text-align: center;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-          backdrop-filter: blur(5px);
-          border: 3px solid #fff;
           max-width: 85%;
         }
         
         .cover-title {
           font-size: 3.5rem;
           font-weight: bold;
-          color: #2c3e50;
+          color: white;
           margin: 0;
-          text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+          text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
           line-height: 1.2;
           text-transform: uppercase;
           letter-spacing: 2px;
@@ -585,9 +591,10 @@ function generateHTMLContent(
         
         .cover-subtitle {
           font-size: 1.2rem;
-          color: #7f8c8d;
+          color: white;
           margin: 1rem 0 0 0;
           font-style: italic;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
         }
         
         /* PÁGINAS DEL CUENTO - Imagen de fondo con texto superpuesto */
@@ -615,16 +622,12 @@ function generateHTMLContent(
         .story-text {
           font-size: 1.8rem;
           line-height: 1.6;
-          color: #2c3e50;
+          color: white;
           text-align: center;
           width: 100%;
           font-weight: 500;
-          text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
-          background: rgba(255, 255, 255, 0.9);
+          text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
           padding: 2rem;
-          border-radius: 15px;
-          box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-          border: 2px solid rgba(255,255,255,0.8);
         }
         
         /* Páginas sin imagen - diseño alternativo */
@@ -644,10 +647,19 @@ function generateHTMLContent(
         @media print {
           .cover-title {
             font-size: 3rem;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+          }
+          
+          .cover-subtitle {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
           }
           
           .story-text {
             font-size: 1.6rem;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
           }
           
           .page-overlay {
