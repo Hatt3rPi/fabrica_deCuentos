@@ -159,6 +159,33 @@ export const storyService = {
     return data.imageUrl as string;
   },
 
+  async generateCoverImage(storyId: string, customPrompt?: string): Promise<string> {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    // If custom prompt is provided, update the cover page prompt first
+    if (customPrompt) {
+      const { error } = await supabase
+        .from('story_pages')
+        .update({ prompt: customPrompt })
+        .eq('story_id', storyId)
+        .eq('page_number', 0);
+      if (error) throw error;
+    }
+    
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-cover`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ story_id: storyId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to regenerate cover');
+    return data.imageUrl as string;
+  },
+
   async updateCoverImage(storyId: string, imageUrl: string): Promise<void> {
     const { error } = await supabase
       .from('story_pages')

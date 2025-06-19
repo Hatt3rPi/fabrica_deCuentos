@@ -11,13 +11,15 @@ const PreviewStep: React.FC = () => {
     isGenerating, 
     setIsGenerating, 
     generatePageImage,
+    generateCoverImage,
     bulkGenerationProgress,
     pageStates,
     retryFailedPages,
     // Story completion functionality
     completeStory,
     isCompleting,
-    completionResult
+    completionResult,
+    isPdfOutdated
   } = useWizard();
   const { createNotification } = useNotifications();
   const [currentPage, setCurrentPage] = useState(0);
@@ -44,16 +46,23 @@ const PreviewStep: React.FC = () => {
   };
 
   const handleRegeneratePage = async (pageId: string) => {
+    const currentPageData = generatedPages.find(p => p.id === pageId);
+    const isCover = currentPageData?.pageNumber === 0;
+    
     try {
-      await generatePageImage(pageId);
+      if (isCover) {
+        await generateCoverImage(promptText);
+      } else {
+        await generatePageImage(pageId);
+      }
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Imagen actualizada',
-        'La página se regeneró correctamente',
+        `${isCover ? 'La portada' : 'La página'} se regeneró correctamente`,
         NotificationPriority.LOW
       );
     } catch (err) {
-      console.error('Error regenerating page', err);
+      console.error('Error regenerating', isCover ? 'cover' : 'page', err);
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Error al regenerar',
@@ -167,7 +176,8 @@ const PreviewStep: React.FC = () => {
               )}
               
               <img
-                src={currentPageData.imageUrl || '/placeholder-image.png'}
+                key={`${currentPageData.id}-${currentPageData.imageUrl}-${Date.now()}`}
+                src={currentPageData.imageUrl ? `${currentPageData.imageUrl}?t=${Date.now()}` : '/placeholder-image.png'}
                 alt={`Página ${currentPage + 1}`}
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -248,7 +258,7 @@ const PreviewStep: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
           >
             <Pencil className="w-4 h-4" />
-            Editar prompt de esta página
+            {currentPageData.pageNumber === 0 ? 'Editar prompt de la portada' : 'Editar prompt de esta página'}
           </button>
         )}
       </div>
@@ -350,6 +360,15 @@ const PreviewStep: React.FC = () => {
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-800">
                 <span className="font-semibold">Error:</span> {completionResult.error}
+              </p>
+            </div>
+          )}
+
+          {/* PDF outdated state */}
+          {completionResult?.success && isPdfOutdated && (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-amber-800">
+                <span className="font-semibold">⚠️ PDF desactualizado:</span> Has regenerado algunas imágenes. Finaliza el cuento nuevamente para actualizar el PDF.
               </p>
             </div>
           )}
