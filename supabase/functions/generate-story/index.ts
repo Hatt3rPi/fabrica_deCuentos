@@ -84,11 +84,12 @@ Deno.serve(async (req) => {
     start = Date.now();
     
     // Determinar si usar max_tokens o max_completion_tokens según el modelo
-    const isOModel = model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4');
+    const isOModel = model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4') || model.includes('-4o');
     const tokenParam = isOModel ? 'max_completion_tokens' : 'max_tokens';
     
     // Los modelos serie O necesitan más tokens porque usan muchos para razonamiento interno
-    const maxTokens = isOModel ? 10000 : 1500;
+    // Aumentamos tokens para modelos no-O también debido a prompts largos
+    const maxTokens = isOModel ? 10000 : 3000;
     
     const storyPayload: any = {
       model,
