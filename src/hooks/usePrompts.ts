@@ -24,11 +24,20 @@ export const usePrompts = () => {
   }, [isAdmin]);
 
   const createPrompt = useCallback(
-    async (type: string, content: string, endpoint: string, model: string) => {
+    async (
+      type: string, 
+      content: string, 
+      endpoint: string, 
+      model: string,
+      size?: string | null,
+      quality?: string | null,
+      width?: number | null,
+      height?: number | null
+    ) => {
       if (!isAdmin) return null;
       setSaving(true);
       try {
-        const created = await promptService.upsertPrompt(type, content, endpoint, model);
+        const created = await promptService.upsertPrompt(type, content, endpoint, model, size, quality, width, height);
         setPrompts(prev => [...prev, created]);
         return created;
       } catch (err) {
@@ -42,13 +51,22 @@ export const usePrompts = () => {
   );
 
   const updatePrompt = useCallback(
-    async (id: string, content: string, endpoint: string, model: string) => {
+    async (
+      id: string, 
+      content: string, 
+      endpoint: string, 
+      model: string,
+      size?: string | null,
+      quality?: string | null,
+      width?: number | null,
+      height?: number | null
+    ) => {
       if (!isAdmin) return null;
       const current = prompts.find(p => p.id === id);
       if (!current) return null;
       setSaving(true);
       try {
-        const updated = await promptService.upsertPrompt(current.type, content, endpoint, model);
+        const updated = await promptService.upsertPrompt(current.type, content, endpoint, model, size, quality, width, height);
         setPrompts(prev => prev.map(p => (p.id === id ? updated : p)));
         return updated;
       } catch (err) {
