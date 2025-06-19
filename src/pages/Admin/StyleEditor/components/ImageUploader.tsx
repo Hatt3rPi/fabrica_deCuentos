@@ -43,7 +43,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       // Generar nombre único para el archivo
       const timestamp = Date.now();
       const fileExt = file.name.split('.').pop();
-      const fileName = `style-backgrounds/${pageType}_${timestamp}.${fileExt}`;
+      const fileName = `style_design/${pageType}_${timestamp}.${fileExt}`;
 
       // Subir archivo a Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
