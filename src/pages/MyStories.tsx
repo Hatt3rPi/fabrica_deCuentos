@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus } from 'lucide-react';
+import { Plus, BookOpen, PenTool } from 'lucide-react';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import { storyService } from '../services/storyService';
 import { useNavigate } from 'react-router-dom';
@@ -159,22 +159,96 @@ const MyStories: React.FC = () => {
 
   const cancelDelete = () => setStoryToDelete(null);
 
+  // Agrupar cuentos por estado
+  const { completedStories, draftStories } = useMemo(() => {
+    const completed = stories.filter(story => story.status === 'completed');
+    const drafts = stories.filter(story => story.status === 'draft');
+    return {
+      completedStories: completed,
+      draftStories: drafts
+    };
+  }, [stories]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 p-6">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-purple-800 dark:text-purple-300 mb-8">Mis Cuentos</h1>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {stories.map((story) => (
-            <StoryCard
-              key={story.id}
-              story={story}
-              onContinue={handleContinueStory}
-              onRead={handleReadStory}
-              onDelete={handleDeleteClick}
-            />
-          ))}
-        </div>
+        {/* Sección de Cuentos Completados */}
+        {completedStories.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <BookOpen className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">
+                Cuentos Completados
+              </h2>
+              <span className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm font-medium">
+                {completedStories.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {completedStories.map((story) => (
+                <StoryCard
+                  key={story.id}
+                  story={story}
+                  onContinue={handleContinueStory}
+                  onRead={handleReadStory}
+                  onDelete={handleDeleteClick}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sección de Borradores */}
+        {draftStories.length > 0 && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <PenTool className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">
+                Cuentos en Borrador
+              </h2>
+              <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded-full text-sm font-medium">
+                {draftStories.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {draftStories.map((story) => (
+                <StoryCard
+                  key={story.id}
+                  story={story}
+                  onContinue={handleContinueStory}
+                  onRead={handleReadStory}
+                  onDelete={handleDeleteClick}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Mensaje cuando no hay cuentos */}
+        {stories.length === 0 && (
+          <div className="text-center py-16">
+            <div className="mb-6">
+              <div className="w-24 h-24 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto">
+                <BookOpen className="w-12 h-12 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              No tienes cuentos aún
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              ¡Comienza creando tu primer cuento mágico!
+            </p>
+            <button
+              onClick={handleNewStory}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-800 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Crear mi primer cuento</span>
+            </button>
+          </div>
+        )}
 
       <button
         onClick={handleNewStory}
