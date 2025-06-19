@@ -66,6 +66,8 @@ export interface StoryStyleConfig {
   isDefault?: boolean;
   coverConfig: CoverConfig;
   pageConfig: PageConfig;
+  coverBackgroundUrl?: string;
+  pageBackgroundUrl?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;

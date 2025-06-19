@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, ArrowLeft, Download, Loader } from 'lucide-r
 import { createClient } from '@supabase/supabase-js';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../types/notification';
+import { styleConfigService } from '../services/styleConfigService';
+import { StoryStyleConfig, convertToReactStyle, convertContainerToReactStyle } from '../types/styleConfig';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -33,6 +35,7 @@ const StoryReader: React.FC = () => {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [styleConfig, setStyleConfig] = useState<StoryStyleConfig | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -41,6 +44,7 @@ const StoryReader: React.FC = () => {
     }
     
     fetchStoryData();
+    fetchStyleConfig();
   }, [id]);
 
   // Keyboard navigation
@@ -58,6 +62,18 @@ const StoryReader: React.FC = () => {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [currentPageIndex, pages.length]);
+
+  const fetchStyleConfig = async () => {
+    try {
+      const config = await styleConfigService.getActiveStyle();
+      if (config) {
+        setStyleConfig(config);
+      }
+    } catch (error) {
+      console.error('Error loading style config:', error);
+      // Continue with default styles if loading fails
+    }
+  };
 
   const fetchStoryData = async () => {
     try {
@@ -220,6 +236,44 @@ const StoryReader: React.FC = () => {
   const isFirstPage = currentPageIndex === 0;
   const isLastPage = currentPageIndex === pages.length - 1;
 
+  // Get appropriate styles based on page type
+  const getTextStyles = () => {
+    if (!styleConfig) return {};
+    const config = currentPageIndex === 0 
+      ? styleConfig.coverConfig.title 
+      : styleConfig.pageConfig.text;
+    return convertToReactStyle(config);
+  };
+
+  const getContainerStyles = () => {
+    if (!styleConfig) return {};
+    const config = currentPageIndex === 0 
+      ? styleConfig.coverConfig.title 
+      : styleConfig.pageConfig.text;
+    return convertContainerToReactStyle(config.containerStyle);
+  };
+
+  const getPosition = () => {
+    if (!styleConfig) return currentPageIndex === 0 ? 'center' : 'bottom';
+    const config = currentPageIndex === 0 
+      ? styleConfig.coverConfig.title 
+      : styleConfig.pageConfig.text;
+    return config.position;
+  };
+
+  const getBackgroundImage = () => {
+    // First check for custom background images
+    if (styleConfig) {
+      if (currentPageIndex === 0 && styleConfig.coverBackgroundUrl) {
+        return styleConfig.coverBackgroundUrl;
+      } else if (currentPageIndex > 0 && styleConfig.pageBackgroundUrl) {
+        return styleConfig.pageBackgroundUrl;
+      }
+    }
+    // Fall back to story page image
+    return currentPage.image_url;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Header with navigation and controls */}
@@ -267,29 +321,39 @@ const StoryReader: React.FC = () => {
               <div 
                 className="aspect-[3/4] bg-gray-100 dark:bg-gray-700 relative bg-cover bg-center"
                 style={{
-                  backgroundImage: currentPage.image_url ? `url(${currentPage.image_url})` : undefined
+                  backgroundImage: getBackgroundImage() ? `url(${getBackgroundImage()})` : undefined
                 }}
               >
-                {/* Text overlay - positioned differently for cover (page 0) vs story pages */}
-                {currentPage.page_number === 0 ? (
-                  // Cover page - title centered
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center px-8 py-6 bg-white/90 dark:bg-gray-800/90 rounded-lg shadow-lg backdrop-blur-sm">
-                      <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-200 mb-2">
-                        {story.title}
-                      </h1>
-                      {currentPage.text && (
-                        <p className="text-lg text-gray-600 dark:text-gray-400">
-                          {currentPage.text}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  // Story pages - text at bottom
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/50 to-transparent p-6">
-                    <div className="text-white text-lg md:text-xl leading-relaxed text-center font-medium">
-                      {currentPage.text.split('\n').map((line, index) => (
+                {/* Text overlay with dynamic positioning */}
+                <div 
+                  className={`absolute inset-0 flex ${
+                    getPosition() === 'top' ? 'items-start pt-8' :
+                    getPosition() === 'center' ? 'items-center' :
+                    'items-end pb-8'
+                  } justify-center px-6`}
+                >
+                  <div 
+                    style={{
+                      ...getContainerStyles(),
+                      ...(styleConfig && currentPageIndex > 0 && styleConfig.pageConfig.text.containerStyle.gradientOverlay
+                        ? { background: styleConfig.pageConfig.text.containerStyle.gradientOverlay }
+                        : {}
+                      ),
+                      maxWidth: getContainerStyles().maxWidth || '100%',
+                      width: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: styleConfig?.pageConfig.text.verticalAlign || 'flex-end'
+                    }}
+                    className="relative"
+                  >
+                    <div 
+                      style={{
+                        ...getTextStyles(),
+                        width: '100%'
+                      }}
+                    >
+                      {currentPageIndex === 0 ? story.title : currentPage.text.split('\n').map((line, index) => (
                         <React.Fragment key={index}>
                           {line}
                           {index < currentPage.text.split('\n').length - 1 && <br />}
@@ -297,7 +361,7 @@ const StoryReader: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 

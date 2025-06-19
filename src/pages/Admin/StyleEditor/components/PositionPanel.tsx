@@ -8,10 +8,16 @@ interface PositionPanelProps {
 }
 
 const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageType }) => {
-  const positions = [
+  const verticalPositions = [
     { value: 'top', label: 'Superior', icon: '↑' },
     { value: 'center', label: 'Centro', icon: '•' },
     { value: 'bottom', label: 'Inferior', icon: '↓' }
+  ];
+
+  const horizontalPositions = [
+    { value: 'left', label: 'Izquierda', icon: '←' },
+    { value: 'center', label: 'Centro', icon: '•' },
+    { value: 'right', label: 'Derecha', icon: '→' }
   ];
 
   // Extraer valores de padding
@@ -70,19 +76,43 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
 
   return (
     <div className="space-y-6">
-      {/* Position */}
+      {/* Vertical Position */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           <Move className="w-4 h-4 inline mr-1" />
           Posición Vertical
         </label>
         <div className="grid grid-cols-3 gap-2">
-          {positions.map(pos => (
+          {verticalPositions.map(pos => (
             <button
               key={pos.value}
               onClick={() => onChange({ position: pos.value })}
               className={`px-3 py-2 rounded-lg border-2 transition-all ${
                 config.position === pos.value
+                  ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+              }`}
+            >
+              <div className="text-2xl mb-1">{pos.icon}</div>
+              <div className="text-xs">{pos.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Horizontal Position */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <Move className="w-4 h-4 inline mr-1" />
+          Posición Horizontal
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {horizontalPositions.map(pos => (
+            <button
+              key={pos.value}
+              onClick={() => onChange({ textAlign: pos.value })}
+              className={`px-3 py-2 rounded-lg border-2 transition-all ${
+                config.textAlign === pos.value
                   ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
                   : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
               }`}

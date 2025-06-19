@@ -13,7 +13,8 @@ import {
   Settings,
   Eye,
   EyeOff,
-  RotateCcw
+  RotateCcw,
+  Image
 } from 'lucide-react';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
@@ -26,6 +27,7 @@ import ColorPanel from './components/ColorPanel';
 import EffectsPanel from './components/EffectsPanel';
 import ContainerPanel from './components/ContainerPanel';
 import TemplatesModal from './components/TemplatesModal';
+import ImageUploader from './components/ImageUploader';
 
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
@@ -45,6 +47,8 @@ const AdminStyleEditor: React.FC = () => {
   
   const [originalConfig, setOriginalConfig] = useState<StoryStyleConfig | null>(null);
   const [previewImage, setPreviewImage] = useState<string>('');
+  const [customCoverImage, setCustomCoverImage] = useState<string>('');
+  const [customPageImage, setCustomPageImage] = useState<string>('');
   const [currentPageType, setCurrentPageType] = useState<'cover' | 'page'>('cover');
   const [activePanel, setActivePanel] = useState<string>('typography');
   
@@ -66,10 +70,13 @@ const AdminStyleEditor: React.FC = () => {
   // Detectar cambios
   useEffect(() => {
     if (originalConfig) {
-      const hasChanges = JSON.stringify(activeConfig) !== JSON.stringify(originalConfig);
-      setIsDirty(hasChanges);
+      const hasConfigChanges = JSON.stringify(activeConfig) !== JSON.stringify(originalConfig);
+      const hasImageChanges = 
+        (originalConfig.coverBackgroundUrl || '') !== customCoverImage ||
+        (originalConfig.pageBackgroundUrl || '') !== customPageImage;
+      setIsDirty(hasConfigChanges || hasImageChanges);
     }
-  }, [activeConfig, originalConfig]);
+  }, [activeConfig, originalConfig, customCoverImage, customPageImage]);
 
   const loadActiveConfig = async () => {
     try {
@@ -78,6 +85,13 @@ const AdminStyleEditor: React.FC = () => {
       if (config) {
         setActiveConfig(config);
         setOriginalConfig(config);
+        // Cargar las imágenes personalizadas si existen
+        if (config.coverBackgroundUrl) {
+          setCustomCoverImage(config.coverBackgroundUrl);
+        }
+        if (config.pageBackgroundUrl) {
+          setCustomPageImage(config.pageBackgroundUrl);
+        }
       }
     } catch (error) {
       createNotification(
@@ -102,13 +116,20 @@ const AdminStyleEditor: React.FC = () => {
     try {
       setIsSaving(true);
       
+      // Incluir las URLs de las imágenes en la configuración
+      const configToSave = {
+        ...activeConfig,
+        coverBackgroundUrl: customCoverImage || undefined,
+        pageBackgroundUrl: customPageImage || undefined
+      };
+      
       let result;
       if (activeConfig.id) {
         // Actualizar existente
-        result = await styleConfigService.updateStyle(activeConfig.id, activeConfig);
+        result = await styleConfigService.updateStyle(activeConfig.id, configToSave);
       } else {
         // Crear nuevo
-        result = await styleConfigService.createStyle(activeConfig);
+        result = await styleConfigService.createStyle(configToSave);
       }
 
       if (result) {
@@ -138,6 +159,8 @@ const AdminStyleEditor: React.FC = () => {
   const handleReset = () => {
     if (originalConfig) {
       setActiveConfig(originalConfig);
+      setCustomCoverImage(originalConfig.coverBackgroundUrl || '');
+      setCustomPageImage(originalConfig.pageBackgroundUrl || '');
       setIsDirty(false);
     }
   };
@@ -356,7 +379,7 @@ const AdminStyleEditor: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+            <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
               <button
                 onClick={() => setActivePanel('colors')}
                 className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -389,6 +412,20 @@ const AdminStyleEditor: React.FC = () => {
               >
                 <Settings className="w-4 h-4 inline mr-1" />
                 Contenedor
+              </button>
+            </div>
+
+            <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+              <button
+                onClick={() => setActivePanel('images')}
+                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'images'
+                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                }`}
+              >
+                <Image className="w-4 h-4 inline mr-1" />
+                Imágenes
               </button>
             </div>
 
@@ -429,6 +466,23 @@ const AdminStyleEditor: React.FC = () => {
                 pageType={currentPageType}
               />
             )}
+            
+            {activePanel === 'images' && (
+              <div className="space-y-6">
+                <ImageUploader
+                  currentImage={customCoverImage}
+                  onImageChange={setCustomCoverImage}
+                  label="Imagen de fondo para Portada"
+                  pageType="cover"
+                />
+                <ImageUploader
+                  currentImage={customPageImage}
+                  onImageChange={setCustomPageImage}
+                  label="Imagen de fondo para Páginas Interiores"
+                  pageType="page"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -465,7 +519,10 @@ const AdminStyleEditor: React.FC = () => {
             <StylePreview
               config={activeConfig}
               pageType={currentPageType}
-              sampleImage={previewImage}
+              sampleImage={currentPageType === 'cover' 
+                ? (customCoverImage || previewImage)
+                : (customPageImage || previewImage)
+              }
               sampleText={currentPageType === 'cover' ? SAMPLE_TEXTS.cover : SAMPLE_TEXTS.page}
               showGrid={showGrid}
               showRulers={showRulers}
