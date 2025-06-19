@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { StoryStyleConfig, convertToReactStyle, convertContainerToReactStyle } from '../../../../types/styleConfig';
 
 interface StylePreviewProps {
@@ -22,6 +22,49 @@ const StylePreview: React.FC<StylePreviewProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scale = zoomLevel / 100;
+  const [dimensions, setDimensions] = useState({ width: 1536, height: 1024 });
+
+  // Calcular dimensiones responsivas
+  useEffect(() => {
+    const updateDimensions = () => {
+      const container = containerRef.current?.parentElement;
+      if (!container) return;
+      
+      const { width: containerWidth } = container.getBoundingClientRect();
+      const padding = 64; // 4rem total (2rem cada lado)
+      const availableWidth = containerWidth - padding;
+      
+      // Mantener aspect ratio 3:2
+      const aspectRatio = 3/2;
+      const maxWidth = 1536;
+      const maxHeight = 1024;
+      
+      // Calcular basado en el ancho disponible
+      let width = Math.min(availableWidth, maxWidth);
+      let height = width / aspectRatio;
+      
+      // Si la altura calculada excede el máximo, ajustar por altura
+      if (height > maxHeight) {
+        height = maxHeight;
+        width = height * aspectRatio;
+      }
+      
+      // Para móviles, usar el 100% del ancho disponible
+      if (window.innerWidth < 768) {
+        width = availableWidth;
+        height = width / aspectRatio;
+      }
+      
+      setDimensions({ 
+        width: Math.floor(width), 
+        height: Math.floor(height) 
+      });
+    };
+    
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, [zoomLevel]);
 
   // Obtener configuración actual según tipo de página
   const currentConfig = pageType === 'cover' ? config.coverConfig.title : config.pageConfig.text;
@@ -31,9 +74,11 @@ const StylePreview: React.FC<StylePreviewProps> = ({
   // Calcular posición del contenedor
   const getContainerPosition = () => {
     const position = currentConfig.position;
+    const horizontalPosition = currentConfig.horizontalPosition || 'center';
     let alignItems = 'center';
     let justifyContent = 'center';
 
+    // Posición vertical
     switch (position) {
       case 'top':
         alignItems = 'flex-start';
@@ -43,6 +88,19 @@ const StylePreview: React.FC<StylePreviewProps> = ({
         break;
       case 'bottom':
         alignItems = 'flex-end';
+        break;
+    }
+
+    // Posición horizontal del contenedor
+    switch (horizontalPosition) {
+      case 'left':
+        justifyContent = 'flex-start';
+        break;
+      case 'center':
+        justifyContent = 'center';
+        break;
+      case 'right':
+        justifyContent = 'flex-end';
         break;
     }
 
@@ -141,8 +199,8 @@ const StylePreview: React.FC<StylePreviewProps> = ({
         <div 
           className="relative bg-cover bg-center bg-no-repeat"
           style={{
-            width: '1536px',
-            height: '1024px',
+            width: `${dimensions.width}px`,
+            height: `${dimensions.height}px`,
             backgroundImage: `url(${sampleImage})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center'

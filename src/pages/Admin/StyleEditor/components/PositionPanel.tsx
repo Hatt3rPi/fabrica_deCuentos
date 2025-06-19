@@ -110,9 +110,9 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
           {horizontalPositions.map(pos => (
             <button
               key={pos.value}
-              onClick={() => onChange({ textAlign: pos.value })}
+              onClick={() => onChange({ horizontalPosition: pos.value })}
               className={`px-3 py-2 rounded-lg border-2 transition-all ${
-                config.textAlign === pos.value
+                (config.horizontalPosition || 'center') === pos.value
                   ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
                   : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
               }`}
