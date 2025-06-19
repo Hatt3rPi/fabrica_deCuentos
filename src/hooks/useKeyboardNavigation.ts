@@ -1,22 +1,24 @@
 import { useEffect, useCallback } from 'react';
 
 interface UseKeyboardNavigationProps {
+  onPrevious: () => void;
   onNext: () => void;
-  onPrev: () => void;
   onEscape: () => void;
-  dependencies?: any[];
+  enabled?: boolean;
 }
 
 export const useKeyboardNavigation = ({
+  onPrevious,
   onNext,
-  onPrev,
   onEscape,
-  dependencies = []
-}: UseKeyboardNavigationProps): void => {
+  enabled = true
+}: UseKeyboardNavigationProps) => {
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
+    if (!enabled) return;
+
     switch (event.key) {
       case 'ArrowLeft':
-        onPrev();
+        onPrevious();
         break;
       case 'ArrowRight':
         onNext();
@@ -25,10 +27,12 @@ export const useKeyboardNavigation = ({
         onEscape();
         break;
     }
-  }, [onNext, onPrev, onEscape, ...dependencies]);
+  }, [onPrevious, onNext, onEscape, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
+
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [handleKeyPress]);
+  }, [handleKeyPress, enabled]);
 };

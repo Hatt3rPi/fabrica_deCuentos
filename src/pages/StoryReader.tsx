@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ArrowLeft, Download, Loader } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useStoryData } from '../hooks/useStoryData';
+import { useStoryReader } from '../hooks/useStoryReader';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { usePdfExport } from '../hooks/usePdfExport';
 import { useStoryStyles } from '../hooks/useStoryStyles';
@@ -14,8 +14,8 @@ const StoryReader: React.FC = () => {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
   // Custom hooks
-  const { story, pages, loading } = useStoryData(id, user, supabase);
-  const { downloadingPdf, handleDownloadPdf } = usePdfExport(id, supabase);
+  const { story, pages, loading, error } = useStoryReader(id);
+  const { downloadPdf, downloading: downloadingPdf } = usePdfExport();
   const { getTextStyles, getContainerStyles, getPosition, getBackgroundImage, styleConfig } = useStoryStyles();
 
   // Navigation callbacks with memoization
@@ -34,9 +34,8 @@ const StoryReader: React.FC = () => {
   // Keyboard navigation
   useKeyboardNavigation({
     onNext: goToNextPage,
-    onPrev: goToPreviousPage,
-    onEscape: handleEscape,
-    dependencies: [currentPageIndex, pages.length]
+    onPrevious: goToPreviousPage,
+    onEscape: handleEscape
   });
 
   // Memoized current page
@@ -50,10 +49,6 @@ const StoryReader: React.FC = () => {
     isLastPage: currentPageIndex === pages.length - 1
   }), [currentPageIndex, pages.length]);
 
-  // PDF download handler
-  const onDownloadPdf = useCallback(() => {
-    handleDownloadPdf(story?.export_url);
-  }, [story?.export_url, handleDownloadPdf]);
 
   // Render loading state
   if (loading) {
@@ -67,12 +62,12 @@ const StoryReader: React.FC = () => {
     );
   }
 
-  // Render empty state
-  if (!story || pages.length === 0) {
+  // Render error or empty state
+  if (error || (!loading && (!story || pages.length === 0))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">No se pudo cargar el cuento</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{error || 'No se pudo cargar el cuento'}</p>
           <button
             onClick={() => navigate('/home')}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
@@ -132,7 +127,7 @@ const StoryReader: React.FC = () => {
               Página {currentPageIndex + 1} de {pages.length}
             </span>
             <button
-              onClick={onDownloadPdf}
+              onClick={() => story && downloadPdf(story)}
               disabled={downloadingPdf}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
