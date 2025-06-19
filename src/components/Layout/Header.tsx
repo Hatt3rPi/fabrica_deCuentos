@@ -5,7 +5,7 @@ import NotificationBell from '../Notifications/NotificationBell';
 import { Link } from 'react-router-dom';
 
 const Header: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -75,14 +75,14 @@ const Header: React.FC = () => {
           <nav>
             <ul className="space-y-2">
               <li>
-                <a 
-                  href="/perfil" 
+                <Link 
+                  to="/perfil" 
                   className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <User className="w-5 h-5" />
                   <span>Mi Perfil</span>
-                </a>
+                </Link>
               </li>
             </ul>
           </nav>
