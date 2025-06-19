@@ -12,6 +12,7 @@ import Sidebar from './components/Layout/Sidebar';
 import LoginForm from './components/Auth/LoginForm';
 import LandingPage from './pages/LandingPage';
 import MyStories from './pages/MyStories';
+import StoryReader from './pages/StoryReader';
 import CharacterForm from './components/Character/CharacterForm';
 import CharactersGrid from './components/Character/CharactersGrid';
 import ToastContainer from './components/UI/ToastContainer';
@@ -19,6 +20,7 @@ import ProfileSettings from './pages/ProfileSettings';
 import PromptsManager from './pages/Admin/Prompts/PromptsManager';
 import PromptAnalytics from './pages/Admin/Analytics/PromptAnalytics';
 import AdminFlujo from './pages/Admin/Flujo';
+import AdminStyleEditor from './pages/Admin/StyleEditor/AdminStyleEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -124,6 +126,14 @@ function AnimatedRoutes() {
                   }
                 />
                 <Route
+                  path="/story/:id/read"
+                  element={
+                    <PrivateRoute>
+                      <StoryReader />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
                   path="/perfil"
                   element={
                     <PrivateRoute>
@@ -152,6 +162,14 @@ function AnimatedRoutes() {
                   element={
                     <PrivateRoute>
                       <AdminFlujo />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/style"
+                  element={
+                    <PrivateRoute>
+                      <AdminStyleEditor />
                     </PrivateRoute>
                   }
                 />

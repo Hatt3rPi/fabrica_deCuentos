@@ -246,22 +246,30 @@ async function getCompleteStoryData(storyId: string, userId: string) {
     .eq('story_id', storyId)
     .maybeSingle();
 
+  // Obtener configuración de estilos activa
+  const { data: styleConfig } = await supabaseAdmin
+    .from('story_style_configs')
+    .select('*')
+    .eq('is_active', true)
+    .maybeSingle();
+
   return {
     story: story as StoryData,
     pages: pages as StoryPage[],
     characters,
-    design: design as DesignSettings | null
+    design: design as DesignSettings | null,
+    styleConfig: styleConfig || null
   };
 }
 
 async function generateStoryPDF(
-  storyData: { story: StoryData; pages: StoryPage[]; characters: Character[]; design: DesignSettings | null },
+  storyData: { story: StoryData; pages: StoryPage[]; characters: Character[]; design: DesignSettings | null; styleConfig: any },
   format: string,
   includeMetadata: boolean
 ): Promise<Uint8Array> {
   console.log('[story-export] Generando PDF...');
   
-  const { story, pages, characters, design } = storyData;
+  const { story, pages, characters, design, styleConfig } = storyData;
   
   // Detectar aspect ratio de la primera imagen disponible
   const storyPages = pages.filter(p => p.page_number > 0);
@@ -278,7 +286,7 @@ async function generateStoryPDF(
   console.log(`[story-export] 🎯 Aspect ratio final para PDF: ${aspectRatio}`);
   
   // Crear contenido HTML para convertir a PDF
-  const htmlContent = generateHTMLContent(story, pages, characters, design, includeMetadata, aspectRatio);
+  const htmlContent = generateHTMLContent(story, pages, characters, design, includeMetadata, aspectRatio, styleConfig);
   
   // Generar PDF usando Browserless.io con aspect ratio específico
   const pdfContent = await generatePDFFromHTML(htmlContent, aspectRatio);
@@ -481,7 +489,8 @@ function generateHTMLContent(
   characters: Character[],
   design: DesignSettings | null,
   includeMetadata: boolean,
-  aspectRatio: string = 'portrait'
+  aspectRatio: string = 'portrait',
+  styleConfig: any = null
 ): string {
   // Para cuentos infantiles, generamos un diseño visual atractivo
   // con imágenes de fondo y texto superpuesto
@@ -493,6 +502,75 @@ function generateHTMLContent(
   
   // Generar CSS dinámico basado en aspect ratio
   const dynamicCSS = generateDynamicPageCSS(aspectRatio);
+  
+  // Generar estilos dinámicos desde la configuración
+  const generateDynamicStyles = () => {
+    if (!styleConfig) return '';
+    
+    const coverConfig = styleConfig.cover_config?.title || {};
+    const pageConfig = styleConfig.page_config?.text || {};
+    
+    return `
+      /* Estilos dinámicos de portada */
+      .cover-title {
+        font-family: "${coverConfig.fontFamily || 'Indie Flower'}", cursive;
+        font-size: ${coverConfig.fontSize || '4rem'};
+        font-weight: ${coverConfig.fontWeight || 'bold'};
+        color: ${coverConfig.color || 'white'};
+        text-shadow: ${coverConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.8)'};
+        text-align: ${coverConfig.textAlign || 'center'};
+        letter-spacing: ${coverConfig.letterSpacing || '1px'};
+      }
+      
+      .cover-overlay {
+        background: ${coverConfig.containerStyle?.background || 'transparent'};
+        padding: ${coverConfig.containerStyle?.padding || '2rem 3rem'};
+        border-radius: ${coverConfig.containerStyle?.borderRadius || '0'};
+        max-width: ${coverConfig.containerStyle?.maxWidth || '85%'};
+        ${coverConfig.containerStyle?.border ? `border: ${coverConfig.containerStyle.border};` : ''}
+        ${coverConfig.containerStyle?.boxShadow ? `box-shadow: ${coverConfig.containerStyle.boxShadow};` : ''}
+        ${coverConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${coverConfig.containerStyle.backdropFilter};` : ''}
+      }
+      
+      /* Posicionamiento dinámico de portada */
+      .cover-page {
+        ${coverConfig.position === 'top' ? 'align-items: flex-start; padding-top: 3rem;' : ''}
+        ${coverConfig.position === 'center' ? 'align-items: center;' : ''}
+        ${coverConfig.position === 'bottom' ? 'align-items: flex-end; padding-bottom: 3rem;' : ''}
+      }
+      
+      /* Estilos dinámicos de páginas */
+      .story-text {
+        font-family: "${pageConfig.fontFamily || 'Indie Flower'}", cursive;
+        font-size: ${pageConfig.fontSize || '2.2rem'};
+        font-weight: ${pageConfig.fontWeight || '600'};
+        line-height: ${pageConfig.lineHeight || '1.4'};
+        color: ${pageConfig.color || 'white'};
+        text-shadow: ${pageConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.9)'};
+        text-align: ${pageConfig.textAlign || 'center'};
+      }
+      
+      .page-overlay {
+        background: ${pageConfig.containerStyle?.gradientOverlay || pageConfig.containerStyle?.background || 'transparent'};
+        padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'};
+        min-height: ${pageConfig.containerStyle?.minHeight || '25%'};
+        ${pageConfig.containerStyle?.border ? `border: ${pageConfig.containerStyle.border};` : ''}
+        ${pageConfig.containerStyle?.borderRadius ? `border-radius: ${pageConfig.containerStyle.borderRadius};` : ''}
+        ${pageConfig.containerStyle?.boxShadow ? `box-shadow: ${pageConfig.containerStyle.boxShadow};` : ''}
+        ${pageConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${pageConfig.containerStyle.backdropFilter};` : ''}
+        
+        /* Alineación vertical del contenedor */
+        ${pageConfig.verticalAlign ? `justify-content: ${pageConfig.verticalAlign};` : 'justify-content: flex-end;'}
+      }
+      
+      /* Posicionamiento dinámico de páginas */
+      .story-page {
+        ${pageConfig.position === 'top' ? 'align-items: flex-start;' : ''}
+        ${pageConfig.position === 'center' ? 'align-items: center;' : ''}
+        ${pageConfig.position === 'bottom' ? 'align-items: flex-end;' : ''}
+      }
+    `;
+  };
   
   // Función para convertir texto a HTML preservando saltos de línea
   function textToHTML(text: string): string {
@@ -514,9 +592,13 @@ function generateHTMLContent(
       .replace(/<p><\/p>/g, '');
   }
 
+  // Usar imagen de fondo personalizada si existe
+  const pageBackgroundImage = styleConfig?.page_background_url || '';
+  const coverBackgroundImage = styleConfig?.cover_background_url || coverPage?.image_url || '';
+  
   const pagesContent = storyPages
     .map(page => `
-      <div class="story-page" style="background-image: url('${page.image_url || ''}')">
+      <div class="story-page" style="background-image: url('${pageBackgroundImage || page.image_url || ''}')">
         <div class="page-overlay">
           <div class="story-text">
             ${textToHTML(page.text)}
@@ -539,6 +621,9 @@ function generateHTMLContent(
         @import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');
         
         ${dynamicCSS}
+        
+        /* Estilos dinámicos de la configuración */
+        ${generateDynamicStyles()}
         
         * {
           box-sizing: border-box;
@@ -569,31 +654,10 @@ function generateHTMLContent(
           align-items: flex-start;
           justify-content: center;
           padding-top: 3rem;
-          ${coverPage?.image_url ? `background-image: url('${coverPage.image_url}');` : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'}
+          ${coverBackgroundImage ? `background-image: url('${coverBackgroundImage}');` : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'}
         }
         
-        .cover-overlay {
-          background: transparent;
-          padding: 2rem 3rem;
-          border-radius: 0;
-          text-align: center;
-          box-shadow: none;
-          backdrop-filter: none;
-          border: none;
-          max-width: 85%;
-        }
-        
-        .cover-title {
-          font-family: "Indie Flower", cursive;
-          font-size: 4rem;
-          font-weight: bold;
-          color: white;
-          margin: 0;
-          text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
-          line-height: 1.2;
-          text-transform: none;
-          letter-spacing: 1px;
-        }
+        /* Los estilos de .cover-overlay y .cover-title son generados dinámicamente arriba */
         
         .cover-subtitle {
           font-family: "Indie Flower", cursive;
@@ -617,30 +681,7 @@ function generateHTMLContent(
           margin: 0;
         }
         
-        .page-overlay {
-          width: 100%;
-          background: transparent;
-          padding: 1rem 2rem 6rem 2rem;
-          min-height: 25%;
-          display: flex;
-          align-items: flex-end;
-        }
-        
-        .story-text {
-          font-family: "Indie Flower", cursive;
-          font-size: 2.2rem;
-          line-height: 1.4;
-          color: white;
-          text-align: center;
-          width: 100%;
-          font-weight: 600;
-          text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
-          background: transparent;
-          padding: 1.5rem;
-          border-radius: 0;
-          box-shadow: none;
-          border: none;
-        }
+        /* Los estilos de .page-overlay y .story-text son generados dinámicamente arriba */
         
         /* Páginas sin imagen - diseño alternativo */
         .story-page:not([style*="background-image"]) {
