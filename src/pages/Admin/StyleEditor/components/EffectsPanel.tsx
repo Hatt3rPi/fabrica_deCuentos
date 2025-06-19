@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Gradient, Square, Circle } from 'lucide-react';
+import { Layers, Palette, Square, Circle } from 'lucide-react';
 
 interface EffectsPanelProps {
   containerStyle: any;
@@ -136,7 +136,7 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({ containerStyle, onChange })
                 : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
             }`}
           >
-            <Gradient className="w-4 h-4 inline mr-1" />
+            <Palette className="w-4 h-4 inline mr-1" />
             Degradado
           </button>
         </div>

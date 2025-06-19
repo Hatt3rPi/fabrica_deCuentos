@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Square, Circle, RoundedCorner } from 'lucide-react';
+import { Settings, Square, Circle, Box } from 'lucide-react';
 
 interface ContainerPanelProps {
   containerStyle: any;
@@ -95,7 +95,7 @@ const ContainerPanel: React.FC<ContainerPanelProps> = ({ containerStyle, onChang
       {/* Border Radius */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          <RoundedCorner className="w-4 h-4 inline mr-1" />
+          <Box className="w-4 h-4 inline mr-1" />
           Redondeo de Esquinas
         </label>
         
