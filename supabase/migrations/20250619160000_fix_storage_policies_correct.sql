@@ -72,10 +72,4 @@ CREATE POLICY "authenticated_delete_style_design"
     (storage.foldername(name))[1] = 'style_design'
   );
 
--- Add comment for documentation
-COMMENT ON SCHEMA storage IS 'Storage schema with policies for style_design folder';
-
--- Grant necessary permissions
-GRANT USAGE ON SCHEMA storage TO authenticated;
-GRANT ALL ON storage.objects TO authenticated;
-GRANT ALL ON storage.buckets TO authenticated;
+-- Storage policies configured successfully
