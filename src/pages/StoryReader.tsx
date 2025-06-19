@@ -1,16 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ArrowLeft, Download, Loader } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../types/notification';
 import { styleConfigService } from '../services/styleConfigService';
 import { StoryStyleConfig, convertToReactStyle, convertContainerToReactStyle } from '../types/styleConfig';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 interface StoryData {
   id: string;
@@ -29,6 +24,7 @@ interface StoryPage {
 const StoryReader: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { supabase, user } = useAuth();
   const { createNotification } = useNotifications();
   const [story, setStory] = useState<StoryData | null>(null);
   const [pages, setPages] = useState<StoryPage[]>([]);
@@ -38,14 +34,14 @@ const StoryReader: React.FC = () => {
   const [styleConfig, setStyleConfig] = useState<StoryStyleConfig | null>(null);
 
   useEffect(() => {
-    if (!id) {
+    if (!id || !user) {
       navigate('/home');
       return;
     }
     
     fetchStoryData();
     fetchStyleConfig();
-  }, [id]);
+  }, [id, user]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -79,18 +75,19 @@ const StoryReader: React.FC = () => {
     try {
       setLoading(true);
 
-      // Fetch story
+      // Fetch story - validate user ownership
       const { data: storyData, error: storyError } = await supabase
         .from('stories')
         .select('id, title, status, export_url')
         .eq('id', id)
+        .eq('user_id', user?.id)
         .single();
 
       if (storyError || !storyData) {
         createNotification(
           NotificationType.SYSTEM_UPDATE,
           'Error',
-          'Cuento no encontrado',
+          'Cuento no encontrado o sin permisos de acceso',
           NotificationPriority.HIGH
         );
         navigate('/home');
