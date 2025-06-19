@@ -20,6 +20,7 @@ import ProfileSettings from './pages/ProfileSettings';
 import PromptsManager from './pages/Admin/Prompts/PromptsManager';
 import PromptAnalytics from './pages/Admin/Analytics/PromptAnalytics';
 import AdminFlujo from './pages/Admin/Flujo';
+import AdminStyleEditor from './pages/Admin/StyleEditor/AdminStyleEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -161,6 +162,14 @@ function AnimatedRoutes() {
                   element={
                     <PrivateRoute>
                       <AdminFlujo />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/style"
+                  element={
+                    <PrivateRoute>
+                      <AdminStyleEditor />
                     </PrivateRoute>
                   }
                 />
