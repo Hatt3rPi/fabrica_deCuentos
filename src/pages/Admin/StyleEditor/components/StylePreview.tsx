@@ -141,8 +141,8 @@ const StylePreview: React.FC<StylePreviewProps> = ({
         <div 
           className="relative bg-cover bg-center bg-no-repeat"
           style={{
-            width: '600px',
-            height: '800px',
+            width: '1536px',
+            height: '1024px',
             backgroundImage: `url(${sampleImage})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center'
