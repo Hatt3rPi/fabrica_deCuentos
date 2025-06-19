@@ -8,6 +8,7 @@ import StoryCard from '../components/StoryCard';
 import { EstadoFlujo } from '../types';
 import { initialFlowState } from '../stores/wizardFlowStore';
 import type { WizardStep } from '../context/WizardContext';
+import { logger } from '../utils/logger';
 
 interface Story {
   id: string;
@@ -55,17 +56,14 @@ const MyStories: React.FC = () => {
         (data || []).map((s) => ({ ...s, cover_url: covers[s.id] || '' })) as Story[]
       );
     } catch (error) {
-      console.error('Error loading stories:', error);
+      logger.error('Error loading stories:', error);
     }
   };
 
   const handleNewStory = async () => {
-    console.log('🚀 INICIANDO CREACIÓN DE HISTORIA');
-    console.log('User:', user);
-    console.log('Supabase client:', supabase);
+    logger.debug('Iniciando creación de historia');
     
     try {
-      console.log('📝 INSERTANDO EN BD...');
       const { data: story, error } = await supabase
         .from('stories')
         .insert({
@@ -77,14 +75,12 @@ const MyStories: React.FC = () => {
         .select()
         .single();
 
-      console.log('📊 RESULTADO:', { data: story, error });
-
       if (error) throw error;
 
-      console.log('✅ HISTORIA CREADA, NAVEGANDO A:', `/wizard/${story.id}`);
+      logger.debug('Historia creada, navegando a wizard');
       navigate(`/wizard/${story.id}`);
     } catch (err) {
-      console.error('❌ ERROR CREATING STORY:', err);
+      logger.error('Error creating story:', err);
       alert('Error al crear la historia: ' + err.message);
     }
   };
@@ -153,7 +149,7 @@ const MyStories: React.FC = () => {
       setStories(prev => prev.filter(s => s.id !== storyToDelete.id));
       alert('Cuento eliminado correctamente');
     } catch (err) {
-      console.error('Error deleting story:', err);
+      logger.error('Error deleting story:', err);
       alert('Error al eliminar el cuento');
     } finally {
       setIsDeleting(false);

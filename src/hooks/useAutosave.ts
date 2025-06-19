@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { WizardState, EstadoFlujo } from '../types';
+import { logger, autosaveLogger } from '../utils/logger';
 
 const AUTOSAVE_DELAY = 1000; // 1 second delay between saves
 const MAX_RETRIES = 3;
@@ -43,15 +44,11 @@ export const useAutosave = (
     const save = async () => {
       const currentStoryId = storyIdRef.current;
       if (!currentStoryId || !isValidUUID(currentStoryId)) {
-        console.error('Invalid storyId format');
+        logger.error('Invalid storyId format');
         return;
       }
 
-      console.log('[AutoSave] INICIANDO SAVE', {
-        storyId: currentStoryId,
-        flow: flow,
-        timestamp: new Date().toISOString()
-      });
+      autosaveLogger.start(currentStoryId);
 
       try {
         // Save to localStorage first as backup
@@ -89,7 +86,7 @@ export const useAutosave = (
           fields: ['title', 'theme', 'target_age', 'literary_style', 'central_message', 'additional_details']
         });
 
-        console.log('💾 [AutoSave] Guardando story con título:', state.meta.title);
+        logger.debug('Guardando story con título:', state.meta.title);
         const { error: storyError } = await supabase
           .from('stories')
           .update({
@@ -105,11 +102,11 @@ export const useAutosave = (
           .eq('id', currentStoryId);
 
         if (storyError) {
-          console.error('[AutoSave] ERROR AL PERSISTIR STORY:', storyError);
+          autosaveLogger.error(storyError);
           throw storyError;
         }
 
-        console.log('[AutoSave] ✅ SAVE COMPLETADO EXITOSAMENTE');
+        autosaveLogger.success();
 
         // Reset retry count on successful save
         retryCountRef.current = 0;
