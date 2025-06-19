@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 2025-01-19 - Refactorización StoryReader
+- **StoryReader.tsx**: Refactorizado componente de 414 líneas para mejorar mantenibilidad
+  - Creados 4 custom hooks para separar responsabilidades: `useStoryData`, `useKeyboardNavigation`, `usePdfExport`, `useStoryStyles`
+  - Agregadas optimizaciones de performance con `useCallback` y `useMemo`
+  - Corregido edge case de renderizado de texto con null checks
+  - Reducción del 40% en líneas de código del componente principal (414 → 247 líneas)
+  - Documentación completa en `/docs/solutions/story-reader-refactor/`
+
 ## 2025-06-17 - Finalización y Exportación de Cuentos
 - **Finalización de Cuentos con Exportación PDF**: Implementación completa de funcionalidad para finalizar cuentos y generar archivos PDF descargables. Incluye 3 fases: MVP Core, Edge Function Real, y Testing & Polish.
 - **Edge Function `story-export`**: Nueva función para generar PDFs profesionales con HTML styling, metadatos completos, información de personajes, y todas las páginas del cuento. Integrada con Supabase Storage.

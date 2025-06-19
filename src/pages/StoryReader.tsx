@@ -1,207 +1,61 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ArrowLeft, Download, Loader } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../hooks/useNotifications';
-import { NotificationType, NotificationPriority } from '../types/notification';
-import { styleConfigService } from '../services/styleConfigService';
-import { StoryStyleConfig, convertToReactStyle, convertContainerToReactStyle } from '../types/styleConfig';
-
-interface StoryData {
-  id: string;
-  title: string;
-  status: 'draft' | 'completed';
-  export_url?: string;
-}
-
-interface StoryPage {
-  id: string;
-  page_number: number;
-  text: string;
-  image_url: string;
-}
+import { useStoryData } from '../hooks/useStoryData';
+import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
+import { usePdfExport } from '../hooks/usePdfExport';
+import { useStoryStyles } from '../hooks/useStoryStyles';
 
 const StoryReader: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { supabase, user } = useAuth();
-  const { createNotification } = useNotifications();
-  const [story, setStory] = useState<StoryData | null>(null);
-  const [pages, setPages] = useState<StoryPage[]>([]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [styleConfig, setStyleConfig] = useState<StoryStyleConfig | null>(null);
 
-  useEffect(() => {
-    if (!id || !user) {
-      navigate('/home');
-      return;
-    }
-    
-    fetchStoryData();
-    fetchStyleConfig();
-  }, [id, user]);
+  // Custom hooks
+  const { story, pages, loading } = useStoryData(id, user, supabase);
+  const { downloadingPdf, handleDownloadPdf } = usePdfExport(id, supabase);
+  const { getTextStyles, getContainerStyles, getPosition, getBackgroundImage, styleConfig } = useStoryStyles();
+
+  // Navigation callbacks with memoization
+  const goToPreviousPage = useCallback(() => {
+    setCurrentPageIndex(prev => Math.max(0, prev - 1));
+  }, []);
+
+  const goToNextPage = useCallback(() => {
+    setCurrentPageIndex(prev => Math.min(pages.length - 1, prev + 1));
+  }, [pages.length]);
+
+  const handleEscape = useCallback(() => {
+    navigate('/home');
+  }, [navigate]);
 
   // Keyboard navigation
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft') {
-        goToPreviousPage();
-      } else if (event.key === 'ArrowRight') {
-        goToNextPage();
-      } else if (event.key === 'Escape') {
-        navigate('/home');
-      }
-    };
+  useKeyboardNavigation({
+    onNext: goToNextPage,
+    onPrev: goToPreviousPage,
+    onEscape: handleEscape,
+    dependencies: [currentPageIndex, pages.length]
+  });
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [currentPageIndex, pages.length]);
+  // Memoized current page
+  const currentPage = useMemo(() => {
+    return pages[currentPageIndex];
+  }, [pages, currentPageIndex]);
 
-  const fetchStyleConfig = async () => {
-    try {
-      const config = await styleConfigService.getActiveStyle();
-      if (config) {
-        setStyleConfig(config);
-      }
-    } catch (error) {
-      console.error('Error loading style config:', error);
-      // Continue with default styles if loading fails
-    }
-  };
+  // Memoized navigation state
+  const { isFirstPage, isLastPage } = useMemo(() => ({
+    isFirstPage: currentPageIndex === 0,
+    isLastPage: currentPageIndex === pages.length - 1
+  }), [currentPageIndex, pages.length]);
 
-  const fetchStoryData = async () => {
-    try {
-      setLoading(true);
+  // PDF download handler
+  const onDownloadPdf = useCallback(() => {
+    handleDownloadPdf(story?.export_url);
+  }, [story?.export_url, handleDownloadPdf]);
 
-      // Fetch story - validate user ownership
-      const { data: storyData, error: storyError } = await supabase
-        .from('stories')
-        .select('id, title, status, export_url')
-        .eq('id', id)
-        .eq('user_id', user?.id)
-        .single();
-
-      if (storyError || !storyData) {
-        createNotification(
-          NotificationType.SYSTEM_UPDATE,
-          'Error',
-          'Cuento no encontrado o sin permisos de acceso',
-          NotificationPriority.HIGH
-        );
-        navigate('/home');
-        return;
-      }
-
-      // Only allow reading completed stories
-      if (storyData.status !== 'completed') {
-        createNotification(
-          NotificationType.SYSTEM_UPDATE,
-          'Error',
-          'Solo se pueden leer cuentos completados',
-          NotificationPriority.HIGH
-        );
-        navigate('/home');
-        return;
-      }
-
-      setStory(storyData);
-
-      // Fetch pages
-      const { data: pagesData, error: pagesError } = await supabase
-        .from('story_pages')
-        .select('id, page_number, text, image_url')
-        .eq('story_id', id)
-        .order('page_number');
-
-      if (pagesError) {
-        createNotification(
-          NotificationType.SYSTEM_UPDATE,
-          'Error',
-          'Error cargando páginas del cuento',
-          NotificationPriority.HIGH
-        );
-        return;
-      }
-
-      setPages(pagesData || []);
-    } catch (error) {
-      console.error('Error fetching story:', error);
-      createNotification(
-        NotificationType.SYSTEM_UPDATE,
-        'Error',
-        'Error cargando el cuento',
-        NotificationPriority.HIGH
-      );
-      navigate('/home');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const goToPreviousPage = () => {
-    setCurrentPageIndex(prev => Math.max(0, prev - 1));
-  };
-
-  const goToNextPage = () => {
-    setCurrentPageIndex(prev => Math.min(pages.length - 1, prev + 1));
-  };
-
-  const handleDownloadPdf = async () => {
-    if (!story?.export_url) {
-      // If no export URL, generate PDF
-      try {
-        setDownloadingPdf(true);
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/story-export`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            story_id: id,
-            save_to_library: true
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Error generando PDF');
-        }
-
-        const data = await response.json();
-        if (data.downloadUrl) {
-          window.open(data.downloadUrl, '_blank');
-          createNotification(
-            NotificationType.SYSTEM_UPDATE,
-            'Éxito',
-            'PDF descargado exitosamente',
-            NotificationPriority.MEDIUM
-          );
-        }
-      } catch (error) {
-        console.error('Error downloading PDF:', error);
-        createNotification(
-          NotificationType.SYSTEM_UPDATE,
-          'Error',
-          'Error descargando PDF',
-          NotificationPriority.HIGH
-        );
-      } finally {
-        setDownloadingPdf(false);
-      }
-    } else {
-      // Use existing export URL
-      window.open(story.export_url, '_blank');
-      createNotification(
-        NotificationType.SYSTEM_UPDATE,
-        'Éxito',
-        'PDF descargado exitosamente',
-        NotificationPriority.MEDIUM
-      );
-    }
-  };
-
+  // Render loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -213,6 +67,7 @@ const StoryReader: React.FC = () => {
     );
   }
 
+  // Render empty state
   if (!story || pages.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -229,47 +84,30 @@ const StoryReader: React.FC = () => {
     );
   }
 
-  const currentPage = pages[currentPageIndex];
-  const isFirstPage = currentPageIndex === 0;
-  const isLastPage = currentPageIndex === pages.length - 1;
-
-  // Get appropriate styles based on page type
-  const getTextStyles = () => {
-    if (!styleConfig) return {};
-    const config = currentPageIndex === 0 
-      ? styleConfig.coverConfig.title 
-      : styleConfig.pageConfig.text;
-    return convertToReactStyle(config);
-  };
-
-  const getContainerStyles = () => {
-    if (!styleConfig) return {};
-    const config = currentPageIndex === 0 
-      ? styleConfig.coverConfig.title 
-      : styleConfig.pageConfig.text;
-    return convertContainerToReactStyle(config.containerStyle);
-  };
-
-  const getPosition = () => {
-    if (!styleConfig) return currentPageIndex === 0 ? 'center' : 'bottom';
-    const config = currentPageIndex === 0 
-      ? styleConfig.coverConfig.title 
-      : styleConfig.pageConfig.text;
-    return config.position;
-  };
-
-  const getBackgroundImage = () => {
-    // First check for custom background images
-    if (styleConfig) {
-      if (currentPageIndex === 0 && styleConfig.coverBackgroundUrl) {
-        return styleConfig.coverBackgroundUrl;
-      } else if (currentPageIndex > 0 && styleConfig.pageBackgroundUrl) {
-        return styleConfig.pageBackgroundUrl;
-      }
+  // Safe text rendering with null check
+  const renderPageText = () => {
+    if (currentPageIndex === 0) {
+      return story.title;
     }
-    // Fall back to story page image
-    return currentPage.image_url;
+
+    // Handle edge case where text might not exist
+    if (!currentPage?.text) {
+      return null;
+    }
+
+    return currentPage.text.split('\n').map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        {index < currentPage.text.split('\n').length - 1 && <br />}
+      </React.Fragment>
+    ));
   };
+
+  // Get styles for current page
+  const textStyles = getTextStyles(currentPageIndex);
+  const containerStyles = getContainerStyles(currentPageIndex);
+  const position = getPosition(currentPageIndex);
+  const backgroundImage = getBackgroundImage(currentPageIndex, currentPage?.image_url);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
@@ -294,7 +132,7 @@ const StoryReader: React.FC = () => {
               Página {currentPageIndex + 1} de {pages.length}
             </span>
             <button
-              onClick={handleDownloadPdf}
+              onClick={onDownloadPdf}
               disabled={downloadingPdf}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
@@ -318,25 +156,25 @@ const StoryReader: React.FC = () => {
               <div 
                 className="aspect-[3/4] bg-gray-100 dark:bg-gray-700 relative bg-cover bg-center"
                 style={{
-                  backgroundImage: getBackgroundImage() ? `url(${getBackgroundImage()})` : undefined
+                  backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined
                 }}
               >
                 {/* Text overlay with dynamic positioning */}
                 <div 
                   className={`absolute inset-0 flex ${
-                    getPosition() === 'top' ? 'items-start pt-8' :
-                    getPosition() === 'center' ? 'items-center' :
+                    position === 'top' ? 'items-start pt-8' :
+                    position === 'center' ? 'items-center' :
                     'items-end pb-8'
                   } justify-center px-6`}
                 >
                   <div 
                     style={{
-                      ...getContainerStyles(),
+                      ...containerStyles,
                       ...(styleConfig && currentPageIndex > 0 && styleConfig.pageConfig.text.containerStyle.gradientOverlay
                         ? { background: styleConfig.pageConfig.text.containerStyle.gradientOverlay }
                         : {}
                       ),
-                      maxWidth: getContainerStyles().maxWidth || '100%',
+                      maxWidth: containerStyles.maxWidth || '100%',
                       width: '100%',
                       display: 'flex',
                       flexDirection: 'column',
@@ -346,16 +184,11 @@ const StoryReader: React.FC = () => {
                   >
                     <div 
                       style={{
-                        ...getTextStyles(),
+                        ...textStyles,
                         width: '100%'
                       }}
                     >
-                      {currentPageIndex === 0 ? story.title : currentPage.text.split('\n').map((line, index) => (
-                        <React.Fragment key={index}>
-                          {line}
-                          {index < currentPage.text.split('\n').length - 1 && <br />}
-                        </React.Fragment>
-                      ))}
+                      {renderPageText()}
                     </div>
                   </div>
                 </div>
