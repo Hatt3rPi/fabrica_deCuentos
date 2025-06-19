@@ -11,7 +11,15 @@ import { edgeFunctionColorMap } from '../../constants/edgeFunctionColors';
 
 interface PromptAccordionProps {
   prompt: Prompt;
-  onSave: (content: string, endpoint: string, model: string) => Promise<void> | void;
+  onSave: (
+    content: string, 
+    endpoint: string, 
+    model: string,
+    size?: string | null,
+    quality?: string | null,
+    width?: number | null,
+    height?: number | null
+  ) => Promise<void> | void;
 }
 
 const rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
@@ -62,13 +70,15 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
   useEffect(() => {
     const provider = modelToProvider[model];
     if (provider === 'openai') {
-      setSize(openaiSizeOptions[model]?.[0] || '1024x1024');
-      setQuality(openaiQualityOptions[model]?.[0] || 'standard');
+      // Use saved values from prompt or defaults
+      setSize(prompt.size || openaiSizeOptions[model]?.[0] || '1024x1024');
+      setQuality(prompt.quality || openaiQualityOptions[model]?.[0] || 'standard');
     } else if (provider === 'flux') {
-      setWidth('1024');
-      setHeight('1024');
+      // Use saved values from prompt or defaults
+      setWidth(prompt.width?.toString() || '1024');
+      setHeight(prompt.height?.toString() || '1024');
     }
-  }, [model, modelToProvider]);
+  }, [model, modelToProvider, prompt.size, prompt.quality, prompt.width, prompt.height]);
 
   // Filtrar modelos compatibles con el tipo de prompt
   const compatibleModels = React.useMemo(() => {
@@ -91,15 +101,45 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
     setContent(prompt.content);
     setEndpoint(prompt.endpoint || '');
     setModel(prompt.model || 'gpt-4o');
-    setSize('1024x1024');
-    setQuality('standard');
-    setWidth('1024');
-    setHeight('1024');
-  }, [prompt.content, prompt.endpoint, prompt.model]);
+    
+    // Load saved preferences or use defaults
+    const provider = modelToProvider[prompt.model || 'gpt-4o'];
+    if (provider === 'openai') {
+      setSize(prompt.size || openaiSizeOptions[prompt.model || 'gpt-4o']?.[0] || '1024x1024');
+      setQuality(prompt.quality || openaiQualityOptions[prompt.model || 'gpt-4o']?.[0] || 'standard');
+    } else if (provider === 'flux') {
+      setWidth(prompt.width?.toString() || '1024');
+      setHeight(prompt.height?.toString() || '1024');
+    } else {
+      // Default values for other providers
+      setSize(prompt.size || '1024x1024');
+      setQuality(prompt.quality || 'standard');
+      setWidth(prompt.width?.toString() || '1024');
+      setHeight(prompt.height?.toString() || '1024');
+    }
+  }, [prompt.content, prompt.endpoint, prompt.model, prompt.size, prompt.quality, prompt.width, prompt.height, modelToProvider]);
 
   const handleSave = async () => {
     setIsSaving(true);
-    await onSave(content, endpoint, model);
+    
+    // Prepare image preferences based on model type
+    const provider = modelToProvider[model];
+    let imageSize: string | null = null;
+    let imageQuality: string | null = null;
+    let imageWidth: number | null = null;
+    let imageHeight: number | null = null;
+    
+    if (getModelType(model) === 'image') {
+      if (provider === 'openai') {
+        imageSize = size;
+        imageQuality = quality;
+      } else if (provider === 'flux') {
+        imageWidth = parseInt(width) || null;
+        imageHeight = parseInt(height) || null;
+      }
+    }
+    
+    await onSave(content, endpoint, model, imageSize, imageQuality, imageWidth, imageHeight);
     setIsSaving(false);
     setIsEditing(false);
   };
@@ -267,10 +307,21 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
                   setContent(prompt.content);
                   setEndpoint(prompt.endpoint || '');
                   setModel(prompt.model || 'gpt-4o');
-                  setSize('1024x1024');
-                  setQuality('standard');
-                  setWidth('1024');
-                  setHeight('1024');
+                  
+                  // Restore saved preferences or defaults
+                  const provider = modelToProvider[prompt.model || 'gpt-4o'];
+                  if (provider === 'openai') {
+                    setSize(prompt.size || openaiSizeOptions[prompt.model || 'gpt-4o']?.[0] || '1024x1024');
+                    setQuality(prompt.quality || openaiQualityOptions[prompt.model || 'gpt-4o']?.[0] || 'standard');
+                  } else if (provider === 'flux') {
+                    setWidth(prompt.width?.toString() || '1024');
+                    setHeight(prompt.height?.toString() || '1024');
+                  } else {
+                    setSize(prompt.size || '1024x1024');
+                    setQuality(prompt.quality || 'standard');
+                    setWidth(prompt.width?.toString() || '1024');
+                    setHeight(prompt.height?.toString() || '1024');
+                  }
                 }}
                 disabled={isSaving}
               >

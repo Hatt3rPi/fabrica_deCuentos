@@ -56,7 +56,9 @@ const PromptsManager: React.FC = () => {
           <PromptAccordion
             key={p.id}
             prompt={p}
-            onSave={(content, endpoint, model) => updatePrompt(p.id, content, endpoint, model)}
+            onSave={(content, endpoint, model, size, quality, width, height) => 
+              updatePrompt(p.id, content, endpoint, model, size, quality, width, height)
+            }
           />
         ))}
       </div>
