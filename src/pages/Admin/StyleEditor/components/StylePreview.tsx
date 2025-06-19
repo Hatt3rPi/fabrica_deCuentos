@@ -139,11 +139,13 @@ const StylePreview: React.FC<StylePreviewProps> = ({
       >
         {/* Page Container */}
         <div 
-          className="relative bg-cover bg-center"
+          className="relative bg-cover bg-center bg-no-repeat"
           style={{
             width: '600px',
             height: '800px',
-            backgroundImage: `url(${sampleImage})`
+            backgroundImage: `url(${sampleImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
           }}
         >
           {/* Gradient Overlay (for pages) */}
@@ -161,7 +163,7 @@ const StylePreview: React.FC<StylePreviewProps> = ({
               className="relative"
               style={{
                 ...containerStyle,
-                ...(pageType === 'page' && position === 'bottom' ? {
+                ...(pageType === 'page' && currentConfig.position === 'bottom' ? {
                   position: 'absolute',
                   bottom: 0,
                   left: 0,
