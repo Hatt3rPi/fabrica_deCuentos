@@ -24,7 +24,9 @@ class StyleConfigService {
           coverConfig: data.cover_config,
           pageConfig: data.page_config,
           coverBackgroundUrl: data.cover_background_url,
-          pageBackgroundUrl: data.page_background_url
+          pageBackgroundUrl: data.page_background_url,
+          coverSampleText: data.cover_sample_text,
+          pageSampleText: data.page_sample_text
         };
       }
 
@@ -57,6 +59,8 @@ class StyleConfigService {
         pageConfig: style.page_config,
         coverBackgroundUrl: style.cover_background_url,
         pageBackgroundUrl: style.page_background_url,
+        coverSampleText: style.cover_sample_text,
+        pageSampleText: style.page_sample_text,
         createdAt: style.created_at,
         updatedAt: style.updated_at,
         createdBy: style.created_by,
@@ -86,6 +90,8 @@ class StyleConfigService {
           page_config: style.pageConfig,
           cover_background_url: style.coverBackgroundUrl,
           page_background_url: style.pageBackgroundUrl,
+          cover_sample_text: style.coverSampleText,
+          page_sample_text: style.pageSampleText,
           created_by: user?.id
         })
         .select()
@@ -103,6 +109,8 @@ class StyleConfigService {
         pageConfig: data.page_config,
         coverBackgroundUrl: data.cover_background_url,
         pageBackgroundUrl: data.page_background_url,
+        coverSampleText: data.cover_sample_text,
+        pageSampleText: data.page_sample_text,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
         createdBy: data.created_by,
@@ -129,6 +137,8 @@ class StyleConfigService {
       if (updates.pageConfig !== undefined) updateData.page_config = updates.pageConfig;
       if (updates.coverBackgroundUrl !== undefined) updateData.cover_background_url = updates.coverBackgroundUrl;
       if (updates.pageBackgroundUrl !== undefined) updateData.page_background_url = updates.pageBackgroundUrl;
+      if (updates.coverSampleText !== undefined) updateData.cover_sample_text = updates.coverSampleText;
+      if (updates.pageSampleText !== undefined) updateData.page_sample_text = updates.pageSampleText;
 
       const { data, error } = await supabase
         .from('story_style_configs')
@@ -149,6 +159,8 @@ class StyleConfigService {
         pageConfig: data.page_config,
         coverBackgroundUrl: data.cover_background_url,
         pageBackgroundUrl: data.page_background_url,
+        coverSampleText: data.cover_sample_text,
+        pageSampleText: data.page_sample_text,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
         createdBy: data.created_by,
@@ -174,6 +186,40 @@ class StyleConfigService {
       return true;
     } catch (error) {
       console.error('Error activating style:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Crear un nuevo template
+   */
+  async createTemplate(templateData: {
+    name: string;
+    category: 'classic' | 'modern' | 'playful' | 'elegant';
+    description?: string;
+    configData: any;
+  }): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from('story_style_templates')
+        .insert({
+          name: templateData.name,
+          category: templateData.category,
+          description: templateData.description,
+          config_data: {
+            cover_config: templateData.configData.coverConfig,
+            page_config: templateData.configData.pageConfig
+          },
+          is_premium: false,
+          created_by: user?.id
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error creating template:', error);
       return false;
     }
   }

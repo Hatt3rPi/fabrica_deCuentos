@@ -74,9 +74,11 @@ const StylePreview: React.FC<StylePreviewProps> = ({
   // Calcular posición del contenedor
   const getContainerPosition = () => {
     const position = currentConfig.position;
+    const horizontalPosition = currentConfig.horizontalPosition || 'center';
     let alignItems = 'center';
     let justifyContent = 'center';
 
+    // Posición vertical
     switch (position) {
       case 'top':
         alignItems = 'flex-start';
@@ -86,6 +88,19 @@ const StylePreview: React.FC<StylePreviewProps> = ({
         break;
       case 'bottom':
         alignItems = 'flex-end';
+        break;
+    }
+
+    // Posición horizontal del contenedor
+    switch (horizontalPosition) {
+      case 'left':
+        justifyContent = 'flex-start';
+        break;
+      case 'center':
+        justifyContent = 'center';
+        break;
+      case 'right':
+        justifyContent = 'flex-end';
         break;
     }
 

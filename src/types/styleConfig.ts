@@ -33,7 +33,9 @@ export interface TitleConfig {
   textAlign: 'left' | 'center' | 'right';
   textShadow: string;
   position: 'top' | 'center' | 'bottom';
+  horizontalPosition?: 'left' | 'center' | 'right';
   letterSpacing?: string;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   containerStyle: ContainerStyle;
 }
 
@@ -46,7 +48,9 @@ export interface PageTextConfig {
   textAlign: 'left' | 'center' | 'right' | 'justify';
   textShadow: string;
   position: 'top' | 'center' | 'bottom';
+  horizontalPosition?: 'left' | 'center' | 'right';
   verticalAlign?: string;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   containerStyle: ContainerStyle;
 }
 
@@ -68,6 +72,8 @@ export interface StoryStyleConfig {
   pageConfig: PageConfig;
   coverBackgroundUrl?: string;
   pageBackgroundUrl?: string;
+  coverSampleText?: string;
+  pageSampleText?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -97,6 +103,7 @@ export const DEFAULT_COVER_CONFIG: CoverConfig = {
     textAlign: 'center',
     textShadow: '3px 3px 6px rgba(0,0,0,0.8)',
     position: 'center',
+    horizontalPosition: 'center',
     containerStyle: {
       background: 'transparent',
       padding: '2rem 3rem',
@@ -116,6 +123,7 @@ export const DEFAULT_PAGE_CONFIG: PageConfig = {
     textAlign: 'center',
     textShadow: '3px 3px 6px rgba(0,0,0,0.9)',
     position: 'bottom',
+    horizontalPosition: 'center',
     verticalAlign: 'flex-end',
     containerStyle: {
       background: 'transparent',
@@ -137,6 +145,7 @@ export function convertToReactStyle(config: TitleConfig | PageTextConfig): React
     textShadow: config.textShadow,
     letterSpacing: config.letterSpacing,
     lineHeight: 'lineHeight' in config ? config.lineHeight : undefined,
+    textTransform: 'textTransform' in config ? config.textTransform as any : undefined,
   };
 }
 

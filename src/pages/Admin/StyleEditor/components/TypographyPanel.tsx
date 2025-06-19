@@ -73,7 +73,10 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
           Fuente
         </label>
         <select
-          value={config.fontFamily.split(',')[0].replace(/['"]/g, '')}
+          value={(() => {
+            const currentFont = config.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+            return FONT_OPTIONS.find(f => f.value === currentFont)?.value || currentFont;
+          })()}
           onChange={(e) => {
             const font = FONT_OPTIONS.find(f => f.value === e.target.value);
             const fontFamily = font?.category === 'serif' 

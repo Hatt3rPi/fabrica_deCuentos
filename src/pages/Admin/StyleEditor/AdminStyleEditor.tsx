@@ -29,6 +29,8 @@ import EffectsPanel from './components/EffectsPanel';
 import ContainerPanel from './components/ContainerPanel';
 import TemplatesModal from './components/TemplatesModal';
 import ImageUploader from './components/ImageUploader';
+import TextEditor from './components/TextEditor';
+import CreateTemplateModal from './components/CreateTemplateModal';
 
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
@@ -50,6 +52,8 @@ const AdminStyleEditor: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string>('');
   const [customCoverImage, setCustomCoverImage] = useState<string>('');
   const [customPageImage, setCustomPageImage] = useState<string>('');
+  const [customCoverText, setCustomCoverText] = useState<string>(SAMPLE_TEXTS.cover);
+  const [customPageText, setCustomPageText] = useState<string>(SAMPLE_TEXTS.page);
   const [currentPageType, setCurrentPageType] = useState<'cover' | 'page'>('cover');
   const [activePanel, setActivePanel] = useState<string>('typography');
   
@@ -60,6 +64,7 @@ const AdminStyleEditor: React.FC = () => {
   const [showGrid, setShowGrid] = useState(false);
   const [showRulers, setShowRulers] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
@@ -76,9 +81,12 @@ const AdminStyleEditor: React.FC = () => {
       const hasImageChanges = 
         (originalConfig.coverBackgroundUrl || '') !== customCoverImage ||
         (originalConfig.pageBackgroundUrl || '') !== customPageImage;
-      setIsDirty(hasConfigChanges || hasImageChanges);
+      const hasTextChanges = 
+        (originalConfig.coverSampleText || SAMPLE_TEXTS.cover) !== customCoverText ||
+        (originalConfig.pageSampleText || SAMPLE_TEXTS.page) !== customPageText;
+      setIsDirty(hasConfigChanges || hasImageChanges || hasTextChanges);
     }
-  }, [activeConfig, originalConfig, customCoverImage, customPageImage]);
+  }, [activeConfig, originalConfig, customCoverImage, customPageImage, customCoverText, customPageText]);
 
   const loadActiveConfig = async () => {
     try {
@@ -93,6 +101,13 @@ const AdminStyleEditor: React.FC = () => {
         }
         if (config.pageBackgroundUrl) {
           setCustomPageImage(config.pageBackgroundUrl);
+        }
+        // Cargar los textos personalizados si existen
+        if (config.coverSampleText) {
+          setCustomCoverText(config.coverSampleText);
+        }
+        if (config.pageSampleText) {
+          setCustomPageText(config.pageSampleText);
         }
       }
     } catch (error) {
@@ -118,11 +133,13 @@ const AdminStyleEditor: React.FC = () => {
     try {
       setIsSaving(true);
       
-      // Incluir las URLs de las imágenes en la configuración
+      // Incluir las URLs de las imágenes y textos en la configuración
       const configToSave = {
         ...activeConfig,
         coverBackgroundUrl: customCoverImage || undefined,
-        pageBackgroundUrl: customPageImage || undefined
+        pageBackgroundUrl: customPageImage || undefined,
+        coverSampleText: customCoverText !== SAMPLE_TEXTS.cover ? customCoverText : undefined,
+        pageSampleText: customPageText !== SAMPLE_TEXTS.page ? customPageText : undefined
       };
       
       let result;
@@ -163,6 +180,8 @@ const AdminStyleEditor: React.FC = () => {
       setActiveConfig(originalConfig);
       setCustomCoverImage(originalConfig.coverBackgroundUrl || '');
       setCustomPageImage(originalConfig.pageBackgroundUrl || '');
+      setCustomCoverText(originalConfig.coverSampleText || SAMPLE_TEXTS.cover);
+      setCustomPageText(originalConfig.pageSampleText || SAMPLE_TEXTS.page);
       setIsDirty(false);
     }
   };
@@ -247,6 +266,25 @@ const AdminStyleEditor: React.FC = () => {
     setIsDirty(true);
   };
 
+  const handleCreateTemplate = async (templateData: any) => {
+    try {
+      await styleConfigService.createTemplate(templateData);
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Éxito',
+        'Template creado correctamente',
+        NotificationPriority.MEDIUM
+      );
+    } catch (error) {
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error',
+        'No se pudo crear el template',
+        NotificationPriority.HIGH
+      );
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -279,13 +317,22 @@ const AdminStyleEditor: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
-            >
-              <Layout className="w-4 h-4" />
-              Templates
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowTemplates(true)}
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+              >
+                <Layout className="w-4 h-4" />
+                Templates
+              </button>
+              <button
+                onClick={() => setShowCreateTemplate(true)}
+                className="px-4 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-colors flex items-center gap-2"
+              >
+                <Palette className="w-4 h-4" />
+                Crear Template
+              </button>
+            </div>
             
             <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2 hidden sm:block" />
             
@@ -458,6 +505,17 @@ const AdminStyleEditor: React.FC = () => {
                 <Image className="w-4 h-4 inline mr-1" />
                 Imágenes
               </button>
+              <button
+                onClick={() => setActivePanel('text')}
+                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'text'
+                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                }`}
+              >
+                <Type className="w-4 h-4 inline mr-1" />
+                Texto
+              </button>
             </div>
 
             {/* Active Panel Content */}
@@ -514,6 +572,16 @@ const AdminStyleEditor: React.FC = () => {
                 />
               </div>
             )}
+            
+            {activePanel === 'text' && (
+              <TextEditor
+                coverText={customCoverText}
+                pageText={customPageText}
+                onCoverTextChange={setCustomCoverText}
+                onPageTextChange={setCustomPageText}
+                currentPageType={currentPageType}
+              />
+            )}
           </div>
         </div>
 
@@ -555,7 +623,7 @@ const AdminStyleEditor: React.FC = () => {
                 ? (customCoverImage || activeConfig.coverBackgroundUrl || previewImage)
                 : (customPageImage || activeConfig.pageBackgroundUrl || previewImage)
               }
-              sampleText={currentPageType === 'cover' ? SAMPLE_TEXTS.cover : SAMPLE_TEXTS.page}
+              sampleText={currentPageType === 'cover' ? customCoverText : customPageText}
               showGrid={showGrid}
               showRulers={showRulers}
               zoomLevel={zoomLevel}
@@ -574,6 +642,16 @@ const AdminStyleEditor: React.FC = () => {
         <TemplatesModal
           onClose={() => setShowTemplates(false)}
           onSelect={handleTemplateSelect}
+        />
+      )}
+
+      {/* Create Template Modal */}
+      {showCreateTemplate && (
+        <CreateTemplateModal
+          isOpen={showCreateTemplate}
+          onClose={() => setShowCreateTemplate(false)}
+          onSave={handleCreateTemplate}
+          currentConfig={activeConfig}
         />
       )}
     </div>
