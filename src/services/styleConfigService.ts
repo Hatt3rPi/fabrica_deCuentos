@@ -22,7 +22,9 @@ class StyleConfigService {
           id: data.id,
           name: data.name,
           coverConfig: data.cover_config,
-          pageConfig: data.page_config
+          pageConfig: data.page_config,
+          coverBackgroundUrl: data.cover_background_url,
+          pageBackgroundUrl: data.page_background_url
         };
       }
 
@@ -53,6 +55,8 @@ class StyleConfigService {
         isDefault: style.is_default,
         coverConfig: style.cover_config,
         pageConfig: style.page_config,
+        coverBackgroundUrl: style.cover_background_url,
+        pageBackgroundUrl: style.page_background_url,
         createdAt: style.created_at,
         updatedAt: style.updated_at,
         createdBy: style.created_by,
@@ -80,6 +84,8 @@ class StyleConfigService {
           is_default: style.isDefault || false,
           cover_config: style.coverConfig,
           page_config: style.pageConfig,
+          cover_background_url: style.coverBackgroundUrl,
+          page_background_url: style.pageBackgroundUrl,
           created_by: user?.id
         })
         .select()
@@ -95,6 +101,8 @@ class StyleConfigService {
         isDefault: data.is_default,
         coverConfig: data.cover_config,
         pageConfig: data.page_config,
+        coverBackgroundUrl: data.cover_background_url,
+        pageBackgroundUrl: data.page_background_url,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
         createdBy: data.created_by,
@@ -119,6 +127,8 @@ class StyleConfigService {
       if (updates.isDefault !== undefined) updateData.is_default = updates.isDefault;
       if (updates.coverConfig !== undefined) updateData.cover_config = updates.coverConfig;
       if (updates.pageConfig !== undefined) updateData.page_config = updates.pageConfig;
+      if (updates.coverBackgroundUrl !== undefined) updateData.cover_background_url = updates.coverBackgroundUrl;
+      if (updates.pageBackgroundUrl !== undefined) updateData.page_background_url = updates.pageBackgroundUrl;
 
       const { data, error } = await supabase
         .from('story_style_configs')
@@ -137,6 +147,8 @@ class StyleConfigService {
         isDefault: data.is_default,
         coverConfig: data.cover_config,
         pageConfig: data.page_config,
+        coverBackgroundUrl: data.cover_background_url,
+        pageBackgroundUrl: data.page_background_url,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
         createdBy: data.created_by,
