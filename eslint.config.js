@@ -23,6 +23,10 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // Prevenir console.log en producción - usar logger utilities
+      'no-console': ['warn', { 
+        allow: ['warn', 'error'] 
+      }],
     },
   }
 );

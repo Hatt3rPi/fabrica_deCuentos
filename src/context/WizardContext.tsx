@@ -5,6 +5,7 @@ import { useAutosave } from '../hooks/useAutosave';
 import { Character, StorySettings, DesignSettings, WizardState, EstadoFlujo } from '../types';
 import { useWizardFlowStore } from '../stores/wizardFlowStore';
 import { storyService } from '../services/storyService';
+import { logger, wizardLogger } from '../utils/logger';
 
 export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'export';
 
@@ -149,7 +150,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         p.id === pageId ? { ...p, imageUrl } : p
       ));
     } catch (err) {
-      console.error('Error regenerating page image:', err);
+      logger.error('Error regenerating page image:', err);
     } finally {
       setIsGenerating(false);
     }
@@ -192,7 +193,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       // Generate all images in parallel using Promise.allSettled
       const generationPromises = pagesToGenerate.map(async (page) => {
         try {
-          console.log(`[Parallel Generation] Starting generation for page ${page.pageNumber}`);
+          logger.debug(`[Parallel Generation] Starting generation for page ${page.pageNumber}`);
           const url = await storyService.generatePageImage(storyId, page.id);
           
           // Update page with new image URL
@@ -208,10 +209,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             inProgress: prev.inProgress.filter(id => id !== page.id)
           }));
           
-          console.log(`[Parallel Generation] Completed page ${page.pageNumber}`);
+          logger.debug(`[Parallel Generation] Completed page ${page.pageNumber}`);
           return { pageId: page.id, success: true, url };
         } catch (error) {
-          console.error(`[Parallel Generation] Failed page ${page.pageNumber}:`, error);
+          logger.error(`[Parallel Generation] Failed page ${page.pageNumber}:`, error);
           updatePageState(page.id, 'error');
           setBulkGenerationProgress(prev => ({ 
             ...prev, 
@@ -228,10 +229,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const successCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
       const failCount = results.filter(r => r.status === 'fulfilled' && !r.value.success).length;
       
-      console.log(`[Parallel Generation] Completed: ${successCount} successful, ${failCount} failed`);
+      logger.debug(`[Parallel Generation] Completed: ${successCount} successful, ${failCount} failed`);
       
     } catch (error) {
-      console.error('[Parallel Generation] Unexpected error:', error);
+      logger.error('[Parallel Generation] Unexpected error:', error);
     } finally {
       setIsGenerating(false);
     }
@@ -249,7 +250,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     
     if (failedPages.length === 0) return;
 
-    console.log(`[Retry Failed] Retrying ${failedPages.length} failed pages`);
+    logger.debug(`[Retry Failed] Retrying ${failedPages.length} failed pages`);
     
     // Reset failed pages to generating state
     failedPages.forEach(page => updatePageState(page.id, 'generating'));
@@ -434,7 +435,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const updateStoryTitle = (title: string) => {
-    console.log('🏷️ [WizardContext] updateStoryTitle called with:', title);
+    wizardLogger.step('updateStoryTitle', { title });
     setState(prevState => {
       const newState = {
         ...prevState,
@@ -443,7 +444,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           title
         }
       };
-      console.log('🏷️ [WizardContext] New state meta.title:', newState.meta.title);
+      logger.debug('New state meta.title:', newState.meta.title);
       return newState;
     });
   };
@@ -466,7 +467,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
     setGeneratedPages([]);
     setIsGenerating(false);
-    console.log('[WizardFlow] resetWizard', useWizardFlowStore.getState().estado);
+    logger.debug('[WizardFlow] resetWizard', useWizardFlowStore.getState().estado);
   };
 
   useEffect(() => {
@@ -492,7 +493,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         title: state.meta.title || ''
       },
     };
-    console.log('🔄 [WizardContext] useEffect reconstruyendo estado, título preservado:', state.meta.title);
+    logger.debug('useEffect reconstruyendo estado, título preservado:', state.meta.title);
     setState(newState);
     // El estado del wizard se mantiene en memoria y se sincroniza mediante autosave
   }, [storyId, characters, storySettings, designSettings, generatedPages, currentStep]);
