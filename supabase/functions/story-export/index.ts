@@ -536,10 +536,18 @@ function generateHTMLContent(
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
       <style>
+        @import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');
+        
         ${dynamicCSS}
         
         * {
           box-sizing: border-box;
+        }
+        
+        .indie-flower-regular {
+          font-family: "Indie Flower", cursive;
+          font-weight: 400;
+          font-style: normal;
         }
         
         body { 
@@ -651,10 +659,19 @@ function generateHTMLContent(
         @media print {
           .cover-title {
             font-size: 3rem;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+          }
+          
+          .cover-subtitle {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
           }
           
           .story-text {
             font-size: 1.6rem;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
           }
           
           .page-overlay {
