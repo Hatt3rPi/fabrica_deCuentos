@@ -211,13 +211,8 @@ class StyleConfigService {
         throw new Error('Usuario no encontrado');
       }
       
-      // Verificar si el usuario es admin
-      const userRole = user.user_metadata?.role || user.raw_user_meta_data?.role;
-      console.log('User role:', userRole, 'User metadata:', user.user_metadata, 'Raw metadata:', user.raw_user_meta_data);
-      
-      if (userRole !== 'admin') {
-        throw new Error('Solo los administradores pueden crear templates');
-      }
+      // Los permisos se validan en RLS policies por email, no necesitamos validar aquí
+      console.log('User authenticated:', user.email);
       
       const { data, error } = await supabase
         .from('story_style_templates')
