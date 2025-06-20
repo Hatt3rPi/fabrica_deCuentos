@@ -109,15 +109,8 @@ const StylePreview: React.FC<StylePreviewProps> = ({
 
   const positionStyles = getContainerPosition();
 
-  // Aplicar overlay de gradiente si está configurado
-  const overlayStyle = pageType === 'page' && currentConfig.containerStyle.gradientOverlay
-    ? {
-        background: currentConfig.containerStyle.gradientOverlay,
-        position: 'absolute' as const,
-        inset: 0,
-        pointerEvents: 'none' as const
-      }
-    : null;
+  // Sin overlay de gradiente
+  const overlayStyle = null;
 
   return (
     <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
