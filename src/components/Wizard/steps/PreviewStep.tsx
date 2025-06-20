@@ -77,7 +77,11 @@ const PreviewStep: React.FC = () => {
     try {
       // Siempre guardar en biblioteca personal
       const result = await completeStory(true);
-      console.log('Story completion result:', result);
+      
+      // Debug logging solo en desarrollo
+      if (import.meta.env.DEV) {
+        console.log('Story completion result:', result);
+      }
       
       if (result.success) {
         createNotification(
@@ -89,16 +93,33 @@ const PreviewStep: React.FC = () => {
         setShowCompletionModal(false);
         setShowSuccessNotification(true);
         
-        // Descargar automáticamente el PDF
+        // Descargar automáticamente el PDF con fallback
         if (result.downloadUrl) {
-          console.log('Triggering automatic download:', result.downloadUrl);
-          const link = document.createElement('a');
-          link.href = result.downloadUrl;
-          link.download = `cuento-${Date.now()}.pdf`;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          if (import.meta.env.DEV) {
+            console.log('Triggering automatic download:', result.downloadUrl);
+          }
+          
+          try {
+            const link = document.createElement('a');
+            link.href = result.downloadUrl;
+            link.download = `cuento-${Date.now()}.pdf`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } catch (downloadError) {
+            // Fallback: mostrar enlace manual si la descarga automática falla
+            console.warn('Automatic download failed:', downloadError);
+            createNotification(
+              NotificationType.SYSTEM_UPDATE,
+              'Descarga disponible',
+              'La descarga automática falló. Haz clic aquí para descargar tu cuento manualmente.',
+              NotificationPriority.MEDIUM
+            );
+            
+            // Abrir en nueva ventana como fallback
+            window.open(result.downloadUrl, '_blank');
+          }
         }
         
         // Auto-cerrar notificación después de 8 segundos
@@ -439,7 +460,11 @@ const PreviewStep: React.FC = () => {
 
             <div className="mb-6 p-4 bg-purple-50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="w-4 h-4 bg-purple-600 rounded flex items-center justify-center">
+                <div 
+                  className="w-4 h-4 bg-purple-600 rounded flex items-center justify-center"
+                  role="status"
+                  aria-label="Guardado automáticamente en biblioteca"
+                >
                   <CheckCircle className="w-3 h-3 text-white" />
                 </div>
                 <div>
