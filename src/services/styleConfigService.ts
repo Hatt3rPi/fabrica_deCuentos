@@ -140,6 +140,16 @@ class StyleConfigService {
       if (updates.coverSampleText !== undefined) updateData.cover_sample_text = updates.coverSampleText;
       if (updates.pageSampleText !== undefined) updateData.page_sample_text = updates.pageSampleText;
 
+      console.log('updateStyle called with:', {
+        id,
+        updates,
+        updateData,
+        backgroundUrls: {
+          cover: updates.coverBackgroundUrl,
+          page: updates.pageBackgroundUrl
+        }
+      });
+
       const { data, error } = await supabase
         .from('story_style_configs')
         .update(updateData)
@@ -173,19 +183,38 @@ class StyleConfigService {
   }
 
   /**
-   * Activar un estilo específico
+   * Activar un estilo específico (desactiva todos los demás)
    */
   async activateStyle(id: string): Promise<boolean> {
     try {
-      const { error } = await supabase
+      console.log('Activating style with ID:', id);
+      
+      // Primero desactivar todos los estilos
+      const { error: deactivateError } = await supabase
+        .from('story_style_configs')
+        .update({ is_active: false })
+        .neq('id', id);
+
+      if (deactivateError) {
+        console.error('Error deactivating other styles:', deactivateError);
+        throw deactivateError;
+      }
+
+      // Luego activar el estilo seleccionado
+      const { error: activateError } = await supabase
         .from('story_style_configs')
         .update({ is_active: true })
         .eq('id', id);
 
-      if (error) throw error;
+      if (activateError) {
+        console.error('Error activating style:', activateError);
+        throw activateError;
+      }
+
+      console.log('Style activated successfully');
       return true;
     } catch (error) {
-      console.error('Error activating style:', error);
+      console.error('Error in activateStyle:', error);
       return false;
     }
   }
