@@ -268,18 +268,31 @@ const AdminStyleEditor: React.FC = () => {
 
   const handleCreateTemplate = async (templateData: any) => {
     try {
-      await styleConfigService.createTemplate(templateData);
-      createNotification(
-        NotificationType.SYSTEM_UPDATE,
-        'Éxito',
-        'Template creado correctamente',
-        NotificationPriority.MEDIUM
-      );
+      console.log('Attempting to create template with data:', templateData);
+      const result = await styleConfigService.createTemplate(templateData);
+      console.log('Template creation result:', result);
+      
+      if (result) {
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Éxito',
+          'Template creado correctamente',
+          NotificationPriority.MEDIUM
+        );
+      } else {
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Error',
+          'No se pudo crear el template - resultado falso',
+          NotificationPriority.HIGH
+        );
+      }
     } catch (error) {
+      console.error('Error in handleCreateTemplate:', error);
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Error',
-        'No se pudo crear el template',
+        `Error al crear template: ${error.message}`,
         NotificationPriority.HIGH
       );
     }

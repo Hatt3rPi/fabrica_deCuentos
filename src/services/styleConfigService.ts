@@ -200,23 +200,46 @@ class StyleConfigService {
     configData: any;
   }): Promise<boolean> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      const { error } = await supabase
+      if (userError) {
+        console.error('Auth error:', userError);
+        throw new Error('Usuario no autenticado');
+      }
+      
+      if (!user) {
+        throw new Error('Usuario no encontrado');
+      }
+      
+      // Los permisos se validan en RLS policies por email, no necesitamos validar aquí
+      console.log('User authenticated:', user.email);
+      
+      const { data, error } = await supabase
         .from('story_style_templates')
         .insert({
           name: templateData.name,
           category: templateData.category,
-          description: templateData.description,
           config_data: {
             cover_config: templateData.configData.coverConfig,
             page_config: templateData.configData.pageConfig
           },
-          is_premium: false,
-          created_by: user?.id
-        });
+          is_premium: false
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
+      
+      console.log('Template created successfully:', data);
       return true;
     } catch (error) {
       console.error('Error creating template:', error);

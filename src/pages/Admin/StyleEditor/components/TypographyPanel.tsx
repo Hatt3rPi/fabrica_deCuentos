@@ -8,18 +8,35 @@ interface TypographyPanelProps {
 
 // Fuentes populares de Google Fonts
 const FONT_OPTIONS = [
+  // Manuscritas/Handwriting
   { value: 'Indie Flower', label: 'Indie Flower', category: 'handwriting' },
+  { value: 'Caveat', label: 'Caveat', category: 'handwriting' },
   { value: 'Comic Neue', label: 'Comic Neue', category: 'handwriting' },
   { value: 'Kalam', label: 'Kalam', category: 'handwriting' },
+  
+  // Divertidas/Display
+  { value: 'Caprasimo', label: 'Caprasimo', category: 'display' },
+  { value: 'Barriecito', label: 'Barriecito', category: 'display' },
+  { value: 'Barrio', label: 'Barrio', category: 'display' },
+  { value: 'Galindo', label: 'Galindo', category: 'display' },
+  { value: 'Lakki Reddy', label: 'Lakki Reddy', category: 'display' },
+  { value: 'Rampart One', label: 'Rampart One', category: 'display' },
+  { value: 'Ribeye', label: 'Ribeye', category: 'display' },
+  { value: 'Slackey', label: 'Slackey', category: 'display' },
+  { value: 'Spicy Rice', label: 'Spicy Rice', category: 'display' },
+  { value: 'Fredoka', label: 'Fredoka', category: 'display' },
+  { value: 'Chewy', label: 'Chewy', category: 'display' },
+  { value: 'Pacifico', label: 'Pacifico', category: 'display' },
+  
+  // Sans-serif
   { value: 'Inter', label: 'Inter', category: 'sans-serif' },
   { value: 'Roboto', label: 'Roboto', category: 'sans-serif' },
   { value: 'Open Sans', label: 'Open Sans', category: 'sans-serif' },
+  
+  // Serif
   { value: 'Playfair Display', label: 'Playfair Display', category: 'serif' },
   { value: 'Georgia', label: 'Georgia', category: 'serif' },
-  { value: 'Crimson Text', label: 'Crimson Text', category: 'serif' },
-  { value: 'Fredoka', label: 'Fredoka', category: 'display' },
-  { value: 'Chewy', label: 'Chewy', category: 'display' },
-  { value: 'Pacifico', label: 'Pacifico', category: 'display' }
+  { value: 'Crimson Text', label: 'Crimson Text', category: 'serif' }
 ];
 
 const FONT_WEIGHTS = [
@@ -88,8 +105,13 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
           }}
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
-          <optgroup label="Manuscrita">
+          <optgroup label="Manuscritas">
             {FONT_OPTIONS.filter(f => f.category === 'handwriting').map(font => (
+              <option key={font.value} value={font.value}>{font.label}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Divertidas">
+            {FONT_OPTIONS.filter(f => f.category === 'display').map(font => (
               <option key={font.value} value={font.value}>{font.label}</option>
             ))}
           </optgroup>
@@ -100,11 +122,6 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
           </optgroup>
           <optgroup label="Serif">
             {FONT_OPTIONS.filter(f => f.category === 'serif').map(font => (
-              <option key={font.value} value={font.value}>{font.label}</option>
-            ))}
-          </optgroup>
-          <optgroup label="Display">
-            {FONT_OPTIONS.filter(f => f.category === 'display').map(font => (
               <option key={font.value} value={font.value}>{font.label}</option>
             ))}
           </optgroup>
@@ -119,7 +136,7 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
         <div className="flex gap-2">
           <input
             type="range"
-            min="8"
+            min="4"
             max="120"
             step="1"
             value={getFontSizeValue()}
@@ -129,7 +146,7 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
           <div className="flex items-center gap-1">
             <input
               type="number"
-              min="8"
+              min="4"
               max="120"
               step="0.1"
               value={getFontSizeValue()}
