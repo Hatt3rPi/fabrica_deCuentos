@@ -42,6 +42,8 @@ async function generateImageWithRetry(
   referenceImages: Blob[],
   endpoint: string,
   model: string,
+  size: string = '1024x1024',
+  quality: string = 'standard',
   retries = MAX_RETRIES
 ): Promise<{ url: string }> {
 
@@ -58,7 +60,7 @@ async function generateImageWithRetry(
         }
         return { url: await generateWithFlux(prompt, inputUrl) };
       } else if (referenceImages.length === 0) {
-        const payload = { model, prompt, size: '1024x1024', n: 1 };
+        const payload = { model, prompt, size, quality, n: 1 };
         console.log('[generate-cover] [REQUEST]', JSON.stringify(payload));
         const { url } = await generateWithOpenAI({
           endpoint,
@@ -68,7 +70,7 @@ async function generateImageWithRetry(
       } else {
         // Para gpt-image-1, podemos enviar múltiples imágenes de referencia
         // Deben enviarse usando el parámetro image[]
-        const payload = { model, prompt, size: '1024x1024', n: 1 };
+        const payload = { model, prompt, size, quality, n: 1 };
         console.log('[generate-cover] [REQUEST]', JSON.stringify(payload));
         const { url } = await generateWithOpenAI({
           endpoint,
@@ -152,7 +154,7 @@ Deno.serve(async (req) => {
     // Obtener el prompt
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content, endpoint, model')
+      .select('id, content, endpoint, model, size, quality, width, height')
       .eq('type', 'PROMPT_CUENTO_PORTADA')
       .single();
       
@@ -255,7 +257,9 @@ Deno.serve(async (req) => {
     }
 
     // Generar imagen con reintentos
-    const { url: imageUrl } = await generateImageWithRetry(prompt, referenceImages, apiEndpoint, apiModel);
+    const configuredSize = promptRow?.size || '1024x1024';
+    const configuredQuality = promptRow?.quality || 'standard';
+    const { url: imageUrl } = await generateImageWithRetry(prompt, referenceImages, apiEndpoint, apiModel, configuredSize, configuredQuality);
     
     // Convertir base64 a Blob
     const base64Data = imageUrl.split(',')[1];

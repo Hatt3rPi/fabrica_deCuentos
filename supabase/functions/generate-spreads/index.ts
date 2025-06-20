@@ -19,11 +19,16 @@ Deno.serve(async (req) => {
     const images = await Promise.all(
       prompts.map(async (prompt: string) => {
         const start = Date.now();
+        // Use configurable defaults - can be overridden via environment or future prompt configuration
+        const defaultSize = Deno.env.get('DEFAULT_IMAGE_SIZE') || '1024x1024';
+        const defaultQuality = Deno.env.get('DEFAULT_IMAGE_QUALITY') || 'high';
+        const defaultModel = Deno.env.get('DEFAULT_IMAGE_MODEL') || 'gpt-image-1';
+        
         const payload = {
-          model: 'gpt-image-1',
+          model: defaultModel,
           prompt,
-          size: '1024x1024',
-          quality: 'high',
+          size: defaultSize,
+          quality: defaultQuality,
           n: 1,
           referenced_image_ids: referenceImageIds,
         };
@@ -40,7 +45,7 @@ Deno.serve(async (req) => {
         }
         const elapsed = Date.now() - start;
         await logPromptMetric({
-          modelo_ia: 'gpt-image-1',
+          modelo_ia: defaultModel,
           tiempo_respuesta_ms: elapsed,
           estado: url ? 'success' : 'error',
           error_type: url ? null : 'service_error',

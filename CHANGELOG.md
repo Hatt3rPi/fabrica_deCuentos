@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 2025-01-20 - Corrección tamaño de imagen en portadas
+- **generate-cover**: Corregido problema donde la generación de portadas no respetaba el tamaño "auto" configurado en admin
+  - Agregada migración para actualizar valores NULL de size/quality a 'auto' en PROMPT_CUENTO_PORTADA
+  - El problema ocurría porque los campos size/quality estaban NULL en la base de datos
+  - Documentación completa en `/docs/solutions/prompt-image-size-issue/`
+
 ## 2025-01-19 - Refactorización StoryReader
 - **StoryReader.tsx**: Refactorizado componente de 414 líneas para mejorar mantenibilidad
   - Creados 4 custom hooks para separar responsabilidades: `useStoryData`, `useKeyboardNavigation`, `usePdfExport`, `useStoryStyles`

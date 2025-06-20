@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content, endpoint, model')
+      .select('id, content, endpoint, model, size, quality, width, height')
       .eq('type', promptType)
       .single();
 
@@ -95,10 +95,13 @@ Deno.serve(async (req) => {
       console.log('[generate-cover-variant] [OUT]', resultUrl);
     } else {
       const start = Date.now();
+      const configuredSize = promptRow?.size || '1024x1024';
+      const configuredQuality = promptRow?.quality || 'standard';
       const openaiPayload = {
         model: apiModel,
         prompt: stylePrompt,
-        size: '1024x1024',
+        size: configuredSize,
+        quality: configuredQuality,
         n: 1,
       };
       console.log('[generate-cover-variant] [REQUEST]', JSON.stringify(openaiPayload));

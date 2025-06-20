@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
 
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content, endpoint, model')
+      .select('id, content, endpoint, model, size, quality, width, height')
       .eq('type', 'PROMPT_GENERADOR_CUENTOS')
       .single();
     const storyPrompt = promptRow?.content || '';
@@ -266,7 +266,7 @@ Deno.serve(async (req) => {
     let coverUrl = '';
     const { data: coverRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content, endpoint, model')
+      .select('id, content, endpoint, model, size, quality, width, height')
       .eq('type', 'PROMPT_CUENTO_PORTADA')
       .single();
     const coverPrompt = coverRow?.content || '';
@@ -279,11 +279,13 @@ Deno.serve(async (req) => {
         .replace('{palette}', 'colores vibrantes')
         .replace('{story}', title);
       const cstart = Date.now();
+      const configuredSize = coverRow?.size || '1024x1024';
+      const configuredQuality = coverRow?.quality || 'high';
       const coverPayload = {
         model: coverModel,
         prompt: promptText,
-        size: '1024x1024',
-        quality: 'high',
+        size: configuredSize,
+        quality: configuredQuality,
         n: 1,
         referenced_image_ids: charThumbnails,
       };

@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content, endpoint, model')
+      .select('id, content, endpoint, model, size, quality, width, height')
       .eq('type', promptType)
       .single();
 
@@ -44,6 +44,8 @@ Deno.serve(async (req) => {
     const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/images/edits';
     apiModel = promptRow?.model || 'gpt-image-1';
     promptId = promptRow?.id;
+    const configuredSize = promptRow?.size || '1024x1024';
+    const configuredQuality = promptRow?.quality || 'standard';
     if (!stylePrompt) {
       throw new Error('Prompt not found');
     }
@@ -83,7 +85,8 @@ Deno.serve(async (req) => {
     const formData = new FormData();
     formData.append('model', apiModel);
     formData.append('prompt', stylePrompt);
-    formData.append('size', '1024x1024');
+    formData.append('size', configuredSize);
+    formData.append('quality', configuredQuality);
     formData.append('n', '1');
     formData.append('image', blob, `reference.${ext}`);
 
@@ -103,7 +106,8 @@ Deno.serve(async (req) => {
       const openaiPayload = {
         model: apiModel,
         prompt: stylePrompt,
-        size: '1024x1024',
+        size: configuredSize,
+        quality: configuredQuality,
         n: 1,
         image: imageUrl.split('/').pop()
       };
@@ -113,7 +117,8 @@ Deno.serve(async (req) => {
         payload: {
           model: apiModel,
           prompt: stylePrompt,
-          size: '1024x1024',
+          size: configuredSize,
+          quality: configuredQuality,
           n: 1,
         },
         files: { image: refBlob },
