@@ -66,3 +66,64 @@
 :root {
   --header-height: 4rem;
 }
+
+/* Google Fonts CSS Classes */
+.caprasimo-regular {
+  font-family: "Caprasimo", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.caveat {
+  font-family: "Caveat", cursive;
+  font-optical-sizing: auto;
+  font-style: normal;
+}
+
+.barriecito-regular {
+  font-family: "Barriecito", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.barrio-regular {
+  font-family: "Barrio", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.galindo-regular {
+  font-family: "Galindo", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.lakki-reddy-regular {
+  font-family: "Lakki Reddy", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.rampart-one-regular {
+  font-family: "Rampart One", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.ribeye-regular {
+  font-family: "Ribeye", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.slackey-regular {
+  font-family: "Slackey", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.spicy-rice-regular {
+  font-family: "Spicy Rice", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
