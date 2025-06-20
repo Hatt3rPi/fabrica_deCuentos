@@ -22,7 +22,6 @@ export interface ContainerStyle {
   border?: string;
   boxShadow?: string;
   backdropFilter?: string;
-  gradientOverlay?: string;
 }
 
 export interface TitleConfig {
@@ -128,8 +127,7 @@ export const DEFAULT_PAGE_CONFIG: PageConfig = {
     containerStyle: {
       background: 'transparent',
       padding: '1rem 2rem 6rem 2rem',
-      minHeight: '25%',
-      gradientOverlay: 'linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.5), transparent)'
+      minHeight: '25%'
     }
   }
 };

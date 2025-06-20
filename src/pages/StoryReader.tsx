@@ -165,10 +165,6 @@ const StoryReader: React.FC = () => {
                   <div 
                     style={{
                       ...containerStyles,
-                      ...(styleConfig && currentPageIndex > 0 && styleConfig.pageConfig.text.containerStyle.gradientOverlay
-                        ? { background: styleConfig.pageConfig.text.containerStyle.gradientOverlay }
-                        : {}
-                      ),
                       maxWidth: containerStyles.maxWidth || '100%',
                       width: '100%',
                       display: 'flex',
