@@ -81,25 +81,25 @@
 }
 
 .barriecito-regular {
-  font-family: "Barriecito", cursive;
+  font-family: "Barriecito", system-ui;
   font-weight: 400;
   font-style: normal;
 }
 
 .barrio-regular {
-  font-family: "Barrio", cursive;
+  font-family: "Barrio", system-ui;
   font-weight: 400;
   font-style: normal;
 }
 
 .galindo-regular {
-  font-family: "Galindo", cursive;
+  font-family: "Galindo", sans-serif;
   font-weight: 400;
   font-style: normal;
 }
 
 .lakki-reddy-regular {
-  font-family: "Lakki Reddy", cursive;
+  font-family: "Lakki Reddy", serif;
   font-weight: 400;
   font-style: normal;
 }
@@ -111,19 +111,19 @@
 }
 
 .ribeye-regular {
-  font-family: "Ribeye", cursive;
+  font-family: "Ribeye", serif;
   font-weight: 400;
   font-style: normal;
 }
 
 .slackey-regular {
-  font-family: "Slackey", cursive;
+  font-family: "Slackey", sans-serif;
   font-weight: 400;
   font-style: normal;
 }
 
 .spicy-rice-regular {
-  font-family: "Spicy Rice", cursive;
+  font-family: "Spicy Rice", serif;
   font-weight: 400;
   font-style: normal;
 }
