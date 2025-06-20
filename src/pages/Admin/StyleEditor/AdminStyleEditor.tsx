@@ -15,7 +15,8 @@ import {
   EyeOff,
   RotateCcw,
   Image,
-  X
+  X,
+  Zap
 } from 'lucide-react';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
@@ -67,6 +68,7 @@ const AdminStyleEditor: React.FC = () => {
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
 
   // Cargar configuración activa y imagen de muestra
   useEffect(() => {
@@ -142,14 +144,25 @@ const AdminStyleEditor: React.FC = () => {
         pageSampleText: customPageText !== SAMPLE_TEXTS.page ? customPageText : undefined
       };
       
+      console.log('Saving config with images:', {
+        coverBackgroundUrl: configToSave.coverBackgroundUrl,
+        pageBackgroundUrl: configToSave.pageBackgroundUrl,
+        customCoverImage,
+        customPageImage
+      });
+      
       let result;
       if (activeConfig.id) {
         // Actualizar existente
+        console.log('Updating existing style with ID:', activeConfig.id);
         result = await styleConfigService.updateStyle(activeConfig.id, configToSave);
       } else {
         // Crear nuevo
+        console.log('Creating new style');
         result = await styleConfigService.createStyle(configToSave);
       }
+
+      console.log('Save result:', result);
 
       if (result) {
         setActiveConfig(result);
@@ -162,12 +175,15 @@ const AdminStyleEditor: React.FC = () => {
           'Configuración guardada correctamente',
           NotificationPriority.MEDIUM
         );
+      } else {
+        throw new Error('No se recibió respuesta del servidor');
       }
     } catch (error) {
+      console.error('Error saving configuration:', error);
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Error',
-        'No se pudo guardar la configuración',
+        `No se pudo guardar la configuración: ${error.message}`,
         NotificationPriority.HIGH
       );
     } finally {
@@ -298,6 +314,51 @@ const AdminStyleEditor: React.FC = () => {
     }
   };
 
+  const handleActivateStyle = async () => {
+    if (!activeConfig.id) {
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error',
+        'Primero debes guardar la configuración',
+        NotificationPriority.HIGH
+      );
+      return;
+    }
+
+    try {
+      setIsActivating(true);
+      console.log('Activating style with ID:', activeConfig.id);
+      
+      const result = await styleConfigService.activateStyle(activeConfig.id);
+      
+      if (result) {
+        // Actualizar el config local para reflejar que ahora está activo
+        const updatedConfig = { ...activeConfig, isActive: true };
+        setActiveConfig(updatedConfig);
+        setOriginalConfig(updatedConfig);
+        
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Éxito',
+          'Estilo aplicado a la generación de cuentos',
+          NotificationPriority.MEDIUM
+        );
+      } else {
+        throw new Error('No se pudo activar el estilo');
+      }
+    } catch (error) {
+      console.error('Error activating style:', error);
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error',
+        `Error al activar el estilo: ${error.message}`,
+        NotificationPriority.HIGH
+      );
+    } finally {
+      setIsActivating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -413,6 +474,20 @@ const AdminStyleEditor: React.FC = () => {
                 <Save className="w-4 h-4" />
               )}
               Guardar
+            </button>
+            
+            <button
+              onClick={handleActivateStyle}
+              disabled={!activeConfig.id || isActivating || activeConfig.isActive}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              title={activeConfig.isActive ? 'Este estilo ya está activo' : 'Aplicar este estilo a la generación de cuentos'}
+            >
+              {isActivating ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Zap className="w-4 h-4" />
+              )}
+              {activeConfig.isActive ? 'Estilo Activo' : 'Aplicar Estilo'}
             </button>
           </div>
         </div>
