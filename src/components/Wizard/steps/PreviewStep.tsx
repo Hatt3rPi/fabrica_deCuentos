@@ -26,7 +26,6 @@ const PreviewStep: React.FC = () => {
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [promptText, setPromptText] = useState('');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [saveToLibrary, setSaveToLibrary] = useState(true);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const handleFallback = () => setIsGenerating(false);
 
@@ -76,16 +75,31 @@ const PreviewStep: React.FC = () => {
 
   const handleCompleteStory = async () => {
     try {
-      const result = await completeStory(saveToLibrary);
+      // Siempre guardar en biblioteca personal
+      const result = await completeStory(true);
+      console.log('Story completion result:', result);
+      
       if (result.success) {
         createNotification(
           NotificationType.SYSTEM_UPDATE,
           'Cuento finalizado',
-          'Tu cuento se ha completado exitosamente',
+          'Tu cuento se ha completado exitosamente y se está descargando',
           NotificationPriority.HIGH
         );
         setShowCompletionModal(false);
         setShowSuccessNotification(true);
+        
+        // Descargar automáticamente el PDF
+        if (result.downloadUrl) {
+          console.log('Triggering automatic download:', result.downloadUrl);
+          const link = document.createElement('a');
+          link.href = result.downloadUrl;
+          link.download = `cuento-${Date.now()}.pdf`;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
         
         // Auto-cerrar notificación después de 8 segundos
         setTimeout(() => {
@@ -99,7 +113,8 @@ const PreviewStep: React.FC = () => {
           NotificationPriority.HIGH
         );
       }
-    } catch {
+    } catch (error) {
+      console.error('Error completing story:', error);
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Error al finalizar',
@@ -419,27 +434,23 @@ const PreviewStep: React.FC = () => {
             </div>
             
             <p className="text-gray-600 mb-6 text-center">
-              Tu cuento será marcado como completado y se generará un archivo PDF descargable con todas las páginas e ilustraciones.
+              Tu cuento será marcado como completado, se guardará en tu biblioteca personal y se descargará automáticamente un archivo PDF con todas las páginas e ilustraciones.
             </p>
 
             <div className="mb-6 p-4 bg-purple-50 rounded-lg">
-              <label className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={saveToLibrary}
-                  onChange={(e) => setSaveToLibrary(e.target.checked)}
-                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 mt-1"
-                  disabled={isCompleting}
-                />
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 bg-purple-600 rounded flex items-center justify-center">
+                  <CheckCircle className="w-3 h-3 text-white" />
+                </div>
                 <div>
                   <span className="text-gray-700 font-medium">
-                    Guardar en mi biblioteca personal
+                    Se guardará en tu biblioteca personal
                   </span>
                   <p className="text-sm text-gray-500 mt-1">
                     Podrás acceder a tu cuento desde tu perfil en cualquier momento y descargarlo nuevamente.
                   </p>
                 </div>
-              </label>
+              </div>
             </div>
 
             {isCompleting && (
