@@ -189,26 +189,15 @@ class StyleConfigService {
     try {
       console.log('Activating style with ID:', id);
       
-      // Primero desactivar todos los estilos
-      const { error: deactivateError } = await supabase
-        .from('story_style_configs')
-        .update({ is_active: false })
-        .neq('id', id);
+      // Usar una sola query que maneje la lógica de activación
+      // Esto evita conflictos con los triggers
+      const { error } = await supabase.rpc('activate_style_config', {
+        style_id: id
+      });
 
-      if (deactivateError) {
-        console.error('Error deactivating other styles:', deactivateError);
-        throw deactivateError;
-      }
-
-      // Luego activar el estilo seleccionado
-      const { error: activateError } = await supabase
-        .from('story_style_configs')
-        .update({ is_active: true })
-        .eq('id', id);
-
-      if (activateError) {
-        console.error('Error activating style:', activateError);
-        throw activateError;
+      if (error) {
+        console.error('Error activating style:', error);
+        throw error;
       }
 
       console.log('Style activated successfully');

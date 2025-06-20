@@ -15,35 +15,8 @@ const BACKGROUND_PRESETS = [
   { name: 'Negro 50%', value: 'rgba(0,0,0,0.5)' },
 ];
 
-const GRADIENT_PRESETS = [
-  { 
-    name: 'Oscuro inferior', 
-    value: 'linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)' 
-  },
-  { 
-    name: 'Oscuro superior', 
-    value: 'linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)' 
-  },
-  { 
-    name: 'Claro inferior', 
-    value: 'linear-gradient(to top, rgba(255,255,255,0.95), rgba(255,255,255,0.7), transparent)' 
-  },
-  { 
-    name: 'Oscuro completo', 
-    value: 'linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.7))' 
-  },
-  { 
-    name: 'Viñeta', 
-    value: 'radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%)' 
-  },
-  { 
-    name: 'Sin gradiente', 
-    value: '' 
-  }
-];
 
 const EffectsPanel: React.FC<EffectsPanelProps> = ({ containerStyle, onChange }) => {
-  const [backgroundType, setBackgroundType] = useState<'solid' | 'gradient'>('solid');
 
   // Parsear valores actuales
   const getCurrentBackgroundColor = () => {
@@ -54,9 +27,6 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({ containerStyle, onChange })
     return containerStyle.background || 'rgba(255,255,255,0.9)';
   };
 
-  const getCurrentGradient = () => {
-    return containerStyle.gradientOverlay || '';
-  };
 
   // Extraer valores de box-shadow
   const parseBoxShadow = (shadow: string) => {
@@ -110,45 +80,13 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({ containerStyle, onChange })
 
   return (
     <div className="space-y-6">
-      {/* Tipo de Fondo */}
+      {/* Fondo del Contenedor */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           <Layers className="w-4 h-4 inline mr-1" />
-          Tipo de Fondo
+          Color de Fondo
         </label>
-        <div className="flex gap-2 mb-3">
-          <button
-            onClick={() => setBackgroundType('solid')}
-            className={`flex-1 px-3 py-2 rounded-lg border-2 transition-colors ${
-              backgroundType === 'solid'
-                ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-            }`}
-          >
-            <Square className="w-4 h-4 inline mr-1" />
-            Sólido
-          </button>
-          <button
-            onClick={() => setBackgroundType('gradient')}
-            className={`flex-1 px-3 py-2 rounded-lg border-2 transition-colors ${
-              backgroundType === 'gradient'
-                ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-            }`}
-          >
-            <Palette className="w-4 h-4 inline mr-1" />
-            Degradado
-          </button>
-        </div>
-      </div>
-
-      {/* Fondo del Contenedor */}
-      {backgroundType === 'solid' && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Color de Fondo
-          </label>
-          <div className="space-y-2">
+        <div className="space-y-2">
             {BACKGROUND_PRESETS.map(preset => (
               <button
                 key={preset.value}
@@ -183,31 +121,6 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({ containerStyle, onChange })
             </div>
           </div>
         </div>
-      )}
-
-      {/* Overlay de Gradiente */}
-      {backgroundType === 'gradient' && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Overlay de Gradiente
-          </label>
-          <div className="space-y-2">
-            {GRADIENT_PRESETS.map(preset => (
-              <button
-                key={preset.name}
-                onClick={() => onChange({ gradientOverlay: preset.value })}
-                className={`w-full px-3 py-2 text-left rounded-lg border transition-colors ${
-                  containerStyle.gradientOverlay === preset.value
-                    ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/30'
-                    : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <span className="text-sm">{preset.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Blur de Fondo */}
       <div>

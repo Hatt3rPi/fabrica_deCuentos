@@ -81,7 +81,7 @@ const TemplatesModal: React.FC<TemplatesModalProps> = ({ onClose, onSelect }) =>
           <div 
             className="absolute bottom-0 left-0 right-0 p-2"
             style={{
-              background: pageStyle.containerStyle.background || pageStyle.containerStyle.gradientOverlay,
+              background: pageStyle.containerStyle.background,
               minHeight: '40%'
             }}
           >
