@@ -43,11 +43,7 @@ const AdminStyleEditor: React.FC = () => {
   const { createNotification } = useNotifications();
   
   // Estados principales
-  const [activeConfig, setActiveConfig] = useState<StoryStyleConfig>({
-    name: 'Nueva Configuración',
-    coverConfig: DEFAULT_COVER_CONFIG,
-    pageConfig: DEFAULT_PAGE_CONFIG
-  });
+  const [activeConfig, setActiveConfig] = useState<StoryStyleConfig | null>(null);
   
   const [originalConfig, setOriginalConfig] = useState<StoryStyleConfig | null>(null);
   const [previewImage, setPreviewImage] = useState<string>('');
@@ -132,6 +128,16 @@ const AdminStyleEditor: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!activeConfig) {
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error',
+        'No hay configuración activa para guardar',
+        NotificationPriority.HIGH
+      );
+      return;
+    }
+
     try {
       setIsSaving(true);
       
@@ -151,15 +157,16 @@ const AdminStyleEditor: React.FC = () => {
         customPageImage
       });
       
+      // SIEMPRE actualizar el registro activo, nunca crear uno nuevo
       let result;
-      if (activeConfig.id) {
-        // Actualizar existente
-        console.log('Updating existing style with ID:', activeConfig.id);
+      if (activeConfig?.id) {
+        // Actualizar el existente
+        console.log('Updating active style with ID:', activeConfig.id);
         result = await styleConfigService.updateStyle(activeConfig.id, configToSave);
       } else {
-        // Crear nuevo
-        console.log('Creating new style');
-        result = await styleConfigService.createStyle(configToSave);
+        // Solo crear si no existe ninguno (primera vez)
+        console.log('No active style found, getting or creating default');
+        result = await styleConfigService.updateActiveStyle(configToSave);
       }
 
       console.log('Save result:', result);
@@ -167,6 +174,9 @@ const AdminStyleEditor: React.FC = () => {
       if (result) {
         setActiveConfig(result);
         setOriginalConfig(result);
+        // Actualizar las imágenes en el estado local
+        if (result.coverBackgroundUrl) setCustomCoverImage(result.coverBackgroundUrl);
+        if (result.pageBackgroundUrl) setCustomPageImage(result.pageBackgroundUrl);
         setIsDirty(false);
         
         createNotification(
@@ -211,65 +221,84 @@ const AdminStyleEditor: React.FC = () => {
   };
 
   const updateCoverConfig = useCallback((updates: any) => {
-    setActiveConfig(prev => ({
-      ...prev,
-      coverConfig: {
-        ...prev.coverConfig,
-        title: {
-          ...prev.coverConfig.title,
-          ...updates
-        }
-      }
-    }));
-  }, []);
-
-  const updatePageConfig = useCallback((updates: any) => {
-    setActiveConfig(prev => ({
-      ...prev,
-      pageConfig: {
-        ...prev.pageConfig,
-        text: {
-          ...prev.pageConfig.text,
-          ...updates
-        }
-      }
-    }));
-  }, []);
-
-  const updateContainerStyle = useCallback((containerUpdates: any) => {
-    if (currentPageType === 'cover') {
-      setActiveConfig(prev => ({
+    setActiveConfig(prev => {
+      if (!prev) return prev;
+      return {
         ...prev,
         coverConfig: {
           ...prev.coverConfig,
           title: {
             ...prev.coverConfig.title,
-            containerStyle: {
-              ...prev.coverConfig.title.containerStyle,
-              ...containerUpdates
-            }
+            ...updates
           }
         }
-      }));
-    } else {
-      setActiveConfig(prev => ({
+      };
+    });
+  }, []);
+
+  const updatePageConfig = useCallback((updates: any) => {
+    setActiveConfig(prev => {
+      if (!prev) return prev;
+      return {
         ...prev,
         pageConfig: {
           ...prev.pageConfig,
           text: {
             ...prev.pageConfig.text,
-            containerStyle: {
-              ...prev.pageConfig.text.containerStyle,
-              ...containerUpdates
-            }
+            ...updates
           }
         }
-      }));
+      };
+    });
+  }, []);
+
+  const updateContainerStyle = useCallback((containerUpdates: any) => {
+    if (currentPageType === 'cover') {
+      setActiveConfig(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          coverConfig: {
+            ...prev.coverConfig,
+            title: {
+              ...prev.coverConfig.title,
+              containerStyle: {
+                ...prev.coverConfig.title.containerStyle,
+                ...containerUpdates
+              }
+            }
+          }
+        };
+      });
+    } else {
+      setActiveConfig(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          pageConfig: {
+            ...prev.pageConfig,
+            text: {
+              ...prev.pageConfig.text,
+              containerStyle: {
+                ...prev.pageConfig.text.containerStyle,
+                ...containerUpdates
+              }
+            }
+          }
+        };
+      });
     }
   }, [currentPageType]);
 
   const getCurrentConfig = () => {
-    return currentPageType === 'cover' ? activeConfig.coverConfig.title : activeConfig.pageConfig.text;
+    if (!activeConfig) {
+      return currentPageType === 'cover' 
+        ? DEFAULT_COVER_CONFIG.title 
+        : DEFAULT_PAGE_CONFIG.text;
+    }
+    return currentPageType === 'cover' 
+      ? activeConfig.coverConfig.title 
+      : activeConfig.pageConfig.text;
   };
 
   const handleTemplateSelect = (template: any) => {
@@ -315,7 +344,7 @@ const AdminStyleEditor: React.FC = () => {
   };
 
   const handleActivateStyle = async () => {
-    if (!activeConfig.id) {
+    if (!activeConfig || !activeConfig.id) {
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Error',
@@ -476,19 +505,10 @@ const AdminStyleEditor: React.FC = () => {
               Guardar
             </button>
             
-            <button
-              onClick={handleActivateStyle}
-              disabled={!activeConfig.id || isActivating || activeConfig.isActive}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-              title={activeConfig.isActive ? 'Este estilo ya está activo' : 'Aplicar este estilo a la generación de cuentos'}
-            >
-              {isActivating ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Zap className="w-4 h-4" />
-              )}
-              {activeConfig.isActive ? 'Estilo Activo' : 'Aplicar Estilo'}
-            </button>
+            <div className="px-4 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2">
+              <Zap className="w-4 h-4" />
+              Estilo Activo
+            </div>
           </div>
         </div>
       </div>
@@ -607,14 +627,14 @@ const AdminStyleEditor: React.FC = () => {
             </div>
 
             {/* Active Panel Content */}
-            {activePanel === 'typography' && (
+            {activePanel === 'typography' && activeConfig && (
               <TypographyPanel
                 config={getCurrentConfig()}
                 onChange={currentPageType === 'cover' ? updateCoverConfig : updatePageConfig}
               />
             )}
             
-            {activePanel === 'position' && (
+            {activePanel === 'position' && activeConfig && (
               <PositionPanel
                 config={getCurrentConfig()}
                 onChange={currentPageType === 'cover' ? updateCoverConfig : updatePageConfig}
@@ -622,21 +642,21 @@ const AdminStyleEditor: React.FC = () => {
               />
             )}
             
-            {activePanel === 'colors' && (
+            {activePanel === 'colors' && activeConfig && (
               <ColorPanel
                 config={getCurrentConfig()}
                 onChange={currentPageType === 'cover' ? updateCoverConfig : updatePageConfig}
               />
             )}
             
-            {activePanel === 'effects' && (
+            {activePanel === 'effects' && activeConfig && (
               <EffectsPanel
                 containerStyle={getCurrentConfig().containerStyle}
                 onChange={updateContainerStyle}
               />
             )}
             
-            {activePanel === 'container' && (
+            {activePanel === 'container' && activeConfig && (
               <ContainerPanel
                 containerStyle={getCurrentConfig().containerStyle}
                 onChange={updateContainerStyle}
@@ -704,18 +724,24 @@ const AdminStyleEditor: React.FC = () => {
             </div>
 
             {/* Preview Component */}
-            <StylePreview
-              config={activeConfig}
-              pageType={currentPageType}
-              sampleImage={currentPageType === 'cover' 
-                ? (customCoverImage || activeConfig.coverBackgroundUrl || previewImage)
-                : (customPageImage || activeConfig.pageBackgroundUrl || previewImage)
-              }
-              sampleText={currentPageType === 'cover' ? customCoverText : customPageText}
-              showGrid={showGrid}
-              showRulers={showRulers}
-              zoomLevel={zoomLevel}
-            />
+            {activeConfig ? (
+              <StylePreview
+                config={activeConfig}
+                pageType={currentPageType}
+                sampleImage={currentPageType === 'cover' 
+                  ? (customCoverImage || activeConfig.coverBackgroundUrl || previewImage)
+                  : (customPageImage || activeConfig.pageBackgroundUrl || previewImage)
+                }
+                sampleText={currentPageType === 'cover' ? customCoverText : customPageText}
+                showGrid={showGrid}
+                showRulers={showRulers}
+                zoomLevel={zoomLevel}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-96 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                <p className="text-gray-500 dark:text-gray-400">Cargando configuración...</p>
+              </div>
+            )}
 
             {/* Info */}
             <div className="mt-4 md:mt-6 text-center text-xs md:text-sm text-gray-500 dark:text-gray-400 px-4">
@@ -739,7 +765,11 @@ const AdminStyleEditor: React.FC = () => {
           isOpen={showCreateTemplate}
           onClose={() => setShowCreateTemplate(false)}
           onSave={handleCreateTemplate}
-          currentConfig={activeConfig}
+          currentConfig={activeConfig || {
+            name: 'Nueva Configuración',
+            coverConfig: DEFAULT_COVER_CONFIG,
+            pageConfig: DEFAULT_PAGE_CONFIG
+          }}
         />
       )}
     </div>

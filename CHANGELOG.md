@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Arreglado
+- **AdminStyleEditor**: Agregadas verificaciones de null para `activeConfig` en todos los lugares donde se accedía sin verificar, previniendo errores cuando la configuración aún no se ha cargado
+  - Verificación en `handleSave()` antes de procesar la configuración
+  - Verificación en funciones de actualización: `updateCoverConfig`, `updatePageConfig`, `updateContainerStyle`
+  - Verificación en `getCurrentConfig()` con fallback a configuraciones por defecto
+  - Verificación en `handleActivateStyle()` y botones de UI
+  - Protección condicional en paneles de control para mostrarlos solo cuando `activeConfig` existe
+  - Componente `StylePreview` protegido con mensaje de carga cuando no hay configuración
+  - Modal `CreateTemplateModal` con configuración de fallback cuando `activeConfig` es null
+
 ## 2025-01-19 - Refactorización StoryReader
 - **StoryReader.tsx**: Refactorizado componente de 414 líneas para mejorar mantenibilidad
   - Creados 4 custom hooks para separar responsabilidades: `useStoryData`, `useKeyboardNavigation`, `usePdfExport`, `useStoryStyles`

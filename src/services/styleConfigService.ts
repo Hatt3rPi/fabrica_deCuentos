@@ -73,7 +73,8 @@ class StyleConfigService {
   }
 
   /**
-   * Crear un nuevo estilo
+   * Crear un nuevo estilo (DEPRECADO - usar updateActiveStyle para singleton)
+   * Solo se debería usar para crear templates, no para el estilo principal
    */
   async createStyle(style: Omit<StoryStyleConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoryStyleConfig | null> {
     try {
@@ -178,6 +179,41 @@ class StyleConfigService {
       };
     } catch (error) {
       console.error('Error updating style:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Actualizar el estilo activo (o crear si no existe)
+   * Siempre trabaja con el registro activo, no crea nuevos
+   */
+  async updateActiveStyle(updates: Partial<StoryStyleConfig>): Promise<StoryStyleConfig | null> {
+    try {
+      // Primero obtener el estilo activo
+      const activeStyle = await this.getActiveStyle();
+      
+      if (activeStyle && activeStyle.id) {
+        // Si existe, actualizarlo
+        return this.updateStyle(activeStyle.id, updates);
+      } else {
+        // Si no existe ninguno activo, actualizar el default
+        const { data: defaultStyle } = await supabase
+          .from('story_style_configs')
+          .select('id')
+          .eq('is_default', true)
+          .single();
+          
+        if (defaultStyle) {
+          // Actualizar el default y marcarlo como activo
+          return this.updateStyle(defaultStyle.id, { ...updates, isActive: true });
+        } else {
+          // No debería pasar, pero por si acaso crear uno nuevo
+          console.warn('No default style found, creating new one');
+          return this.createStyle({ ...updates, isActive: true, isDefault: true });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating active style:', error);
       return null;
     }
   }
