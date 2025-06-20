@@ -136,7 +136,7 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
         <div className="flex gap-2">
           <input
             type="range"
-            min="8"
+            min="4"
             max="120"
             step="1"
             value={getFontSizeValue()}
@@ -146,7 +146,7 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
           <div className="flex items-center gap-1">
             <input
               type="number"
-              min="8"
+              min="4"
               max="120"
               step="0.1"
               value={getFontSizeValue()}
