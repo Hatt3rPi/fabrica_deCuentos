@@ -8,12 +8,15 @@ const supabase = createClient(
 
 class StyleConfigService {
   /**
-   * Obtener el estilo activo actual
+   * Obtener el template activo actual
    */
-  async getActiveStyle(): Promise<StoryStyleConfig | null> {
+  async getActiveTemplate(): Promise<StyleTemplate | null> {
     try {
       const { data, error } = await supabase
-        .rpc('get_active_story_style');
+        .from('story_style_templates')
+        .select('*')
+        .eq('is_active', true)
+        .single();
 
       if (error) throw error;
 
@@ -21,12 +24,40 @@ class StyleConfigService {
         return {
           id: data.id,
           name: data.name,
-          coverConfig: data.cover_config,
-          pageConfig: data.page_config,
-          coverBackgroundUrl: data.cover_background_url,
-          pageBackgroundUrl: data.page_background_url,
-          coverSampleText: data.cover_sample_text,
-          pageSampleText: data.page_sample_text
+          category: data.category,
+          thumbnailUrl: data.thumbnail_url,
+          configData: data.config_data,
+          isPremium: data.is_premium,
+          isActive: data.is_active,
+          createdAt: data.created_at
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error fetching active template:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtener el estilo activo actual (adaptado para templates)
+   */
+  async getActiveStyle(): Promise<StoryStyleConfig | null> {
+    try {
+      const template = await this.getActiveTemplate();
+      
+      if (template) {
+        return {
+          id: template.id,
+          name: template.name,
+          coverConfig: template.configData.cover_config,
+          pageConfig: template.configData.page_config,
+          // Las imágenes custom son solo para admin/styles, no para templates
+          coverBackgroundUrl: undefined,
+          pageBackgroundUrl: undefined,
+          coverSampleText: undefined,
+          pageSampleText: undefined
         };
       }
 
@@ -183,29 +214,80 @@ class StyleConfigService {
   }
 
   /**
-   * Activar un estilo específico (desactiva todos los demás)
+   * Actualizar el template activo
    */
-  async activateStyle(id: string): Promise<boolean> {
+  async updateActiveTemplate(updates: Partial<StyleTemplate>): Promise<StyleTemplate | null> {
     try {
-      console.log('Activating style with ID:', id);
+      const activeTemplate = await this.getActiveTemplate();
       
-      // Usar una sola query que maneje la lógica de activación
-      // Esto evita conflictos con los triggers
-      const { error } = await supabase.rpc('activate_style_config', {
-        style_id: id
+      if (!activeTemplate) {
+        console.error('No active template found');
+        return null;
+      }
+
+      const updateData: any = {};
+      
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.category !== undefined) updateData.category = updates.category;
+      if (updates.configData !== undefined) updateData.config_data = updates.configData;
+      
+      console.log('Updating active template with:', updateData);
+
+      const { data, error } = await supabase
+        .from('story_style_templates')
+        .update(updateData)
+        .eq('id', activeTemplate.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id,
+        name: data.name,
+        category: data.category,
+        thumbnailUrl: data.thumbnail_url,
+        configData: data.config_data,
+        isPremium: data.is_premium,
+        isActive: data.is_active,
+        createdAt: data.created_at
+      };
+    } catch (error) {
+      console.error('Error updating active template:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Activar un template específico (desactiva todos los demás)
+   */
+  async activateTemplate(id: string): Promise<boolean> {
+    try {
+      console.log('Activating template with ID:', id);
+      
+      const { error } = await supabase.rpc('activate_template', {
+        template_id: id
       });
 
       if (error) {
-        console.error('Error activating style:', error);
+        console.error('Error activating template:', error);
         throw error;
       }
 
-      console.log('Style activated successfully');
+      console.log('Template activated successfully');
       return true;
     } catch (error) {
-      console.error('Error in activateStyle:', error);
+      console.error('Error in activateTemplate:', error);
       return false;
     }
+  }
+
+  /**
+   * Activar un estilo específico (DEPRECATED - usar activateTemplate)
+   */
+  async activateStyle(id: string): Promise<boolean> {
+    console.warn('activateStyle is deprecated, use activateTemplate instead');
+    return this.activateTemplate(id);
   }
 
   /**
@@ -284,6 +366,7 @@ class StyleConfigService {
         thumbnailUrl: template.thumbnail_url,
         configData: template.config_data,
         isPremium: template.is_premium,
+        isActive: template.is_active,
         createdAt: template.created_at
       }));
     } catch (error) {

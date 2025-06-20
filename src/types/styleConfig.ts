@@ -89,6 +89,7 @@ export interface StyleTemplate {
     page_config: PageConfig;
   };
   isPremium: boolean;
+  isActive?: boolean;
   createdAt: string;
 }
 
