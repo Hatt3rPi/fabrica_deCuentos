@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../hooks/useNotifications';
 import { 
   Notification, 
@@ -11,6 +12,7 @@ interface NotificationCenterProps {
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
+  const navigate = useNavigate();
   const { 
     notifications, 
     unreadCount, 
@@ -54,14 +56,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
     if (notification.actions && notification.actions.length > 0) {
       const primaryAction = notification.actions[0];
       if (primaryAction.url) {
-        window.location.href = primaryAction.url;
+        navigate(primaryAction.url);
       }
     } else {
       // Default navigation based on notification type
       switch (notification.type) {
         case NotificationType.CHARACTER_GENERATION_COMPLETE:
           if (notification.data?.characterId) {
-            window.location.href = `/personaje/${notification.data.characterId}`;
+            navigate(`/personaje/${notification.data.characterId}`);
           }
           break;
         // Handle other notification types
@@ -376,7 +378,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (action.url) {
-                                      window.location.href = action.url;
+                                      navigate(action.url);
                                     }
                                     // Handle other action types
                                   }}
@@ -403,17 +405,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
 
       {/* Footer */}
       <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-center">
-        <a
-          href="/configuracion/notificaciones"
-          className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
+        <button
           onClick={(e) => {
             e.preventDefault();
-            // Navigate to notification settings
-            window.location.href = '/configuracion/notificaciones';
+            navigate('/configuracion/notificaciones');
           }}
+          className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 cursor-pointer underline"
         >
           Configurar preferencias de notificaciones
-        </a>
+        </button>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useLocation, Link } from 'react-router-dom';
+import { useState, useCallback } from 'react';
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -16,53 +16,52 @@ export const PageTransition: React.FC<PageTransitionProps> = ({
   className = '',
 }) => {
   const [isAnimating, setIsAnimating] = useState(false);
-  const navigate = useNavigate();
-  // La ubicación se maneja internamente
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (isAnimating) return;
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    // Prevent multiple simultaneous navigations
+    if (isAnimating) {
+      e.preventDefault();
+      return;
+    }
     
-    setIsAnimating(true);
-    
-    // Si hay un onClick personalizado, lo ejecutamos
+    // Execute custom onClick if provided
     if (onClick) {
       onClick();
     }
     
-    // Navegamos después de un pequeño retraso para permitir la animación
-    setTimeout(() => {
-      if (to) {
-        navigate(to);
-      }
-      // Reseteamos el estado después de la navegación
-      setTimeout(() => setIsAnimating(false), 500);
-    }, 300);
-  };
+    // If no 'to' prop, let default behavior proceed (no navigation)
+    if (!to) {
+      return;
+    }
 
-  return (
-    <>
-      <AnimatePresence>
-        {isAnimating && (
-          <motion.div
-            className="fixed inset-0 z-50"
-            style={{ backgroundColor: '#F8F4E9' }} // Color hueso
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ duration: 0.5, ease: 'easeInOut' }}
-          />
-        )}
-      </AnimatePresence>
-      
-      <button 
-        onClick={handleClick} 
+    // Set animating state briefly to prevent rapid clicks
+    setIsAnimating(true);
+    setTimeout(() => setIsAnimating(false), 300);
+  }, [isAnimating, onClick, to]);
+
+  // If there's a 'to' prop, use Link for proper React Router navigation
+  if (to) {
+    return (
+      <Link 
+        to={to}
+        onClick={handleClick}
         className={className}
-        disabled={isAnimating}
       >
         {children}
-      </button>
-    </>
+      </Link>
+    );
+  }
+
+  // If no 'to' prop, render as button for custom onClick behavior
+  return (
+    <button 
+      onClick={handleClick} 
+      className={className}
+      disabled={isAnimating}
+      type="button"
+    >
+      {children}
+    </button>
   );
 };
 
