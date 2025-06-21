@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fix: Navigation 404 Errors (2025-06-21)
+- **Issue #213 - Navigation 404 Errors**: Resueltos errores 404 intermitentes causados por patrones de navegación mixtos
+  - **NotificationCenter.tsx**: Reemplazados `window.location.href` con `useNavigate()` para navegación consistente
+  - **PageTransition.tsx**: Eliminado `preventDefault()` y setTimeout que causaban race conditions
+  - **App.tsx**: Consolidado a un solo `AnimatePresence` para evitar conflictos de sincronización
+  - **Resultado**: Navegación predecible y eliminación completa de errores 404 en sidebar y notificaciones
+  - **Documentación**: `/docs/solutions/fix-navigation-404-errors/README.md`
+
 ### Optimizaciones Story Export (2025-06-21)
 - **Query Optimization**: Optimizada consulta de páginas en `story-export/index.ts` líneas 215-220
   - Cambio de `select('*')` a `select('id, page_number, text, image_url')` para mejor rendimiento
