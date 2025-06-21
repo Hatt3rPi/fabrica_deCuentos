@@ -557,7 +557,40 @@ function generateHTMLContent(
     console.log(`[story-export] 📐 pageConfig.position: ${pageConfig.position}`);
     console.log(`[story-export] 🎨 pageConfig.containerStyle.background: ${pageConfig.containerStyle?.background}`);
     console.log(`[story-export] 📏 pageConfig.containerStyle.padding: ${pageConfig.containerStyle?.padding}`);
+    console.log(`[story-export] 🎨 coverConfig.fontFamily: ${coverConfig.fontFamily}`);
+    console.log(`[story-export] 📐 coverConfig.position: ${coverConfig.position}`);
   }
+  
+  // Extraer fuentes únicas para importar de Google Fonts
+  const extractFontName = (fontFamily: string): string => {
+    // Limpiar comillas y obtener solo el nombre de la fuente
+    return fontFamily?.replace(/["']/g, '').split(',')[0].trim() || '';
+  };
+  
+  const fonts = new Set<string>();
+  if (coverConfig.fontFamily) {
+    const coverFont = extractFontName(coverConfig.fontFamily);
+    if (coverFont && coverFont !== 'cursive' && coverFont !== 'sans-serif') {
+      fonts.add(coverFont);
+    }
+  }
+  if (pageConfig.fontFamily) {
+    const pageFont = extractFontName(pageConfig.fontFamily);
+    if (pageFont && pageFont !== 'cursive' && pageFont !== 'sans-serif') {
+      fonts.add(pageFont);
+    }
+  }
+  // Siempre incluir Indie Flower como fallback
+  fonts.add('Indie Flower');
+  
+  // Generar imports de Google Fonts
+  const fontImports = Array.from(fonts).map(font => {
+    // Manejar espacios en nombres de fuentes
+    const urlFont = font.replace(/\s+/g, '+');
+    return `<link href="https://fonts.googleapis.com/css2?family=${urlFont}&display=swap" rel="stylesheet">`;
+  }).join('\n      ');
+  
+  console.log(`[story-export] 📚 Fuentes a importar:`, Array.from(fonts));
 
   // Generar estilos dinámicos desde la configuración (misma estructura que /read)
   const generateDynamicStyles = () => {
@@ -566,64 +599,94 @@ function generateHTMLContent(
       return '';
     }
     
+    // Procesar fontFamily correctamente (remover escapes y comillas extras)
+    const processFontFamily = (fontFamily: string): string => {
+      if (!fontFamily) return 'Indie Flower';
+      // Remover escapes y comillas extras
+      return fontFamily.replace(/\\/g, '').replace(/^["']|["']$/g, '');
+    };
+    
+    const coverFontFamily = processFontFamily(coverConfig.fontFamily);
+    const pageFontFamily = processFontFamily(pageConfig.fontFamily);
+    
     return `
-      /* Estilos dinámicos de portada */
+      /* Estilos dinámicos de portada - Con !important para override */
       .cover-title {
-        font-family: "${coverConfig.fontFamily || 'Indie Flower'}", cursive;
-        font-size: ${coverConfig.fontSize || '4rem'};
-        font-weight: ${coverConfig.fontWeight || 'bold'};
-        color: ${coverConfig.color || 'white'};
-        text-shadow: ${coverConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.8)'};
-        text-align: ${coverConfig.textAlign || 'center'};
-        letter-spacing: ${coverConfig.letterSpacing || '1px'};
+        font-family: ${coverFontFamily}, cursive !important;
+        font-size: ${coverConfig.fontSize || '4rem'} !important;
+        font-weight: ${coverConfig.fontWeight || 'bold'} !important;
+        color: ${coverConfig.color || 'white'} !important;
+        text-shadow: ${coverConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.8)'} !important;
+        text-align: ${coverConfig.textAlign || 'center'} !important;
+        ${coverConfig.letterSpacing ? `letter-spacing: ${coverConfig.letterSpacing} !important;` : ''}
+        ${coverConfig.textTransform ? `text-transform: ${coverConfig.textTransform} !important;` : ''}
       }
       
       .cover-overlay {
-        background: ${coverConfig.containerStyle?.background || 'transparent'};
-        padding: ${coverConfig.containerStyle?.padding || '2rem 3rem'};
-        border-radius: ${coverConfig.containerStyle?.borderRadius || '0'};
-        max-width: ${coverConfig.containerStyle?.maxWidth || '85%'};
-        ${coverConfig.containerStyle?.border ? `border: ${coverConfig.containerStyle.border};` : ''}
-        ${coverConfig.containerStyle?.boxShadow ? `box-shadow: ${coverConfig.containerStyle.boxShadow};` : ''}
-        ${coverConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${coverConfig.containerStyle.backdropFilter};` : ''}
+        background: ${coverConfig.containerStyle?.background || 'transparent'} !important;
+        padding: ${coverConfig.containerStyle?.padding || '2rem 3rem'} !important;
+        border-radius: ${coverConfig.containerStyle?.borderRadius || '0'} !important;
+        max-width: ${coverConfig.containerStyle?.maxWidth || '85%'} !important;
+        ${coverConfig.containerStyle?.border ? `border: ${coverConfig.containerStyle.border} !important;` : ''}
+        ${coverConfig.containerStyle?.boxShadow ? `box-shadow: ${coverConfig.containerStyle.boxShadow} !important;` : ''}
+        ${coverConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${coverConfig.containerStyle.backdropFilter} !important;` : ''}
       }
       
       /* Posicionamiento dinámico de portada */
       .cover-page {
-        ${coverConfig.position === 'top' ? 'align-items: flex-start; padding-top: 3rem;' : ''}
-        ${coverConfig.position === 'center' ? 'align-items: center;' : ''}
-        ${coverConfig.position === 'bottom' ? 'align-items: flex-end; padding-bottom: 3rem;' : ''}
+        ${coverConfig.position === 'top' ? 'align-items: flex-start !important; padding-top: 3rem !important;' : ''}
+        ${coverConfig.position === 'center' ? 'align-items: center !important; padding-top: 0 !important;' : ''}
+        ${coverConfig.position === 'bottom' ? 'align-items: flex-end !important; padding-bottom: 3rem !important; padding-top: 0 !important;' : ''}
       }
       
       /* Estilos dinámicos de páginas */
       .story-text {
-        font-family: "${pageConfig.fontFamily || 'Indie Flower'}", cursive;
-        font-size: ${pageConfig.fontSize || '2.2rem'}; /* Usar tamaño real del template */
-        font-weight: ${pageConfig.fontWeight || '600'};
-        line-height: ${pageConfig.lineHeight || '1.4'};
-        color: ${pageConfig.color || 'white'};
-        text-shadow: ${pageConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.9)'};
-        text-align: ${pageConfig.textAlign || 'center'};
+        font-family: ${pageFontFamily}, cursive !important;
+        font-size: ${pageConfig.fontSize || '2.2rem'} !important;
+        font-weight: ${pageConfig.fontWeight || '600'} !important;
+        line-height: ${pageConfig.lineHeight || '1.4'} !important;
+        color: ${pageConfig.color || 'white'} !important;
+        text-shadow: ${pageConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.9)'} !important;
+        text-align: ${pageConfig.textAlign || 'center'} !important;
       }
       
       .page-overlay {
-        background: ${pageConfig.containerStyle?.background || 'transparent'};
-        padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'};
-        min-height: ${pageConfig.containerStyle?.minHeight || '25%'};
-        ${pageConfig.containerStyle?.border ? `border: ${pageConfig.containerStyle.border};` : ''}
-        ${pageConfig.containerStyle?.borderRadius ? `border-radius: ${pageConfig.containerStyle.borderRadius};` : ''}
-        ${pageConfig.containerStyle?.boxShadow ? `box-shadow: ${pageConfig.containerStyle.boxShadow};` : ''}
-        ${pageConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${pageConfig.containerStyle.backdropFilter};` : ''}
+        position: relative;
+        background: ${pageConfig.containerStyle?.background || 'transparent'} !important;
+        padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'} !important;
+        min-height: ${pageConfig.containerStyle?.minHeight || '25%'} !important;
+        ${pageConfig.containerStyle?.maxWidth ? `max-width: ${pageConfig.containerStyle.maxWidth} !important;` : ''}
+        ${pageConfig.containerStyle?.border ? `border: ${pageConfig.containerStyle.border} !important;` : ''}
+        ${pageConfig.containerStyle?.borderRadius ? `border-radius: ${pageConfig.containerStyle.borderRadius} !important;` : ''}
+        ${pageConfig.containerStyle?.boxShadow ? `box-shadow: ${pageConfig.containerStyle.boxShadow} !important;` : ''}
+        ${pageConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${pageConfig.containerStyle.backdropFilter} !important;` : ''}
         
         /* Alineación vertical del contenedor basada en template */
-        ${pageConfig.verticalAlign ? `justify-content: ${pageConfig.verticalAlign};` : 'justify-content: flex-end;'}
+        display: flex !important;
+        flex-direction: column !important;
+        ${pageConfig.verticalAlign ? `justify-content: ${pageConfig.verticalAlign} !important;` : 'justify-content: flex-end !important;'}
       }
+      
+      /* Gradiente overlay si existe */
+      ${pageConfig.containerStyle?.gradientOverlay ? `
+      .page-overlay::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: ${pageConfig.containerStyle.gradientOverlay};
+        border-radius: inherit;
+        z-index: -1;
+      }
+      ` : ''}
       
       /* Posicionamiento dinámico basado en template */
       .story-page {
-        ${pageConfig.position === 'top' ? 'align-items: flex-start;' : ''}
-        ${pageConfig.position === 'center' ? 'align-items: center;' : ''}
-        ${pageConfig.position === 'bottom' ? 'align-items: flex-end;' : pageConfig.position ? '' : 'align-items: flex-end;'} /* Default bottom si no está definido */
+        ${pageConfig.position === 'top' ? 'align-items: flex-start !important;' : ''}
+        ${pageConfig.position === 'center' ? 'align-items: center !important;' : ''}
+        ${pageConfig.position === 'bottom' ? 'align-items: flex-end !important;' : 'align-items: flex-end !important;'}
       }
     `;
   };
@@ -675,34 +738,24 @@ function generateHTMLContent(
       <title>${story.title}</title>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
+      ${fontImports}
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');
-        
-        ${dynamicCSS}
-        
-        /* Estilos dinámicos de la configuración */
-        ${generateDynamicStyles()}
-        
+        /* Reset y configuración base */
         * {
           box-sizing: border-box;
-        }
-        
-        .indie-flower-regular {
-          font-family: "Indie Flower", cursive;
-          font-weight: 400;
-          font-style: normal;
         }
         
         body { 
           margin: 0; 
           padding: 0;
-          font-family: "Indie Flower", cursive;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
         
-        /* PORTADA - Imagen de fondo con título superpuesto */
+        /* CSS dinámico de tamaño de página */
+        ${dynamicCSS}
+        
+        /* ESTRUCTURA BASE - Sin estilos hardcodeados */
         .cover-page {
           background-size: cover;
           background-position: center;
@@ -710,24 +763,10 @@ function generateHTMLContent(
           page-break-after: always;
           position: relative;
           display: flex;
-          align-items: flex-start;
           justify-content: center;
-          padding-top: 3rem;
           ${coverBackgroundImage ? `background-image: url('${coverBackgroundImage}');` : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'}
         }
         
-        /* Los estilos de .cover-overlay y .cover-title son generados dinámicamente arriba */
-        
-        .cover-subtitle {
-          font-family: "Indie Flower", cursive;
-          font-size: 1.5rem;
-          color: white;
-          margin: 1rem 0 0 0;
-          font-style: normal;
-          text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        }
-        
-        /* PÁGINAS DEL CUENTO - Imagen de fondo con texto superpuesto */
         .story-page {
           background-size: cover;
           background-position: center;
@@ -737,10 +776,13 @@ function generateHTMLContent(
           display: flex;
           padding: 0;
           margin: 0;
-          /* Posicionamiento será manejado dinámicamente arriba */
         }
         
-        /* Los estilos de .page-overlay y .story-text son generados dinámicamente arriba */
+        /* Z-index para asegurar que el texto esté encima del gradiente */
+        .story-text {
+          position: relative;
+          z-index: 1;
+        }
         
         /* Páginas sin imagen - diseño alternativo */
         .story-page:not([style*="background-image"]) {
@@ -755,32 +797,6 @@ function generateHTMLContent(
           background: linear-gradient(135deg, #ffd3e1 0%, #c44569 100%);
         }
         
-        /* Optimizaciones para impresión */
-        @media print {
-          .cover-title {
-            font-size: 3rem;
-            color: white;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
-          }
-          
-          .cover-subtitle {
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-          }
-          
-          .story-text {
-            /* Usar el tamaño del template para impresión también */
-            font-size: ${pageConfig.fontSize || '2.2rem'};
-            color: ${pageConfig.color || 'white'};
-            text-shadow: ${pageConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.9)'};
-          }
-          
-          .page-overlay {
-            padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'};
-            background: ${pageConfig.containerStyle?.background || 'transparent'};
-          }
-        }
-        
         /* Evitar saltos de página dentro de elementos */
         .cover-page, .story-page {
           page-break-inside: avoid;
@@ -790,6 +806,9 @@ function generateHTMLContent(
           orphans: 3;
           widows: 3;
         }
+        
+        /* ESTILOS DINÁMICOS DEL TEMPLATE - Aplicados al final para máxima prioridad */
+        ${generateDynamicStyles()}
       </style>
     </head>
     <body>
