@@ -57,10 +57,9 @@ const StoryReader: React.FC = () => {
   const backgroundImage = getBackgroundImage(currentPageIndex, currentPage?.image_url);
   const imageDimensions = useImageDimensions(backgroundImage);
 
-  // Memoized responsive font size calculation
-  const responsiveFontSize = useMemo(() => {
-    const baseFontSize = parseFloat(textStyles.fontSize as string || '16');
-    return `clamp(${baseFontSize * 0.7}px, ${textStyles.fontSize}, ${baseFontSize * 1.2}px)`;
+  // Use exact fontSize from configuration to ensure consistency with PDF and template
+  const exactFontSize = useMemo(() => {
+    return textStyles.fontSize || '16px';
   }, [textStyles.fontSize]);
 
   // Render loading state
@@ -215,7 +214,7 @@ const StoryReader: React.FC = () => {
                       style={{
                         ...textStyles,
                         width: '100%',
-                        fontSize: responsiveFontSize,
+                        fontSize: exactFontSize, // Use exact configured fontSize
                         lineHeight: textStyles.lineHeight || '1.4'
                       }}
                       className="text-center sm:text-left"
