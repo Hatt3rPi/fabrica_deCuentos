@@ -547,21 +547,24 @@ function generateHTMLContent(
   // Generar CSS dinámico basado en aspect ratio
   const dynamicCSS = generateDynamicPageCSS(aspectRatio);
   
+  // Definir configuraciones fuera del scope para uso global
+  const coverConfig = styleConfig?.coverConfig?.title || {};
+  const pageConfig = styleConfig?.pageConfig?.text || {};
+  
+  if (styleConfig) {
+    console.log('[story-export] 🎨 Configuración de estilos detectada:');
+    console.log(`[story-export] 📝 pageConfig.fontSize: ${pageConfig.fontSize}`);
+    console.log(`[story-export] 📐 pageConfig.position: ${pageConfig.position}`);
+    console.log(`[story-export] 🎨 pageConfig.containerStyle.background: ${pageConfig.containerStyle?.background}`);
+    console.log(`[story-export] 📏 pageConfig.containerStyle.padding: ${pageConfig.containerStyle?.padding}`);
+  }
+
   // Generar estilos dinámicos desde la configuración (misma estructura que /read)
   const generateDynamicStyles = () => {
     if (!styleConfig) {
       console.log('[story-export] ⚠️ No styleConfig encontrado, usando estilos por defecto');
       return '';
     }
-    
-    const coverConfig = styleConfig.coverConfig?.title || {};
-    const pageConfig = styleConfig.pageConfig?.text || {};
-    
-    console.log('[story-export] 🎨 Configuración de estilos detectada:');
-    console.log(`[story-export] 📝 pageConfig.fontSize: ${pageConfig.fontSize}`);
-    console.log(`[story-export] 📐 pageConfig.position: ${pageConfig.position}`);
-    console.log(`[story-export] 🎨 pageConfig.containerStyle.background: ${pageConfig.containerStyle?.background}`);
-    console.log(`[story-export] 📏 pageConfig.containerStyle.padding: ${pageConfig.containerStyle?.padding}`);
     
     return `
       /* Estilos dinámicos de portada */
