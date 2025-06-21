@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Optimizaciones Story Export (2025-06-21)
+- **Query Optimization**: Optimizada consulta de páginas en `story-export/index.ts` líneas 215-220
+  - Cambio de `select('*')` a `select('id, page_number, text, image_url')` para mejor rendimiento
+  - Agregado campo de desempate `order('id')` para orden consistente de páginas
+  - Implementada validación robusta de datos de páginas con filtering automático
+  - Mejorado logging para debugging de páginas inválidas
+  - Documentación actualizada en `/docs/tech/story-export.md`
+
 ## 2025-01-20 - Implementación completa de size/quality dinámico en edge functions
 - **8 Edge Functions actualizadas**: Implementación estandarizada de configuración dinámica de size/quality
   - **Patrón A (BD + fallback)**: generate-cover, generate-story, generate-thumbnail-variant, generate-cover-variant

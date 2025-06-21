@@ -16,11 +16,12 @@ Ubicación: `supabase/functions/story-export/index.ts`
 
 **Flujo de Procesamiento:**
 1. **Validación**: Autenticación de usuario y permisos
-2. **Datos**: Obtención completa del cuento (story, pages, characters, design)
-3. **HTML**: Generación de contenido HTML con metadatos y styling
-4. **PDF**: Conversión a PDF (actualmente simulado, ready para Puppeteer)
-5. **Storage**: Subida a bucket `exports` con estructura organizada
-6. **Database**: Actualización de estado completado con URLs
+2. **Datos**: Obtención optimizada del cuento (story, pages, characters, design)
+3. **Validación de Páginas**: Verificación de integridad de datos de páginas
+4. **HTML**: Generación de contenido HTML con metadatos y styling
+5. **PDF**: Conversión a PDF (actualmente simulado, ready para Puppeteer)
+6. **Storage**: Subida a bucket `exports` con estructura organizada
+7. **Database**: Actualización de estado completado con URLs
 
 **Estructura de Storage:**
 ```
@@ -61,6 +62,42 @@ interface StoryExportRequest {
   format?: 'pdf' | 'epub' | 'web';
   include_metadata?: boolean;
 }
+```
+
+## Optimizaciones de Query (Junio 2025)
+
+### Mejoras en Obtención de Páginas
+La consulta de páginas del cuento fue optimizada en líneas 215-220 del archivo `story-export/index.ts`:
+
+**Cambios Implementados:**
+1. **Selección específica de campos**: Cambió de `select('*')` a `select('id, page_number, text, image_url')`
+   - Mejora el rendimiento al transferir solo los datos necesarios
+   - Los campos `prompt`, `created_at`, `updated_at` no se usan en la exportación
+
+2. **Ordenamiento mejorado**: Agregó campo de desempate `order('id', { ascending: true })`
+   - Garantiza orden consistente en caso de empates en `page_number`
+   - Previene variaciones en el orden de páginas entre ejecuciones
+
+3. **Validación de datos**: Implementó validación robusta de páginas
+   - Verifica que existan páginas antes de proceder
+   - Valida que cada página tenga `page_number`, `text` e `image_url` válidos
+   - Filtra páginas inválidas en lugar de fallar completamente
+   - Proporciona logging detallado para debugging
+
+**Beneficios:**
+- Mejor rendimiento en consultas de base de datos
+- Mayor robustez ante datos incompletos o corruptos
+- Orden consistente de páginas en el PDF final
+- Logging mejorado para troubleshooting
+
+**Query Optimizada:**
+```typescript
+const { data: pages, error: pagesError } = await supabaseAdmin
+  .from('story_pages')
+  .select('id, page_number, text, image_url')
+  .eq('story_id', storyId)
+  .order('page_number', { ascending: true })
+  .order('id', { ascending: true }); // Campo de desempate
 ```
 
 ## Generación de PDF
