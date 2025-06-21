@@ -1,21 +1,72 @@
 name: Verificación funcionamiento CORE
 
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
+  issue_comment:
+    types: [created]
 
 jobs:
+  check-comment:
+    # Solo ejecutar en comentarios de PR que contengan @QA_lacuenteria
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '@QA_lacuenteria')
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.check.outputs.should-run }}
+    steps:
+      - name: Check if comment contains trigger
+        id: check
+        run: |
+          echo "should-run=true" >> $GITHUB_OUTPUT
+          echo "🚀 Trigger detectado: @QA_lacuenteria"
+      
+      - name: Add reaction to comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            })
+      
+      - name: Post initial status comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '🤖 **QA Bot**: Iniciando verificación de funcionamiento CORE...\n\n⏳ Este proceso puede tomar varios minutos.'
+            })
+  
   cypress-run:
+    needs: check-comment
+    if: needs.check-comment.outputs.should-run == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         node-version: [18.x]
     steps:
-      - name: Checkout
+      - name: Get PR branch
+        uses: actions/github-script@v6
+        id: get-pr
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            core.setOutput('head-ref', pr.data.head.ref);
+            core.setOutput('head-sha', pr.data.head.sha);
+            console.log(`PR branch: ${pr.data.head.ref}, SHA: ${pr.data.head.sha}`);
+      
+      - name: Checkout PR
         uses: actions/checkout@v3
+        with:
+          ref: ${{ steps.get-pr.outputs.head-sha }}
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
@@ -59,3 +110,29 @@ jobs:
         with:
           name: cypress-videos
           path: cypress/videos
+      
+      - name: Post result comment
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            
+            let message = '';
+            if (status === 'success') {
+              message = `✅ **QA Bot**: Verificación completada exitosamente!\n\nTodas las pruebas CORE pasaron correctamente.`;
+            } else if (status === 'failure') {
+              message = `❌ **QA Bot**: La verificación falló.\n\nAlgunas pruebas no pasaron. Por favor revisa los logs y capturas.`;
+            } else {
+              message = `⚠️ **QA Bot**: La verificación fue cancelada o tuvo un error inesperado.`;
+            }
+            
+            message += `\n\n[Ver detalles de la ejecución](${runUrl})`;
+            
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message
+            });
