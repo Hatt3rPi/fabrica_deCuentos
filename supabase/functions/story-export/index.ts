@@ -572,27 +572,64 @@ function generateHTMLContent(
     console.log(`[story-export] 📐 coverConfig.position: ${coverConfig.position}`);
   }
   
-  // Extraer fuentes únicas para importar de Google Fonts
-  const extractFontName = (fontFamily: string): string => {
-    // Limpiar comillas y obtener solo el nombre de la fuente
-    return fontFamily?.replace(/["']/g, '').split(',')[0].trim() || '';
+  // Constantes para CSS y validaciones
+  const CSS_CONSTANTS = {
+    DEFAULT_FONTS: {
+      FALLBACK: 'Indie Flower',
+      CURSIVE: 'cursive'
+    },
+    POSITIONS: {
+      CENTER: 'center',
+      TOP: 'flex-start',
+      BOTTOM: 'flex-end'
+    }
+  } as const;
+
+  // Función robusta para extraer y validar nombres de fuentes
+  const extractAndValidateFontName = (fontFamily: string): string | null => {
+    if (!fontFamily) return null;
+    
+    // Remover escapes
+    let cleaned = fontFamily.replace(/\\/g, '');
+    
+    // Extraer nombre de fuente
+    const match = cleaned.match(/["']([^"']+)["']/);
+    const fontName = match ? match[1].trim() : cleaned.replace(/["']/g, '').split(',')[0].trim();
+    
+    // Validar que no sea un tipo genérico
+    if (!fontName || fontName === 'cursive' || fontName === 'sans-serif' || fontName === 'serif' || fontName === 'monospace') {
+      return null;
+    }
+    
+    // Validación de seguridad: solo caracteres alfanuméricos, espacios y guiones
+    if (!/^[a-zA-Z0-9\s\-]+$/.test(fontName) || fontName.length > 50) {
+      console.warn(`[story-export] ⚠️ Nombre de fuente inválido: "${fontName}"`);
+      return null;
+    }
+    
+    return fontName;
   };
   
   const fonts = new Set<string>();
+  
+  // Extraer y validar fuente de portada
   if (coverConfig.fontFamily) {
-    const coverFont = extractFontName(coverConfig.fontFamily);
-    if (coverFont && coverFont !== 'cursive' && coverFont !== 'sans-serif') {
+    const coverFont = extractAndValidateFontName(coverConfig.fontFamily);
+    if (coverFont) {
       fonts.add(coverFont);
     }
   }
+  
+  // Extraer y validar fuente de páginas
   if (pageConfig.fontFamily) {
-    const pageFont = extractFontName(pageConfig.fontFamily);
-    if (pageFont && pageFont !== 'cursive' && pageFont !== 'sans-serif') {
+    const pageFont = extractAndValidateFontName(pageConfig.fontFamily);
+    if (pageFont) {
       fonts.add(pageFont);
     }
   }
-  // Siempre incluir Indie Flower como fallback
-  fonts.add('Indie Flower');
+  
+  // Siempre incluir fuente fallback
+  fonts.add(CSS_CONSTANTS.DEFAULT_FONTS.FALLBACK);
   
   // Generar imports de Google Fonts
   const fontImports = Array.from(fonts).map(font => {
@@ -601,7 +638,7 @@ function generateHTMLContent(
     return `<link href="https://fonts.googleapis.com/css2?family=${urlFont}&display=swap" rel="stylesheet">`;
   }).join('\n      ');
   
-  console.log(`[story-export] 📚 Fuentes a importar:`, Array.from(fonts));
+  console.log(`[story-export] 📚 Fuentes a importar (${fonts.size}):`, Array.from(fonts));
 
   // Generar estilos dinámicos desde la configuración (misma estructura que /read)
   const generateDynamicStyles = () => {
@@ -610,20 +647,20 @@ function generateHTMLContent(
       return '';
     }
     
-    // Procesar fontFamily correctamente (remover escapes y comillas extras)
-    const processFontFamily = (fontFamily: string): string => {
-      if (!fontFamily) return 'Indie Flower';
-      // Remover escapes y comillas extras
-      return fontFamily.replace(/\\/g, '').replace(/^["']|["']$/g, '');
-    };
+    // Usar función unificada para procesar fuentes
+    const coverFontFamily = extractAndValidateFontName(coverConfig.fontFamily) || CSS_CONSTANTS.DEFAULT_FONTS.FALLBACK;
+    const pageFontFamily = extractAndValidateFontName(pageConfig.fontFamily) || CSS_CONSTANTS.DEFAULT_FONTS.FALLBACK;
     
-    const coverFontFamily = processFontFamily(coverConfig.fontFamily);
-    const pageFontFamily = processFontFamily(pageConfig.fontFamily);
+    // Logs de debug condicionales (solo si hay configuración de debug)
+    if (console.debug) {
+      console.debug(`[story-export] 🔤 Cover font procesada: "${coverFontFamily}" (original: "${coverConfig.fontFamily}")`);
+      console.debug(`[story-export] 🔤 Page font procesada: "${pageFontFamily}" (original: "${pageConfig.fontFamily}")`);
+    }
     
     return `
       /* Estilos dinámicos de portada - Con !important para override */
       .cover-title {
-        font-family: ${coverFontFamily}, cursive !important;
+        font-family: ${coverFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
         font-size: ${coverConfig.fontSize || '4rem'} !important;
         font-weight: ${coverConfig.fontWeight || 'bold'} !important;
         color: ${coverConfig.color || 'white'} !important;
@@ -652,7 +689,7 @@ function generateHTMLContent(
       
       /* Estilos dinámicos de páginas */
       .story-text {
-        font-family: ${pageFontFamily}, cursive !important;
+        font-family: ${pageFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
         font-size: ${pageConfig.fontSize || '2.2rem'} !important;
         font-weight: ${pageConfig.fontWeight || '600'} !important;
         line-height: ${pageConfig.lineHeight || '1.4'} !important;
@@ -666,7 +703,7 @@ function generateHTMLContent(
         background: ${pageConfig.containerStyle?.background || 'transparent'} !important;
         padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'} !important;
         min-height: ${pageConfig.containerStyle?.minHeight || '25%'} !important;
-        ${pageConfig.containerStyle?.maxWidth ? `max-width: ${pageConfig.containerStyle.maxWidth} !important;` : ''}
+        width: ${pageConfig.containerStyle?.maxWidth || '100%'} !important;
         ${pageConfig.containerStyle?.border ? `border: ${pageConfig.containerStyle.border} !important;` : ''}
         ${pageConfig.containerStyle?.borderRadius ? `border-radius: ${pageConfig.containerStyle.borderRadius} !important;` : ''}
         ${pageConfig.containerStyle?.boxShadow ? `box-shadow: ${pageConfig.containerStyle.boxShadow} !important;` : ''}
@@ -695,6 +732,7 @@ function generateHTMLContent(
       
       /* Posicionamiento dinámico basado en template */
       .story-page {
+        justify-content: center !important; /* Centrar horizontalmente */
         ${pageConfig.position === 'top' ? 'align-items: flex-start !important;' : ''}
         ${pageConfig.position === 'center' ? 'align-items: center !important;' : ''}
         ${pageConfig.position === 'bottom' ? 'align-items: flex-end !important;' : 'align-items: flex-end !important;'}
