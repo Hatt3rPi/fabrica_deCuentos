@@ -280,7 +280,7 @@ Deno.serve(async (req) => {
         .replace('{story}', title);
       const cstart = Date.now();
       const configuredSize = coverRow?.size || '1024x1024';
-      const configuredQuality = coverRow?.quality || 'high';
+      const configuredQuality = coverRow?.quality || 'standard';
       const coverPayload = {
         model: coverModel,
         prompt: promptText,

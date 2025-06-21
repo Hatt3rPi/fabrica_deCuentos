@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
         const start = Date.now();
         // Use configurable defaults - can be overridden via environment or future prompt configuration
         const defaultSize = Deno.env.get('DEFAULT_IMAGE_SIZE') || '1024x1024';
-        const defaultQuality = Deno.env.get('DEFAULT_IMAGE_QUALITY') || 'high';
+        const defaultQuality = Deno.env.get('DEFAULT_IMAGE_QUALITY') || 'standard';
         const defaultModel = Deno.env.get('DEFAULT_IMAGE_MODEL') || 'gpt-image-1';
         
         const payload = {

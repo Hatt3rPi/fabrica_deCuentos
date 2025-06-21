@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
           quality: configuredQuality,
           n: 1,
         },
-        files: { image: refBlob },
+        files: { image: blob },
         mimeType,
       });
       elapsed = Date.now() - start;

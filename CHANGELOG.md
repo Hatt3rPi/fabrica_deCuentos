@@ -2,11 +2,13 @@
 
 ## Unreleased
 
-## 2025-01-20 - Corrección tamaño de imagen en portadas
-- **generate-cover**: Corregido problema donde la generación de portadas no respetaba el tamaño "auto" configurado en admin
-  - Agregada migración para actualizar valores NULL de size/quality a 'auto' en PROMPT_CUENTO_PORTADA
-  - El problema ocurría porque los campos size/quality estaban NULL en la base de datos
-  - Documentación completa en `/docs/solutions/prompt-image-size-issue/`
+## 2025-01-20 - Implementación completa de size/quality dinámico en edge functions
+- **8 Edge Functions actualizadas**: Implementación estandarizada de configuración dinámica de size/quality
+  - **Patrón A (BD + fallback)**: generate-cover, generate-story, generate-thumbnail-variant, generate-cover-variant
+  - **Patrón B (env vars)**: generate-scene, generate-spreads, generate-variations (usan prompts dinámicos)
+  - **Bug fixes**: Corregido error `refBlob` → `blob` en generate-thumbnail-variant
+  - **Fallbacks unificados**: Estandarizado quality='standard' en todas las funciones
+  - **Documentación completa** en `/docs/solutions/prompt-image-size-issue/`
 
 ## 2025-01-19 - Refactorización StoryReader
 - **StoryReader.tsx**: Refactorizado componente de 414 líneas para mejorar mantenibilidad

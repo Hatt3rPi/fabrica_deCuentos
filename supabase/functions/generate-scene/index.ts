@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
   // Set up configurable defaults at function scope
   const defaultSize = Deno.env.get('DEFAULT_IMAGE_SIZE') || '1024x1024';
-  const defaultQuality = Deno.env.get('DEFAULT_IMAGE_QUALITY') || 'high';
+  const defaultQuality = Deno.env.get('DEFAULT_IMAGE_QUALITY') || 'standard';
   const defaultModel = Deno.env.get('DEFAULT_IMAGE_MODEL') || 'gpt-image-1';
 
   try {
