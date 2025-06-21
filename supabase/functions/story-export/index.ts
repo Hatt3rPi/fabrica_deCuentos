@@ -549,10 +549,19 @@ function generateHTMLContent(
   
   // Generar estilos dinámicos desde la configuración (misma estructura que /read)
   const generateDynamicStyles = () => {
-    if (!styleConfig) return '';
+    if (!styleConfig) {
+      console.log('[story-export] ⚠️ No styleConfig encontrado, usando estilos por defecto');
+      return '';
+    }
     
     const coverConfig = styleConfig.coverConfig?.title || {};
     const pageConfig = styleConfig.pageConfig?.text || {};
+    
+    console.log('[story-export] 🎨 Configuración de estilos detectada:');
+    console.log(`[story-export] 📝 pageConfig.fontSize: ${pageConfig.fontSize}`);
+    console.log(`[story-export] 📐 pageConfig.position: ${pageConfig.position}`);
+    console.log(`[story-export] 🎨 pageConfig.containerStyle.background: ${pageConfig.containerStyle?.background}`);
+    console.log(`[story-export] 📏 pageConfig.containerStyle.padding: ${pageConfig.containerStyle?.padding}`);
     
     return `
       /* Estilos dinámicos de portada */
@@ -586,7 +595,7 @@ function generateHTMLContent(
       /* Estilos dinámicos de páginas */
       .story-text {
         font-family: "${pageConfig.fontFamily || 'Indie Flower'}", cursive;
-        font-size: ${pageConfig.fontSize || '1.8rem'}; /* Reducir para coincidir con template */
+        font-size: ${pageConfig.fontSize || '2.2rem'}; /* Usar tamaño real del template */
         font-weight: ${pageConfig.fontWeight || '600'};
         line-height: ${pageConfig.lineHeight || '1.4'};
         color: ${pageConfig.color || 'white'};
@@ -595,18 +604,23 @@ function generateHTMLContent(
       }
       
       .page-overlay {
-        background: transparent; /* FORZAR transparente como en template */
-        padding: ${pageConfig.containerStyle?.padding || '2rem 3rem 3rem 3rem'}; /* Ajustar padding para coincidir con template */
-        min-height: auto; /* Altura automática como en template */
-        /* Eliminar bordes y sombras que no existen en template */
+        background: ${pageConfig.containerStyle?.background || 'transparent'};
+        padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'};
+        min-height: ${pageConfig.containerStyle?.minHeight || '25%'};
+        ${pageConfig.containerStyle?.border ? `border: ${pageConfig.containerStyle.border};` : ''}
+        ${pageConfig.containerStyle?.borderRadius ? `border-radius: ${pageConfig.containerStyle.borderRadius};` : ''}
+        ${pageConfig.containerStyle?.boxShadow ? `box-shadow: ${pageConfig.containerStyle.boxShadow};` : ''}
+        ${pageConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${pageConfig.containerStyle.backdropFilter};` : ''}
         
-        /* Alineación vertical del contenedor - SIEMPRE flex-end para coincidir con template */
-        justify-content: flex-end;
+        /* Alineación vertical del contenedor basada en template */
+        ${pageConfig.verticalAlign ? `justify-content: ${pageConfig.verticalAlign};` : 'justify-content: flex-end;'}
       }
       
-      /* Posicionamiento FIJO para coincidir con template - SIEMPRE bottom */
+      /* Posicionamiento dinámico basado en template */
       .story-page {
-        align-items: flex-end !important; /* FORZAR bottom independiente de configuración */
+        ${pageConfig.position === 'top' ? 'align-items: flex-start;' : ''}
+        ${pageConfig.position === 'center' ? 'align-items: center;' : ''}
+        ${pageConfig.position === 'bottom' ? 'align-items: flex-end;' : pageConfig.position ? '' : 'align-items: flex-end;'} /* Default bottom si no está definido */
       }
     `;
   };
@@ -718,9 +732,9 @@ function generateHTMLContent(
           page-break-after: always;
           position: relative;
           display: flex;
-          align-items: flex-end; /* FORZAR bottom como en template */
           padding: 0;
           margin: 0;
+          /* Posicionamiento será manejado dinámicamente arriba */
         }
         
         /* Los estilos de .page-overlay y .story-text son generados dinámicamente arriba */
@@ -752,14 +766,15 @@ function generateHTMLContent(
           }
           
           .story-text {
-            font-size: 1.4rem; /* Más pequeño para coincidir con template */
-            color: white;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            /* Usar el tamaño del template para impresión también */
+            font-size: ${pageConfig.fontSize || '2.2rem'};
+            color: ${pageConfig.color || 'white'};
+            text-shadow: ${pageConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.9)'};
           }
           
           .page-overlay {
-            padding: 2rem 3rem 3rem 3rem;
-            background: transparent !important; /* Asegurar transparencia en impresión */
+            padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'};
+            background: ${pageConfig.containerStyle?.background || 'transparent'};
           }
         }
         
