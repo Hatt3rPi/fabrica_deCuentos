@@ -586,7 +586,7 @@ function generateHTMLContent(
       /* Estilos dinámicos de páginas */
       .story-text {
         font-family: "${pageConfig.fontFamily || 'Indie Flower'}", cursive;
-        font-size: ${pageConfig.fontSize || '2.2rem'};
+        font-size: ${pageConfig.fontSize || '1.8rem'}; /* Reducir para coincidir con template */
         font-weight: ${pageConfig.fontWeight || '600'};
         line-height: ${pageConfig.lineHeight || '1.4'};
         color: ${pageConfig.color || 'white'};
@@ -595,23 +595,18 @@ function generateHTMLContent(
       }
       
       .page-overlay {
-        background: ${pageConfig.containerStyle?.background || 'transparent'};
-        padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'};
-        min-height: ${pageConfig.containerStyle?.minHeight || '25%'};
-        ${pageConfig.containerStyle?.border ? `border: ${pageConfig.containerStyle.border};` : ''}
-        ${pageConfig.containerStyle?.borderRadius ? `border-radius: ${pageConfig.containerStyle.borderRadius};` : ''}
-        ${pageConfig.containerStyle?.boxShadow ? `box-shadow: ${pageConfig.containerStyle.boxShadow};` : ''}
-        ${pageConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${pageConfig.containerStyle.backdropFilter};` : ''}
+        background: transparent; /* FORZAR transparente como en template */
+        padding: ${pageConfig.containerStyle?.padding || '2rem 3rem 3rem 3rem'}; /* Ajustar padding para coincidir con template */
+        min-height: auto; /* Altura automática como en template */
+        /* Eliminar bordes y sombras que no existen en template */
         
-        /* Alineación vertical del contenedor */
-        ${pageConfig.verticalAlign ? `justify-content: ${pageConfig.verticalAlign};` : 'justify-content: flex-end;'}
+        /* Alineación vertical del contenedor - SIEMPRE flex-end para coincidir con template */
+        justify-content: flex-end;
       }
       
-      /* Posicionamiento dinámico de páginas */
+      /* Posicionamiento FIJO para coincidir con template - SIEMPRE bottom */
       .story-page {
-        ${pageConfig.position === 'top' ? 'align-items: flex-start;' : ''}
-        ${pageConfig.position === 'center' ? 'align-items: center;' : ''}
-        ${pageConfig.position === 'bottom' ? 'align-items: flex-end;' : ''}
+        align-items: flex-end !important; /* FORZAR bottom independiente de configuración */
       }
     `;
   };
@@ -723,7 +718,7 @@ function generateHTMLContent(
           page-break-after: always;
           position: relative;
           display: flex;
-          align-items: flex-end;
+          align-items: flex-end; /* FORZAR bottom como en template */
           padding: 0;
           margin: 0;
         }
@@ -757,13 +752,14 @@ function generateHTMLContent(
           }
           
           .story-text {
-            font-size: 1.6rem;
+            font-size: 1.4rem; /* Más pequeño para coincidir con template */
             color: white;
             text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
           }
           
           .page-overlay {
             padding: 2rem 3rem 3rem 3rem;
+            background: transparent !important; /* Asegurar transparencia en impresión */
           }
         }
         
