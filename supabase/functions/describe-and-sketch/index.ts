@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
     if (!openaiKey) throw new Error('Falta la clave de API de OpenAI');
     const { data: promptRow } = await supabaseAdmin
       .from('prompts')
-      .select('id, content, endpoint, model')
+      .select('id, content, endpoint, model, size, quality, width, height')
       .eq('type', 'PROMPT_CREAR_MINIATURA_PERSONAJE')
       .single();
     const characterPrompt = promptRow?.content || '';
@@ -307,12 +307,15 @@ Deno.serve(async (req) => {
     else {
       // En caso de no usar BFL.ai, utilizamos OpenAI directamente
       const startGenerate = Date.now();
+      const configuredSize = promptRow?.size || '1024x1024';
+      const configuredQuality = promptRow?.quality || 'standard';
       const result = await generateWithOpenAI({
         endpoint: apiEndpoint,
         payload: {
           model: apiModel,
           prompt: imagePrompt,
-          size: '1024x1024',
+          size: configuredSize,
+          quality: configuredQuality,
           n: 1,
         },
         files: { image: refBlob },
