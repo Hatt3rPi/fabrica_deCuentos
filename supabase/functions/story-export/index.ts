@@ -276,12 +276,22 @@ async function getCompleteStoryData(storyId: string, userId: string) {
     .eq('story_id', storyId)
     .maybeSingle();
 
-  // Obtener configuración de estilos activa
-  const { data: styleConfig } = await supabaseAdmin
-    .from('story_style_configs')
+  // Obtener configuración de estilos activa (mismo método que usa /read)
+  const { data: activeTemplate } = await supabaseAdmin
+    .from('story_style_templates')
     .select('*')
     .eq('is_active', true)
     .maybeSingle();
+
+  // Transformar a la estructura que usa /read
+  const styleConfig = activeTemplate ? {
+    id: activeTemplate.id,
+    name: activeTemplate.name,
+    coverConfig: activeTemplate.config_data.cover_config,
+    pageConfig: activeTemplate.config_data.page_config,
+    coverBackgroundUrl: undefined, // Templates no tienen backgrounds custom
+    pageBackgroundUrl: undefined
+  } : null;
 
   return {
     story: story as StoryData,
@@ -529,16 +539,20 @@ function generateHTMLContent(
   const coverPage = pages.find(p => p.page_number === 0);
   
   console.log(`[story-export] 🎨 Generando HTML con aspect ratio: ${aspectRatio}`);
+  console.log(`[story-export] 📖 Total páginas: ${pages.length}`);
+  console.log(`[story-export] 📑 Páginas interiores: ${storyPages.length}`);
+  console.log(`[story-export] 🏠 Portada encontrada:`, coverPage ? 'SÍ' : 'NO');
+  console.log(`[story-export] 🖼️ Imagen de portada:`, coverPage?.image_url || 'NINGUNA');
   
   // Generar CSS dinámico basado en aspect ratio
   const dynamicCSS = generateDynamicPageCSS(aspectRatio);
   
-  // Generar estilos dinámicos desde la configuración
+  // Generar estilos dinámicos desde la configuración (misma estructura que /read)
   const generateDynamicStyles = () => {
     if (!styleConfig) return '';
     
-    const coverConfig = styleConfig.cover_config?.title || {};
-    const pageConfig = styleConfig.page_config?.text || {};
+    const coverConfig = styleConfig.coverConfig?.title || {};
+    const pageConfig = styleConfig.pageConfig?.text || {};
     
     return `
       /* Estilos dinámicos de portada */
@@ -622,9 +636,12 @@ function generateHTMLContent(
       .replace(/<p><\/p>/g, '');
   }
 
-  // Usar imagen de fondo personalizada si existe
-  const pageBackgroundImage = styleConfig?.page_background_url || '';
-  const coverBackgroundImage = styleConfig?.cover_background_url || coverPage?.image_url || '';
+  // Usar imagen de fondo personalizada si existe (templates no tienen backgrounds custom)
+  const pageBackgroundImage = styleConfig?.pageBackgroundUrl || '';
+  const coverBackgroundImage = coverPage?.image_url || styleConfig?.coverBackgroundUrl || '';
+  
+  console.log(`[story-export] 🏞️ Background página:`, pageBackgroundImage || 'NINGUNO');
+  console.log(`[story-export] 🌄 Background portada:`, coverBackgroundImage || 'NINGUNO');
   
   const pagesContent = storyPages
     .map(page => `
