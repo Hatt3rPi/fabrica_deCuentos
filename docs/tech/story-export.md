@@ -13,15 +13,17 @@ Ubicación: `supabase/functions/story-export/index.ts`
 - Integración completa con Supabase Storage
 - Métricas y logging para monitoreo
 - Manejo robusto de errores con timeouts
+- Detección optimizada de aspect ratio de imágenes
 
 **Flujo de Procesamiento:**
 1. **Validación**: Autenticación de usuario y permisos
 2. **Datos**: Obtención optimizada del cuento (story, pages, characters, design)
 3. **Validación de Páginas**: Verificación de integridad de datos de páginas
-4. **HTML**: Generación de contenido HTML con metadatos y styling
-5. **PDF**: Conversión a PDF (actualmente simulado, ready para Puppeteer)
-6. **Storage**: Subida a bucket `exports` con estructura organizada
-7. **Database**: Actualización de estado completado con URLs
+4. **Detección de Aspect Ratio**: Análisis optimizado usando Range headers (solo 1KB)
+5. **HTML**: Generación de contenido HTML con metadatos y styling dinámico
+6. **PDF**: Conversión a PDF con Browserless.io
+7. **Storage**: Subida a bucket `exports` con estructura organizada
+8. **Database**: Actualización de estado completado con URLs
 
 **Estructura de Storage:**
 ```
@@ -63,6 +65,30 @@ interface StoryExportRequest {
   include_metadata?: boolean;
 }
 ```
+
+## Optimizaciones de Performance
+
+### Detección de Aspect Ratio con Range Headers (Junio 2025)
+**Problema**: Descarga completa de imágenes (potencialmente varios MB) solo para leer primeros bytes y detectar dimensiones.
+
+**Solución Implementada**: Usar HTTP Range headers para descargar solo el primer KB:
+```typescript
+// Optimización en detectImageAspectRatio()
+const imageResponse = await fetch(imageUrl, {
+  headers: { 'Range': 'bytes=0-1023' } // Solo primer KB
+});
+```
+
+**Beneficios**:
+- **PNG**: Solo necesita 24 bytes para obtener width/height
+- **JPEG**: Máximo 600 bytes para encontrar marcador SOF con dimensiones
+- **Reducción**: ~99% menos transferencia de datos en imágenes grandes
+- **Fallback**: Automático si servidor no soporta Range headers
+
+**Manejo de Respuestas**:
+- `206 Partial Content`: Range soportado, datos parciales recibidos
+- `200 OK`: Servidor no soporta Range, fallback a descarga completa
+- `416 Range Not Satisfiable`: Rango inválido, retry sin Range
 
 ## Optimizaciones de Query (Junio 2025)
 

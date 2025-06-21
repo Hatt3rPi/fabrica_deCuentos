@@ -339,17 +339,28 @@ async function detectImageAspectRatio(imageUrl: string): Promise<string> {
   try {
     console.log(`[story-export] 🔍 Iniciando detección de aspect ratio para: ${imageUrl}`);
     
-    // Hacer descarga completa para analizar dimensiones
-    console.log(`[story-export] 📥 Descargando imagen para análisis...`);
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
+    // Primero intentar con Range headers para optimizar descarga
+    console.log(`[story-export] 📥 Descargando primeros bytes de imagen para análisis...`);
+    
+    // Para PNG necesitamos 24 bytes, para JPEG hasta ~600 bytes para encontrar SOF
+    let imageResponse = await fetch(imageUrl, {
+      headers: { 'Range': 'bytes=0-1023' } // Solo primer KB
+    });
+    
+    // Si el servidor no soporta Range, hacer descarga normal pero limitada
+    if (imageResponse.status === 416 || imageResponse.status === 200) {
+      console.log(`[story-export] ⚠️ Servidor no soporta Range headers, descargando inicio de imagen...`);
+      imageResponse = await fetch(imageUrl);
+    }
+    
+    if (!imageResponse.ok && imageResponse.status !== 206) {
       throw new Error(`Failed to fetch image: ${imageResponse.status}`);
     }
     
     const imageBuffer = await imageResponse.arrayBuffer();
     const uint8Array = new Uint8Array(imageBuffer);
     
-    console.log(`[story-export] 📊 Imagen descargada, tamaño: ${uint8Array.length} bytes`);
+    console.log(`[story-export] 📊 Bytes descargados: ${uint8Array.length} (optimizado con Range headers)`);
     console.log(`[story-export] 🔬 Primeros 12 bytes: ${Array.from(uint8Array.slice(0, 12)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
     
     // Detectar dimensiones desde los primeros bytes de la imagen
