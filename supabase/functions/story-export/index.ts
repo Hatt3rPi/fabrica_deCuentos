@@ -212,15 +212,45 @@ async function getCompleteStoryData(storyId: string, userId: string) {
     throw new Error('Cuento no encontrado o sin permisos de acceso');
   }
 
-  // Obtener páginas del cuento
+  // Obtener páginas del cuento (solo campos necesarios para la exportación)
   const { data: pages, error: pagesError } = await supabaseAdmin
     .from('story_pages')
-    .select('*')
+    .select('id, page_number, text, image_url')
     .eq('story_id', storyId)
-    .order('page_number');
+    .order('page_number', { ascending: true })
+    .order('id', { ascending: true }); // Campo de desempate para garantizar orden consistente
 
   if (pagesError) {
     throw new Error('Error al obtener páginas del cuento');
+  }
+
+  // Validar que existan páginas y que tengan los datos mínimos requeridos
+  if (!pages || pages.length === 0) {
+    throw new Error('El cuento no tiene páginas para exportar');
+  }
+
+  // Validar que las páginas tengan los campos esenciales
+  const invalidPages = pages.filter(page => 
+    typeof page.page_number !== 'number' || 
+    !page.text || page.text.trim() === '' ||
+    !page.image_url || page.image_url.trim() === ''
+  );
+
+  if (invalidPages.length > 0) {
+    console.warn(`[story-export] Páginas con datos incompletos encontradas: ${invalidPages.length}`);
+    // Filtrar páginas inválidas en lugar de fallar completamente
+    const validPages = pages.filter(page => 
+      typeof page.page_number === 'number' && 
+      page.text && page.text.trim() !== '' &&
+      page.image_url && page.image_url.trim() !== ''
+    );
+    
+    if (validPages.length === 0) {
+      throw new Error('No se encontraron páginas válidas para exportar');
+    }
+    
+    console.log(`[story-export] Usando ${validPages.length} páginas válidas de ${pages.length} total`);
+    pages.splice(0, pages.length, ...validPages);
   }
 
   // Obtener personajes vinculados
@@ -551,7 +581,7 @@ function generateHTMLContent(
       }
       
       .page-overlay {
-        background: ${pageConfig.containerStyle?.gradientOverlay || pageConfig.containerStyle?.background || 'transparent'};
+        background: ${pageConfig.containerStyle?.background || 'transparent'};
         padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'};
         min-height: ${pageConfig.containerStyle?.minHeight || '25%'};
         ${pageConfig.containerStyle?.border ? `border: ${pageConfig.containerStyle.border};` : ''}
@@ -598,7 +628,7 @@ function generateHTMLContent(
   
   const pagesContent = storyPages
     .map(page => `
-      <div class="story-page" style="background-image: url('${pageBackgroundImage || page.image_url || ''}')">
+      <div class="story-page" style="background-image: url('${page.image_url || pageBackgroundImage || ''}')">
         <div class="page-overlay">
           <div class="story-text">
             ${textToHTML(page.text)}
