@@ -549,10 +549,19 @@ function generateHTMLContent(
   
   // Generar estilos dinámicos desde la configuración (misma estructura que /read)
   const generateDynamicStyles = () => {
-    if (!styleConfig) return '';
+    if (!styleConfig) {
+      console.log('[story-export] ⚠️ No styleConfig encontrado, usando estilos por defecto');
+      return '';
+    }
     
     const coverConfig = styleConfig.coverConfig?.title || {};
     const pageConfig = styleConfig.pageConfig?.text || {};
+    
+    console.log('[story-export] 🎨 Configuración de estilos detectada:');
+    console.log(`[story-export] 📝 pageConfig.fontSize: ${pageConfig.fontSize}`);
+    console.log(`[story-export] 📐 pageConfig.position: ${pageConfig.position}`);
+    console.log(`[story-export] 🎨 pageConfig.containerStyle.background: ${pageConfig.containerStyle?.background}`);
+    console.log(`[story-export] 📏 pageConfig.containerStyle.padding: ${pageConfig.containerStyle?.padding}`);
     
     return `
       /* Estilos dinámicos de portada */
@@ -586,7 +595,7 @@ function generateHTMLContent(
       /* Estilos dinámicos de páginas */
       .story-text {
         font-family: "${pageConfig.fontFamily || 'Indie Flower'}", cursive;
-        font-size: ${pageConfig.fontSize || '2.2rem'};
+        font-size: ${pageConfig.fontSize || '2.2rem'}; /* Usar tamaño real del template */
         font-weight: ${pageConfig.fontWeight || '600'};
         line-height: ${pageConfig.lineHeight || '1.4'};
         color: ${pageConfig.color || 'white'};
@@ -603,15 +612,15 @@ function generateHTMLContent(
         ${pageConfig.containerStyle?.boxShadow ? `box-shadow: ${pageConfig.containerStyle.boxShadow};` : ''}
         ${pageConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${pageConfig.containerStyle.backdropFilter};` : ''}
         
-        /* Alineación vertical del contenedor */
+        /* Alineación vertical del contenedor basada en template */
         ${pageConfig.verticalAlign ? `justify-content: ${pageConfig.verticalAlign};` : 'justify-content: flex-end;'}
       }
       
-      /* Posicionamiento dinámico de páginas */
+      /* Posicionamiento dinámico basado en template */
       .story-page {
         ${pageConfig.position === 'top' ? 'align-items: flex-start;' : ''}
         ${pageConfig.position === 'center' ? 'align-items: center;' : ''}
-        ${pageConfig.position === 'bottom' ? 'align-items: flex-end;' : ''}
+        ${pageConfig.position === 'bottom' ? 'align-items: flex-end;' : pageConfig.position ? '' : 'align-items: flex-end;'} /* Default bottom si no está definido */
       }
     `;
   };
@@ -723,9 +732,9 @@ function generateHTMLContent(
           page-break-after: always;
           position: relative;
           display: flex;
-          align-items: flex-end;
           padding: 0;
           margin: 0;
+          /* Posicionamiento será manejado dinámicamente arriba */
         }
         
         /* Los estilos de .page-overlay y .story-text son generados dinámicamente arriba */
@@ -757,13 +766,15 @@ function generateHTMLContent(
           }
           
           .story-text {
-            font-size: 1.6rem;
-            color: white;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            /* Usar el tamaño del template para impresión también */
+            font-size: ${pageConfig.fontSize || '2.2rem'};
+            color: ${pageConfig.color || 'white'};
+            text-shadow: ${pageConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.9)'};
           }
           
           .page-overlay {
-            padding: 2rem 3rem 3rem 3rem;
+            padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'};
+            background: ${pageConfig.containerStyle?.background || 'transparent'};
           }
         }
         
