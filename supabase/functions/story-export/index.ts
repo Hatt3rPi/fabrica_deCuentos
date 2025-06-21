@@ -574,8 +574,16 @@ function generateHTMLContent(
   
   // Extraer fuentes únicas para importar de Google Fonts
   const extractFontName = (fontFamily: string): string => {
-    // Limpiar comillas y obtener solo el nombre de la fuente
-    return fontFamily?.replace(/["']/g, '').split(',')[0].trim() || '';
+    if (!fontFamily) return '';
+    // Primero remover todos los escapes
+    let cleaned = fontFamily.replace(/\\/g, '');
+    // Buscar contenido entre las comillas más internas
+    const match = cleaned.match(/["']([^"']+)["']/);
+    if (match) {
+      return match[1].trim();
+    }
+    // Fallback: limpiar comillas y tomar primera parte
+    return cleaned.replace(/["']/g, '').split(',')[0].trim();
   };
   
   const fonts = new Set<string>();
@@ -613,12 +621,22 @@ function generateHTMLContent(
     // Procesar fontFamily correctamente (remover escapes y comillas extras)
     const processFontFamily = (fontFamily: string): string => {
       if (!fontFamily) return 'Indie Flower';
-      // Remover escapes y comillas extras
-      return fontFamily.replace(/\\/g, '').replace(/^["']|["']$/g, '');
+      // Primero remover todos los escapes
+      let cleaned = fontFamily.replace(/\\/g, '');
+      // Buscar contenido entre las comillas más internas
+      const match = cleaned.match(/["']([^"']+)["']/);
+      if (match) {
+        return match[1].trim();
+      }
+      // Fallback: limpiar comillas y tomar primera parte
+      return cleaned.replace(/["']/g, '').split(',')[0].trim();
     };
     
     const coverFontFamily = processFontFamily(coverConfig.fontFamily);
     const pageFontFamily = processFontFamily(pageConfig.fontFamily);
+    
+    console.log(`[story-export] 🔤 Cover font procesada: "${coverFontFamily}" (original: "${coverConfig.fontFamily}")`);
+    console.log(`[story-export] 🔤 Page font procesada: "${pageFontFamily}" (original: "${pageConfig.fontFamily}")`);
     
     return `
       /* Estilos dinámicos de portada - Con !important para override */
@@ -666,7 +684,7 @@ function generateHTMLContent(
         background: ${pageConfig.containerStyle?.background || 'transparent'} !important;
         padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'} !important;
         min-height: ${pageConfig.containerStyle?.minHeight || '25%'} !important;
-        ${pageConfig.containerStyle?.maxWidth ? `max-width: ${pageConfig.containerStyle.maxWidth} !important;` : ''}
+        width: ${pageConfig.containerStyle?.maxWidth || '100%'} !important;
         ${pageConfig.containerStyle?.border ? `border: ${pageConfig.containerStyle.border} !important;` : ''}
         ${pageConfig.containerStyle?.borderRadius ? `border-radius: ${pageConfig.containerStyle.borderRadius} !important;` : ''}
         ${pageConfig.containerStyle?.boxShadow ? `box-shadow: ${pageConfig.containerStyle.boxShadow} !important;` : ''}
@@ -695,6 +713,7 @@ function generateHTMLContent(
       
       /* Posicionamiento dinámico basado en template */
       .story-page {
+        justify-content: center !important; /* Centrar horizontalmente */
         ${pageConfig.position === 'top' ? 'align-items: flex-start !important;' : ''}
         ${pageConfig.position === 'center' ? 'align-items: center !important;' : ''}
         ${pageConfig.position === 'bottom' ? 'align-items: flex-end !important;' : 'align-items: flex-end !important;'}
