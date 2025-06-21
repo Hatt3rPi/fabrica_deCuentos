@@ -3,11 +3,7 @@ import { generateWithFlux } from '../_shared/flux.ts';
 import { generateWithOpenAI } from '../_shared/openai.ts';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { handleCorsPreflightResponse, corsResponse, corsErrorResponse } from '../_shared/cors.ts';
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',

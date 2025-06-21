@@ -3,11 +3,7 @@ import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { handleCorsPreflightResponse, corsResponse, corsErrorResponse } from '../_shared/cors.ts';
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -21,7 +17,7 @@ const ACTIVITY = 'generar_historia';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return handleCorsPreflightResponse(req);
   }
 
   let promptId: string | undefined;
@@ -40,10 +36,7 @@ Deno.serve(async (req) => {
     userId = await getUserId(req);
     const enabled = await isActivityEnabled(STAGE, ACTIVITY);
     if (!enabled) {
-      return new Response(
-        JSON.stringify({ error: 'Actividad deshabilitada' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse('Actividad deshabilitada', req, 403);
     }
 
     const { data: promptRow } = await supabaseAdmin
@@ -333,22 +326,13 @@ Deno.serve(async (req) => {
 
     // Devolver la historia generada antes de crear la portada
     await endInflightCall(userId, ACTIVITY);
-    return new Response(
-      JSON.stringify({
-        story_id,
-        title,
-        paragraphs,
-        pages: paragraphs.length,
-        coverUrl
-      }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+    return corsResponse({
+      story_id,
+      title,
+      paragraphs,
+      pages: paragraphs.length,
+      coverUrl
+    }, req);
   } catch (err) {
     console.error('[generate-story] Error:', err);
     if (promptId) {
@@ -369,9 +353,6 @@ Deno.serve(async (req) => {
       });
     }
     await endInflightCall(userId, ACTIVITY);
-    return new Response(
-      JSON.stringify({ error: (err as Error).message }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    return corsErrorResponse(err as Error, req, 400);
   }
 });
