@@ -11,6 +11,71 @@ export interface CorsOptions {
 }
 
 /**
+ * Detecta el ambiente de ejecución automáticamente
+ * Prioriza variables explícitas sobre detección automática
+ */
+export function isProduction(): boolean {
+  const environment = Deno.env.get('ENVIRONMENT');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  
+  // 1. Variable explícita de ambiente tiene máxima prioridad
+  if (environment === 'production' || environment === 'prod') {
+    return true;
+  }
+  
+  // 2. Si está explícitamente en desarrollo, respetarlo
+  if (environment === 'development' || environment === 'dev') {
+    return false;
+  }
+  
+  // 3. Detectar por URL de Supabase solo si no hay variable ENVIRONMENT
+  if (!environment && supabaseUrl?.includes('.supabase.co')) {
+    return true;
+  }
+  
+  // 4. Detectar por ausencia de localhost solo si no hay variable ENVIRONMENT
+  if (!environment && supabaseUrl && !supabaseUrl.includes('localhost') && !supabaseUrl.includes('127.0.0.1')) {
+    return true;
+  }
+  
+  // 5. Por defecto, asumir desarrollo si no hay indicadores claros
+  return false;
+}
+
+/**
+ * Obtiene los origins permitidos para el ambiente actual
+ */
+export function getAllowedOrigins(): string[] {
+  if (isProduction()) {
+    // Origins de producción - configurables via variables de ambiente
+    const prodOrigins = Deno.env.get('ALLOWED_ORIGINS');
+    if (prodOrigins) {
+      return prodOrigins.split(',').map(origin => origin.trim());
+    }
+    
+    // Fallback: origins de producción conocidos
+    return [
+      'https://lacuenteria.cl',
+      'https://www.lacuenteria.cl',
+      'https://app.lacuenteria.cl'
+    ];
+  } else {
+    // Origins de desarrollo
+    return [
+      'http://localhost:5173',
+      'http://localhost:5174', 
+      'http://localhost:5175',
+      'http://localhost:5176',
+      'http://localhost:5177',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'https://localhost:5173',
+      'https://127.0.0.1:5173'
+    ];
+  }
+}
+
+/**
  * Genera headers CORS apropiados basados en el request y opciones
  */
 export function getCorsHeaders(request: Request, options: CorsOptions = {}): Record<string, string> {
@@ -55,53 +120,64 @@ export function getCorsHeaders(request: Request, options: CorsOptions = {}): Rec
 }
 
 /**
- * Headers CORS para desarrollo local
- * Optimizado para localhost y evitar problemas de cookies Cloudflare
+ * Headers CORS automáticos basados en el ambiente detectado
+ * Optimizado para desarrollo y seguro para producción
+ */
+export function getSmartCorsHeaders(request: Request): Record<string, string> {
+  const allowedOrigins = getAllowedOrigins();
+  
+  if (isProduction()) {
+    // Configuración restrictiva para producción
+    return getCorsHeaders(request, {
+      origin: allowedOrigins,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      headers: [
+        'authorization',
+        'x-client-info',
+        'apikey', 
+        'content-type'
+      ]
+    });
+  } else {
+    // Configuración permisiva para desarrollo
+    return getCorsHeaders(request, {
+      origin: allowedOrigins,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+      headers: [
+        'authorization',
+        'x-client-info', 
+        'apikey',
+        'content-type',
+        'x-supabase-auth-token',
+        'cache-control'
+      ]
+    });
+  }
+}
+
+/**
+ * Headers CORS para desarrollo local (deprecated - usar getSmartCorsHeaders)
+ * @deprecated Use getSmartCorsHeaders() instead
  */
 export function getDevCorsHeaders(request: Request): Record<string, string> {
-  return getCorsHeaders(request, {
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:5174', 
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:5174'
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    headers: [
-      'authorization',
-      'x-client-info', 
-      'apikey',
-      'content-type',
-      'x-supabase-auth-token',
-      'cache-control'
-    ]
-  });
+  return getSmartCorsHeaders(request);
 }
 
 /**
- * Headers CORS para producción
- * Configuración segura para ambiente productivo
+ * Headers CORS para producción (deprecated - usar getSmartCorsHeaders)
+ * @deprecated Use getSmartCorsHeaders() instead
  */
 export function getProdCorsHeaders(request: Request, allowedOrigins: string[]): Record<string, string> {
-  return getCorsHeaders(request, {
-    origin: allowedOrigins,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    headers: [
-      'authorization',
-      'x-client-info',
-      'apikey', 
-      'content-type'
-    ]
-  });
+  return getSmartCorsHeaders(request);
 }
 
 /**
- * Maneja requests OPTIONS de preflight
+ * Maneja requests OPTIONS de preflight con detección automática de ambiente
  */
 export function handleCorsPreflightResponse(request: Request): Response {
-  const corsHeaders = getDevCorsHeaders(request);
+  const corsHeaders = getSmartCorsHeaders(request);
   return new Response('ok', { 
     status: 200,
     headers: corsHeaders 
@@ -109,7 +185,7 @@ export function handleCorsPreflightResponse(request: Request): Response {
 }
 
 /**
- * Wrapper para responses con CORS apropiado
+ * Wrapper para responses con CORS apropiado y detección automática de ambiente
  */
 export function corsResponse(
   data: any, 
@@ -117,7 +193,7 @@ export function corsResponse(
   options: { status?: number; headers?: Record<string, string> } = {}
 ): Response {
   const { status = 200, headers: additionalHeaders = {} } = options;
-  const corsHeaders = getDevCorsHeaders(request);
+  const corsHeaders = getSmartCorsHeaders(request);
   
   const allHeaders = {
     ...corsHeaders,
@@ -132,7 +208,7 @@ export function corsResponse(
 }
 
 /**
- * Wrapper para errores con CORS apropiado
+ * Wrapper para errores con CORS apropiado y detección automática de ambiente
  */
 export function corsErrorResponse(
   error: string | Error,
