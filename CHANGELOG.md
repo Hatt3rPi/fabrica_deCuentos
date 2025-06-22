@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fix: Error al Editar Prompts en Vista Previa (2025-06-22)
+- **Issue reportado**: Error "Faltan story_id o page_id" y parpadeo de imagen al editar prompts
+  - **storyService.ts**: Añadido soporte para prompt personalizado en `generatePageImage`
+  - **WizardContext.tsx**: Actualizada firma de función para aceptar prompt opcional
+  - **PreviewStep.tsx**: Eliminado timestamp dinámico que causaba parpadeo de imagen
+  - **Resultado**: Edición de prompts funciona correctamente para todas las páginas
+  - **Documentación**: `/docs/solutions/fix-preview-prompt-edit/README.md`
+
 ### Fix: Navigation 404 Errors (2025-06-21)
 - **Issue #213 - Navigation 404 Errors**: Resueltos errores 404 intermitentes causados por patrones de navegación mixtos
   - **NotificationCenter.tsx**: Reemplazados `window.location.href` con `useNavigate()` para navegación consistente
