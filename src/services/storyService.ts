@@ -143,9 +143,23 @@ export const storyService = {
     return { story, characters, design, pages };
   },
 
-  async generatePageImage(storyId: string, pageId: string): Promise<string> {
+  async generatePageImage(storyId: string, pageId: string, customPrompt?: string): Promise<string> {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    // If custom prompt is provided, update the page prompt first
+    if (customPrompt) {
+      const { error } = await supabase
+        .from('story_pages')
+        .update({ prompt: customPrompt })
+        .eq('id', pageId)
+        .eq('story_id', storyId);
+      
+      if (error) {
+        throw new Error('Error al actualizar el prompt de la página');
+      }
+    }
+    
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image-pages`, {
       method: 'POST',
       headers: {
@@ -173,13 +187,24 @@ export const storyService = {
       if (error) throw error;
     }
     
+    // Get design parameters required by the edge function
+    const { data: design } = await supabase
+      .from('story_designs')
+      .select('visual_style, color_palette')
+      .eq('story_id', storyId)
+      .maybeSingle();
+    
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-cover`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ story_id: storyId })
+      body: JSON.stringify({ 
+        story_id: storyId,
+        visual_style: design?.visual_style,
+        color_palette: design?.color_palette
+      })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to regenerate cover');

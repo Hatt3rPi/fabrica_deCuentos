@@ -144,13 +144,13 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [completionResult, setCompletionResult] = useState<import('../types').CompletionResult | null>(null);
   const [isPdfOutdated, setIsPdfOutdated] = useState<boolean>(false);
 
-  const generatePageImage = async (pageId: string) => {
+  const generatePageImage = async (pageId: string, customPrompt?: string) => {
     if (!storyId) return;
     setIsGenerating(true);
     try {
-      const imageUrl = await storyService.generatePageImage(storyId, pageId);
+      const imageUrl = await storyService.generatePageImage(storyId, pageId, customPrompt);
       setGeneratedPages(prev => prev.map(p =>
-        p.id === pageId ? { ...p, imageUrl } : p
+        p.id === pageId ? { ...p, imageUrl, ...(customPrompt ? { prompt: customPrompt } : {}) } : p
       ));
       // Mark PDF as outdated since page has changed
       if (completionResult?.success) {

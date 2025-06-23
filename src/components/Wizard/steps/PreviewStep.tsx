@@ -52,7 +52,7 @@ const PreviewStep: React.FC = () => {
       if (isCover) {
         await generateCoverImage(promptText);
       } else {
-        await generatePageImage(pageId);
+        await generatePageImage(pageId, promptText);
       }
       createNotification(
         NotificationType.SYSTEM_UPDATE,
@@ -212,8 +212,8 @@ const PreviewStep: React.FC = () => {
               )}
               
               <img
-                key={`${currentPageData.id}-${currentPageData.imageUrl}-${Date.now()}`}
-                src={currentPageData.imageUrl ? `${currentPageData.imageUrl}?t=${Date.now()}` : '/placeholder-image.png'}
+                key={`${currentPageData.id}-${currentPageData.imageUrl}`}
+                src={currentPageData.imageUrl || '/placeholder-image.png'}
                 alt={`Página ${currentPage + 1}`}
                 className="w-full h-full object-cover"
                 onError={(e) => {
