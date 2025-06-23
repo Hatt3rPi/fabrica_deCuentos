@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, BookOpen, PenTool } from 'lucide-react';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import { storyService } from '../services/storyService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import StoryCard from '../components/StoryCard';
 import { EstadoFlujo } from '../types';
 import { initialFlowState } from '../stores/wizardFlowStore';
@@ -25,9 +25,63 @@ const MyStories: React.FC = () => {
   const [deleteCharacters, setDeleteCharacters] = useState<boolean>(true);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     loadStories();
+  }, []);
+
+  // Reload stories when user returns to the page (e.g., from wizard)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page is now visible, reload stories to get latest data
+        loadStories();
+      }
+    };
+
+    const handleFocus = () => {
+      // Window regained focus, reload stories
+      loadStories();
+    };
+
+    // Listen for visibility changes (tab switching)
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    // Listen for window focus (returning from other window)
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  // Reload stories when navigating back to home (e.g., from wizard)
+  useEffect(() => {
+    // Check if we just navigated to /home (reload to get fresh data)
+    if (location.pathname === '/home') {
+      loadStories();
+    }
+  }, [location.pathname]);
+
+  // Optional: Soft polling for real-time updates when page is active
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    const startPolling = () => {
+      // Poll every 30 seconds when page is visible and focused
+      interval = setInterval(() => {
+        if (!document.hidden && document.hasFocus()) {
+          loadStories();
+        }
+      }, 30000); // 30 seconds
+    };
+
+    startPolling();
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   const loadStories = async () => {
