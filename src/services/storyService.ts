@@ -360,5 +360,64 @@ export const storyService = {
     });
     
     return data.downloadUrl as string;
+  },
+
+  /**
+   * Actualiza el texto de una página específica
+   */
+  async updatePageText(pageId: string, newText: string): Promise<void> {
+    const { error } = await supabase
+      .from('story_pages')
+      .update({ 
+        text: newText,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', pageId);
+
+    if (error) {
+      throw new Error(`Error al actualizar texto de página: ${error.message}`);
+    }
+  },
+
+  /**
+   * Actualiza el prompt de una página específica
+   */
+  async updatePagePrompt(pageId: string, newPrompt: string): Promise<void> {
+    const { error } = await supabase
+      .from('story_pages')
+      .update({ 
+        prompt: newPrompt,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', pageId);
+
+    if (error) {
+      throw new Error(`Error al actualizar prompt de página: ${error.message}`);
+    }
+  },
+
+  /**
+   * Actualiza tanto texto como prompt de una página
+   */
+  async updatePageContent(pageId: string, updates: { text?: string; prompt?: string }): Promise<void> {
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    if (updates.text !== undefined) {
+      updateData.text = updates.text;
+    }
+    if (updates.prompt !== undefined) {
+      updateData.prompt = updates.prompt;
+    }
+
+    const { error } = await supabase
+      .from('story_pages')
+      .update(updateData)
+      .eq('id', pageId);
+
+    if (error) {
+      throw new Error(`Error al actualizar contenido de página: ${error.message}`);
+    }
   }
 };

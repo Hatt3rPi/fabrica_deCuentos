@@ -22,9 +22,10 @@ interface WizardContextType {
   setGeneratedPages: (pages: GeneratedPage[]) => void;
   isGenerating: boolean;
   setIsGenerating: (value: boolean) => void;
-  generatePageImage: (pageId: string) => Promise<void>;
+  generatePageImage: (pageId: string, customPrompt?: string) => Promise<void>;
   generateCoverImage: (customPrompt?: string) => Promise<void>;
   updateStoryTitle: (title: string) => void;
+  updatePageContent: (pageId: string, updates: { text?: string; prompt?: string }) => Promise<void>;
   nextStep: () => void;
   prevStep: () => void;
   canProceed: () => boolean;
@@ -198,6 +199,35 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       logger.error('Error regenerating cover image:', err);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const updatePageContent = async (pageId: string, updates: { text?: string; prompt?: string }) => {
+    if (!storyId) return;
+
+    try {
+      // Update in database
+      await storyService.updatePageContent(pageId, updates);
+      
+      // Update local state
+      setGeneratedPages(prev => prev.map(p => {
+        if (p.id === pageId) {
+          return {
+            ...p,
+            ...(updates.text !== undefined && { text: updates.text }),
+            ...(updates.prompt !== undefined && { prompt: updates.prompt })
+          };
+        }
+        return p;
+      }));
+
+      // Mark PDF as outdated since content has changed
+      if (completionResult?.success) {
+        setIsPdfOutdated(true);
+      }
+    } catch (error) {
+      logger.error('Error updating page content:', error);
+      throw error;
     }
   };
 
@@ -591,6 +621,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         generatePageImage,
         generateCoverImage,
         updateStoryTitle,
+        updatePageContent,
         nextStep,
         prevStep,
         canProceed,

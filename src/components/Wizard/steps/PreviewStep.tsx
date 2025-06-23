@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
-import { ChevronLeft, ChevronRight, RefreshCw, Pencil, Download, BookOpen, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Pencil, Download, BookOpen, CheckCircle, Settings } from 'lucide-react';
 import { OverlayLoader } from '../../UI/Loader';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 import { useStoryStyles } from '../../../hooks/useStoryStyles';
 import { useImageDimensions } from '../../../hooks/useImageDimensions';
+import InlineTextEditor from './components/InlineTextEditor';
+import AdvancedEditModal from './components/AdvancedEditModal';
 
 const PreviewStep: React.FC = () => {
   const { 
@@ -14,6 +16,7 @@ const PreviewStep: React.FC = () => {
     setIsGenerating, 
     generatePageImage,
     generateCoverImage,
+    updatePageContent,
     bulkGenerationProgress,
     pageStates,
     retryFailedPages,
@@ -29,10 +32,91 @@ const PreviewStep: React.FC = () => {
   const [promptText, setPromptText] = useState('');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [showAdvancedModal, setShowAdvancedModal] = useState(false);
   const handleFallback = () => setIsGenerating(false);
 
   // Style hooks for dynamic preview
   const { getTextStyles, getContainerStyles, getPosition, getBackgroundImage, styleConfig } = useStoryStyles();
+
+  // Función para guardar texto inline
+  const handleSaveText = async (pageId: string, newText: string) => {
+    try {
+      await updatePageContent(pageId, { text: newText });
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Texto actualizado',
+        'El texto se guardó correctamente',
+        NotificationPriority.LOW
+      );
+    } catch (error) {
+      console.error('Error saving text:', error);
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error al guardar',
+        'No se pudo guardar el texto',
+        NotificationPriority.HIGH
+      );
+      throw error;
+    }
+  };
+
+  // Función para manejar el modal avanzado
+  const handleAdvancedEdit = () => {
+    setShowAdvancedModal(true);
+  };
+
+  const handleAdvancedSave = async (updates: { text?: string; prompt?: string }) => {
+    const currentPageData = generatedPages[currentPage];
+    if (!currentPageData) return;
+
+    try {
+      await updatePageContent(currentPageData.id, updates);
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Contenido actualizado',
+        'Los cambios se guardaron correctamente',
+        NotificationPriority.LOW
+      );
+    } catch (error) {
+      console.error('Error saving advanced changes:', error);
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error al guardar',
+        'No se pudieron guardar los cambios',
+        NotificationPriority.HIGH
+      );
+      throw error;
+    }
+  };
+
+  const handleAdvancedRegenerate = async (prompt: string) => {
+    const currentPageData = generatedPages[currentPage];
+    if (!currentPageData) return;
+
+    try {
+      const isCover = currentPageData.pageNumber === 0;
+      if (isCover) {
+        await generateCoverImage(prompt);
+      } else {
+        await generatePageImage(currentPageData.id, prompt);
+      }
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Imagen regenerada',
+        'La imagen se regeneró con el nuevo prompt',
+        NotificationPriority.LOW
+      );
+    } catch (error) {
+      console.error('Error regenerating from advanced modal:', error);
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error al regenerar',
+        'No se pudo regenerar la imagen',
+        NotificationPriority.HIGH
+      );
+      throw error;
+    }
+  };
 
   // Removed simulated loading - now using real progress from parallel generation
 
@@ -271,17 +355,23 @@ const PreviewStep: React.FC = () => {
                         }}
                         className="relative"
                       >
-                        <div 
-                          style={{
+                        <InlineTextEditor
+                          initialText={currentPage === 0 ? generatedPages[0]?.text || '' : currentPageData.text}
+                          onSave={(newText) => handleSaveText(currentPageData.id, newText)}
+                          textStyles={{
                             ...textStyles,
                             width: '100%',
                             fontSize: exactFontSize,
                             lineHeight: textStyles.lineHeight || '1.4'
                           }}
                           className="text-center sm:text-left"
-                        >
-                          {currentPage === 0 ? generatedPages[0]?.text : currentPageData.text}
-                        </div>
+                          config={{
+                            autoSaveDelay: 2000,
+                            showIndicators: true,
+                            multiline: true,
+                            placeholder: 'Doble-click para editar el texto...'
+                          }}
+                        />
                       </div>
                     </div>
                   </>
@@ -344,16 +434,25 @@ const PreviewStep: React.FC = () => {
         </div>
       )}
 
-      {/* Botón para editar prompt - siempre visible */}
-      <div className="flex justify-center mt-4">
+      {/* Botones de edición */}
+      <div className="flex justify-center gap-3 mt-4">
         {!editingPrompt && currentPageData && (
-          <button
-            onClick={() => handleEditPrompt(currentPageData.id, currentPageData.prompt)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
-          >
-            <Pencil className="w-4 h-4" />
-            {currentPageData.pageNumber === 0 ? 'Editar prompt de la portada' : 'Editar prompt de esta página'}
-          </button>
+          <>
+            <button
+              onClick={() => handleEditPrompt(currentPageData.id, currentPageData.prompt)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+            >
+              <Pencil className="w-4 h-4" />
+              Editar Prompt
+            </button>
+            <button
+              onClick={handleAdvancedEdit}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Editor Avanzado
+            </button>
+          </>
         )}
       </div>
       {isGenerating && (
@@ -576,6 +675,24 @@ const PreviewStep: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Advanced Edit Modal */}
+      {showAdvancedModal && currentPageData && (
+        <AdvancedEditModal
+          isOpen={showAdvancedModal}
+          onClose={() => setShowAdvancedModal(false)}
+          pageData={{
+            id: currentPageData.id,
+            text: currentPageData.text,
+            prompt: currentPageData.prompt,
+            pageNumber: currentPageData.pageNumber,
+            imageUrl: currentPageData.imageUrl
+          }}
+          onSave={handleAdvancedSave}
+          onRegenerate={handleAdvancedRegenerate}
+          isRegenerating={isGenerating}
+        />
       )}
     </div>
   );

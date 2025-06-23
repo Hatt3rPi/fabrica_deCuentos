@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Feature: Editor en Tiempo Real para Vista Previa (2025-06-23)
+- **Nueva Funcionalidad**: Sistema completo de edición en tiempo real para contenido y prompts
+  - **Editor Inline**: Doble-click sobre texto para edición directa con auto-save (2s)
+  - **Modal Avanzado**: Editor completo con tabs para texto y prompts, vista previa y regeneración
+  - **Persistencia Inteligente**: Debounce, estado local, indicadores visuales y manejo de errores
+  - **Atajos de Teclado**: Enter/Escape/Ctrl+S para navegación fluida
+  - **Estados Visuales**: Editando (amarillo), guardando (azul), guardado (verde), error (rojo)
+  - **Componentes**: `InlineTextEditor`, `AdvancedEditModal`, hook `useRealTimeEditor`
+  - **Servicios**: Métodos `updatePageText`, `updatePagePrompt`, `updatePageContent`
+  - **UX Mejorada**: Edición fluida sin interrupciones, feedback inmediato, rollback automático
+  - **Documentación**: `/docs/solutions/realtime-preview-editor/README.md`
+
 ### Enhancement: Vista Previa con Display Dinámico (2025-06-23)
 - **Mejora UX**: Implementada visualización dinámica en vista previa del wizard
   - **Aspect Ratios Dinámicos**: Las imágenes se adaptan automáticamente (landscape/portrait/square)
