@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fix: AdvancedEditModal Tab Reset en Regeneración (2025-06-23)
+- **Problema Resuelto**: El modal de edición avanzada reseteaba automáticamente el tab activo a 'text' durante la regeneración de imágenes
+- **Causa**: Hook useEffect dependía tanto de apertura modal como cambios en pageData, ejecutándose en ambos casos
+- **Solución**: Separación de hooks useEffect para distinguir entre apertura de modal vs. actualizaciones de datos
+- **Impacto**: Los usuarios pueden regenerar imágenes desde el tab 'prompt' sin ser interrumpidos
+- **Archivos**: `AdvancedEditModal.tsx`
+- **Documentación**: `/docs/solutions/advanced-modal-tab-reset-fix/README.md`
+
 ### Feature: Editor en Tiempo Real para Vista Previa (2025-06-23)
 - **Nueva Funcionalidad**: Sistema completo de edición en tiempo real para contenido y prompts
   - **Editor Inline**: Doble-click sobre texto para edición directa con auto-save (2s)
