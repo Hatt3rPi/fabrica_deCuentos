@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fix: Error al Editar Prompts de Portada en Vista Previa (2025-06-22)
+- **Issue reportado**: Error "Content-Type: application/json" y parpadeo al editar prompts de portada
+  - **Causa**: `generateCoverImage` solo enviaba `story_id`, pero edge function requiere `visual_style` y `color_palette`
+  - **storyService.ts**: Consultar parámetros de diseño antes de llamar `generate-cover`
+  - **WizardContext.tsx**: Soporte para prompts personalizados en páginas regulares
+  - **PreviewStep.tsx**: Eliminar timestamp dinámico que causaba parpadeo de imagen
+  - **Resultado**: Edición de prompts funciona sin errores y sin parpadeo
+  - **Documentación**: `/docs/solutions/fix-cover-prompt-edit-missing-params/README.md`
+
 ### Fix: Navigation 404 Errors (2025-06-21)
 - **Issue #213 - Navigation 404 Errors**: Resueltos errores 404 intermitentes causados por patrones de navegación mixtos
   - **NotificationCenter.tsx**: Reemplazados `window.location.href` con `useNavigate()` para navegación consistente
