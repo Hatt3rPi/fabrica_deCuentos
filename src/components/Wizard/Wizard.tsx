@@ -26,6 +26,11 @@ const Wizard: React.FC = () => {
     }
   }, [storyId, navigate]);
 
+  // Reset scroll to top when step changes (improves UX navigation)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentStep]);
+
   useEffect(() => {
     return () => {
       const cleanup = async () => {
