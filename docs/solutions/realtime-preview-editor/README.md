@@ -16,7 +16,15 @@ Implementación completa de un sistema de edición en tiempo real para la vista 
   - `Escape` para cancelar
   - `Ctrl/Cmd + S` para guardar manualmente
 
-### 2. **Modal de Edición Avanzada**
+### 2. **Botón de Edición Overlay**
+- **Ubicación**: Esquina superior izquierda de cada imagen
+- **Diseño**: Botón circular blanco semi-transparente con ícono de lápiz
+- **Activación**: Un solo click para abrir el editor completo
+- **Estados**: Se oculta durante generación, hover con efecto scaling
+- **Z-index alto**: Siempre visible sobre la imagen
+
+### 3. **Modal de Edición Avanzada (Unificado)**
+- **Acceso único**: Solo a través del botón overlay de lápiz
 - **Tabs separados**: Texto y Prompt de imagen
 - **Vista previa en tiempo real**: Para el texto editado
 - **Panel de imagen actual**: Muestra la imagen existente
@@ -25,7 +33,7 @@ Implementación completa de un sistema de edición en tiempo real para la vista 
   - `Ctrl/Cmd + S` para guardar
   - `Escape` para cerrar
 
-### 3. **Persistencia Automática**
+### 4. **Persistencia Automática**
 - **Debounce inteligente**: Evita múltiples llamadas API
 - **Estado local**: Respuesta inmediata al usuario
 - **Backup/restore**: Manejo de errores con rollback
@@ -259,6 +267,27 @@ const handleAdvancedRegenerate = async (prompt: string) => {
 - `src/context/WizardContext.tsx` - Función updatePageContent
 - `src/components/Wizard/steps/PreviewStep.tsx` - Integración completa
 
+## 🔄 Mejoras de UX Implementadas
+
+### **Simplificación de Interfaz**
+- ✅ **Eliminados botones externos redundantes** ("Editar Prompt" y "Editor Avanzado")
+- ✅ **Botón overlay único** en esquina superior izquierda de cada imagen
+- ✅ **Funcionalidad consolidada** en el modal avanzado
+- ✅ **Flujo unificado** de edición más intuitivo
+
+### **Nuevo Patrón de Interacción**
+```
+Usuario quiere editar:
+├── Texto rápido: Doble-click inline (inmediato)
+└── Edición completa: Click en botón lápiz → Modal avanzado
+```
+
+### **Beneficios de la Mejora**
+- **UX más limpia**: Menos decisiones para el usuario
+- **Contexto visual**: Botón dentro de la imagen que se va a editar  
+- **Funcionalidad preservada**: Edición inline sigue igual
+- **Código más mantenible**: Eliminación de funciones duplicadas
+
 ## ✅ Estado
 
-**Completado** - Sistema de edición en tiempo real totalmente funcional y listo para producción.
+**Completado** - Sistema de edición en tiempo real totalmente funcional con UX optimizada y listo para producción.

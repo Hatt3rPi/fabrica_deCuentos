@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
-import { ChevronLeft, ChevronRight, RefreshCw, Pencil, Download, BookOpen, CheckCircle, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Pencil, Download, BookOpen, CheckCircle } from 'lucide-react';
 import { OverlayLoader } from '../../UI/Loader';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
@@ -28,8 +28,6 @@ const PreviewStep: React.FC = () => {
   } = useWizard();
   const { createNotification } = useNotifications();
   const [currentPage, setCurrentPage] = useState(0);
-  const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
-  const [promptText, setPromptText] = useState('');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showAdvancedModal, setShowAdvancedModal] = useState(false);
@@ -128,39 +126,6 @@ const PreviewStep: React.FC = () => {
     setCurrentPage((prev) => Math.min(generatedPages.length - 1, prev + 1));
   };
 
-  const handleEditPrompt = (pageId: string, currentPrompt: string) => {
-    setEditingPrompt(pageId);
-    setPromptText(currentPrompt);
-  };
-
-  const handleRegeneratePage = async (pageId: string) => {
-    const currentPageData = generatedPages.find(p => p.id === pageId);
-    const isCover = currentPageData?.pageNumber === 0;
-    
-    try {
-      if (isCover) {
-        await generateCoverImage(promptText);
-      } else {
-        await generatePageImage(pageId, promptText);
-      }
-      createNotification(
-        NotificationType.SYSTEM_UPDATE,
-        'Imagen actualizada',
-        `${isCover ? 'La portada' : 'La página'} se regeneró correctamente`,
-        NotificationPriority.LOW
-      );
-    } catch (err) {
-      console.error('Error regenerating', isCover ? 'cover' : 'page', err);
-      createNotification(
-        NotificationType.SYSTEM_UPDATE,
-        'Error al regenerar',
-        'No se pudo generar la nueva imagen',
-        NotificationPriority.HIGH
-      );
-    } finally {
-      setEditingPrompt(null);
-    }
-  };
 
   const handleCompleteStory = async () => {
     try {
@@ -330,6 +295,17 @@ const PreviewStep: React.FC = () => {
                   ✓ Completada
                 </div>
               )}
+
+              {/* Edit button overlay - top left */}
+              {currentPageData && !isGenerating && pageStates[currentPageData.id] !== 'generating' && (
+                <button
+                  onClick={handleAdvancedEdit}
+                  className="absolute top-2 left-2 w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-gray-700 hover:text-purple-600 transition-all duration-200 z-20 group hover:scale-110"
+                  title="Editar contenido y prompt"
+                >
+                  <Pencil className="w-4 h-4 transition-transform group-hover:scale-110" />
+                </button>
+              )}
               
                     {/* Text overlay with dynamic positioning */}
                     <div 
@@ -394,67 +370,7 @@ const PreviewStep: React.FC = () => {
         </button>
       </div>
 
-      {/* CORRECCIÓN 1: Prompt solo aparece cuando se hace clic en editar */}
-      {editingPrompt === currentPageData?.id && (
-        <div className="mt-8">
-          <div className="max-w-2xl mx-auto bg-purple-50 rounded-lg p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex-grow">
-                <h4 className="text-sm font-medium text-purple-800 mb-1">Prompt de la imagen</h4>
-                <div className="space-y-2">
-                  <textarea
-                    value={promptText}
-                    onChange={(e) => setPromptText(e.target.value)}
-                    className="w-full p-2 border border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    rows={3}
-                  />
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setEditingPrompt(null)}
-                      className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={() => handleRegeneratePage(currentPageData.id)}
-                      disabled={isGenerating}
-                      className="px-3 py-1 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400"
-                    >
-                      {isGenerating ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        'Regenerar'
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Botones de edición */}
-      <div className="flex justify-center gap-3 mt-4">
-        {!editingPrompt && currentPageData && (
-          <>
-            <button
-              onClick={() => handleEditPrompt(currentPageData.id, currentPageData.prompt)}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
-            >
-              <Pencil className="w-4 h-4" />
-              Editar Prompt
-            </button>
-            <button
-              onClick={handleAdvancedEdit}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              Editor Avanzado
-            </button>
-          </>
-        )}
-      </div>
       {isGenerating && (
         <OverlayLoader 
           etapa="vista_previa_parallel" 

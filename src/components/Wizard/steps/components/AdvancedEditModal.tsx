@@ -60,22 +60,20 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
   };
 
   const handleRegenerate = async () => {
-    if (localPrompt === pageData.prompt && !hasChanges) {
-      // Use current prompt
-      await onRegenerate(pageData.prompt);
-    } else if (localPrompt !== pageData.prompt) {
-      // Save prompt first, then regenerate
-      try {
-        setIsSaving(true);
+    try {
+      // If prompt changed, save it first
+      if (localPrompt !== pageData.prompt) {
         await onSave({ prompt: localPrompt });
-        await onRegenerate(localPrompt);
-        onClose();
-      } catch (error) {
-        console.error('Error regenerating:', error);
-        // TODO: Show error notification
-      } finally {
-        setIsSaving(false);
       }
+      
+      // Now regenerate with the new prompt
+      await onRegenerate(localPrompt);
+      
+      // Don't close modal - user can see the new image in preview
+      // Modal will update automatically when parent updates pageData
+    } catch (error) {
+      console.error('Error regenerating:', error);
+      // TODO: Show error notification
     }
   };
 
@@ -203,19 +201,41 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
             )}
           </div>
 
-          {/* Preview Panel (opcional) */}
-          {pageData.imageUrl && (
+          {/* Preview Panel */}
+          {activeTab === 'prompt' && (
             <div className="w-1/3 border-l border-gray-200 p-6 bg-gray-50">
               <p className="text-sm font-medium text-gray-700 mb-3">
-                Imagen actual
+                Vista previa
               </p>
-              <div className="aspect-square bg-white rounded-lg overflow-hidden shadow-sm">
-                <img
-                  src={pageData.imageUrl}
-                  alt={`${pageLabel} actual`}
-                  className="w-full h-full object-cover"
-                />
+              <div className="aspect-square bg-white rounded-lg overflow-hidden shadow-sm relative">
+                {isRegenerating ? (
+                  <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-10">
+                    <RefreshCw className="w-8 h-8 animate-spin text-purple-600 mb-3" />
+                    <p className="text-sm text-gray-600 font-medium">Generando nueva imagen...</p>
+                    <p className="text-xs text-gray-500 mt-1">Esto puede tomar unos segundos</p>
+                  </div>
+                ) : null}
+                
+                {pageData.imageUrl ? (
+                  <img
+                    src={pageData.imageUrl}
+                    alt={`${pageLabel} preview`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <p className="text-sm text-gray-500">Sin imagen</p>
+                  </div>
+                )}
               </div>
+              
+              {localPrompt !== pageData.prompt && (
+                <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded">
+                  <p className="text-xs text-amber-700">
+                    <strong>Nota:</strong> Has modificado el prompt. Haz clic en "Regenerar Imagen" para ver los cambios.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
