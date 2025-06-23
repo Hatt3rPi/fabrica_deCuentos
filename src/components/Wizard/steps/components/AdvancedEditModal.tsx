@@ -100,6 +100,10 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
       // Now regenerate with the new prompt
       await onRegenerate(localPrompt);
       
+      // After regeneration, reset hasChanges to false since everything is in sync
+      // This ensures the UI reflects the current state accurately
+      setHasChanges(false);
+      
       // Don't close modal - user can see the new image in preview
       // Modal will update automatically when parent updates pageData
     } catch (error) {
