@@ -304,13 +304,16 @@ const MyStories: React.FC = () => {
           </div>
         )}
 
-      <button
-        onClick={handleNewStory}
-        className="fixed bottom-8 right-8 flex items-center gap-2 px-6 py-3 bg-purple-600 dark:bg-purple-700 text-white rounded-full shadow-lg hover:bg-purple-700 dark:hover:bg-purple-800 transition-colors"
-      >
-        <Plus className="w-5 h-5" />
-        <span>Nuevo cuento</span>
-      </button>
+      {/* Botón flotante solo se muestra cuando hay cuentos existentes */}
+      {stories.length > 0 && (
+        <button
+          onClick={handleNewStory}
+          className="fixed bottom-8 right-8 flex items-center gap-2 px-6 py-3 bg-purple-600 dark:bg-purple-700 text-white rounded-full shadow-lg hover:bg-purple-700 dark:hover:bg-purple-800 transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          <span>Nuevo cuento</span>
+        </button>
+      )}
       <ConfirmDialog
         isOpen={storyToDelete !== null}
         title="Eliminar cuento"
