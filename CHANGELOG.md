@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Enhancement: Vista Previa con Display Dinámico (2025-06-23)
+- **Mejora UX**: Implementada visualización dinámica en vista previa del wizard
+  - **Aspect Ratios Dinámicos**: Las imágenes se adaptan automáticamente (landscape/portrait/square)
+  - **Estilos de Template**: Texto renderizado con estilos del template configurado
+  - **Posicionamiento Dinámico**: Texto posicionado según configuración (top/center/bottom)
+  - **Responsive Design**: Container adaptativo con breakpoints optimizados
+  - **PreviewStep.tsx**: Integración de `useStoryStyles` y `useImageDimensions` hooks
+  - **Resultado**: Preview más fiel al resultado final, consistente con StoryReader
+  - **Documentación**: `/docs/solutions/dynamic-preview-display/README.md`
 
 ### Fix: Error al Editar Prompts de Portada en Vista Previa (2025-06-22)
 - **Issue reportado**: Error "Content-Type: application/json" y parpadeo al editar prompts de portada

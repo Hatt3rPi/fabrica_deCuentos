@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, RefreshCw, Pencil, Download, BookOpen, Check
 import { OverlayLoader } from '../../UI/Loader';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
+import { useStoryStyles } from '../../../hooks/useStoryStyles';
+import { useImageDimensions } from '../../../hooks/useImageDimensions';
 
 const PreviewStep: React.FC = () => {
   const { 
@@ -28,6 +30,9 @@ const PreviewStep: React.FC = () => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const handleFallback = () => setIsGenerating(false);
+
+  // Style hooks for dynamic preview
+  const { getTextStyles, getContainerStyles, getPosition, getBackgroundImage, styleConfig } = useStoryStyles();
 
   // Removed simulated loading - now using real progress from parallel generation
 
@@ -164,6 +169,16 @@ const PreviewStep: React.FC = () => {
 
   const currentPageData = generatedPages[currentPage];
 
+  // Get styles for current page
+  const textStyles = getTextStyles(currentPage);
+  const containerStyles = getContainerStyles(currentPage);
+  const position = getPosition(currentPage);
+  const backgroundImage = getBackgroundImage(currentPage, currentPageData?.imageUrl);
+  const imageDimensions = useImageDimensions(backgroundImage);
+
+  // Use exact fontSize from configuration to ensure consistency
+  const exactFontSize = textStyles.fontSize || '16px';
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -186,7 +201,28 @@ const PreviewStep: React.FC = () => {
           <ChevronLeft className="w-6 h-6" />
         </button>
 
-        <div className="relative w-[600px] aspect-square bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="w-full max-w-sm sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto">
+          <div className="relative">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+              <div 
+                className={`
+                  relative bg-gray-100 dark:bg-gray-700 bg-cover bg-center
+                  ${imageDimensions.loaded 
+                    ? imageDimensions.aspectRatio > 1.2 
+                      ? 'aspect-[4/3] sm:aspect-[3/2]' // Landscape
+                      : imageDimensions.aspectRatio < 0.8 
+                        ? 'aspect-[3/4] sm:aspect-[2/3]' // Portrait
+                        : 'aspect-square' // Square
+                    : 'aspect-[3/4] sm:aspect-[4/5] md:aspect-[3/4]' // Default fallback
+                  }
+                `}
+                style={{
+                  backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat'
+                }}
+              >
           {currentPageData && (
             <>
               {/* Show page state indicator */}
@@ -211,26 +247,48 @@ const PreviewStep: React.FC = () => {
                 </div>
               )}
               
-              <img
-                key={`${currentPageData.id}-${currentPageData.imageUrl}`}
-                src={currentPageData.imageUrl || '/placeholder-image.png'}
-                alt={`Página ${currentPage + 1}`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  // Fallback para imágenes rotas
-                  (e.target as HTMLImageElement).src = '/placeholder-image.png';
-                }}
-              />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
-                <div 
-                  className="text-white text-lg"
-                  style={{ whiteSpace: 'pre-line' }}
-                >
-                  {currentPageData.text}
-                </div>
+                    {/* Text overlay with dynamic positioning */}
+                    <div 
+                      className={`
+                        absolute inset-0 flex justify-center
+                        px-3 sm:px-6 md:px-8
+                        ${position === 'top' 
+                          ? 'items-start pt-4 sm:pt-6 md:pt-8' 
+                          : position === 'center' 
+                            ? 'items-center' 
+                            : 'items-end pb-4 sm:pb-6 md:pb-8'
+                        }
+                      `}
+                    >
+                      <div 
+                        style={{
+                          ...containerStyles,
+                          maxWidth: containerStyles.maxWidth || '100%',
+                          width: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: styleConfig?.pageConfig.text.verticalAlign || 'flex-end'
+                        }}
+                        className="relative"
+                      >
+                        <div 
+                          style={{
+                            ...textStyles,
+                            width: '100%',
+                            fontSize: exactFontSize,
+                            lineHeight: textStyles.lineHeight || '1.4'
+                          }}
+                          className="text-center sm:text-left"
+                        >
+                          {currentPage === 0 ? generatedPages[0]?.text : currentPageData.text}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
-            </>
-          )}
+            </div>
+          </div>
         </div>
 
         <button

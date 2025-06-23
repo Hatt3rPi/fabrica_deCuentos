@@ -149,9 +149,26 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setIsGenerating(true);
     try {
       const imageUrl = await storyService.generatePageImage(storyId, pageId, customPrompt);
-      setGeneratedPages(prev => prev.map(p =>
-        p.id === pageId ? { ...p, imageUrl, ...(customPrompt ? { prompt: customPrompt } : {}) } : p
-      ));
+      logger.debug('[WizardContext] Image generated for page:', { pageId, imageUrl });
+      
+      setGeneratedPages(prev => {
+        const updated = prev.map(p => {
+          if (p.id === pageId) {
+            // Add timestamp to force cache refresh
+            const imageUrlWithTimestamp = imageUrl ? `${imageUrl}?t=${Date.now()}` : imageUrl;
+            const updatedPage = { ...p, imageUrl: imageUrlWithTimestamp, ...(customPrompt ? { prompt: customPrompt } : {}) };
+            logger.debug('[WizardContext] Updating page:', { 
+              pageId: p.id, 
+              oldUrl: p.imageUrl, 
+              newUrl: imageUrlWithTimestamp 
+            });
+            return updatedPage;
+          }
+          return p;
+        });
+        return updated;
+      });
+      
       // Mark PDF as outdated since page has changed
       if (completionResult?.success) {
         setIsPdfOutdated(true);
@@ -168,8 +185,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setIsGenerating(true);
     try {
       const imageUrl = await storyService.generateCoverImage(storyId, customPrompt);
+      // Add timestamp to force cache refresh
+      const imageUrlWithTimestamp = imageUrl ? `${imageUrl}?t=${Date.now()}` : imageUrl;
       setGeneratedPages(prev => prev.map(p =>
-        p.pageNumber === 0 ? { ...p, imageUrl, prompt: customPrompt || p.prompt } : p
+        p.pageNumber === 0 ? { ...p, imageUrl: imageUrlWithTimestamp, prompt: customPrompt || p.prompt } : p
       ));
       // Mark PDF as outdated since cover has changed
       if (completionResult?.success) {

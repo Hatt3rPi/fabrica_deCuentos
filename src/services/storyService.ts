@@ -227,7 +227,7 @@ export const storyService = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to regenerate cover');
-    return data.imageUrl as string;
+    return data.coverUrl as string;
   },
 
   async updateCoverImage(storyId: string, imageUrl: string): Promise<void> {
