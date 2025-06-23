@@ -118,11 +118,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             
             if (url) {
               variants[style.key] = url;
-              // Update individual variant status to ready
+              // Update individual variant status to ready AND url immediately for progressive preview
               setCovers(prev => ({
                 ...prev,
                 [storyId]: {
                   ...prev[storyId],
+                  variants: { ...prev[storyId]?.variants, [style.key]: url },
                   variantStatus: {
                     ...prev[storyId]?.variantStatus,
                     [style.key]: 'ready'
