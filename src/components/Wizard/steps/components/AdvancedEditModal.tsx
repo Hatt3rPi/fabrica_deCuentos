@@ -19,9 +19,12 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [lastImageUrl, setLastImageUrl] = useState('');
 
-  // Reset all state when modal opens (first time)
+  // Initialize state when modal first opens
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Reset all state when modal opens (first time only)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isInitialized) {
       setLocalText(pageData.text);
       setLocalPrompt(pageData.prompt);
       setHasChanges(false);
@@ -29,12 +32,16 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
       setShowPreview(false);
       setLastImageUrl(pageData.imageUrl);
       setIsImageLoading(false);
+      setIsInitialized(true);
+    } else if (!isOpen) {
+      // Reset initialization flag when modal closes
+      setIsInitialized(false);
     }
-  }, [isOpen]); // Only depend on isOpen, not pageData
+  }, [isOpen, isInitialized, pageData.text, pageData.prompt, pageData.imageUrl]);
 
   // Update local state when pageData changes during active session (preserve activeTab)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isInitialized) {
       setLocalText(pageData.text);
       setLocalPrompt(pageData.prompt);
       setHasChanges(false);
@@ -42,7 +49,7 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
       setLastImageUrl(pageData.imageUrl);
       setIsImageLoading(false);
     }
-  }, [pageData]); // Only depend on pageData changes
+  }, [isOpen, isInitialized, pageData.text, pageData.prompt, pageData.imageUrl]);
 
   // Detect when image URL changes (new image generated)
   useEffect(() => {
