@@ -187,12 +187,30 @@ export const storyService = {
       if (error) throw error;
     }
     
-    // Get design parameters required by the edge function
+    // Get design parameters and character reference images required by the edge function
     const { data: design } = await supabase
       .from('story_designs')
       .select('visual_style, color_palette')
       .eq('story_id', storyId)
       .maybeSingle();
+    
+    // Get character reference images for the story
+    const { data: storyCharacters } = await supabase
+      .from('story_characters')
+      .select('character_id')
+      .eq('story_id', storyId);
+    
+    let referenceImageIds: string[] = [];
+    if (storyCharacters && storyCharacters.length > 0) {
+      const characterIds = storyCharacters.map(sc => sc.character_id);
+      const { data: characters } = await supabase
+        .from('characters')
+        .select('thumbnail_url')
+        .in('id', characterIds)
+        .not('thumbnail_url', 'is', null);
+      
+      referenceImageIds = characters?.map(c => c.thumbnail_url).filter(Boolean) || [];
+    }
     
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-cover`, {
       method: 'POST',
@@ -203,7 +221,8 @@ export const storyService = {
       body: JSON.stringify({ 
         story_id: storyId,
         visual_style: design?.visual_style,
-        color_palette: design?.color_palette
+        color_palette: design?.color_palette,
+        reference_image_ids: referenceImageIds
       })
     });
     const data = await res.json();

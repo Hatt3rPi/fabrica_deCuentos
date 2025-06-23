@@ -59,7 +59,7 @@ async function generateImageWithRetry(
           inputUrl = `data:image/png;base64,${b64}`;
         }
         return { url: await generateWithFlux(prompt, inputUrl) };
-      } else if (referenceImages.length === 0) {
+      } else if (referenceImages.length === 0 && model !== 'gpt-image-1') {
         const payload = { model, prompt, size, quality, n: 1 };
         console.log('[generate-cover] [REQUEST]', JSON.stringify(payload));
         const { url } = await generateWithOpenAI({
