@@ -16,6 +16,32 @@
   - **Resultado**: Edición fluida sin interrupciones, feedback inmediato, interfaz más limpia
   - **Documentación**: `/docs/solutions/realtime-preview-editor/README.md`
 
+### Enhancement: Mejoras de Edición de Portada y UX (2025-06-23)
+- **Conexión Título-Portada**: Editar texto de portada actualiza automáticamente título del cuento
+  - **handleSaveText**: Detecta página 0 y llama `updateStoryTitle(newText)`
+  - **handleAdvancedSave**: Actualiza título cuando se edita texto de portada en modal
+  - **Notificaciones específicas**: "Título actualizado" vs "Texto actualizado"
+  - **Sincronización automática**: Cambios se reflejan en auto-save del wizard
+  - **Resultado**: Ediciones de portada mantienen consistencia con título del cuento
+
+- **Estado de Regeneración Específico**: Loader modal ya no se cierra prematuramente
+  - **Nuevo estado**: `isRegeneratingModal` separado del global `isGenerating`
+  - **WizardContext actualizado**: Nuevo estado en interfaz, declaración y provider
+  - **AdvancedEditModal mejorado**: Usa estado específico para mejor timing
+  - **Detección de carga**: `isImageLoading` rastrea cuando nueva imagen carga completamente
+  - **Handlers de imagen**: `onLoad` y `onError` controlan estado de carga
+  - **UI mejorada**: Mensajes diferenciados ("Generando..." vs "Cargando...")
+  - **Botones inteligentes**: Deshabilitados durante regeneración Y carga de imagen
+  - **Resultado**: Loader se mantiene visible hasta que imagen esté completamente cargada
+
+- **Actualización Automática de Home**: Cambios se reflejan sin refresh manual
+  - **Visibility API**: Recarga stories cuando usuario regresa a la página
+  - **Focus events**: Detecta cuando ventana recupera foco
+  - **Navigation tracking**: Recarga al navegar de vuelta a `/home`
+  - **Polling inteligente**: Actualización cada 30s cuando página activa y enfocada
+  - **Múltiples triggers**: visibilitychange, focus, location.pathname, intervalo
+  - **Resultado**: Cambios de título/imagen de portada aparecen automáticamente en home
+
 ### Enhancement: Vista Previa con Display Dinámico (2025-06-23)
 - **Mejora UX**: Implementada visualización dinámica en vista previa del wizard
   - **Aspect Ratios Dinámicos**: Las imágenes se adaptan automáticamente (landscape/portrait/square)

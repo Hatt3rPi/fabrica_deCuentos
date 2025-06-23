@@ -14,9 +14,12 @@ const PreviewStep: React.FC = () => {
     generatedPages, 
     isGenerating, 
     setIsGenerating, 
+    isRegeneratingModal,
+    setIsRegeneratingModal,
     generatePageImage,
     generateCoverImage,
     updatePageContent,
+    updateStoryTitle,
     bulkGenerationProgress,
     pageStates,
     retryFailedPages,
@@ -39,13 +42,29 @@ const PreviewStep: React.FC = () => {
   // Función para guardar texto inline
   const handleSaveText = async (pageId: string, newText: string) => {
     try {
+      // Encontrar la página que se está editando
+      const pageData = generatedPages.find(page => page.id === pageId);
+      const isCoverPage = pageData?.pageNumber === 0;
+      
       await updatePageContent(pageId, { text: newText });
-      createNotification(
-        NotificationType.SYSTEM_UPDATE,
-        'Texto actualizado',
-        'El texto se guardó correctamente',
-        NotificationPriority.LOW
-      );
+      
+      // Si es la portada, actualizar también el título del cuento
+      if (isCoverPage) {
+        updateStoryTitle(newText);
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Título actualizado',
+          'El título del cuento se actualizó correctamente',
+          NotificationPriority.LOW
+        );
+      } else {
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Texto actualizado',
+          'El texto se guardó correctamente',
+          NotificationPriority.LOW
+        );
+      }
     } catch (error) {
       console.error('Error saving text:', error);
       createNotification(
@@ -68,13 +87,27 @@ const PreviewStep: React.FC = () => {
     if (!currentPageData) return;
 
     try {
+      const isCoverPage = currentPageData.pageNumber === 0;
+      
       await updatePageContent(currentPageData.id, updates);
-      createNotification(
-        NotificationType.SYSTEM_UPDATE,
-        'Contenido actualizado',
-        'Los cambios se guardaron correctamente',
-        NotificationPriority.LOW
-      );
+      
+      // Si es la portada y se está actualizando el texto, actualizar también el título
+      if (isCoverPage && updates.text) {
+        updateStoryTitle(updates.text);
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Portada actualizada',
+          'El título y contenido se guardaron correctamente',
+          NotificationPriority.LOW
+        );
+      } else {
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Contenido actualizado',
+          'Los cambios se guardaron correctamente',
+          NotificationPriority.LOW
+        );
+      }
     } catch (error) {
       console.error('Error saving advanced changes:', error);
       createNotification(
@@ -92,6 +125,7 @@ const PreviewStep: React.FC = () => {
     if (!currentPageData) return;
 
     try {
+      setIsRegeneratingModal(true);
       const isCover = currentPageData.pageNumber === 0;
       if (isCover) {
         await generateCoverImage(prompt);
@@ -113,6 +147,8 @@ const PreviewStep: React.FC = () => {
         NotificationPriority.HIGH
       );
       throw error;
+    } finally {
+      setIsRegeneratingModal(false);
     }
   };
 
@@ -607,7 +643,7 @@ const PreviewStep: React.FC = () => {
           }}
           onSave={handleAdvancedSave}
           onRegenerate={handleAdvancedRegenerate}
-          isRegenerating={isGenerating}
+          isRegenerating={isRegeneratingModal}
         />
       )}
     </div>

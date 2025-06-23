@@ -16,6 +16,8 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false);
+  const [lastImageUrl, setLastImageUrl] = useState('');
 
   // Reset local state when pageData changes or modal opens
   useEffect(() => {
@@ -25,8 +27,18 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
       setHasChanges(false);
       setActiveTab('text');
       setShowPreview(false);
+      setLastImageUrl(pageData.imageUrl);
+      setIsImageLoading(false);
     }
   }, [isOpen, pageData]);
+
+  // Detect when image URL changes (new image generated)
+  useEffect(() => {
+    if (pageData.imageUrl && pageData.imageUrl !== lastImageUrl) {
+      setIsImageLoading(true);
+      setLastImageUrl(pageData.imageUrl);
+    }
+  }, [pageData.imageUrl, lastImageUrl]);
 
   // Track changes
   useEffect(() => {
@@ -75,6 +87,14 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
       console.error('Error regenerating:', error);
       // TODO: Show error notification
     }
+  };
+
+  const handleImageLoad = () => {
+    setIsImageLoading(false);
+  };
+
+  const handleImageError = () => {
+    setIsImageLoading(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -208,11 +228,15 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
                 Vista previa
               </p>
               <div className="aspect-square bg-white rounded-lg overflow-hidden shadow-sm relative">
-                {isRegenerating ? (
+                {(isRegenerating || isImageLoading) ? (
                   <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-10">
                     <RefreshCw className="w-8 h-8 animate-spin text-purple-600 mb-3" />
-                    <p className="text-sm text-gray-600 font-medium">Generando nueva imagen...</p>
-                    <p className="text-xs text-gray-500 mt-1">Esto puede tomar unos segundos</p>
+                    <p className="text-sm text-gray-600 font-medium">
+                      {isRegenerating ? 'Generando nueva imagen...' : 'Cargando imagen...'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {isRegenerating ? 'Esto puede tomar unos segundos' : 'Actualizando vista previa'}
+                    </p>
                   </div>
                 ) : null}
                 
@@ -221,6 +245,8 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
                     src={pageData.imageUrl}
                     alt={`${pageLabel} preview`}
                     className="w-full h-full object-cover"
+                    onLoad={handleImageLoad}
+                    onError={handleImageError}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-100">
@@ -262,15 +288,15 @@ const AdvancedEditModal: React.FC<AdvancedEditModalProps> = ({
             {activeTab === 'prompt' && (
               <button
                 onClick={handleRegenerate}
-                disabled={isRegenerating || isSaving}
+                disabled={isRegenerating || isImageLoading || isSaving}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {isRegenerating ? (
+                {(isRegenerating || isImageLoading) ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
                 ) : (
                   <RefreshCw className="w-4 h-4" />
                 )}
-                {isRegenerating ? 'Regenerando...' : 'Regenerar Imagen'}
+                {isRegenerating ? 'Regenerando...' : isImageLoading ? 'Cargando...' : 'Regenerar Imagen'}
               </button>
             )}
             

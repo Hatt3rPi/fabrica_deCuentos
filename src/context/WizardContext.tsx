@@ -22,6 +22,8 @@ interface WizardContextType {
   setGeneratedPages: (pages: GeneratedPage[]) => void;
   isGenerating: boolean;
   setIsGenerating: (value: boolean) => void;
+  isRegeneratingModal: boolean;
+  setIsRegeneratingModal: (value: boolean) => void;
   generatePageImage: (pageId: string, customPrompt?: string) => Promise<void>;
   generateCoverImage: (customPrompt?: string) => Promise<void>;
   updateStoryTitle: (title: string) => void;
@@ -130,6 +132,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   });
   const [generatedPages, setGeneratedPages] = useState<GeneratedPage[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [isRegeneratingModal, setIsRegeneratingModal] = useState<boolean>(false);
   
   // New states for parallel generation
   const [bulkGenerationProgress, setBulkGenerationProgress] = useState<BulkGenerationProgress>({
@@ -618,6 +621,8 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setGeneratedPages,
         isGenerating,
         setIsGenerating,
+        isRegeneratingModal,
+        setIsRegeneratingModal,
         generatePageImage,
         generateCoverImage,
         updateStoryTitle,
