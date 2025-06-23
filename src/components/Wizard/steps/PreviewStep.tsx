@@ -89,24 +89,47 @@ const PreviewStep: React.FC = () => {
     try {
       const isCoverPage = currentPageData.pageNumber === 0;
       
-      await updatePageContent(currentPageData.id, updates);
-      
-      // Si es la portada y se está actualizando el texto, actualizar también el título
-      if (isCoverPage && updates.text) {
-        updateStoryTitle(updates.text);
+      // Para la portada, validar que tenemos un ID válido antes de intentar actualizar
+      if (isCoverPage && (!currentPageData.id || currentPageData.id === 'undefined')) {
+        // Si es la portada y no tenemos un ID válido, solo actualizar el estado local
+        // La información se guardará cuando se complete el cuento
+        if (updates.text) {
+          updateStoryTitle(updates.text);
+        }
+        // Actualizar el estado local de las páginas para reflejar los cambios del prompt
+        if (updates.prompt) {
+          setGeneratedPages(prev => prev.map(p =>
+            p.pageNumber === 0 ? { ...p, prompt: updates.prompt! } : p
+          ));
+        }
+        
         createNotification(
           NotificationType.SYSTEM_UPDATE,
           'Portada actualizada',
-          'El título y contenido se guardaron correctamente',
+          'Los cambios se aplicaron correctamente',
           NotificationPriority.LOW
         );
       } else {
-        createNotification(
-          NotificationType.SYSTEM_UPDATE,
-          'Contenido actualizado',
-          'Los cambios se guardaron correctamente',
-          NotificationPriority.LOW
-        );
+        // Para páginas normales o portadas con ID válido, actualizar en base de datos
+        await updatePageContent(currentPageData.id, updates);
+        
+        // Si es la portada y se está actualizando el texto, actualizar también el título
+        if (isCoverPage && updates.text) {
+          updateStoryTitle(updates.text);
+          createNotification(
+            NotificationType.SYSTEM_UPDATE,
+            'Portada actualizada',
+            'El título y contenido se guardaron correctamente',
+            NotificationPriority.LOW
+          );
+        } else {
+          createNotification(
+            NotificationType.SYSTEM_UPDATE,
+            'Contenido actualizado',
+            'Los cambios se guardaron correctamente',
+            NotificationPriority.LOW
+          );
+        }
       }
     } catch (error) {
       console.error('Error saving advanced changes:', error);
