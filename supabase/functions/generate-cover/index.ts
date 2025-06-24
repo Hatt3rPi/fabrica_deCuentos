@@ -66,10 +66,10 @@ async function generateCoverWithCharacters(
     
     // Enriquecer el prompt con información detallada sobre cada personaje
     const characterDescriptions = imagesToUse.map((char, idx) => 
-      `Imagen ${idx + 1} corresponde al personaje "${char.name}"`
+      `- Imagen ${idx + 1} corresponde al personaje "${char.name}"`
     ).join('. ');
     
-    const enrichedPrompt = `CONTEXTO DE PERSONAJES PRINCIPALES: ${characterDescriptions}. \n\nPORTADA A GENERAR: ${basePrompt}\n\nIMPORTANTE: Si la portada incluye personajes, usa sus imágenes de referencia correspondientes para mantener consistencia visual. Las imágenes están ordenadas alfabéticamente por nombre de personaje.`;
+    const enrichedPrompt = `# CONTEXTO DE PERSONAJES PRINCIPALES: \n ${characterDescriptions}. \n\n # PORTADA A GENERAR: ${basePrompt}\n\n**IMPORTANTE**: Si la portada incluye personajes, usa sus imágenes de referencia correspondientes para mantener consistencia visual. Las imágenes están ordenadas alfabéticamente por nombre de personaje.`;
     
     console.log('[generate-cover] Usando gpt-image-1 con múltiples imágenes de personajes');
     console.log('[generate-cover] Personajes incluidos:', imagesToUse.map(c => c.name));
@@ -229,11 +229,8 @@ Deno.serve(async (req) => {
     });
 
     const prompt = basePrompt
-      .replace('{style}', visual_style || 'acuarela digital')
       .replace('{estilo}', visual_style || 'acuarela digital')
-      .replace('{palette}', color_palette || 'colores vibrantes')
       .replace('{paleta}', color_palette || 'colores vibrantes')
-      .replace('{story}', coverPrompt)
       .replace('{historia}', coverPrompt);
       
     // Registrar el prompt generado

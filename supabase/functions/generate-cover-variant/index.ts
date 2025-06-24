@@ -19,6 +19,16 @@ const FILE = 'generate-cover-variant';
 const STAGE = 'historia';
 const ACTIVITY = 'portada_variante';
 
+// Mapeo de estilos a descripciones breves para logging
+const STYLE_DESCRIPTIONS: Record<string, string> = {
+  'PROMPT_ESTILO_KAWAII': 'Kawaii',
+  'PROMPT_ESTILO_ACUARELADIGITAL': 'Acuarela Digital',
+  'PROMPT_ESTILO_BORDADO': 'Parche Bordado',
+  'PROMPT_ESTILO_MANO': 'Dibujado a Mano',
+  'PROMPT_ESTILO_RECORTES': 'Recortes de Papel',
+  'PROMPT_ESTILO_DEFAULT': 'Default'
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -47,6 +57,19 @@ Deno.serve(async (req) => {
     if (!stylePrompt) {
       throw new Error('Prompt not found');
     }
+
+    // Crear prompt enriquecido con formato Markdown
+    const enrichedPrompt = `# TRANSFORMACIÓN DE PORTADA
+
+## Instrucciones de Transformación
+Aplica la siguiente transformación estilística a la portada:
+
+${stylePrompt}
+
+## Consideraciones Importantes
+
+- **Adaptar colores y texturas** según el estilo solicitado
+- **Conservar la magia** y atractivo para el público infantil`;
 
     userId = await getUserId(req);
     const enabled = await isActivityEnabled(STAGE, ACTIVITY);
@@ -88,7 +111,7 @@ Deno.serve(async (req) => {
     let tokensOut = 0;
     if (apiEndpoint.includes('bfl.ai')) {
       const start = Date.now();
-      resultUrl = await generateWithFlux(stylePrompt);
+      resultUrl = await generateWithFlux(enrichedPrompt);
       elapsed = Date.now() - start;
       tokensIn = 0;
       tokensOut = 0;
@@ -99,12 +122,14 @@ Deno.serve(async (req) => {
       const configuredQuality = promptRow?.quality || 'standard';
       const openaiPayload = {
         model: apiModel,
-        prompt: stylePrompt,
+        prompt: enrichedPrompt,
         size: configuredSize,
         quality: configuredQuality,
         n: 1,
       };
       console.log('[generate-cover-variant] [REQUEST]', JSON.stringify(openaiPayload));
+    console.log('[generate-cover-variant] Estilo aplicado:', STYLE_DESCRIPTIONS[promptType] || promptType);
+    console.log('[generate-cover-variant] Prompt enriquecido:', enrichedPrompt);
       const result = await generateWithOpenAI({
         endpoint: apiEndpoint,
         payload: openaiPayload,
