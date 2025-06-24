@@ -74,6 +74,11 @@ IMPORTANTE: Cuando el texto mencione a un personaje por su nombre, usa su imagen
 
 ## Archivos Modificados
 - `/supabase/functions/generate-image-pages/index.ts`
+- `/supabase/functions/generate-cover/index.ts` (extensión de la solución)
+- `/supabase/functions/_shared/openai.ts`
+
+## Extensión a generate-cover
+La misma solución se aplicó a `generate-cover` ya que tenía el mismo problema. Ver detalles en [EXTENSION-COVER.md](./EXTENSION-COVER.md).
 
 ## Testing
 Para probar la solución:

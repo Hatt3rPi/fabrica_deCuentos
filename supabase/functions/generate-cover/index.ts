@@ -37,6 +37,62 @@ function arrayBufferToBlob(buffer: ArrayBuffer, type: string = 'image/png'): Blo
   return new Blob([buffer], { type });
 }
 
+interface CharacterWithImage {
+  name: string;
+  blob: Blob;
+}
+
+/**
+ * Genera una portada con múltiples personajes usando una estrategia mejorada
+ * que intenta maximizar la consistencia visual
+ */
+async function generateCoverWithCharacters(
+  basePrompt: string,
+  characters: CharacterWithImage[],
+  endpoint: string,
+  model: string,
+  size: string,
+  quality: string,
+): Promise<{ url: string }> {
+  // Si no hay personajes, generar sin referencias
+  if (characters.length === 0) {
+    return generateImageWithRetry(basePrompt, [], endpoint, model, size, quality);
+  }
+
+  // Si el endpoint soporta múltiples imágenes con gpt-image-1
+  if (endpoint.includes('/images/edits') && model === 'gpt-image-1') {
+    // gpt-image-1 soporta hasta 16 imágenes
+    const imagesToUse = characters.slice(0, 16); // Limitar a 16 imágenes máximo
+    
+    // Enriquecer el prompt con información detallada sobre cada personaje
+    const characterDescriptions = imagesToUse.map((char, idx) => 
+      `Imagen ${idx + 1} corresponde al personaje "${char.name}"`
+    ).join('. ');
+    
+    const enrichedPrompt = `CONTEXTO DE PERSONAJES PRINCIPALES: ${characterDescriptions}. \n\nPORTADA A GENERAR: ${basePrompt}\n\nIMPORTANTE: Si la portada incluye personajes, usa sus imágenes de referencia correspondientes para mantener consistencia visual. Las imágenes están ordenadas alfabéticamente por nombre de personaje.`;
+    
+    console.log('[generate-cover] Usando gpt-image-1 con múltiples imágenes de personajes');
+    console.log('[generate-cover] Personajes incluidos:', imagesToUse.map(c => c.name));
+    console.log('[generate-cover] Prompt enriquecido:', enrichedPrompt);
+    
+    // gpt-image-1 soporta múltiples imágenes
+    const blobs = imagesToUse.map(c => c.blob);
+    return generateImageWithRetry(enrichedPrompt, blobs, endpoint, model, size, quality);
+  }
+  
+  // Para dall-e-2 (solo soporta una imagen)
+  if (endpoint.includes('/images/edits') && model === 'dall-e-2' && characters.length > 0) {
+    console.log('[generate-cover] Usando dall-e-2 (limitado a una imagen)');
+    const characterInfo = `El personaje principal es "${characters[0].name}". `;
+    const enrichedPrompt = characterInfo + basePrompt;
+    return generateImageWithRetry(enrichedPrompt, [characters[0].blob], endpoint, model, size, quality);
+  }
+
+  // Para otros endpoints o casos
+  const blobs = characters.map(c => c.blob);
+  return generateImageWithRetry(basePrompt, blobs, endpoint, model, size, quality);
+}
+
 async function generateImageWithRetry(
   prompt: string,
   referenceImages: Blob[],
@@ -191,75 +247,92 @@ Deno.serve(async (req) => {
     console.log(prompt);
     console.log('=====================');
 
-    // Descargar imágenes de referencia si se proporcionan
+    // Obtener personajes con sus nombres y miniaturas para la portada
+    const { data: characterRows } = await supabaseAdmin
+      .from('story_characters')
+      .select('characters(name, thumbnail_url)')
+      .eq('story_id', story_id);
+
     let referenceImages: Blob[] = [];
-    if (reference_image_ids?.length > 0) {
-      console.log(`Intentando procesar ${reference_image_ids.length} referencias de imágenes`);
+    let charactersWithImages: CharacterWithImage[] = [];
+    
+    if (characterRows && characterRows.length > 0) {
+      console.log(`Encontrados ${characterRows.length} personajes para la portada`);
       
-      // Filtrar URLs vacías o inválidas
-      const validUrls = reference_image_ids.filter(url => 
-        url && typeof url === 'string' && url.trim() !== ''
-      );
+      // Filtrar personajes válidos con nombre y thumbnail
+      const validCharacters = characterRows
+        .filter((r: any) => r.characters?.name && r.characters?.thumbnail_url)
+        .map((r: any) => ({
+          name: r.characters.name,
+          url: r.characters.thumbnail_url
+        }));
+
+      // Ordenar personajes para mantener consistencia
+      validCharacters.sort((a, b) => a.name.localeCompare(b.name));
       
-      if (validUrls.length > 0) {
+      if (validCharacters.length > 0) {
         try {
-          // Procesar todas las imágenes en paralelo
-          const downloadPromises = validUrls.map(async (url: string) => {
+          const downloadPromises = validCharacters.map(async (char) => {
             try {
-              console.log(`Procesando imagen desde: ${url}`);
+              console.log(`Procesando personaje: ${char.name} desde ${char.url}`);
               
-              // Extraer la ruta del archivo de la URL
-              const urlObj = new URL(url);
-              const pathParts = urlObj.pathname.split('/').filter(Boolean); // Eliminar strings vacíos
-              
-              // En Supabase, la ruta después de 'storage/v1/object/public/' es el bucket/ruta
+              const urlObj = new URL(char.url);
+              const pathParts = urlObj.pathname.split('/').filter(Boolean);
               const storageIndex = pathParts.indexOf('storage');
-              if (storageIndex === -1 || pathParts[storageIndex + 1] !== 'v1' || 
-                  pathParts[storageIndex + 2] !== 'object' || pathParts[storageIndex + 3] !== 'public') {
-                throw new Error('Formato de URL no válido: no es una URL de almacenamiento de Supabase');
+              if (
+                storageIndex === -1 ||
+                pathParts[storageIndex + 1] !== 'v1' ||
+                pathParts[storageIndex + 2] !== 'object' ||
+                pathParts[storageIndex + 3] !== 'public'
+              ) {
+                throw new Error('Formato de URL no válido');
               }
-              
-              // La estructura es: storage/v1/object/public/[bucket]/[ruta...]
-              const bucket = pathParts[storageIndex + 4]; // El bucket está después de 'public/'
-              const filePath = pathParts.slice(storageIndex + 5).join('/'); // El resto es la ruta del archivo
-              
-              console.log(`Descargando imagen: bucket=${bucket}, ruta=${filePath}`);
-              
-              const { data: imageData, error: imageError } = await supabaseAdmin.storage
+              const bucket = pathParts[storageIndex + 4];
+              const filePath = pathParts.slice(storageIndex + 5).join('/');
+              const { data } = await supabaseAdmin.storage
                 .from(bucket)
                 .download(filePath);
-                
-              if (imageError) throw imageError;
-              if (!imageData) throw new Error('No se pudo obtener los datos de la imagen');
-              
-              return imageData;
-              
-            } catch (error) {
-              console.error(`Error al procesar imagen ${url}:`, error);
-              return null; // Retornar null para filtrar después
+              return { blob: data, name: char.name };
+            } catch (err) {
+              console.error(`Error al descargar imagen del personaje ${char.name}:`, err);
+              return null;
             }
           });
           
-          // Esperar a que todas las descargas terminen y filtrar las nulas
           const results = await Promise.all(downloadPromises);
-          referenceImages = results.filter((img): img is Blob => img !== null);
+          const validResults = results.filter((r): r is { blob: Blob, name: string } => r !== null && r.blob !== null);
           
-          console.log(`Se descargaron ${referenceImages.length} de ${validUrls.length} imágenes correctamente`);
+          referenceImages = validResults.map(r => r.blob);
+          charactersWithImages = validResults.map(r => ({
+            name: r.name,
+            blob: r.blob
+          }));
           
+          console.log(`Se procesaron ${charactersWithImages.length} personajes correctamente:`, charactersWithImages.map(c => c.name));
         } catch (error) {
-          console.error('Error al procesar imágenes de referencia:', error);
-          // Continuar sin imágenes de referencia
+          console.error('Error al procesar personajes para la portada:', error);
+          charactersWithImages = [];
           referenceImages = [];
         }
-      } else {
-        console.log('No hay URLs de imágenes válidas para procesar');
       }
     }
 
-    // Generar imagen con reintentos
+    // Generar portada con personajes si están disponibles
     const configuredSize = promptRow?.size || '1024x1024';
     const configuredQuality = promptRow?.quality || 'standard';
-    const { url: imageUrl } = await generateImageWithRetry(prompt, referenceImages, apiEndpoint, apiModel, configuredSize, configuredQuality);
+    
+    console.log('[generate-cover] prompt base:', prompt);
+    console.log('[generate-cover] personajes detectados:', charactersWithImages.map(c => c.name));
+    
+    // Usar la nueva función que maneja mejor múltiples personajes
+    const { url: imageUrl } = await generateCoverWithCharacters(
+      prompt,
+      charactersWithImages,
+      apiEndpoint,
+      apiModel,
+      configuredSize,
+      configuredQuality
+    );
     
     // Convertir base64 a Blob
     const base64Data = imageUrl.split(',')[1];
@@ -341,7 +414,8 @@ Deno.serve(async (req) => {
       story_id,
       image_url: publicUrl,
       elapsed_time_ms: elapsed,
-      reference_images_used: referenceImages.length
+      reference_images_used: referenceImages.length,
+      characters_used: charactersWithImages.map(c => c.name)
     });
 
     await endInflightCall(userId, ACTIVITY);
