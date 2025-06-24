@@ -116,6 +116,13 @@ export interface StorySettings {
   literaryStyle: string;
   centralMessage: string;
   additionalDetails: string;
+  dedicatoria?: {
+    text: string;
+    imageUrl?: string;
+    layout: 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
+    alignment: 'centro' | 'izquierda' | 'derecha';
+    imageSize: 'pequena' | 'mediana' | 'grande';
+  };
 }
 
 // Tipos para la configuración del diseño
@@ -147,6 +154,13 @@ export interface WizardState {
     centralMessage: string;
     additionalDetails: string;
     status: 'draft' | 'done';
+  };
+  dedicatoria?: {
+    text: string;
+    imageUrl?: string;
+    layout: 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
+    alignment: 'centro' | 'izquierda' | 'derecha';
+    imageSize: 'pequena' | 'mediana' | 'grande';
   };
 }
 
