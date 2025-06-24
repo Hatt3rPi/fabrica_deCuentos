@@ -181,12 +181,27 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log('[StoryContext] Loading existing covers for story:', storyId);
       
       // Load base cover from story_pages where page_number = 0
-      const { data: coverPage, error: coverError } = await supabase
+      let { data: coverPage, error: coverError } = await supabase
         .from('story_pages')
-        .select('image_url')
+        .select('image_url, page_number')
         .eq('story_id', storyId)
         .eq('page_number', 0)
         .maybeSingle();
+
+      // Fallback for corrupted data: if no page_number = 0, look for cover URL pattern
+      if (!coverPage && !coverError) {
+        console.log('[StoryContext] No page_number = 0 found, checking for cover URL pattern...');
+        const { data: coverPages } = await supabase
+          .from('story_pages')
+          .select('image_url, page_number')
+          .eq('story_id', storyId)
+          .like('image_url', '%/covers/%');
+        
+        if (coverPages && coverPages.length > 0) {
+          coverPage = coverPages[0];
+          console.log('[StoryContext] Found cover via URL pattern:', coverPage);
+        }
+      }
 
       // Improved error handling - only propagate critical errors
       if (coverError && coverError.code !== 'PGRST116') { // PGRST116 = No rows found (OK)
