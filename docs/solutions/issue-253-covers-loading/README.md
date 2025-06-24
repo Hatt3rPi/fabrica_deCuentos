@@ -152,13 +152,73 @@ console.log('[StoryContext] Loaded existing covers:', {
 });
 ```
 
+## Optimizaciones Implementadas
+
+### 1. **Consultas Optimizadas**
+```typescript
+// ANTES: Múltiples consultas individuales
+STYLE_MAP.map(async (style) => {
+  await supabase.storage.from('storage').list('covers', {
+    search: `${storyId}_${style.key}.png`
+  });
+});
+
+// DESPUÉS: Una sola consulta para todos los archivos
+const { data: allCoverFiles } = await supabase.storage
+  .from('storage')
+  .list('covers', { 
+    search: `${storyId}_` // Lista todos los archivos del story
+  });
+```
+
+### 2. **Cache Busting Consistente**
+```typescript
+// Agregar timestamp para forzar actualización de cache
+variants[style.key] = `${publicUrl}?t=${Date.now()}`;
+```
+
+### 3. **Prevención de Race Conditions**
+```typescript
+const [isLoadingExistingCovers, setIsLoadingExistingCovers] = useState(false);
+
+const loadExistingCovers = async (storyId: string) => {
+  if (isLoadingExistingCovers) {
+    console.log('Already loading covers, skipping duplicate request');
+    return;
+  }
+  setIsLoadingExistingCovers(true);
+  // ... lógica de carga ...
+  setIsLoadingExistingCovers(false);
+};
+```
+
+### 4. **Manejo de Errores Mejorado**
+```typescript
+// Solo propagar errores críticos, ignorar "no encontrado"
+if (coverError && coverError.code !== 'PGRST116') { // PGRST116 = No rows found (OK)
+  throw new Error(`Error loading covers: ${coverError.message}`);
+}
+
+// Estado de error específico por story
+setCovers(prev => ({
+  ...prev,
+  [storyId]: {
+    status: 'error',
+    error: err instanceof Error ? err.message : 'Unknown error loading covers'
+  }
+}));
+```
+
 ## Beneficios
 
 - ✅ **UX mejorado**: Los usuarios ven su progreso visual inmediatamente
 - ✅ **Continuidad**: No se pierde trabajo previo de generación de portadas
-- ✅ **Performance**: No regenera imágenes que ya existen
+- ✅ **Performance optimizada**: Una sola consulta vs múltiples requests
+- ✅ **Cache busting**: Garantiza imágenes actualizadas
+- ✅ **Race condition protection**: Previene cargas duplicadas
+- ✅ **Error handling robusto**: Maneja errores críticos vs esperados
 - ✅ **Consistencia**: Funciona para todos los estilos visuales
-- ✅ **Robustez**: Maneja casos edge y errores
+- ✅ **Robustez**: Maneja casos edge y errores graciosamente
 
 ## Compatibilidad
 

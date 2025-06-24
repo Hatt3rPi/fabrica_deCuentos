@@ -12,6 +12,7 @@ interface CoverInfo {
 
 interface StoryContextType {
   covers: Record<string, CoverInfo>;
+  isLoadingExistingCovers: boolean;
   generateCover: (storyId: string, title: string, opts?: { style?: string; palette?: string; refIds?: string[] }) => Promise<string | undefined>;
   generateCoverVariants: (storyId: string, imageUrl: string) => Promise<void>;
   loadExistingCovers: (storyId: string) => Promise<void>;
@@ -28,6 +29,7 @@ export const useStory = () => {
 export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { supabase } = useAuth();
   const [covers, setCovers] = useState<Record<string, CoverInfo>>({});
+  const [isLoadingExistingCovers, setIsLoadingExistingCovers] = useState<boolean>(false);
 
   const STYLE_MAP: Array<{ key: string; type: string }> = [
     { key: 'kawaii', type: 'PROMPT_ESTILO_KAWAII' },
@@ -65,8 +67,10 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Cover generation failed');
 
-      setCovers(prev => ({ ...prev, [storyId]: { status: 'ready', url: data.coverUrl, variants: {} } }));
-      return data.coverUrl as string;
+      // Add cache busting to cover URL
+      const coverUrlWithTimestamp = data.coverUrl ? `${data.coverUrl}?t=${Date.now()}` : data.coverUrl;
+      setCovers(prev => ({ ...prev, [storyId]: { status: 'ready', url: coverUrlWithTimestamp, variants: {} } }));
+      return coverUrlWithTimestamp as string;
     } catch (err) {
       console.error('Error generating cover:', err);
       setCovers(prev => ({ ...prev, [storyId]: { status: 'error', error: (err as Error).message } }));
@@ -118,13 +122,15 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const url = data.coverUrl || data.url;
             
             if (url) {
-              variants[style.key] = url;
+              // Add cache busting to variant URL
+              const urlWithTimestamp = `${url}?t=${Date.now()}`;
+              variants[style.key] = urlWithTimestamp;
               // Update individual variant status to ready AND url immediately for progressive preview
               setCovers(prev => ({
                 ...prev,
                 [storyId]: {
                   ...prev[storyId],
-                  variants: { ...prev[storyId]?.variants, [style.key]: url },
+                  variants: { ...prev[storyId]?.variants, [style.key]: urlWithTimestamp },
                   variantStatus: {
                     ...prev[storyId]?.variantStatus,
                     [style.key]: 'ready'
@@ -163,6 +169,14 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const loadExistingCovers = async (storyId: string) => {
+    // Prevent race conditions - only allow one load at a time
+    if (isLoadingExistingCovers) {
+      console.log('[StoryContext] Already loading covers, skipping duplicate request');
+      return;
+    }
+
+    setIsLoadingExistingCovers(true);
+    
     try {
       console.log('[StoryContext] Loading existing covers for story:', storyId);
       
@@ -174,9 +188,9 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .eq('page_number', 0)
         .maybeSingle();
 
-      if (coverError) {
-        console.error('[StoryContext] Error loading base cover:', coverError);
-        return;
+      // Improved error handling - only propagate critical errors
+      if (coverError && coverError.code !== 'PGRST116') { // PGRST116 = No rows found (OK)
+        throw new Error(`Error loading covers: ${coverError.message}`);
       }
 
       const baseUrl = coverPage?.image_url;
@@ -185,38 +199,42 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
 
-      // Load variant covers from storage
+      // Optimized storage query - single request for all cover files
+      const { data: allCoverFiles, error: storageError } = await supabase.storage
+        .from('storage')
+        .list('covers', { 
+          search: `${storyId}_` // Lista todos los archivos del story
+        });
+
+      if (storageError) {
+        console.error('[StoryContext] Error listing cover variants:', storageError);
+        // Continue with base cover only if storage fails
+      }
+
+      // Process variants from single storage query
       const variants: Record<string, string> = {};
       const variantStatus: Record<string, 'ready' | 'idle'> = {};
+      const timestamp = Date.now(); // Cache busting timestamp
 
-      // Check each style variant in storage
-      await Promise.all(
-        STYLE_MAP.map(async (style) => {
-          try {
-            const variantPath = `covers/${storyId}_${style.key}.png`;
-            const { data: file } = await supabase.storage
-              .from('storage')
-              .list('covers', {
-                search: `${storyId}_${style.key}.png`
-              });
-            
-            if (file && file.length > 0) {
-              const { data: { publicUrl } } = supabase.storage
-                .from('storage')
-                .getPublicUrl(variantPath);
-              
-              variants[style.key] = publicUrl;
-              variantStatus[style.key] = 'ready';
-              console.log('[StoryContext] Found variant:', style.key, publicUrl);
-            } else {
-              variantStatus[style.key] = 'idle';
-            }
-          } catch (err) {
-            console.error(`[StoryContext] Error checking variant ${style.key}:`, err);
-            variantStatus[style.key] = 'idle';
-          }
-        })
-      );
+      STYLE_MAP.forEach((style) => {
+        // Check if file exists in the retrieved list
+        const fileName = `${storyId}_${style.key}.png`;
+        const fileExists = allCoverFiles?.some(file => file.name === fileName);
+        
+        if (fileExists) {
+          const variantPath = `covers/${fileName}`;
+          const { data: { publicUrl } } = supabase.storage
+            .from('storage')
+            .getPublicUrl(variantPath);
+          
+          // Cache busting for storage URLs
+          variants[style.key] = `${publicUrl}?t=${timestamp}`;
+          variantStatus[style.key] = 'ready';
+          console.log('[StoryContext] Found variant:', style.key, variants[style.key]);
+        } else {
+          variantStatus[style.key] = 'idle';
+        }
+      });
 
       // Update covers state with loaded data
       setCovers(prev => ({
@@ -238,11 +256,21 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     } catch (err) {
       console.error('[StoryContext] Error loading existing covers:', err);
+      // Set error state for the story
+      setCovers(prev => ({
+        ...prev,
+        [storyId]: {
+          status: 'error',
+          error: err instanceof Error ? err.message : 'Unknown error loading covers'
+        }
+      }));
+    } finally {
+      setIsLoadingExistingCovers(false);
     }
   };
 
   return (
-    <StoryContext.Provider value={{ covers, generateCover, generateCoverVariants, loadExistingCovers }}>
+    <StoryContext.Provider value={{ covers, isLoadingExistingCovers, generateCover, generateCoverVariants, loadExistingCovers }}>
       {children}
     </StoryContext.Provider>
   );
