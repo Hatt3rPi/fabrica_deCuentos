@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Feature: Mejoras al Panel Admin/Flujo (2025-06-24)
+- **Nueva Funcionalidad**: Agregadas etapas faltantes Diseño y Vista Previa al panel de administración
+  - **Etapa Diseño**: 
+    - `generate-illustration`: Generar ilustraciones individuales de páginas
+    - `generate-image-pages`: Generar páginas con múltiples personajes
+  - **Etapa Vista Previa**:
+    - `story-export`: Generar PDF final y marcar cuento como completado
+  - **Contador de Usuarios Activos**: 
+    - Muestra usuarios únicos en últimos 60 minutos
+    - Actualización automática cada 10 segundos
+    - Diseño con gradiente purple-to-blue
+  - **Sistema de Control**: Los toggles permiten habilitar/deshabilitar edge functions
+  - **Colores Actualizados**: Indigo para ilustraciones, rojo para exportación
+- **Impacto**: Visibilidad completa del flujo de creación y mejor monitoreo de actividad
+- **Archivos**: `src/pages/Admin/Flujo.tsx`, `src/constants/edgeFunctionColors.ts`
+- **Issue**: #255
+- **PR**: #258
+- **Documentación**: `/docs/solutions/admin-flujo-mejoras/README.md`
+
 ### Fix: Mejora de Asignación de Imágenes de Referencia a Personajes (2025-06-24)
 - **Problema Resuelto**: El endpoint `/images/edits` de OpenAI no asociaba correctamente las imágenes de referencia con los personajes mencionados en el prompt
 - **Causa**: La API no proporciona mecanismo explícito para mapear imágenes a nombres específicos

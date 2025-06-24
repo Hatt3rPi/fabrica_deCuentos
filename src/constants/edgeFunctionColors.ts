@@ -5,5 +5,7 @@ export const edgeFunctionColorMap: Record<string, { base: string; active: string
   'generate-image-pages': { base: 'bg-yellow-100 text-yellow-800', active: 'bg-yellow-600 text-white' },
   'describe-and-sketch': { base: 'bg-purple-100 text-purple-800', active: 'bg-purple-600 text-white' },
   'generate-cover-variant': { base: 'bg-teal-100 text-teal-800', active: 'bg-teal-600 text-white' },
-  'generate-thumbnail-variant': { base: 'bg-orange-100 text-orange-800', active: 'bg-orange-600 text-white' }
+  'generate-thumbnail-variant': { base: 'bg-orange-100 text-orange-800', active: 'bg-orange-600 text-white' },
+  'generate-illustration': { base: 'bg-indigo-100 text-indigo-800', active: 'bg-indigo-600 text-white' },
+  'story-export': { base: 'bg-red-100 text-red-800', active: 'bg-red-600 text-white' }
 };
