@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Plus, Lock } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useWizard } from '../../../context/WizardContext';
 import { useCharacterStore } from '../../../stores/characterStore';
@@ -12,9 +12,13 @@ const CharactersStep: React.FC = () => {
   const { supabase } = useAuth();
   const { storyId } = useParams();
   const navigate = useNavigate();
-  const { characters, setCharacters } = useWizard();
+  const { characters, setCharacters, generatedPages } = useWizard();
   const { setCharacters: setStoreCharacters } = useCharacterStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Check if there are generated story pages (same logic as other steps)
+  const hasGeneratedPages = generatedPages.some(page => page.pageNumber > 0 && page.imageUrl);
+  const isCharactersLocked = hasGeneratedPages;
 
   useEffect(() => {
     loadStoryCharacters();
@@ -114,10 +118,23 @@ const CharactersStep: React.FC = () => {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-purple-800 dark:text-purple-300 mb-2">
-          Personajes de tu Historia
-        </h2>
-        <p className="text-gray-600 dark:text-gray-300">Crea hasta 3 personajes para tu cuento</p>
+        <div className="flex items-center justify-center gap-4 mb-2">
+          <h2 className="text-2xl font-bold text-purple-800 dark:text-purple-300">
+            Personajes de tu Historia
+          </h2>
+          {isCharactersLocked && (
+            <div className="flex items-center text-sm text-amber-700 bg-amber-50 px-3 py-1 rounded-lg">
+              <Lock className="w-4 h-4 mr-1" />
+              Personajes bloqueados: páginas ya generadas
+            </div>
+          )}
+        </div>
+        <p className="text-gray-600 dark:text-gray-300">
+          {isCharactersLocked 
+            ? 'Los personajes no pueden modificarse una vez generadas las páginas del cuento'
+            : 'Crea hasta 3 personajes para tu cuento'
+          }
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -126,8 +143,9 @@ const CharactersStep: React.FC = () => {
             <CharacterCard
               key={character.id}
               character={character}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              onEdit={!isCharactersLocked ? handleEdit : undefined}
+              onDelete={!isCharactersLocked ? handleDelete : undefined}
+              isLocked={isCharactersLocked}
             />
           ))}
         </AnimatePresence>
@@ -138,12 +156,26 @@ const CharactersStep: React.FC = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            onClick={handleAddCharacter}
-            className="h-full min-h-[400px] border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
+            onClick={() => !isCharactersLocked && handleAddCharacter()}
+            disabled={isCharactersLocked}
+            className={`h-full min-h-[400px] border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-colors ${
+              isCharactersLocked
+                ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-300 dark:hover:border-purple-600'
+            }`}
             aria-label="Añadir nuevo personaje"
           >
-            <Plus className="w-12 h-12" />
-            <span className="text-lg">Añadir personaje</span>
+            {isCharactersLocked ? (
+              <>
+                <Lock className="w-12 h-12" />
+                <span className="text-lg">Personajes bloqueados</span>
+              </>
+            ) : (
+              <>
+                <Plus className="w-12 h-12" />
+                <span className="text-lg">Añadir personaje</span>
+              </>
+            )}
           </motion.button>
         )}
 

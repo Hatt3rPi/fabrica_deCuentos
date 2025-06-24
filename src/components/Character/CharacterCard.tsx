@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Lock } from 'lucide-react';
 import { Character } from '../../types';
 
 interface CharacterCardProps {
@@ -19,6 +19,10 @@ interface CharacterCardProps {
   showDescription?: boolean;
   onClick?: () => void;
   isSelected?: boolean;
+  /**
+   * When true, the character card shows as locked and actions are disabled.
+   */
+  isLocked?: boolean;
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({
@@ -30,6 +34,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   showDescription = true,
   onClick,
   isSelected,
+  isLocked = false,
 }) => {
   return (
     <motion.div
@@ -74,31 +79,40 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
 
         {showActions && (
           <div className="flex gap-2">
-            {onEdit && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(character.id);
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-md transition-colors"
-                aria-label="Editar personaje"
-              >
-                <Edit2 className="w-4 h-4" />
-                {!actionsIconOnly && <span>Editar</span>}
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(character.id);
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
-                aria-label="Eliminar personaje"
-              >
-                <Trash2 className="w-4 h-4" />
-                {!actionsIconOnly && <span>Eliminar</span>}
-              </button>
+            {isLocked ? (
+              <div className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-gray-400 bg-gray-50 rounded-md">
+                <Lock className="w-4 h-4" />
+                {!actionsIconOnly && <span>Bloqueado</span>}
+              </div>
+            ) : (
+              <>
+                {onEdit && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(character.id);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-md transition-colors"
+                    aria-label="Editar personaje"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    {!actionsIconOnly && <span>Editar</span>}
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(character.id);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                    aria-label="Eliminar personaje"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {!actionsIconOnly && <span>Eliminar</span>}
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}
