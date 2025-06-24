@@ -6,6 +6,7 @@ import { Character, StorySettings, DesignSettings, WizardState, EstadoFlujo } fr
 import { useWizardFlowStore } from '../stores/wizardFlowStore';
 import { storyService } from '../services/storyService';
 import { logger, wizardLogger } from '../utils/logger';
+import { useStory } from './StoryContext';
 
 export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'export';
 
@@ -92,6 +93,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const { storyId } = useParams();
   const navigate = useNavigate();
   const { supabase, user } = useAuth();
+  const { loadExistingCovers } = useStory();
 
   const {
     estado,
@@ -486,6 +488,12 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
       const etapaInicial = stepFromEstado(useWizardFlowStore.getState().estado);
       setCurrentStep(etapaInicial);
+      
+      // Load existing covers if story has been continued from MyStories
+      if (draft.pages && draft.pages.some(p => p.page_number === 0 && p.image_url)) {
+        console.log('[WizardContext] Loading existing covers for story:', storyId);
+        loadExistingCovers(storyId);
+      }
     });
   }, [storyId]);
 

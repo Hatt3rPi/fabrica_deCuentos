@@ -14,6 +14,7 @@ interface StoryContextType {
   covers: Record<string, CoverInfo>;
   generateCover: (storyId: string, title: string, opts?: { style?: string; palette?: string; refIds?: string[] }) => Promise<string | undefined>;
   generateCoverVariants: (storyId: string, imageUrl: string) => Promise<void>;
+  loadExistingCovers: (storyId: string) => Promise<void>;
 }
 
 const StoryContext = createContext<StoryContextType | undefined>(undefined);
@@ -161,8 +162,87 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const loadExistingCovers = async (storyId: string) => {
+    try {
+      console.log('[StoryContext] Loading existing covers for story:', storyId);
+      
+      // Load base cover from story_pages where page_number = 0
+      const { data: coverPage, error: coverError } = await supabase
+        .from('story_pages')
+        .select('image_url')
+        .eq('story_id', storyId)
+        .eq('page_number', 0)
+        .maybeSingle();
+
+      if (coverError) {
+        console.error('[StoryContext] Error loading base cover:', coverError);
+        return;
+      }
+
+      const baseUrl = coverPage?.image_url;
+      if (!baseUrl) {
+        console.log('[StoryContext] No base cover found for story:', storyId);
+        return;
+      }
+
+      // Load variant covers from storage
+      const variants: Record<string, string> = {};
+      const variantStatus: Record<string, 'ready' | 'idle'> = {};
+
+      // Check each style variant in storage
+      await Promise.all(
+        STYLE_MAP.map(async (style) => {
+          try {
+            const variantPath = `covers/${storyId}_${style.key}.png`;
+            const { data: file } = await supabase.storage
+              .from('storage')
+              .list('covers', {
+                search: `${storyId}_${style.key}.png`
+              });
+            
+            if (file && file.length > 0) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('storage')
+                .getPublicUrl(variantPath);
+              
+              variants[style.key] = publicUrl;
+              variantStatus[style.key] = 'ready';
+              console.log('[StoryContext] Found variant:', style.key, publicUrl);
+            } else {
+              variantStatus[style.key] = 'idle';
+            }
+          } catch (err) {
+            console.error(`[StoryContext] Error checking variant ${style.key}:`, err);
+            variantStatus[style.key] = 'idle';
+          }
+        })
+      );
+
+      // Update covers state with loaded data
+      setCovers(prev => ({
+        ...prev,
+        [storyId]: {
+          status: 'ready',
+          url: baseUrl,
+          variants,
+          variantStatus
+        }
+      }));
+
+      console.log('[StoryContext] Loaded existing covers:', {
+        storyId,
+        baseUrl,
+        variants: Object.keys(variants),
+        variantStatus
+      });
+
+    } catch (err) {
+      console.error('[StoryContext] Error loading existing covers:', err);
+    }
+  };
+
   return (
-    <StoryContext.Provider value={{ covers, generateCover, generateCoverVariants }}>
+    <StoryContext.Provider value={{ covers, generateCover, generateCoverVariants, loadExistingCovers }}>
       {children}
     </StoryContext.Provider>
   );
