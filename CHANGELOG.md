@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Fix: Mejora de Asignación de Imágenes de Referencia a Personajes (2025-06-24)
+- **Problema Resuelto**: El endpoint `/images/edits` de OpenAI no asociaba correctamente las imágenes de referencia con los personajes mencionados en el prompt
+- **Causa**: La API no proporciona mecanismo nativo para mapear imágenes a nombres específicos
+- **Solución**: 
+  - Obtención de nombres de personajes junto con sus thumbnails
+  - Ordenamiento alfabético consistente de personajes
+  - Nueva función `generateImageWithCharacters` para manejo especializado
+  - Prompt enriquecido con información explícita sobre personajes
+  - Logging mejorado para diagnóstico
+- **Limitaciones**: OpenAI `/images/edits` solo acepta una imagen, se usa la primera cuando hay múltiples personajes
+- **Impacto**: Mejora en consistencia visual de personajes en historias multi-personaje
+- **Archivos**: `supabase/functions/generate-image-pages/index.ts`
+- **Issue**: #247
+- **Documentación**: `/docs/solutions/character-image-mapping/README.md`
+
 ### Fix: AdvancedEditModal Tab Reset en Regeneración (2025-06-23)
 - **Problema Resuelto**: El modal de edición avanzada reseteaba automáticamente el tab activo a 'text' durante la regeneración de imágenes
 - **Causa**: Hook useEffect dependía tanto de apertura modal como cambios en pageData, ejecutándose en ambos casos
