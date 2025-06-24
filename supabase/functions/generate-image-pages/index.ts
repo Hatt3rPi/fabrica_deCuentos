@@ -32,6 +32,62 @@ function arrayBufferToBlob(buffer: ArrayBuffer, type: string = 'image/png'): Blo
   return new Blob([buffer], { type });
 }
 
+interface CharacterWithImage {
+  name: string;
+  blob: Blob;
+}
+
+/**
+ * Genera una imagen con múltiples personajes usando una estrategia mejorada
+ * que intenta maximizar la consistencia visual
+ */
+async function generateImageWithCharacters(
+  basePrompt: string,
+  characters: CharacterWithImage[],
+  endpoint: string,
+  model: string,
+  size: string,
+  quality: string,
+): Promise<{ url: string }> {
+  // Si no hay personajes, generar sin referencias
+  if (characters.length === 0) {
+    return generateImageWithRetry(basePrompt, [], endpoint, model, size, quality);
+  }
+
+  // Si el endpoint soporta múltiples imágenes con gpt-image-1
+  if (endpoint.includes('/images/edits') && model === 'gpt-image-1') {
+    // gpt-image-1 soporta hasta 16 imágenes
+    const imagesToUse = characters.slice(0, 16); // Limitar a 16 imágenes máximo
+    
+    // Enriquecer el prompt con información detallada sobre cada personaje
+    const characterDescriptions = imagesToUse.map((char, idx) => 
+      `Imagen ${idx + 1} corresponde al personaje "${char.name}"`
+    ).join('. ');
+    
+    const enrichedPrompt = `CONTEXTO DE PERSONAJES: ${characterDescriptions}. \n\nESCENA A GENERAR: ${basePrompt}\n\nIMPORTANTE: Cuando el texto mencione a un personaje por su nombre, usa su imagen de referencia correspondiente para mantener consistencia visual. Las imágenes están ordenadas alfabéticamente por nombre de personaje.`;
+    
+    console.log('[generate-image-pages] Usando gpt-image-1 con múltiples imágenes');
+    console.log('[generate-image-pages] Personajes incluidos:', imagesToUse.map(c => c.name));
+    console.log('[generate-image-pages] Prompt enriquecido:', enrichedPrompt);
+    
+    // gpt-image-1 soporta múltiples imágenes
+    const blobs = imagesToUse.map(c => c.blob);
+    return generateImageWithRetry(enrichedPrompt, blobs, endpoint, model, size, quality);
+  }
+  
+  // Para dall-e-2 (solo soporta una imagen)
+  if (endpoint.includes('/images/edits') && model === 'dall-e-2' && characters.length > 0) {
+    console.log('[generate-image-pages] Usando dall-e-2 (limitado a una imagen)');
+    const characterInfo = `El personaje principal es "${characters[0].name}". `;
+    const enrichedPrompt = characterInfo + basePrompt;
+    return generateImageWithRetry(enrichedPrompt, [characters[0].blob], endpoint, model, size, quality);
+  }
+
+  // Para otros endpoints o casos
+  const blobs = characters.map(c => c.blob);
+  return generateImageWithRetry(basePrompt, blobs, endpoint, model, size, quality);
+}
+
 async function generateImageWithRetry(
   prompt: string,
   referenceImages: Blob[],
@@ -61,6 +117,7 @@ async function generateImageWithRetry(
         endpoint.includes('/responses');
 
       if (supportsFiles && referenceImages.length > 0) {
+        console.log(`[generate-image-pages] Enviando ${referenceImages.length} imágenes de referencia al endpoint ${endpoint}`);
         const { url } = await generateWithOpenAI({
           endpoint,
           payload,
@@ -159,28 +216,36 @@ Deno.serve(async (req) => {
     model = pagePromptRow.model || 'gpt-image-1';
     promptId = pagePromptRow.id;
 
-    const prompt = basePrompt
+    let prompt = basePrompt
       .replace('{estilo}', stylePrompt)
       .replace('{paleta}', colorPalette || 'colores pasteles vibrantes')
       .replace('{historia}', pagePrompt);
 
-    console.log('[generate-image-pages] prompt:', prompt);
-
-    // Obtener miniaturas de personajes relacionados
+    // Obtener personajes con sus nombres y miniaturas
     const { data: characterRows } = await supabaseAdmin
       .from('story_characters')
-      .select('characters(thumbnail_url)')
+      .select('characters(name, thumbnail_url)')
       .eq('story_id', story_id);
 
     let referenceImages: Blob[] = [];
+    let characterNames: string[] = [];
+    let charactersWithImages: CharacterWithImage[] = [];
+    
     if (characterRows && characterRows.length > 0) {
-      const urls = characterRows
-        .map((r: any) => r.characters?.thumbnail_url)
-        .filter((u: string | null) => u && typeof u === 'string');
+      // Filtrar personajes válidos con nombre y thumbnail
+      const validCharacters = characterRows
+        .filter((r: any) => r.characters?.name && r.characters?.thumbnail_url)
+        .map((r: any) => ({
+          name: r.characters.name,
+          url: r.characters.thumbnail_url
+        }));
 
-      const downloadPromises = urls.map(async (url: string) => {
+      // Ordenar personajes para mantener consistencia
+      validCharacters.sort((a, b) => a.name.localeCompare(b.name));
+      
+      const downloadPromises = validCharacters.map(async (char) => {
         try {
-          const urlObj = new URL(url);
+          const urlObj = new URL(char.url);
           const pathParts = urlObj.pathname.split('/').filter(Boolean);
           const storageIndex = pathParts.indexOf('storage');
           if (
@@ -196,20 +261,39 @@ Deno.serve(async (req) => {
           const { data } = await supabaseAdmin.storage
             .from(bucket)
             .download(filePath);
-          return data ?? null;
+          return { blob: data, name: char.name };
         } catch (err) {
           console.error('No se pudo descargar', err);
           return null;
         }
       });
+      
       const results = await Promise.all(downloadPromises);
-      referenceImages = results.filter((b): b is Blob => b !== null);
+      const validResults = results.filter((r): r is { blob: Blob, name: string } => r !== null && r.blob !== null);
+      
+      referenceImages = validResults.map(r => r.blob);
+      characterNames = validResults.map(r => r.name);
+      charactersWithImages = validResults.map(r => ({
+        name: r.name,
+        blob: r.blob
+      }));
     }
+
+    console.log('[generate-image-pages] prompt base:', prompt);
+    console.log('[generate-image-pages] personajes detectados:', characterNames);
 
     const size = pagePromptRow.size || '1024x1024';
     const quality = pagePromptRow.quality || 'high';
     
-    const { url } = await generateImageWithRetry(prompt, referenceImages, endpoint, model, size, quality);
+    // Usar la nueva función que maneja mejor múltiples personajes
+    const { url } = await generateImageWithCharacters(
+      prompt,
+      charactersWithImages,
+      endpoint,
+      model,
+      size,
+      quality
+    );
 
     let blob: Blob;
     if (url.startsWith('data:')) {

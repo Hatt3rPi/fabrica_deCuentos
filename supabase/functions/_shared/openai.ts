@@ -27,7 +27,14 @@ export async function generateWithOpenAI(opts: OpenAIOptions): Promise<OpenAIRes
     }
     for (const [field, blob] of Object.entries(opts.files)) {
       if (Array.isArray(blob)) {
-        blob.forEach((b, idx) => formData.append(field, b, `${field}_${idx}.png`));
+        // Para arrays, usar el formato 'image[]' que espera OpenAI
+        blob.forEach((b, idx) => {
+          if (field === 'image[]' || field === 'image') {
+            formData.append('image[]', b, `image_${idx}.png`);
+          } else {
+            formData.append(field, b, `${field}_${idx}.png`);
+          }
+        });
       } else {
         formData.append(field, blob, field);
       }
