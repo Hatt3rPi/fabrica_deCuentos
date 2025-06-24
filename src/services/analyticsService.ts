@@ -48,6 +48,59 @@ async function fetchAllRows(builder: (from: number, to: number) => any) {
 }
 
 export const analyticsService = {
+  async fetchDailyMetrics(range?: DateRange): Promise<{ date: string; tokens: number; activeUsers: number }[]> {
+    // Obtener métricas diarias de tokens
+    const tokenMetrics = await fetchAllRows((from, to) => {
+      let q = supabase
+        .from('prompt_metrics')
+        .select('timestamp, tokens_entrada, tokens_salida')
+        .range(from, to);
+      q = applyDateFilter(q, 'timestamp', range);
+      return q;
+    });
+
+    // Obtener usuarios únicos por día
+    const userMetrics = await fetchAllRows((from, to) => {
+      let q = supabase
+        .from('prompt_metrics')
+        .select('timestamp, usuario_id')
+        .range(from, to);
+      q = applyDateFilter(q, 'timestamp', range);
+      return q;
+    });
+
+    // Agrupar por fecha
+    const dailyData: Record<string, { tokens: number; users: Set<string> }> = {};
+
+    // Procesar tokens
+    tokenMetrics.forEach((metric: any) => {
+      const date = new Date(metric.timestamp).toISOString().split('T')[0];
+      if (!dailyData[date]) {
+        dailyData[date] = { tokens: 0, users: new Set() };
+      }
+      dailyData[date].tokens += (metric.tokens_entrada || 0) + (metric.tokens_salida || 0);
+    });
+
+    // Procesar usuarios únicos
+    userMetrics.forEach((metric: any) => {
+      const date = new Date(metric.timestamp).toISOString().split('T')[0];
+      if (metric.usuario_id) {
+        if (!dailyData[date]) {
+          dailyData[date] = { tokens: 0, users: new Set() };
+        }
+        dailyData[date].users.add(metric.usuario_id);
+      }
+    });
+
+    // Convertir a array y ordenar por fecha
+    return Object.entries(dailyData)
+      .map(([date, data]) => ({
+        date,
+        tokens: data.tokens,
+        activeUsers: data.users.size,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  },
   async fetchGeneralUsage(range?: DateRange): Promise<GeneralUsageMetrics> {
     const stories = await fetchAllRows((from, to) => {
       let q = supabase.from('stories').select('user_id').range(from, to);
