@@ -32,6 +32,13 @@ const CONFIG = {
     { key: 'generar_portada', label: 'Generar portada', fn: 'generate-cover' },
     { key: 'portada_variante', label: 'Variantes de portada', fn: 'generate-cover-variant' },
   ],
+  diseño: [
+    { key: 'generar_ilustracion', label: 'Generar ilustración', fn: 'generate-illustration' },
+    { key: 'generar_paginas', label: 'Generar páginas', fn: 'generate-image-pages' },
+  ],
+  'vista previa': [
+    { key: 'generar_pdf', label: 'Generar PDF', fn: 'story-export' },
+  ],
 };
 
 const AdminFlujo: React.FC = () => {
@@ -39,6 +46,7 @@ const AdminFlujo: React.FC = () => {
   const [settings, setSettings] = useState<any>({});
   const [inflight, setInflight] = useState<Inflight[]>([]);
   const [stats, setStats] = useState<Record<string, ActivityStats>>({});
+  const [activeUsers, setActiveUsers] = useState<number>(0);
 
   const loadSettings = async () => {
     const { data } = await supabase
@@ -52,6 +60,22 @@ const AdminFlujo: React.FC = () => {
   const loadInflight = async () => {
     const { data } = await supabase.from('inflight_calls').select('actividad');
     setInflight(data || []);
+  };
+
+  const loadActiveUsers = async () => {
+    const sinceMs = Date.now() - 60 * 60 * 1000; // Last 60 minutes
+    const sinceIso = new Date(sinceMs).toISOString();
+    const activities = Object.values(CONFIG).flat().map((a) => a.key);
+    
+    const { data } = await supabase
+      .from('prompt_metrics')
+      .select('user_id')
+      .in('actividad', activities)
+      .gte('timestamp', sinceIso);
+    
+    // Count unique users
+    const uniqueUsers = new Set((data || []).map((row: any) => row.user_id));
+    setActiveUsers(uniqueUsers.size);
   };
 
   const loadStats = async () => {
@@ -103,10 +127,12 @@ const AdminFlujo: React.FC = () => {
     loadSettings();
     loadInflight();
     loadStats();
+    loadActiveUsers();
     const unsub = subscribeToInflight(loadInflight);
     const id = setInterval(() => {
       loadInflight();
       loadStats();
+      loadActiveUsers();
     }, 10000);
     return () => {
       unsub();
@@ -123,6 +149,7 @@ const AdminFlujo: React.FC = () => {
       .upsert({ key: 'stages_enabled', value: updated }, { onConflict: 'key' });
     setSettings(updated);
     loadStats();
+    loadActiveUsers();
   };
 
   if (!isAdmin) return <p>No autorizado</p>;
@@ -130,6 +157,18 @@ const AdminFlujo: React.FC = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Flujo</h1>
+      
+      {/* Active Users Counter */}
+      <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg p-4 text-white shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Usuarios Activos</h2>
+            <p className="text-purple-100 text-sm">Últimos 60 minutos</p>
+          </div>
+          <div className="text-3xl font-bold">{activeUsers}</div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {Object.entries(CONFIG).map(([stage, acts]) => (
           <div key={stage} className="bg-gray-50 rounded-lg p-4 shadow space-y-4">
