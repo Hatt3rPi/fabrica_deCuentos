@@ -28,6 +28,18 @@ const DedicatoriaStep: React.FC = () => {
 
   const [isUploading, setIsUploading] = useState(false);
 
+  // Función helper para actualizar dedicatoria evitando duplicación de lógica
+  const updateDedicatoria = (updates: Partial<DedicatoriaData>) => {
+    const newDedicatoria = { ...dedicatoria, ...updates };
+    setDedicatoria(newDedicatoria);
+    
+    // Usar callback para evitar stale closures
+    setStorySettings(prevSettings => ({
+      ...prevSettings,
+      dedicatoria: newDedicatoria
+    }));
+  };
+
   // Función para manejar la carga de imagen
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -62,19 +74,7 @@ const DedicatoriaStep: React.FC = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageUrl = e.target?.result as string;
-        setDedicatoria(prev => ({
-          ...prev,
-          imageUrl
-        }));
-        
-        // Actualizar los story settings
-        setStorySettings({
-          ...storySettings,
-          dedicatoria: {
-            ...dedicatoria,
-            imageUrl
-          }
-        });
+        updateDedicatoria({ imageUrl });
 
         createNotification(
           NotificationType.SYSTEM_UPDATE,
@@ -82,57 +82,45 @@ const DedicatoriaStep: React.FC = () => {
           'La imagen se cargó correctamente',
           NotificationPriority.LOW
         );
+        setIsUploading(false);
       };
+      
+      reader.onerror = () => {
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Error al procesar imagen',
+          'No se pudo procesar el archivo de imagen',
+          NotificationPriority.HIGH
+        );
+        setIsUploading(false);
+      };
+      
       reader.readAsDataURL(file);
     } catch (error) {
       console.error('Error uploading image:', error);
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Error al cargar imagen',
-        'No se pudo cargar la imagen',
+        error instanceof Error ? error.message : 'Error desconocido al procesar la imagen',
         NotificationPriority.HIGH
       );
-    } finally {
       setIsUploading(false);
     }
   };
 
   // Función para remover imagen
   const handleRemoveImage = () => {
-    setDedicatoria(prev => ({
-      ...prev,
-      imageUrl: undefined
-    }));
-    
-    setStorySettings({
-      ...storySettings,
-      dedicatoria: {
-        ...dedicatoria,
-        imageUrl: undefined
-      }
-    });
+    updateDedicatoria({ imageUrl: undefined });
   };
 
   // Función para actualizar texto
   const handleTextChange = (text: string) => {
-    const newDedicatoria = { ...dedicatoria, text };
-    setDedicatoria(newDedicatoria);
-    
-    setStorySettings({
-      ...storySettings,
-      dedicatoria: newDedicatoria
-    });
+    updateDedicatoria({ text });
   };
 
   // Función para actualizar configuración de layout
   const handleLayoutChange = (field: keyof DedicatoriaData, value: string) => {
-    const newDedicatoria = { ...dedicatoria, [field]: value };
-    setDedicatoria(newDedicatoria);
-    
-    setStorySettings({
-      ...storySettings,
-      dedicatoria: newDedicatoria
-    });
+    updateDedicatoria({ [field]: value });
   };
 
   const getImageSizeClass = () => {
