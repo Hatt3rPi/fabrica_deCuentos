@@ -489,11 +489,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const etapaInicial = stepFromEstado(useWizardFlowStore.getState().estado);
       setCurrentStep(etapaInicial);
       
-      // Load existing covers if story has been continued from MyStories
-      if (draft.pages && draft.pages.some(p => p.page_number === 0 && p.image_url)) {
-        console.log('[WizardContext] Loading existing covers for story:', storyId);
-        loadExistingCovers(storyId);
-      }
+      // Load existing covers when continuing any story (not just from MyStories)
+      // This ensures covers are loaded regardless of wizard state
+      console.log('[WizardContext] Attempting to load existing covers for story:', storyId);
+      loadExistingCovers(storyId);
     });
   }, [storyId]);
 
