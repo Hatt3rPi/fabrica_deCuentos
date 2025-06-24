@@ -3,7 +3,7 @@ import { useWizard } from '../../../context/WizardContext';
 import { useStory } from '../../../context/StoryContext';
 import { useParams } from 'react-router-dom';
 import { visualStyleOptions } from '../../../types';
-import { Palette, Check, Loader } from 'lucide-react';
+import { Palette, Check, Loader, Lock } from 'lucide-react';
 import { getOptimizedImageUrl } from '../../../lib/image';
 import { characterService } from '../../../services/characterService';
 import { storyService } from '../../../services/storyService';
@@ -28,11 +28,15 @@ const FALLBACK_IMAGES: Record<string, string> = {
 };
 
 const DesignStep: React.FC = () => {
-  const { designSettings, setDesignSettings, characters } = useWizard();
+  const { designSettings, setDesignSettings, characters, generatedPages } = useWizard();
   const { covers } = useStory();
   const { storyId } = useParams();
   const [images, setImages] = useState<Record<string, string>>({});
   const coverState = storyId ? covers[storyId] : undefined;
+
+  // Check if there are generated story pages (not cover)
+  const hasGeneratedPages = generatedPages.some(page => page.pageNumber > 0 && page.imageUrl);
+  const isStyleLocked = hasGeneratedPages;
 
   const selectedStyle = designSettings.visualStyle;
   const rawPreviewUrl =
@@ -106,9 +110,17 @@ const DesignStep: React.FC = () => {
       <div className="grid md:grid-cols-2 gap-8">
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Estilo visual
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Estilo visual
+              </label>
+              {isStyleLocked && (
+                <div className="flex items-center text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">
+                  <Lock className="w-3 h-3 mr-1" />
+                  Estilo bloqueado: páginas ya generadas
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-4">
               {visualStyleOptions.map((option) => {
                 const key = STYLE_TO_KEY[option.value];
@@ -123,15 +135,19 @@ const DesignStep: React.FC = () => {
                 const variantStatus = getVariantStatus(option.value);
                 const isGenerating = variantStatus === 'generating';
                 const hasError = variantStatus === 'error';
+                const isCurrentlySelected = designSettings.visualStyle === option.value;
+                const isDisabled = isStyleLocked && !isCurrentlySelected;
                 
                 return (
                   <div
                     key={option.value}
-                    onClick={() => handleChange('visualStyle', option.value)}
-                    className={`cursor-pointer p-4 rounded-lg border-2 transition-all flex flex-col items-center relative ${
-                      designSettings.visualStyle === option.value
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-purple-200'
+                    onClick={() => !isDisabled && handleChange('visualStyle', option.value)}
+                    className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center relative ${
+                      isDisabled
+                        ? 'cursor-not-allowed opacity-50 border-gray-200 bg-gray-50'
+                        : isCurrentlySelected
+                        ? 'cursor-pointer border-purple-500 bg-purple-50'
+                        : 'cursor-pointer border-gray-200 hover:border-purple-200'
                     }`}
                   >
                     <div className="w-full aspect-square mb-2 overflow-hidden rounded-md bg-gray-100 relative">
@@ -162,6 +178,13 @@ const DesignStep: React.FC = () => {
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                           </svg>
+                        </span>
+                      )}
+                      
+                      {/* Lock indicator for disabled styles */}
+                      {isDisabled && (
+                        <span className="absolute top-1 left-1 text-gray-600 bg-white/80 rounded-full p-0.5">
+                          <Lock className="w-4 h-4" />
                         </span>
                       )}
                     </div>
