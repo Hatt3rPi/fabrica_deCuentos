@@ -8,6 +8,9 @@ import { getModelType, isCompatibleModel } from '../../utils/modelHelpers';
 import { promptEdgeMap } from '../../constants/promptEdgeMap';
 import { openaiQualityOptions, openaiSizeOptions } from '../../constants/imageOptions';
 import { edgeFunctionColorMap } from '../../constants/edgeFunctionColors';
+import MarkdownEditor from './MarkdownEditor';
+import MarkdownPreview from './MarkdownPreview';
+import { isMarkdown, getMarkdownExcerpt } from '../../utils/markdownHelpers';
 
 interface PromptAccordionProps {
   prompt: Prompt;
@@ -156,7 +159,15 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
             <span className="font-bold">{prompt.type}</span>{' '}
             <span className="text-sm italic font-normal">
               (v{prompt.version}, modificado {formatRelativeTime(prompt.updated_at)})
+              {isMarkdown(prompt.content) && (
+                <span className="ml-1 text-blue-600 text-xs">• MD</span>
+              )}
             </span>
+            {prompt.content && (
+              <div className="text-xs text-gray-500 mt-1">
+                {getMarkdownExcerpt(prompt.content, 120)}
+              </div>
+            )}
           </span>
           {edgeFunctions.length > 0 && (
             <span className="flex flex-wrap gap-1 mt-1">
@@ -177,11 +188,11 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
         <div className="p-4 space-y-4">
           {isEditing ? (
             <>
-              <textarea
+              <MarkdownEditor
                 value={content}
-                onChange={e => setContent(e.target.value)}
-                rows={6}
-                className="w-full border rounded px-2 py-1 text-sm"
+                onChange={setContent}
+                rows={8}
+                placeholder="Escribe tu prompt aquí... Puedes usar Markdown para formatear."
               />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
@@ -288,10 +299,13 @@ const PromptAccordion: React.FC<PromptAccordionProps> = ({ prompt, onSave }) => 
             </>
           ) : (
             <>
-              <pre className="whitespace-pre-wrap text-sm">{prompt.content}</pre>
+              <MarkdownPreview content={prompt.content} />
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <p>
                   Endpoint: <code>{prompt.endpoint}</code> | Modelo: {prompt.model}
+                  {isMarkdown(prompt.content) && (
+                    <span className="ml-2 text-blue-600 font-medium">• Markdown</span>
+                  )}
                 </p>
                 <ModelBadge type={getModelType(prompt.model || 'gpt-4o')} />
               </div>
