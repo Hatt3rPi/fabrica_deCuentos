@@ -468,7 +468,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       
       // CRÍTICO: Preservar el título al cargar desde base de datos
       if (s.title) {
+        console.log('[WizardContext] Restaurando título desde BD:', s.title);
         updateStoryTitle(s.title);
+      } else {
+        console.log('[WizardContext] No hay título en BD para restaurar');
       }
       if (draft.design) {
         setDesignSettings({
@@ -524,6 +527,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const updateStoryTitle = (title: string) => {
+    console.log('[WizardContext] updateStoryTitle llamado con:', title);
     wizardLogger.step('updateStoryTitle', { title });
     setState(prevState => {
       const newState = {
@@ -533,6 +537,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           title
         }
       };
+      console.log('[WizardContext] Título actualizado en state:', newState.meta.title);
       logger.debug('New state meta.title:', newState.meta.title);
       return newState;
     });
