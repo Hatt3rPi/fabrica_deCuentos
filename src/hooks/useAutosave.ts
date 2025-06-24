@@ -80,17 +80,31 @@ export const useAutosave = (
           }
         }
 
+        // Verificar el título existente en BD antes de sobrescribir
+        const { data: existingStory } = await supabase
+          .from('stories')
+          .select('title')
+          .eq('id', currentStoryId)
+          .single();
+
+        // Si hay título en BD y el estado actual está vacío, preservar el existente
+        const titleToSave = state.meta.title || existingStory?.title || '';
+
         // Save story metadata (content only, NOT wizard_state)
         console.log('[AutoSave] PERSISTIENDO CONTENIDO DE STORY', {
           storyId: currentStoryId,
-          fields: ['title', 'theme', 'target_age', 'literary_style', 'central_message', 'additional_details']
+          fields: ['title', 'theme', 'target_age', 'literary_style', 'central_message', 'additional_details'],
+          currentTitle: state.meta.title,
+          existingTitle: existingStory?.title,
+          titleToSave
         });
 
-        logger.debug('Guardando story con título:', state.meta.title);
+        logger.debug('Guardando story - Título actual:', state.meta.title, 'Título existente:', existingStory?.title, 'Título a guardar:', titleToSave);
+        
         const { error: storyError } = await supabase
           .from('stories')
           .update({
-            title: state.meta.title,
+            title: titleToSave,
             theme: state.meta.theme,
             target_age: state.meta.targetAge,
             literary_style: state.meta.literaryStyle,
