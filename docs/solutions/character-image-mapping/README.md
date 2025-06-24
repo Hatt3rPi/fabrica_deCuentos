@@ -48,25 +48,29 @@ async function generateImageWithCharacters(
 Cuando se detectan múltiples personajes con el endpoint `/images/edits`:
 - Se enriquece el prompt con información explícita sobre los personajes
 - Se incluyen instrucciones específicas para mantener consistencia visual
-- Se documenta qué personaje corresponde a cada posición
+- Se documenta qué personaje corresponde a cada imagen numerada
+- Para `gpt-image-1`: Se envían hasta 16 imágenes con mapeo explícito
+- Para `dall-e-2`: Se envía solo la primera imagen con información del personaje principal
 
-Ejemplo de prompt enriquecido:
+Ejemplo de prompt enriquecido para gpt-image-1:
 ```
-[PERSONAJES EN LA ESCENA: Personaje 1: María, Personaje 2: Juan]. 
-{prompt original}. 
-IMPORTANTE: Mantén la consistencia visual de cada personaje según su imagen de referencia correspondiente.
+CONTEXTO DE PERSONAJES: Imagen 1 corresponde al personaje "Juan". Imagen 2 corresponde al personaje "María". 
+
+ESCENA A GENERAR: {prompt original}
+
+IMPORTANTE: Cuando el texto mencione a un personaje por su nombre, usa su imagen de referencia correspondiente para mantener consistencia visual. Las imágenes están ordenadas alfabéticamente por nombre de personaje.
 ```
 
 ## Limitaciones Conocidas
-1. **OpenAI `/images/edits` solo acepta una imagen**: Actualmente usamos la primera imagen cuando hay múltiples personajes
-2. **No hay mapeo explícito nombre-imagen**: La API no permite especificar qué imagen corresponde a qué nombre
-3. **Posible inconsistencia con múltiples personajes**: El modelo puede mezclar características entre personajes
+1. **Mapeo implícito de imágenes**: Aunque `gpt-image-1` acepta hasta 16 imágenes, el mapeo entre imagen y nombre de personaje se hace a través del prompt, no hay un parámetro explícito
+2. **dall-e-2 solo acepta una imagen**: Si se usa dall-e-2, está limitado a una sola imagen de referencia
+3. **Dependencia del orden**: La asociación personaje-imagen depende del orden en que se envían las imágenes y cómo se describe en el prompt
 
 ## Posibles Mejoras Futuras
-1. Investigar el endpoint `/responses` de OpenAI para mejor manejo de múltiples imágenes
-2. Implementar generación por lotes (una llamada por personaje) y composición posterior
-3. Explorar modelos alternativos que soporten mejor múltiples referencias
-4. Implementar validación visual post-generación para detectar inconsistencias
+1. Optimizar el formato del prompt para mejorar la asociación imagen-personaje
+2. Implementar validación visual post-generación para detectar inconsistencias
+3. Agregar configuración para elegir entre gpt-image-1 (múltiples imágenes) y dall-e-2 (una imagen)
+4. Experimentar con diferentes estructuras de prompt para maximizar la precisión del mapeo
 
 ## Archivos Modificados
 - `/supabase/functions/generate-image-pages/index.ts`

@@ -54,24 +54,36 @@ async function generateImageWithCharacters(
     return generateImageWithRetry(basePrompt, [], endpoint, model, size, quality);
   }
 
-  // Si el endpoint soporta múltiples imágenes y hay más de un personaje
-  if (endpoint.includes('/images/edits') && characters.length > 1) {
-    // Estrategia 1: Enriquecer el prompt con información detallada sobre cada personaje
-    const characterDescriptions = characters.map((char, idx) => 
-      `Personaje ${idx + 1}: ${char.name}`
-    ).join(', ');
+  // Si el endpoint soporta múltiples imágenes con gpt-image-1
+  if (endpoint.includes('/images/edits') && model === 'gpt-image-1') {
+    // gpt-image-1 soporta hasta 16 imágenes
+    const imagesToUse = characters.slice(0, 16); // Limitar a 16 imágenes máximo
     
-    const enrichedPrompt = `[PERSONAJES EN LA ESCENA: ${characterDescriptions}]. ${basePrompt}. IMPORTANTE: Mantén la consistencia visual de cada personaje según su imagen de referencia correspondiente.`;
+    // Enriquecer el prompt con información detallada sobre cada personaje
+    const characterDescriptions = imagesToUse.map((char, idx) => 
+      `Imagen ${idx + 1} corresponde al personaje "${char.name}"`
+    ).join('. ');
     
-    console.log('[generate-image-pages] Usando estrategia de prompt enriquecido para múltiples personajes');
-    console.log('[generate-image-pages] Personajes:', characters.map(c => c.name));
+    const enrichedPrompt = `CONTEXTO DE PERSONAJES: ${characterDescriptions}. \n\nESCENA A GENERAR: ${basePrompt}\n\nIMPORTANTE: Cuando el texto mencione a un personaje por su nombre, usa su imagen de referencia correspondiente para mantener consistencia visual. Las imágenes están ordenadas alfabéticamente por nombre de personaje.`;
     
-    // OpenAI /images/edits solo acepta una imagen, usar la primera
-    // TODO: Investigar si el endpoint /responses maneja mejor múltiples imágenes
+    console.log('[generate-image-pages] Usando gpt-image-1 con múltiples imágenes');
+    console.log('[generate-image-pages] Personajes incluidos:', imagesToUse.map(c => c.name));
+    console.log('[generate-image-pages] Prompt enriquecido:', enrichedPrompt);
+    
+    // gpt-image-1 soporta múltiples imágenes
+    const blobs = imagesToUse.map(c => c.blob);
+    return generateImageWithRetry(enrichedPrompt, blobs, endpoint, model, size, quality);
+  }
+  
+  // Para dall-e-2 (solo soporta una imagen)
+  if (endpoint.includes('/images/edits') && model === 'dall-e-2' && characters.length > 0) {
+    console.log('[generate-image-pages] Usando dall-e-2 (limitado a una imagen)');
+    const characterInfo = `El personaje principal es "${characters[0].name}". `;
+    const enrichedPrompt = characterInfo + basePrompt;
     return generateImageWithRetry(enrichedPrompt, [characters[0].blob], endpoint, model, size, quality);
   }
 
-  // Para un solo personaje o endpoints que soporten múltiples imágenes
+  // Para otros endpoints o casos
   const blobs = characters.map(c => c.blob);
   return generateImageWithRetry(basePrompt, blobs, endpoint, model, size, quality);
 }
@@ -105,6 +117,7 @@ async function generateImageWithRetry(
         endpoint.includes('/responses');
 
       if (supportsFiles && referenceImages.length > 0) {
+        console.log(`[generate-image-pages] Enviando ${referenceImages.length} imágenes de referencia al endpoint ${endpoint}`);
         const { url } = await generateWithOpenAI({
           endpoint,
           payload,
