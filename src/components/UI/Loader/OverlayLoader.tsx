@@ -18,8 +18,8 @@ export interface OverlayLoaderProps {
 }
 
 const MESSAGE_INTERVAL = 7000;
-const DEFAULT_TIMEOUT = 40000;
-const DEFAULT_FALLBACK_DELAY = 60000;
+const DEFAULT_TIMEOUT = 300000; // 5 minutos
+const DEFAULT_FALLBACK_DELAY = 360000; // 6 minutos
 
 const OverlayLoader: React.FC<OverlayLoaderProps> = ({
   etapa,
