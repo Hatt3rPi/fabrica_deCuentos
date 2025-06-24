@@ -61,10 +61,10 @@ async function generateImageWithCharacters(
     
     // Enriquecer el prompt con información detallada sobre cada personaje
     const characterDescriptions = imagesToUse.map((char, idx) => 
-      `Imagen ${idx + 1} corresponde al personaje "${char.name}"`
+      `- Imagen ${idx + 1} corresponde al personaje "${char.name}"`
     ).join('. ');
     
-    const enrichedPrompt = `CONTEXTO DE PERSONAJES: ${characterDescriptions}. \n\nESCENA A GENERAR: ${basePrompt}\n\nIMPORTANTE: Cuando el texto mencione a un personaje por su nombre, usa su imagen de referencia correspondiente para mantener consistencia visual. Las imágenes están ordenadas alfabéticamente por nombre de personaje.`;
+    const enrichedPrompt = `# CONTEXTO DE PERSONAJES PRINCIPALES: \n ${characterDescriptions}. \n\n # ESCENA A GENERAR: ${basePrompt}\n\n**IMPORTANTE: Cuando el texto mencione a un personaje por su nombre, usa su imagen de referencia correspondiente para mantener consistencia visual. Las imágenes están ordenadas alfabéticamente por nombre de personaje.`;
     
     console.log('[generate-image-pages] Usando gpt-image-1 con múltiples imágenes');
     console.log('[generate-image-pages] Personajes incluidos:', imagesToUse.map(c => c.name));
