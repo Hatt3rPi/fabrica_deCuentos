@@ -38,6 +38,7 @@ interface StoryData {
   completed_at: string;
   dedicatoria_text?: string;
   dedicatoria_image_url?: string;
+  dedicatoria_chosen?: boolean; // NULL = no eligió, TRUE = sí, FALSE = no
   dedicatoria_layout?: {
     layout: 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
     alignment: 'centro' | 'izquierda' | 'derecha';
@@ -210,7 +211,7 @@ async function getCompleteStoryData(storyId: string, userId: string) {
   // Obtener datos del cuento incluyendo campos de dedicatoria
   const { data: story, error: storyError } = await supabaseAdmin
     .from('stories')
-    .select('*, dedicatoria_text, dedicatoria_image_url, dedicatoria_layout')
+    .select('*, dedicatoria_text, dedicatoria_image_url, dedicatoria_chosen, dedicatoria_layout')
     .eq('id', storyId)
     .eq('user_id', userId)
     .single();

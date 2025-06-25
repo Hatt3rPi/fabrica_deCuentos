@@ -2,18 +2,58 @@ import React from 'react';
 import { Heart, ArrowRight } from 'lucide-react';
 import { useWizard } from '../../../context/WizardContext';
 import { useWizardFlowStore } from '../../../stores/wizardFlowStore';
+import { useParams } from 'react-router-dom';
+import { storyService } from '../../../services/storyService';
+import { useNotifications } from '../../../hooks/useNotifications';
+import { NotificationType, NotificationPriority } from '../../../types/notification';
 
 const DedicatoriaChoiceStep: React.FC = () => {
   const { setCurrentStep, nextStep } = useWizard();
   const { avanzarEtapa } = useWizardFlowStore();
+  const { storyId } = useParams();
+  const { createNotification } = useNotifications();
 
-  const handleYes = () => {
+  const handleYes = async () => {
+    // Persistir elección en BD
+    if (storyId) {
+      try {
+        await storyService.persistDedicatoria(storyId, { chosen: true });
+        console.log('[DedicatoriaChoiceStep] ✅ Elección "sí" persistida exitosamente');
+      } catch (error) {
+        console.error('[DedicatoriaChoiceStep] ❌ Error persistiendo elección "sí":', error);
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Error al guardar elección',
+          'Hubo un problema guardando tu elección. Inténtalo nuevamente.',
+          NotificationPriority.HIGH
+        );
+        return;
+      }
+    }
+    
     // Marcar dedicatoria-choice como completado y avanzar a dedicatoria
     avanzarEtapa('dedicatoriaChoice');
     setCurrentStep('dedicatoria');
   };
 
-  const handleNo = () => {
+  const handleNo = async () => {
+    // Persistir elección en BD
+    if (storyId) {
+      try {
+        await storyService.persistDedicatoria(storyId, { chosen: false });
+        console.log('[DedicatoriaChoiceStep] ✅ Elección "no" persistida exitosamente');
+      } catch (error) {
+        console.error('[DedicatoriaChoiceStep] ❌ Error persistiendo elección "no":', error);
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Error al guardar elección',
+          'Hubo un problema guardando tu elección. Inténtalo nuevamente.',
+          NotificationPriority.HIGH
+        );
+        return;
+      }
+    }
+    
     // Marcar dedicatoria-choice como completado y saltar directamente a export
     avanzarEtapa('dedicatoriaChoice');
     // También marcar dedicatoria como completado (saltado)

@@ -447,6 +447,7 @@ export const storyService = {
     layout?: string;
     alignment?: string;
     imageSize?: string;
+    chosen?: boolean;
   }): Promise<void> {
     console.log('[StoryService] persistDedicatoria LLAMADO', {
       storyId,
@@ -463,8 +464,16 @@ export const storyService = {
         alignment: dedicatoria.alignment || 'centro',
         imageSize: dedicatoria.imageSize || 'mediana'
       } : null,
+      dedicatoria_chosen: dedicatoria.chosen !== undefined ? dedicatoria.chosen : undefined,
       updated_at: new Date().toISOString()
     };
+
+    // Limpiar campos undefined del objeto de actualización
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
 
     const { error } = await supabase
       .from('stories')
