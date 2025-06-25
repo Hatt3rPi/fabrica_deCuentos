@@ -104,6 +104,15 @@ export const useWizardLockStatus = (): WizardLockStatus => {
 
   // Lógica centralizada de bloqueos
   const isStepLocked = useCallback((step: WizardStep): boolean => {
+    // DEBUG: Log para diagnosticar problema
+    console.log('[useWizardLockStatus] DEBUG:', {
+      step,
+      storyData,
+      isPdfCompleted,
+      isPreviewGenerated,
+      generatedPagesCount: generatedPages.length
+    });
+    
     // Nivel 2: PDF completado - bloquea todas las etapas excepto export
     if (isPdfCompleted) {
       return step !== 'export';
@@ -115,7 +124,7 @@ export const useWizardLockStatus = (): WizardLockStatus => {
     }
     
     return false;
-  }, [isPdfCompleted, isPreviewGenerated]);
+  }, [isPdfCompleted, isPreviewGenerated, storyData, generatedPages]);
 
   const getLockReason = useCallback((step: WizardStep): string => {
     if (isPdfCompleted) {
