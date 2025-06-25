@@ -285,13 +285,20 @@ export const storyService = {
         const mockUrl = await this.generateMockExport(storyId, saveToLibrary);
         
         // Still update story status manually for mock
-        await supabase
+        console.log('[StoryService] DEBUG: Mock export - actualizando status a completed...');
+        const { data: updateResult, error: updateError } = await supabase
           .from('stories')
           .update({ 
             status: 'completed',
             completed_at: new Date().toISOString()
           })
           .eq('id', storyId);
+          
+        if (updateError) {
+          console.error('[StoryService] ERROR en mock update:', updateError);
+        } else {
+          console.log('[StoryService] ✅ Mock export: status actualizado a completed');
+        }
         
         return { 
           success: true, 
