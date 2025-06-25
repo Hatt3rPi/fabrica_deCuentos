@@ -8,7 +8,7 @@ import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 
 const DedicatoriaChoiceStep: React.FC = () => {
-  const { setCurrentStep, nextStep } = useWizard();
+  const { setCurrentStep, nextStep, skipToStep } = useWizard();
   const { avanzarEtapa } = useWizardFlowStore();
   const { storyId } = useParams();
   const { createNotification } = useNotifications();
@@ -33,7 +33,7 @@ const DedicatoriaChoiceStep: React.FC = () => {
     
     // Marcar dedicatoria-choice como completado y avanzar a dedicatoria
     avanzarEtapa('dedicatoriaChoice');
-    setCurrentStep('dedicatoria');
+    nextStep();
   };
 
   const handleNo = async () => {
@@ -54,11 +54,12 @@ const DedicatoriaChoiceStep: React.FC = () => {
       }
     }
     
-    // Marcar dedicatoria-choice como completado y saltar directamente a export
+    // Marcar dedicatoria-choice como completado
     avanzarEtapa('dedicatoriaChoice');
     // También marcar dedicatoria como completado (saltado)
     avanzarEtapa('dedicatoria');
-    setCurrentStep('export');
+    // Usar skipToStep para saltar directamente a export
+    skipToStep('export');
   };
 
   return (

@@ -31,6 +31,7 @@ interface WizardContextType {
   updatePageContent: (pageId: string, updates: { text?: string; prompt?: string }) => Promise<void>;
   nextStep: () => void;
   prevStep: () => void;
+  skipToStep: (step: WizardStep) => void;
   canProceed: () => boolean;
   resetWizard: () => void;
   // New parallel generation functionality
@@ -572,6 +573,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
+  const skipToStep = (step: WizardStep) => {
+    setCurrentStep(step);
+  };
+
   const updateStoryTitle = (title: string) => {
     console.log('[WizardContext] updateStoryTitle llamado con:', title);
     wizardLogger.step('updateStoryTitle', { title });
@@ -695,6 +700,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         updatePageContent,
         nextStep,
         prevStep,
+        skipToStep,
         canProceed,
         resetWizard,
         // New parallel generation functionality
