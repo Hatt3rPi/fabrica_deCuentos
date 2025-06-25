@@ -8,7 +8,7 @@ import { storyService } from '../services/storyService';
 import { logger, wizardLogger } from '../utils/logger';
 import { useStory } from './StoryContext';
 
-export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'dedicatoria' | 'export';
+export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'dedicatoria-choice' | 'dedicatoria' | 'export';
 
 interface WizardContextType {
   currentStep: WizardStep;
@@ -432,7 +432,9 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (estado.cuento !== 'completado') return 'story';
     if (estado.diseno !== 'completado') return 'design';
     if (estado.vistaPrevia !== 'completado') return 'preview';
-    return 'dedicatoria';
+    if (estado.dedicatoriaChoice !== 'completado') return 'dedicatoria-choice';
+    if (estado.dedicatoria !== 'completado') return 'dedicatoria';
+    return 'export';
   };
 
   useEffect(() => {
@@ -523,12 +525,13 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
   }, [storyId]);
 
-  const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'dedicatoria', 'export'];
+  const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'dedicatoria-choice', 'dedicatoria', 'export'];
   const stepMap: Record<WizardStep, keyof EstadoFlujo | null> = {
     characters: 'personajes',
     story: 'cuento',
     design: 'diseno',
     preview: 'vistaPrevia',
+    'dedicatoria-choice': 'dedicatoriaChoice',
     dedicatoria: 'dedicatoria',
     export: null,
   };
@@ -638,6 +641,9 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return designSettings.visualStyle !== '' && designSettings.colorPalette !== '';
       case 'preview':
         return generatedPages.length > 0;
+      case 'dedicatoria-choice':
+        // El choice debe hacerse mediante los botones del componente
+        return true;
       case 'dedicatoria':
         // La dedicatoria es opcional, siempre permitir avanzar
         return true;

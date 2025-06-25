@@ -11,6 +11,7 @@ export interface EstadoFlujo {
   cuento: EtapaEstado;
   diseno: EtapaEstado;
   vistaPrevia: EtapaEstado;
+  dedicatoriaChoice: EtapaEstado;
   dedicatoria: EtapaEstado;
 }
 
@@ -21,6 +22,7 @@ const logEstado = (estado: EstadoFlujo, accion: string, id?: string | null) => {
     cuento: estado.cuento,
     diseno: estado.diseno,
     vistaPrevia: estado.vistaPrevia,
+    dedicatoriaChoice: estado.dedicatoriaChoice,
     dedicatoria: estado.dedicatoria,
   });
 };
@@ -41,6 +43,7 @@ export const initialFlowState: EstadoFlujo = {
   cuento: 'no_iniciada',
   diseno: 'no_iniciada',
   vistaPrevia: 'no_iniciada',
+  dedicatoriaChoice: 'no_iniciada',
   dedicatoria: 'no_iniciada'
 };
 
@@ -101,11 +104,15 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
           } else if (etapa === 'vistaPrevia') {
             if (nuevoEstado.diseno === 'completado') {
               nuevoEstado.vistaPrevia = 'completado';
-              nuevoEstado.dedicatoria = 'borrador';
+              nuevoEstado.dedicatoriaChoice = 'borrador';
+            }
+          } else if (etapa === 'dedicatoriaChoice') {
+            if (nuevoEstado.vistaPrevia === 'completado') {
+              nuevoEstado.dedicatoriaChoice = 'completado';
             }
           } else if (etapa === 'dedicatoria') {
-            if (nuevoEstado.vistaPrevia === 'completado') {
-              nuevoEstado.dedicatoria = 'borrador';
+            if (nuevoEstado.dedicatoriaChoice === 'completado') {
+              nuevoEstado.dedicatoria = 'completado';
             }
           }
           logEstado(nuevoEstado, 'avanzarEtapa', get().currentStoryId);
@@ -127,6 +134,8 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
             nuevoEstado.diseno = 'borrador';
           } else if (etapa === 'vistaPrevia' && nuevoEstado.vistaPrevia !== 'completado') {
             nuevoEstado.vistaPrevia = 'borrador';
+          } else if (etapa === 'dedicatoriaChoice' && nuevoEstado.dedicatoriaChoice !== 'completado') {
+            nuevoEstado.dedicatoriaChoice = 'borrador';
           } else if (etapa === 'dedicatoria' && nuevoEstado.dedicatoria !== 'completado') {
             nuevoEstado.dedicatoria = 'borrador';
           }
