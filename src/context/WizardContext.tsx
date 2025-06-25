@@ -411,6 +411,22 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setPersonajes(characters.length);
   }, [characters, setPersonajes]);
 
+  // Sincronizar storySettings con state para persistencia correcta
+  useEffect(() => {
+    setState(prevState => ({
+      ...prevState,
+      meta: {
+        ...prevState.meta,
+        theme: storySettings.theme,
+        targetAge: storySettings.targetAge,
+        literaryStyle: storySettings.literaryStyle,
+        centralMessage: storySettings.centralMessage,
+        additionalDetails: storySettings.additionalDetails,
+      },
+      dedicatoria: storySettings.dedicatoria
+    }));
+  }, [storySettings]);
+
   const stepFromEstado = (estado: EstadoFlujo): WizardStep => {
     if (estado.personajes.estado !== 'completado') return 'characters';
     if (estado.cuento !== 'completado') return 'story';
@@ -465,6 +481,13 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         literaryStyle: s.literary_style || '',
         centralMessage: s.central_message || '',
         additionalDetails: s.additional_details || '',
+        dedicatoria: s.dedicatoria_text ? {
+          text: s.dedicatoria_text,
+          imageUrl: s.dedicatoria_image_url || undefined,
+          layout: s.dedicatoria_layout?.layout || 'imagen-arriba',
+          alignment: s.dedicatoria_layout?.alignment || 'centro',
+          imageSize: s.dedicatoria_layout?.imageSize || 'mediana'
+        } : undefined
       });
       
       // CRÍTICO: Preservar el título al cargar desde base de datos
