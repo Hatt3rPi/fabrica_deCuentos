@@ -26,6 +26,16 @@ const DedicatoriaStep: React.FC = () => {
     imageSize: storySettings.dedicatoria?.imageSize || 'mediana'
   });
 
+  // DEBUG: Log para diagnosticar problema de dedicatoria
+  React.useEffect(() => {
+    console.log('[DedicatoriaStep] DEBUG - Estado de dedicatoria:', {
+      storySettingsDedicatoria: storySettings.dedicatoria,
+      localDedicatoria: dedicatoria,
+      hasText: !!dedicatoria.text,
+      hasImage: !!dedicatoria.imageUrl
+    });
+  }, [storySettings.dedicatoria, dedicatoria]);
+
   const [isUploading, setIsUploading] = useState(false);
 
   // Función helper para actualizar dedicatoria evitando duplicación de lógica

@@ -513,7 +513,19 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           imageUrl: p.image_url || '',
           prompt: p.prompt || ''
         }));
+        console.log('[WizardContext] DEBUG - Páginas cargadas desde BD:', {
+          storyId,
+          totalPages: mapped.length,
+          pagesWithImages: mapped.filter(p => p.imageUrl).length,
+          pagesSummary: mapped.map(p => ({ 
+            pageNumber: p.pageNumber, 
+            hasImage: !!p.imageUrl,
+            imageUrl: p.imageUrl?.substring(0, 50) + '...' 
+          }))
+        });
         setGeneratedPages(mapped);
+      } else {
+        console.log('[WizardContext] DEBUG - No hay páginas en draft.pages para story:', storyId);
       }
       const etapaInicial = stepFromEstado(useWizardFlowStore.getState().estado);
       setCurrentStep(etapaInicial);

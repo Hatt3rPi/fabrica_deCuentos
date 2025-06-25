@@ -20,6 +20,22 @@ const CharactersStep: React.FC = () => {
   const hasGeneratedPages = generatedPages.some(page => page.pageNumber > 0 && page.imageUrl);
   const isCharactersLocked = hasGeneratedPages;
 
+  // DEBUG: Log para diagnosticar problema de candados
+  React.useEffect(() => {
+    console.log('[CharactersStep] DEBUG - Estado de candado:', {
+      storyId,
+      totalPages: generatedPages.length,
+      pagesWithImages: generatedPages.filter(p => p.imageUrl && p.pageNumber > 0).length,
+      hasGeneratedPages,
+      isCharactersLocked,
+      allPages: generatedPages.map(p => ({ 
+        pageNumber: p.pageNumber, 
+        hasImage: !!p.imageUrl,
+        imageUrl: p.imageUrl?.substring(0, 30) + '...'
+      }))
+    });
+  }, [generatedPages, hasGeneratedPages, isCharactersLocked, storyId]);
+
   useEffect(() => {
     loadStoryCharacters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
