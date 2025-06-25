@@ -36,6 +36,13 @@ interface StoryData {
   additional_details: string;
   created_at: string;
   completed_at: string;
+  dedicatoria_text?: string;
+  dedicatoria_image_url?: string;
+  dedicatoria_layout?: {
+    layout: 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
+    alignment: 'centro' | 'izquierda' | 'derecha';
+    imageSize: 'pequena' | 'mediana' | 'grande';
+  };
 }
 
 interface StoryPage {
@@ -200,10 +207,10 @@ Deno.serve(async (req) => {
 async function getCompleteStoryData(storyId: string, userId: string) {
   console.log(`[story-export] Obteniendo datos del cuento ${storyId}`);
   
-  // Obtener datos del cuento
+  // Obtener datos del cuento incluyendo campos de dedicatoria
   const { data: story, error: storyError } = await supabaseAdmin
     .from('stories')
-    .select('*')
+    .select('*, dedicatoria_text, dedicatoria_image_url, dedicatoria_layout')
     .eq('id', storyId)
     .eq('user_id', userId)
     .single();
@@ -760,14 +767,79 @@ function generateHTMLContent(
       .replace(/<p><\/p>/g, '');
   }
 
+  // Función para generar página de dedicatoria
+  function generateDedicatoriaPage(story: StoryData): string {
+    if (!story.dedicatoria_text) {
+      return ''; // No mostrar página si no hay texto de dedicatoria
+    }
+
+    const layout = story.dedicatoria_layout || { layout: 'imagen-arriba', alignment: 'centro', imageSize: 'mediana' };
+    const hasImage = !!story.dedicatoria_image_url;
+    
+    // Clases CSS basadas en configuración
+    const alignmentClass = {
+      'centro': 'center',
+      'izquierda': 'flex-start', 
+      'derecha': 'flex-end'
+    }[layout.alignment] || 'center';
+
+    const imageSizeClass = {
+      'pequena': 'width: 120px; height: 120px;',
+      'mediana': 'width: 180px; height: 180px;',
+      'grande': 'width: 240px; height: 240px;'
+    }[layout.imageSize] || 'width: 180px; height: 180px;';
+
+    const flexDirection = {
+      'imagen-arriba': 'column',
+      'imagen-abajo': 'column-reverse',
+      'imagen-izquierda': 'row',
+      'imagen-derecha': 'row-reverse'
+    }[layout.layout] || 'column';
+
+    return `
+      <div class="story-page dedicatoria-page" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+        <div class="page-overlay" style="
+          display: flex; 
+          flex-direction: ${flexDirection}; 
+          align-items: ${alignmentClass}; 
+          justify-content: center; 
+          padding: 60px; 
+          gap: 30px;
+          text-align: ${layout.alignment === 'centro' ? 'center' : layout.alignment === 'izquierda' ? 'left' : 'right'};
+        ">
+          ${hasImage ? `
+            <div class="dedicatoria-image" style="${imageSizeClass} object-fit: cover; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+              <img src="${story.dedicatoria_image_url}" alt="Imagen de dedicatoria" style="width: 100%; height: 100%; object-fit: cover; border-radius: 15px;" />
+            </div>
+          ` : ''}
+          <div class="dedicatoria-text" style="
+            font-family: ${pageConfig.fontFamily || "'Indie Flower', cursive"}; 
+            font-size: 24px; 
+            line-height: 1.8; 
+            color: #4a5568; 
+            font-style: italic;
+            max-width: 600px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          ">
+            ${textToHTML(story.dedicatoria_text)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   // Usar imagen de fondo personalizada si existe (templates no tienen backgrounds custom)
   const pageBackgroundImage = styleConfig?.pageBackgroundUrl || '';
   const coverBackgroundImage = coverPage?.image_url || styleConfig?.coverBackgroundUrl || '';
   
   console.log(`[story-export] 🏞️ Background página:`, pageBackgroundImage || 'NINGUNO');
   console.log(`[story-export] 🌄 Background portada:`, coverBackgroundImage || 'NINGUNO');
+  console.log(`[story-export] 💖 Dedicatoria encontrada:`, story.dedicatoria_text ? 'SÍ' : 'NO');
   
-  const pagesContent = storyPages
+  // Generar página de dedicatoria si existe
+  const dedicatoriaPage = generateDedicatoriaPage(story);
+  
+  const storyPagesContent = storyPages
     .map(page => `
       <div class="story-page" style="background-image: url('${page.image_url || pageBackgroundImage || ''}')">
         <div class="page-overlay">
@@ -778,6 +850,9 @@ function generateHTMLContent(
       </div>
     `)
     .join('');
+  
+  // Combinar dedicatoria (si existe) + páginas del cuento
+  const pagesContent = dedicatoriaPage + storyPagesContent;
   
   return `
     <!DOCTYPE html>

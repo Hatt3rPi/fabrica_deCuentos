@@ -6,6 +6,7 @@ import CharactersStep from './steps/CharactersStep';
 import StoryStep from './steps/StoryStep';
 import DesignStep from './steps/DesignStep';
 import PreviewStep from './steps/PreviewStep';
+import DedicatoriaStep from './steps/DedicatoriaStep';
 import ExportStep from './steps/ExportStep';
 import WizardNav from './WizardNav';
 import StepIndicator from './StepIndicator';
@@ -96,6 +97,8 @@ const Wizard: React.FC = () => {
         return <DesignStep />;
       case 'preview':
         return <PreviewStep />;
+      case 'dedicatoria':
+        return <DedicatoriaStep />;
       case 'export':
         return <ExportStep />;
       default:

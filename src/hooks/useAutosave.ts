@@ -121,12 +121,13 @@ export const useAutosave = (
         // Save story metadata (content only, NOT wizard_state)
         console.log('[AutoSave] PERSISTIENDO CONTENIDO DE STORY', {
           storyId: currentStoryId,
-          fields: ['title', 'theme', 'target_age', 'literary_style', 'central_message', 'additional_details'],
+          fields: ['title', 'theme', 'target_age', 'literary_style', 'central_message', 'additional_details', 'dedicatoria'],
           currentTitle: state.meta.title,
           existingTitle,
           titleToSave,
           usedCache: !state.meta.title && titleFetchedRef.current,
-          consultedDB: !state.meta.title && !titleFetchedRef.current
+          consultedDB: !state.meta.title && !titleFetchedRef.current,
+          hasDedicatoria: !!state.dedicatoria?.text
         });
 
         logger.debug('Guardando story - Título actual:', state.meta.title, 'Título existente:', existingTitle, 'Título a guardar:', titleToSave, 'Usó cache:', !state.meta.title && titleFetchedRef.current, 'Consultó BD:', !state.meta.title && !titleFetchedRef.current);
@@ -140,6 +141,13 @@ export const useAutosave = (
             literary_style: state.meta.literaryStyle,
             central_message: state.meta.centralMessage,
             additional_details: state.meta.additionalDetails,
+            dedicatoria_text: state.dedicatoria?.text || null,
+            dedicatoria_image_url: state.dedicatoria?.imageUrl || null,
+            dedicatoria_layout: state.dedicatoria ? {
+              layout: state.dedicatoria.layout,
+              alignment: state.dedicatoria.alignment,
+              imageSize: state.dedicatoria.imageSize
+            } : null,
             updated_at: new Date().toISOString(),
             status: 'draft'
           })

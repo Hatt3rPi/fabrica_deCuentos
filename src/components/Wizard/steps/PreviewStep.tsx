@@ -31,7 +31,7 @@ const PreviewStep: React.FC = () => {
   } = useWizard();
   const { createNotification } = useNotifications();
   const [currentPage, setCurrentPage] = useState(0);
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  // showCompletionModal removido - funcionalidad movida a ExportStep
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showAdvancedModal, setShowAdvancedModal] = useState(false);
   const handleFallback = () => setIsGenerating(false);
@@ -494,33 +494,9 @@ const PreviewStep: React.FC = () => {
             )}
           </div>
 
-          {/* Botones centrados */}
+          {/* Área para botones futuras funcionalidades */}
           <div className="flex justify-center gap-4">
-            {/* Botón Finalizar Cuento - solo visible si no se ha completado */}
-            {!completionResult?.success && (
-              <button
-                onClick={() => setShowCompletionModal(true)}
-                disabled={isGenerating || isCompleting || !allPagesCompleted}
-                className={`px-8 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                  allPagesCompleted && !isGenerating && !isCompleting
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {isCompleting ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                    Finalizando cuento...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5" />
-                    Finalizar Cuento
-                  </>
-                )}
-              </button>
-            )}
-
+            {/* El botón "Finalizar Cuento" se movió a la etapa Export */}
           </div>
 
           {/* Error state */}

@@ -71,7 +71,7 @@ const WizardNav: React.FC = () => {
         <span>Anterior</span>
       </button>
 
-      {currentStep === 'preview' ? (
+      {currentStep === 'export' ? (
         completionResult?.success && completionResult.downloadUrl ? (
           <a
             href={completionResult.downloadUrl}
