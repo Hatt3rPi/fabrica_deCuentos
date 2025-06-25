@@ -57,16 +57,19 @@ export const useWizardLockStatus = (): WizardLockStatus => {
 
   // Detectar si el PDF fue completado
   const isPdfCompleted = useMemo(() => {
-    console.log('[useWizardLockStatus] DEBUG storyData COMPLETO:', {
+    const isCompleted = storyData?.status === 'completed';
+    console.log('[useWizardLockStatus] DEBUG isPdfCompleted CÁLCULO:', {
       storyData,
       status: storyData?.status,
-      dedicatoriaChosen: storyData?.dedicatoria_chosen,
-      allFields: storyData ? Object.keys(storyData) : [],
-      isCompleted: storyData?.status === 'completed',
+      statusType: typeof storyData?.status,
+      statusExacto: storyData?.status,
+      isCompleted,
+      condicion: "storyData?.status === 'completed'",
+      resultado: isCompleted,
       timestamp: new Date().toISOString(),
       storyId
     });
-    return storyData?.status === 'completed';
+    return isCompleted;
   }, [storyData, storyId]);
 
   // Use ref to track if component is mounted and for timeout management
@@ -203,11 +206,15 @@ export const useWizardLockStatus = (): WizardLockStatus => {
         // Actualizar inmediatamente el estado local cuando es un export
         if (event.detail?.immediate || event.detail?.forced) {
           console.log('[useWizardLockStatus] ✅ ACTUALIZANDO STATUS A COMPLETED INMEDIATAMENTE');
-          setStoryData(prev => ({
-            ...prev,
+          const updatedData = {
             status: 'completed',
-            completed_at: new Date().toISOString()
-          }));
+            dedicatoria_chosen: storyData?.dedicatoria_chosen ?? null,
+            wizard_state: storyData?.wizard_state,
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          console.log('[useWizardLockStatus] DEBUG: Nuevo estado local:', updatedData);
+          setStoryData(updatedData);
           setError(null);
         }
         
@@ -236,12 +243,17 @@ export const useWizardLockStatus = (): WizardLockStatus => {
         },
         (payload) => {
           if (!mountedRef.current) return;
+          console.log('[useWizardLockStatus] DEBUG: Cambio en tiempo real detectado:', payload.new);
           if (payload.new && ('status' in payload.new || 'dedicatoria_chosen' in payload.new)) {
-            setStoryData(prev => ({
-              ...prev,
-              status: payload.new.status || prev?.status || '',
-              dedicatoria_chosen: payload.new.dedicatoria_chosen ?? prev?.dedicatoria_chosen
-            }));
+            const updatedData = {
+              ...storyData,
+              status: payload.new.status || storyData?.status || '',
+              dedicatoria_chosen: payload.new.dedicatoria_chosen ?? storyData?.dedicatoria_chosen,
+              completed_at: payload.new.completed_at || storyData?.completed_at,
+              updated_at: payload.new.updated_at || new Date().toISOString()
+            };
+            console.log('[useWizardLockStatus] DEBUG: Actualizando por cambio en tiempo real:', updatedData);
+            setStoryData(updatedData);
             setError(null); // Clear any previous errors on successful update
           }
         }
