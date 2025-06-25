@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
-import { ChevronLeft, ChevronRight, RefreshCw, Pencil, Download, BookOpen, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Pencil, Lock } from 'lucide-react';
 import { OverlayLoader } from '../../UI/Loader';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
@@ -8,6 +8,7 @@ import { useStoryStyles } from '../../../hooks/useStoryStyles';
 import { useImageDimensions } from '../../../hooks/useImageDimensions';
 import InlineTextEditor from './components/InlineTextEditor';
 import AdvancedEditModal from './components/AdvancedEditModal';
+import { useStoryCompletionStatus } from '../../../hooks/useStoryCompletionStatus';
 
 const PreviewStep: React.FC = () => {
   const { 
@@ -24,17 +25,14 @@ const PreviewStep: React.FC = () => {
     pageStates,
     retryFailedPages,
     // Story completion functionality
-    completeStory,
-    isCompleting,
-    completionResult,
     isPdfOutdated
   } = useWizard();
   const { createNotification } = useNotifications();
   const [currentPage, setCurrentPage] = useState(0);
   // showCompletionModal removido - funcionalidad movida a ExportStep
-  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showAdvancedModal, setShowAdvancedModal] = useState(false);
   const handleFallback = () => setIsGenerating(false);
+  const { isCompleted, isLoading, error, retry } = useStoryCompletionStatus();
 
   // Style hooks for dynamic preview
   const { getTextStyles, getContainerStyles, getPosition, getBackgroundImage, styleConfig } = useStoryStyles();
@@ -79,6 +77,24 @@ const PreviewStep: React.FC = () => {
 
   // Función para manejar el modal avanzado
   const handleAdvancedEdit = () => {
+    if (isCompleted || isLoading) {
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Edición bloqueada',
+        'No puedes editar el cuento porque el PDF ya ha sido generado',
+        NotificationPriority.HIGH
+      );
+      return;
+    }
+    if (error) {
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error de conexión',
+        'No se puede verificar el estado del cuento. Intenta nuevamente.',
+        NotificationPriority.HIGH
+      );
+      return;
+    }
     setShowAdvancedModal(true);
   };
 
@@ -219,10 +235,45 @@ const PreviewStep: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-purple-800">Vista Previa del Cuento</h2>
-        <p className="text-gray-600">
+        <h2 className="text-2xl font-bold text-purple-800 dark:text-purple-300">
+          {isCompleted ? 'Vista Previa - Solo Lectura' : 'Vista Previa del Cuento'}
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400">
           Página {currentPage + 1} de {generatedPages.length}
         </p>
+        
+        {error && (
+          <div className="mt-4 mx-auto max-w-md">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <div className="flex items-center justify-center gap-2 text-red-800 dark:text-red-200">
+                <span className="text-sm font-medium">Error al verificar estado del cuento</span>
+              </div>
+              <p className="text-xs text-red-700 dark:text-red-300 mt-1 text-center">
+                {error}
+              </p>
+              <button
+                onClick={retry}
+                className="mt-2 mx-auto block px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {isCompleted && !error && (
+          <div className="mt-4 mx-auto max-w-md">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <div className="flex items-center justify-center gap-2 text-yellow-800 dark:text-yellow-200">
+                <Lock className="w-4 h-4" />
+                <span className="text-sm font-medium">PDF generado - edición bloqueada</span>
+              </div>
+              <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                El contenido ya no puede modificarse
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-center gap-8">
@@ -288,10 +339,19 @@ const PreviewStep: React.FC = () => {
               {currentPageData && !isGenerating && pageStates[currentPageData.id] !== 'generating' && (
                 <button
                   onClick={handleAdvancedEdit}
-                  className="absolute top-2 left-2 w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-gray-700 hover:text-purple-600 transition-all duration-200 z-20 group hover:scale-110"
-                  title="Editar contenido y prompt"
+                  disabled={isCompleted || isLoading || error}
+                  className={`absolute top-2 left-2 w-8 h-8 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center transition-all duration-200 z-20 group ${
+                    isCompleted || isLoading || error
+                      ? 'bg-gray-200/90 text-gray-400 cursor-not-allowed'
+                      : 'bg-white/90 hover:bg-white hover:shadow-xl text-gray-700 hover:text-purple-600 hover:scale-110'
+                  }`}
+                  title={isCompleted || isLoading || error ? 'Edición bloqueada' : 'Editar contenido y prompt'}
                 >
-                  <Pencil className="w-4 h-4 transition-transform group-hover:scale-110" />
+                  {isCompleted || isLoading || error ? (
+                    <Lock className="w-4 h-4" />
+                  ) : (
+                    <Pencil className="w-4 h-4 transition-transform group-hover:scale-110" />
+                  )}
                 </button>
               )}
               
@@ -319,23 +379,41 @@ const PreviewStep: React.FC = () => {
                         }}
                         className="relative"
                       >
-                        <InlineTextEditor
-                          initialText={currentPage === 0 ? generatedPages[0]?.text || '' : currentPageData.text}
-                          onSave={(newText) => handleSaveText(currentPageData.id, newText)}
-                          textStyles={{
-                            ...textStyles,
-                            width: '100%',
-                            fontSize: exactFontSize,
-                            lineHeight: textStyles.lineHeight || '1.4'
-                          }}
-                          className="text-center sm:text-left"
-                          config={{
-                            autoSaveDelay: 2000,
-                            showIndicators: true,
-                            multiline: true,
-                            placeholder: 'Doble-click para editar el texto...'
-                          }}
-                        />
+                        {isCompleted || isLoading || error ? (
+                          // Texto de solo lectura cuando está completado o hay error
+                          <div
+                            style={{
+                              ...textStyles,
+                              width: '100%',
+                              fontSize: exactFontSize,
+                              lineHeight: textStyles.lineHeight || '1.4',
+                              opacity: 0.8,
+                              cursor: 'default'
+                            }}
+                            className="text-center sm:text-left"
+                            title={error ? "Error de conexión" : "Solo lectura - PDF generado"}
+                          >
+                            {currentPage === 0 ? generatedPages[0]?.text || '' : currentPageData.text}
+                          </div>
+                        ) : (
+                          <InlineTextEditor
+                            initialText={currentPage === 0 ? generatedPages[0]?.text || '' : currentPageData.text}
+                            onSave={(newText) => handleSaveText(currentPageData.id, newText)}
+                            textStyles={{
+                              ...textStyles,
+                              width: '100%',
+                              fontSize: exactFontSize,
+                              lineHeight: textStyles.lineHeight || '1.4'
+                            }}
+                            className="text-center sm:text-left"
+                            config={{
+                              autoSaveDelay: 2000,
+                              showIndicators: true,
+                              multiline: true,
+                              placeholder: 'Doble-click para editar el texto...'
+                            }}
+                          />
+                        )}
                       </div>
                     </div>
                   </>
@@ -428,17 +506,8 @@ const PreviewStep: React.FC = () => {
             {/* El botón "Finalizar Cuento" se movió a la etapa Export */}
           </div>
 
-          {/* Error state */}
-          {completionResult?.error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800">
-                <span className="font-semibold">Error:</span> {completionResult.error}
-              </p>
-            </div>
-          )}
-
-          {/* PDF outdated state */}
-          {completionResult?.success && isPdfOutdated && (
+          {/* PDF outdated state - only show if user can edit */}
+          {!isCompleted && !error && isPdfOutdated && (
             <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-amber-800">
                 <span className="font-semibold">⚠️ PDF desactualizado:</span> Has regenerado algunas imágenes. Finaliza el cuento nuevamente para actualizar el PDF.
@@ -447,37 +516,6 @@ const PreviewStep: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Notificación de éxito - reemplaza el contenedor verde */}
-      {completionResult?.success && showSuccessNotification && (
-        <div className="fixed top-4 right-4 z-50 max-w-md">
-          <div className="bg-white border border-green-200 rounded-lg shadow-lg p-4 animate-slide-in-right">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="flex-grow">
-                <h4 className="font-semibold text-green-800 mb-1">
-                  ¡Cuento completado exitosamente!
-                </h4>
-                <p className="text-sm text-green-700">
-                  Tu cuento ha sido generado y está listo para descargar.
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowSuccessNotification(false)}
-                className="flex-shrink-0 text-green-600 hover:text-green-800 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
 
       {/* Advanced Edit Modal */}
       {showAdvancedModal && currentPageData && (

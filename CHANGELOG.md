@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Feature: Bloqueo de Edición Post-PDF (2025-06-25)
+- **Nueva Funcionalidad**: Implementado sistema de bloqueo de edición de campos después de generar PDF
+  - **Hook personalizado**: `useStoryCompletionStatus` para monitorear estado de completación desde BD
+  - **DedicatoriaChoiceStep**: Botones "Sí/No" bloqueados con indicadores visuales cuando `story.status === 'completed'`
+  - **DedicatoriaStep**: Todos los campos de dedicatoria bloqueados (texto, imagen, configuración de layout)
+  - **PreviewStep**: Edición inline y modal avanzado deshabilitados, reemplazados con vista de solo lectura
+  - **UX mejorada**: Íconos de candado, mensajes explicativos y estilos visuales diferenciados
+  - **Real-time**: Escucha cambios de estado en tiempo real via Supabase subscriptions
+- **Impacto**: Evita inconsistencias entre PDF generado y contenido en interfaz, mejora confiabilidad del sistema
+- **Archivos**: `src/hooks/useStoryCompletionStatus.ts`, `src/components/Wizard/steps/DedicatoriaChoiceStep.tsx`, `src/components/Wizard/steps/DedicatoriaStep.tsx`, `src/components/Wizard/steps/PreviewStep.tsx`
+- **Issue**: #266
+
 ### Feature: Mejoras al Panel Admin/Flujo (2025-06-24)
 - **Nueva Funcionalidad**: Agregadas etapas faltantes Diseño y Vista Previa al panel de administración
   - **Etapa Diseño**: 
