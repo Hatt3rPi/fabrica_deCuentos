@@ -389,9 +389,7 @@ export const storyService = {
       timestamp: new Date().toISOString()
     });
 
-    // DEBUG: Verificar si se actualiza el status después del export exitoso
-    console.log(`[StoryService] DEBUG: ¿Se actualiza stories.status a 'completed'? NO - Esta es la causa del problema`);
-    console.log(`[StoryService] DEBUG: El export fue exitoso pero stories.status sigue siendo 'draft'`);
+    // Export successful - Edge Function handles status update to 'completed'
     
     return data.downloadUrl as string;
   },
