@@ -34,11 +34,24 @@ export const useWizardLockStatus = (): WizardLockStatus => {
 
   // Detectar si la vista previa fue generada (páginas con imágenes existen)
   const isPreviewGenerated = useMemo(() => {
+    console.log('[useWizardLockStatus] DEBUG generatedPages:', {
+      length: generatedPages.length,
+      pages: generatedPages.map(p => ({
+        pageNumber: p.pageNumber,
+        hasImageUrl: !!p.imageUrl,
+        imageUrlLength: p.imageUrl?.length || 0
+      }))
+    });
     return generatedPages.some(page => page.pageNumber > 0 && page.imageUrl);
   }, [generatedPages]);
 
   // Detectar si el PDF fue completado
   const isPdfCompleted = useMemo(() => {
+    console.log('[useWizardLockStatus] DEBUG storyData:', {
+      storyData,
+      status: storyData?.status,
+      isCompleted: storyData?.status === 'completed'
+    });
     return storyData?.status === 'completed';
   }, [storyData]);
 
