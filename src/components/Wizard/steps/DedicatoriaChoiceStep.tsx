@@ -13,7 +13,7 @@ const DedicatoriaChoiceStep: React.FC = () => {
   const { avanzarEtapa } = useWizardFlowStore();
   const { storyId } = useParams();
   const { createNotification } = useNotifications();
-  const { isCompleted, isLoading } = useStoryCompletionStatus();
+  const { isCompleted, isLoading, error, retry } = useStoryCompletionStatus();
 
   const handleYes = async () => {
     // Persistir elección en BD
@@ -79,7 +79,22 @@ const DedicatoriaChoiceStep: React.FC = () => {
           {isCompleted ? 'Dedicatoria - Solo Lectura' : '¿Te gustaría agregar una dedicatoria?'}
         </h2>
         
-        {isCompleted ? (
+        {error ? (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-center gap-2 text-red-800 dark:text-red-200">
+              <span className="font-medium">Error al verificar estado del cuento</span>
+            </div>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-2 text-center">
+              {error}
+            </p>
+            <button
+              onClick={retry}
+              className="mt-3 mx-auto block px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : isCompleted ? (
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-center gap-2 text-yellow-800 dark:text-yellow-200">
               <Lock className="w-5 h-5" />
@@ -105,9 +120,9 @@ const DedicatoriaChoiceStep: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-lg mx-auto">
         <button
           onClick={handleYes}
-          disabled={isCompleted || isLoading}
+          disabled={isCompleted || isLoading || error}
           className={`group relative overflow-hidden rounded-xl border-2 p-6 transition-all duration-300
-                     ${isCompleted || isLoading 
+                     ${isCompleted || isLoading || error
                        ? 'border-gray-300 dark:border-gray-600 cursor-not-allowed bg-gray-100 dark:bg-gray-700' 
                        : 'border-purple-300 dark:border-purple-600 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-lg hover:scale-105 bg-white dark:bg-gray-800'
                      }`}
@@ -133,9 +148,9 @@ const DedicatoriaChoiceStep: React.FC = () => {
 
         <button
           onClick={handleNo}
-          disabled={isCompleted || isLoading}
+          disabled={isCompleted || isLoading || error}
           className={`group relative overflow-hidden rounded-xl border-2 p-6 transition-all duration-300
-                     ${isCompleted || isLoading 
+                     ${isCompleted || isLoading || error
                        ? 'border-gray-300 dark:border-gray-600 cursor-not-allowed bg-gray-100 dark:bg-gray-700' 
                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-lg hover:scale-105 bg-white dark:bg-gray-800'
                      }`}

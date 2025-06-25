@@ -7,12 +7,16 @@ import { NotificationType, NotificationPriority } from '../../../types/notificat
 import { storyService } from '../../../services/storyService';
 import { useStoryCompletionStatus } from '../../../hooks/useStoryCompletionStatus';
 
+type LayoutOption = 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
+type AlignmentOption = 'centro' | 'izquierda' | 'derecha';
+type ImageSizeOption = 'pequena' | 'mediana' | 'grande';
+
 interface DedicatoriaData {
   text: string;
   imageUrl?: string;
-  layout: 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
-  alignment: 'centro' | 'izquierda' | 'derecha';
-  imageSize: 'pequena' | 'mediana' | 'grande';
+  layout: LayoutOption;
+  alignment: AlignmentOption;
+  imageSize: ImageSizeOption;
 }
 
 const DedicatoriaStep: React.FC = () => {
@@ -20,7 +24,7 @@ const DedicatoriaStep: React.FC = () => {
   const { createNotification } = useNotifications();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { storyId } = useParams();
-  const { isCompleted, isLoading } = useStoryCompletionStatus();
+  const { isCompleted, isLoading, error, retry } = useStoryCompletionStatus();
 
   // Estado inicial de la dedicatoria
   const [dedicatoria, setDedicatoria] = useState<DedicatoriaData>({
@@ -190,8 +194,11 @@ const DedicatoriaStep: React.FC = () => {
     updateDedicatoria({ text });
   };
 
-  // Función para actualizar configuración de layout
-  const handleLayoutChange = (field: keyof DedicatoriaData, value: string) => {
+  // Función para actualizar configuración de layout con type safety mejorado
+  const handleLayoutChange = <K extends keyof DedicatoriaData>(
+    field: K, 
+    value: DedicatoriaData[K]
+  ) => {
     updateDedicatoria({ [field]: value });
   };
 
@@ -247,7 +254,24 @@ const DedicatoriaStep: React.FC = () => {
         </p>
       </div>
 
-      {isCompleted && (
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="flex items-center justify-center gap-2 text-red-800 dark:text-red-200">
+            <span className="font-medium">Error al verificar estado del cuento</span>
+          </div>
+          <p className="text-sm text-red-700 dark:text-red-300 mt-2 text-center">
+            {error}
+          </p>
+          <button
+            onClick={retry}
+            className="mt-3 mx-auto block px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {isCompleted && !error && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
           <div className="flex items-center justify-center gap-2 text-yellow-800 dark:text-yellow-200">
             <Lock className="w-5 h-5" />
@@ -273,9 +297,9 @@ const DedicatoriaStep: React.FC = () => {
               onChange={(e) => handleTextChange(e.target.value)}
               placeholder={isCompleted ? "No hay texto de dedicatoria" : "Escribe tu mensaje personal..."}
               maxLength={300}
-              disabled={isCompleted || isLoading}
+              disabled={isCompleted || isLoading || error}
               className={`w-full p-3 border rounded-lg resize-none
-                        ${isCompleted || isLoading
+                        ${isCompleted || isLoading || error
                           ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                           : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
                         }`}
@@ -297,9 +321,9 @@ const DedicatoriaStep: React.FC = () => {
                     <button
                       key={index}
                       onClick={() => handleTextChange(ejemplo)}
-                      disabled={isCompleted || isLoading}
+                      disabled={isCompleted || isLoading || error}
                       className={`block text-sm text-left
-                                ${isCompleted || isLoading
+                                ${isCompleted || isLoading || error
                                   ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
                                   : 'text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300'
                                 }`}
@@ -320,9 +344,9 @@ const DedicatoriaStep: React.FC = () => {
             
             {!dedicatoria.imageUrl ? (
               <div
-                onClick={isCompleted || isLoading ? undefined : () => fileInputRef.current?.click()}
+                onClick={isCompleted || isLoading || error ? undefined : () => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors
-                          ${isCompleted || isLoading
+                          ${isCompleted || isLoading || error
                             ? 'border-gray-300 dark:border-gray-600 cursor-not-allowed bg-gray-50 dark:bg-gray-700/50'
                             : 'border-gray-300 dark:border-gray-600 cursor-pointer hover:border-purple-400 dark:hover:border-purple-500'
                           }`}
@@ -334,15 +358,15 @@ const DedicatoriaStep: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {isCompleted || isLoading ? (
+                    {isCompleted || isLoading || error ? (
                       <Lock className="mx-auto h-8 w-8 text-gray-400" />
                     ) : (
                       <Upload className="mx-auto h-8 w-8 text-gray-400" />
                     )}
-                    <p className={`text-sm ${isCompleted || isLoading ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                      {isCompleted || isLoading ? 'Carga de imagen bloqueada' : 'Haz clic para subir una imagen'}
+                    <p className={`text-sm ${isCompleted || isLoading || error ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                      {isCompleted || isLoading || error ? 'Carga de imagen bloqueada' : 'Haz clic para subir una imagen'}
                     </p>
-                    {!isCompleted && !isLoading && (
+                    {!isCompleted && !isLoading && !error && (
                       <p className="text-xs text-gray-500">
                         PNG, JPG, WebP hasta 5MB
                       </p>
@@ -357,7 +381,7 @@ const DedicatoriaStep: React.FC = () => {
                   alt="Imagen de dedicatoria"
                   className="w-full h-48 object-cover rounded-lg"
                 />
-                {!isCompleted && !isLoading && (
+                {!isCompleted && !isLoading && !error && (
                   <button
                     onClick={handleRemoveImage}
                     className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 
@@ -379,7 +403,7 @@ const DedicatoriaStep: React.FC = () => {
               type="file"
               accept="image/*"
               onChange={handleImageUpload}
-              disabled={isCompleted || isLoading}
+              disabled={isCompleted || isLoading || error}
               className="hidden"
             />
           </div>
@@ -398,17 +422,17 @@ const DedicatoriaStep: React.FC = () => {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: 'imagen-arriba', label: 'Arriba' },
-                    { value: 'imagen-abajo', label: 'Abajo' },
-                    { value: 'imagen-izquierda', label: 'Izquierda' },
-                    { value: 'imagen-derecha', label: 'Derecha' }
+                    { value: 'imagen-arriba' as const, label: 'Arriba' },
+                    { value: 'imagen-abajo' as const, label: 'Abajo' },
+                    { value: 'imagen-izquierda' as const, label: 'Izquierda' },
+                    { value: 'imagen-derecha' as const, label: 'Derecha' }
                   ].map((option) => (
                     <button
                       key={option.value}
                       onClick={() => handleLayoutChange('layout', option.value)}
-                      disabled={isCompleted || isLoading}
+                      disabled={isCompleted || isLoading || error}
                       className={`p-2 text-sm rounded-lg border transition-colors ${
-                        isCompleted || isLoading
+                        isCompleted || isLoading || error
                           ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                           : dedicatoria.layout === option.value
                             ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300'
@@ -428,16 +452,16 @@ const DedicatoriaStep: React.FC = () => {
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { value: 'pequena', label: 'Pequeña' },
-                    { value: 'mediana', label: 'Mediana' },
-                    { value: 'grande', label: 'Grande' }
+                    { value: 'pequena' as const, label: 'Pequeña' },
+                    { value: 'mediana' as const, label: 'Mediana' },
+                    { value: 'grande' as const, label: 'Grande' }
                   ].map((option) => (
                     <button
                       key={option.value}
                       onClick={() => handleLayoutChange('imageSize', option.value)}
-                      disabled={isCompleted || isLoading}
+                      disabled={isCompleted || isLoading || error}
                       className={`p-2 text-sm rounded-lg border transition-colors ${
-                        isCompleted || isLoading
+                        isCompleted || isLoading || error
                           ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                           : dedicatoria.imageSize === option.value
                             ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300'
@@ -457,16 +481,16 @@ const DedicatoriaStep: React.FC = () => {
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { value: 'izquierda', label: 'Izquierda', icon: AlignLeft },
-                    { value: 'centro', label: 'Centro', icon: AlignCenter },
-                    { value: 'derecha', label: 'Derecha', icon: AlignRight }
+                    { value: 'izquierda' as const, label: 'Izquierda', icon: AlignLeft },
+                    { value: 'centro' as const, label: 'Centro', icon: AlignCenter },
+                    { value: 'derecha' as const, label: 'Derecha', icon: AlignRight }
                   ].map((option) => (
                     <button
                       key={option.value}
                       onClick={() => handleLayoutChange('alignment', option.value)}
-                      disabled={isCompleted || isLoading}
+                      disabled={isCompleted || isLoading || error}
                       className={`p-2 rounded-lg border transition-colors flex items-center justify-center gap-1 ${
-                        isCompleted || isLoading
+                        isCompleted || isLoading || error
                           ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                           : dedicatoria.alignment === option.value
                             ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300'
