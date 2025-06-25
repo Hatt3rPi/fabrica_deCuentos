@@ -342,11 +342,28 @@ export const storyService = {
       })
     });
     
-    const data = await res.json();
-    
     if (!res.ok) {
-      console.error('[StoryService] Edge Function error:', data);
-      throw new Error(data.error || 'Failed to export story');
+      let errorMessage;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error || 'Failed to export story';
+        console.error('[StoryService] Edge Function error:', errorData);
+      } catch (jsonError) {
+        // Si no se puede parsear como JSON, leer como texto
+        const errorText = await res.text();
+        errorMessage = `Edge Function returned non-JSON response (${res.status}): ${errorText.substring(0, 200)}...`;
+        console.error('[StoryService] Edge Function returned HTML/text error:', errorText);
+      }
+      throw new Error(errorMessage);
+    }
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonError) {
+      const responseText = await res.text();
+      console.error('[StoryService] Failed to parse response as JSON:', responseText);
+      throw new Error('Edge Function returned invalid JSON response');
     }
     
     if (!data.success) {
@@ -418,6 +435,56 @@ export const storyService = {
 
     if (error) {
       throw new Error(`Error al actualizar contenido de página: ${error.message}`);
+    }
+  },
+
+  /**
+   * Persiste específicamente los datos de dedicatoria
+   */
+  async persistDedicatoria(storyId: string, dedicatoria: {
+    text?: string;
+    imageUrl?: string;
+    layout?: string;
+    alignment?: string;
+    imageSize?: string;
+    chosen?: boolean;
+  }): Promise<void> {
+    console.log('[StoryService] persistDedicatoria LLAMADO', {
+      storyId,
+      dedicatoria,
+      hasText: !!dedicatoria.text,
+      hasImage: !!dedicatoria.imageUrl
+    });
+
+    const updateData = {
+      dedicatoria_text: dedicatoria.text || null,
+      dedicatoria_image_url: dedicatoria.imageUrl || null,
+      dedicatoria_layout: dedicatoria.text ? {
+        layout: dedicatoria.layout || 'imagen-arriba',
+        alignment: dedicatoria.alignment || 'centro',
+        imageSize: dedicatoria.imageSize || 'mediana'
+      } : null,
+      dedicatoria_chosen: dedicatoria.chosen !== undefined ? dedicatoria.chosen : undefined,
+      updated_at: new Date().toISOString()
+    };
+
+    // Limpiar campos undefined del objeto de actualización
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    const { error } = await supabase
+      .from('stories')
+      .update(updateData)
+      .eq('id', storyId);
+
+    if (error) {
+      console.error('[StoryService] ERROR EN persistDedicatoria:', error);
+      throw new Error(`Error al persistir dedicatoria: ${error.message}`);
+    } else {
+      console.log('[StoryService] ✅ persistDedicatoria EXITOSO', { storyId, updateData });
     }
   }
 };

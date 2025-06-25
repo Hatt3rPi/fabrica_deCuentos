@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { Upload, X, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { useWizard } from '../../../context/WizardContext';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
+import { storyService } from '../../../services/storyService';
 
 interface DedicatoriaData {
   text: string;
@@ -16,6 +18,7 @@ const DedicatoriaStep: React.FC = () => {
   const { storySettings, setStorySettings } = useWizard();
   const { createNotification } = useNotifications();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { storyId } = useParams();
 
   // Estado inicial de la dedicatoria
   const [dedicatoria, setDedicatoria] = useState<DedicatoriaData>({
@@ -26,10 +29,20 @@ const DedicatoriaStep: React.FC = () => {
     imageSize: storySettings.dedicatoria?.imageSize || 'mediana'
   });
 
+  // DEBUG: Log para diagnosticar problema de dedicatoria
+  React.useEffect(() => {
+    console.log('[DedicatoriaStep] DEBUG - Estado de dedicatoria:', {
+      storySettingsDedicatoria: storySettings.dedicatoria,
+      localDedicatoria: dedicatoria,
+      hasText: !!dedicatoria.text,
+      hasImage: !!dedicatoria.imageUrl
+    });
+  }, [storySettings.dedicatoria, dedicatoria]);
+
   const [isUploading, setIsUploading] = useState(false);
 
-  // Función helper para actualizar dedicatoria evitando duplicación de lógica
-  const updateDedicatoria = (updates: Partial<DedicatoriaData>) => {
+  // Función helper para actualizar dedicatoria con persistencia explícita
+  const updateDedicatoria = async (updates: Partial<DedicatoriaData>) => {
     const newDedicatoria = { ...dedicatoria, ...updates };
     setDedicatoria(newDedicatoria);
     
@@ -38,6 +51,29 @@ const DedicatoriaStep: React.FC = () => {
       ...prevSettings,
       dedicatoria: newDedicatoria
     }));
+
+    // PERSISTENCIA EXPLÍCITA - Guardar inmediatamente en BD
+    if (storyId) {
+      try {
+        await storyService.persistDedicatoria(storyId, {
+          text: newDedicatoria.text,
+          imageUrl: newDedicatoria.imageUrl,
+          layout: newDedicatoria.layout,
+          alignment: newDedicatoria.alignment,
+          imageSize: newDedicatoria.imageSize
+        });
+        
+        console.log('[DedicatoriaStep] ✅ Dedicatoria persistida exitosamente');
+      } catch (error) {
+        console.error('[DedicatoriaStep] ❌ Error persistiendo dedicatoria:', error);
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Error al guardar',
+          'No se pudo guardar la dedicatoria. Inténtalo nuevamente.',
+          NotificationPriority.HIGH
+        );
+      }
+    }
   };
 
   // Función para manejar la carga de imagen

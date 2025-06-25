@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useWizard } from '../../../context/WizardContext';
+import { useWizardFlowStore } from '../../../stores/wizardFlowStore';
 import { Download, Copy, Check, Loader, BookOpen, CheckCircle } from 'lucide-react';
 import Button from '../../UI/Button';
 
@@ -10,6 +11,7 @@ const ExportStep: React.FC = () => {
     completionResult,
     generatedPages 
   } = useWizard();
+  const { estado } = useWizardFlowStore();
   const [saveToLibrary, setSaveToLibrary] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -18,7 +20,7 @@ const ExportStep: React.FC = () => {
     if (!completionResult && !isCompleting) {
       completeStory(saveToLibrary);
     }
-  }, [saveToLibrary]);
+  }, [completionResult, isCompleting, completeStory, saveToLibrary]);
 
   const handleExport = async () => {
     if (!completionResult?.success) {

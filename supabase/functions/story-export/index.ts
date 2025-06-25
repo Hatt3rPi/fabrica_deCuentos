@@ -38,6 +38,7 @@ interface StoryData {
   completed_at: string;
   dedicatoria_text?: string;
   dedicatoria_image_url?: string;
+  dedicatoria_chosen?: boolean; // NULL = no eligió, TRUE = sí, FALSE = no
   dedicatoria_layout?: {
     layout: 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
     alignment: 'centro' | 'izquierda' | 'derecha';
@@ -210,7 +211,7 @@ async function getCompleteStoryData(storyId: string, userId: string) {
   // Obtener datos del cuento incluyendo campos de dedicatoria
   const { data: story, error: storyError } = await supabaseAdmin
     .from('stories')
-    .select('*, dedicatoria_text, dedicatoria_image_url, dedicatoria_layout')
+    .select('*, dedicatoria_text, dedicatoria_image_url, dedicatoria_chosen, dedicatoria_layout')
     .eq('id', storyId)
     .eq('user_id', userId)
     .single();
@@ -218,6 +219,14 @@ async function getCompleteStoryData(storyId: string, userId: string) {
   if (storyError || !story) {
     throw new Error('Cuento no encontrado o sin permisos de acceso');
   }
+
+  // DEBUG: Log específico para dedicatoria
+  console.log(`[story-export] 💖 Datos de dedicatoria en BD:`, {
+    dedicatoria_text: story.dedicatoria_text,
+    dedicatoria_image_url: story.dedicatoria_image_url,
+    dedicatoria_layout: story.dedicatoria_layout,
+    has_dedicatoria: !!story.dedicatoria_text
+  });
 
   // Obtener páginas del cuento (solo campos necesarios para la exportación)
   const { data: pages, error: pagesError } = await supabaseAdmin
@@ -769,7 +778,14 @@ function generateHTMLContent(
 
   // Función para generar página de dedicatoria
   function generateDedicatoriaPage(story: StoryData): string {
+    console.log(`[story-export] 🎯 generateDedicatoriaPage llamada con:`, {
+      dedicatoria_text: story.dedicatoria_text,
+      dedicatoria_image_url: story.dedicatoria_image_url,
+      dedicatoria_layout: story.dedicatoria_layout
+    });
+    
     if (!story.dedicatoria_text) {
+      console.log(`[story-export] ❌ No hay texto de dedicatoria, retornando página vacía`);
       return ''; // No mostrar página si no hay texto de dedicatoria
     }
 
@@ -838,6 +854,11 @@ function generateHTMLContent(
   
   // Generar página de dedicatoria si existe
   const dedicatoriaPage = generateDedicatoriaPage(story);
+  console.log(`[story-export] 📝 Página de dedicatoria generada:`, {
+    length: dedicatoriaPage.length,
+    hasContent: dedicatoriaPage.length > 0,
+    preview: dedicatoriaPage.substring(0, 100) + (dedicatoriaPage.length > 100 ? '...' : '')
+  });
   
   const storyPagesContent = storyPages
     .map(page => `

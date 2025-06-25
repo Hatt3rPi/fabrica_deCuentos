@@ -8,7 +8,7 @@ import { storyService } from '../services/storyService';
 import { logger, wizardLogger } from '../utils/logger';
 import { useStory } from './StoryContext';
 
-export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'dedicatoria' | 'export';
+export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'dedicatoria-choice' | 'dedicatoria' | 'export';
 
 interface WizardContextType {
   currentStep: WizardStep;
@@ -31,6 +31,7 @@ interface WizardContextType {
   updatePageContent: (pageId: string, updates: { text?: string; prompt?: string }) => Promise<void>;
   nextStep: () => void;
   prevStep: () => void;
+  skipToStep: (step: WizardStep) => void;
   canProceed: () => boolean;
   resetWizard: () => void;
   // New parallel generation functionality
@@ -413,6 +414,12 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Sincronizar storySettings con state para persistencia correcta
   useEffect(() => {
+    console.log('[WizardContext] DEBUG - Sincronizando storySettings con state:', {
+      storySettingsDedicatoria: storySettings.dedicatoria,
+      hasDedicatoriaText: !!storySettings.dedicatoria?.text,
+      hasDedicatoriaImage: !!storySettings.dedicatoria?.imageUrl
+    });
+    
     setState(prevState => ({
       ...prevState,
       meta: {
@@ -432,7 +439,9 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (estado.cuento !== 'completado') return 'story';
     if (estado.diseno !== 'completado') return 'design';
     if (estado.vistaPrevia !== 'completado') return 'preview';
-    return 'dedicatoria';
+    if (estado.dedicatoriaChoice !== 'completado') return 'dedicatoria-choice';
+    if (estado.dedicatoria !== 'completado') return 'dedicatoria';
+    return 'export';
   };
 
   useEffect(() => {
@@ -511,7 +520,19 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           imageUrl: p.image_url || '',
           prompt: p.prompt || ''
         }));
+        console.log('[WizardContext] DEBUG - Páginas cargadas desde BD:', {
+          storyId,
+          totalPages: mapped.length,
+          pagesWithImages: mapped.filter(p => p.imageUrl).length,
+          pagesSummary: mapped.map(p => ({ 
+            pageNumber: p.pageNumber, 
+            hasImage: !!p.imageUrl,
+            imageUrl: p.imageUrl?.substring(0, 50) + '...' 
+          }))
+        });
         setGeneratedPages(mapped);
+      } else {
+        console.log('[WizardContext] DEBUG - No hay páginas en draft.pages para story:', storyId);
       }
       const etapaInicial = stepFromEstado(useWizardFlowStore.getState().estado);
       setCurrentStep(etapaInicial);
@@ -523,12 +544,13 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
   }, [storyId]);
 
-  const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'dedicatoria', 'export'];
+  const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'dedicatoria-choice', 'dedicatoria', 'export'];
   const stepMap: Record<WizardStep, keyof EstadoFlujo | null> = {
     characters: 'personajes',
     story: 'cuento',
     design: 'diseno',
     preview: 'vistaPrevia',
+    'dedicatoria-choice': 'dedicatoriaChoice',
     dedicatoria: 'dedicatoria',
     export: null,
   };
@@ -549,6 +571,10 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (currentIndex > 0) {
       setCurrentStep(steps[currentIndex - 1]);
     }
+  };
+
+  const skipToStep = (step: WizardStep) => {
+    setCurrentStep(step);
   };
 
   const updateStoryTitle = (title: string) => {
@@ -638,6 +664,9 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return designSettings.visualStyle !== '' && designSettings.colorPalette !== '';
       case 'preview':
         return generatedPages.length > 0;
+      case 'dedicatoria-choice':
+        // El choice debe hacerse mediante los botones del componente
+        return true;
       case 'dedicatoria':
         // La dedicatoria es opcional, siempre permitir avanzar
         return true;
@@ -671,6 +700,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         updatePageContent,
         nextStep,
         prevStep,
+        skipToStep,
         canProceed,
         resetWizard,
         // New parallel generation functionality
