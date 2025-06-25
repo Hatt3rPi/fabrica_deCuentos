@@ -29,7 +29,7 @@ export const useWizardLockStatus = (): WizardLockStatus => {
   const { storyId } = useParams();
   const { generatedPages } = useWizard();
   
-  // SOLUCIÓN ROBUSTA: Usar localStorage como respaldo para persistir estado entre navegaciones
+  // Usar localStorage como respaldo para persistir estado entre navegaciones
   const getInitialStoryData = (): StoryData | null => {
     if (!storyId) return null;
     
@@ -37,9 +37,7 @@ export const useWizardLockStatus = (): WizardLockStatus => {
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
-        const parsed = JSON.parse(cached);
-        console.log('[useWizardLockStatus] DEBUG: Restaurando estado desde localStorage:', parsed);
-        return parsed;
+        return JSON.parse(cached);
       } catch (e) {
         console.error('[useWizardLockStatus] Error parsing cached data:', e);
       }
@@ -60,7 +58,6 @@ export const useWizardLockStatus = (): WizardLockStatus => {
       if (newData && storyId) {
         const cacheKey = `story_lock_status_${storyId}`;
         localStorage.setItem(cacheKey, JSON.stringify(newData));
-        console.log('[useWizardLockStatus] DEBUG: Guardando estado en localStorage:', newData);
       }
       return newData;
     });
@@ -68,41 +65,13 @@ export const useWizardLockStatus = (): WizardLockStatus => {
 
   // Detectar si la vista previa fue generada (páginas con imágenes existen)
   const isPreviewGenerated = useMemo(() => {
-    console.log('[useWizardLockStatus] DEBUG generatedPages COMPLETO:', {
-      length: generatedPages.length,
-      timestamp: new Date().toISOString(),
-      storyId,
-      pages: generatedPages.map(p => ({
-        id: p.id,
-        pageNumber: p.pageNumber,
-        hasImageUrl: !!p.imageUrl,
-        imageUrlLength: p.imageUrl?.length || 0,
-        hasText: !!p.text,
-        textLength: p.text?.length || 0,
-        prompt: p.prompt?.substring(0, 50) + '...' || 'sin prompt'
-      })),
-      pagesWithImages: generatedPages.filter(p => p.pageNumber > 0 && p.imageUrl).length,
-      totalNonCoverPages: generatedPages.filter(p => p.pageNumber > 0).length
-    });
     return generatedPages.some(page => page.pageNumber > 0 && page.imageUrl);
-  }, [generatedPages, storyId]);
+  }, [generatedPages]);
 
   // Detectar si el PDF fue completado
   const isPdfCompleted = useMemo(() => {
-    const isCompleted = storyData?.status === 'completed';
-    console.log('[useWizardLockStatus] DEBUG isPdfCompleted CÁLCULO:', {
-      storyData,
-      status: storyData?.status,
-      statusType: typeof storyData?.status,
-      statusExacto: storyData?.status,
-      isCompleted,
-      condicion: "storyData?.status === 'completed'",
-      resultado: isCompleted,
-      timestamp: new Date().toISOString(),
-      storyId
-    });
-    return isCompleted;
-  }, [storyData, storyId]);
+    return storyData?.status === 'completed';
+  }, [storyData]);
 
   // Use ref to track if component is mounted and for timeout management
   const mountedRef = useRef(true);
@@ -124,32 +93,13 @@ export const useWizardLockStatus = (): WizardLockStatus => {
         .eq('id', storyId)
         .single();
 
-      console.log('[useWizardLockStatus] DEBUG QUERY BD COMPLETA:', {
-        storyId,
-        queryResult: story,
-        error: fetchError,
-        timestamp: new Date().toISOString()
-      });
 
       if (fetchError) {
         throw new Error(`Database error: ${fetchError.message}`);
       }
 
       if (mountedRef.current) {
-        // CRÍTICO: No permitir que una consulta devuelva 'draft' si ya tenemos 'completed'
-        const currentStatus = storyData?.status;
-        
-        if (currentStatus === 'completed' && story.status === 'draft') {
-          console.log('[useWizardLockStatus] ⚠️ PROTECCIÓN: BD devuelve draft pero tenemos completed - manteniendo completed');
-          // Mantener el status como completed y solo actualizar otros campos
-          setStoryData({
-            ...story,
-            status: 'completed', // Forzar mantener completed
-            completed_at: storyData?.completed_at || story.completed_at
-          });
-        } else {
-          setStoryData(story);
-        }
+        setStoryData(story);
         retryCountRef.current = 0; // Reset retry count on success
       }
     } catch (err) {
@@ -186,22 +136,6 @@ export const useWizardLockStatus = (): WizardLockStatus => {
 
   // Lógica centralizada de bloqueos
   const isStepLocked = useCallback((step: WizardStep): boolean => {
-    // DEBUG: Log para diagnosticar problema
-    console.log('[useWizardLockStatus] DEBUG FLUJO ESPERADO:', {
-      step,
-      storyData,
-      isPdfCompleted,
-      isPreviewGenerated,
-      generatedPagesCount: generatedPages.length,
-      expectedFlow: {
-        'NIVEL 1 - Vista previa generada': 'Debería bloquear characters, story, design',
-        'NIVEL 2 - PDF completado': 'Debería bloquear dedicatoria-choice, dedicatoria, preview',
-        'Estado actual stories.status': storyData?.status || 'null',
-        'Páginas con imágenes': generatedPages.filter(p => p.pageNumber > 0 && p.imageUrl).length,
-        'Total páginas no-cover': generatedPages.filter(p => p.pageNumber > 0).length
-      }
-    });
-    
     // Nivel 2: PDF completado - bloquea todas las etapas excepto export
     if (isPdfCompleted) {
       return step !== 'export';
@@ -213,7 +147,7 @@ export const useWizardLockStatus = (): WizardLockStatus => {
     }
     
     return false;
-  }, [isPdfCompleted, isPreviewGenerated, storyData, generatedPages]);
+  }, [isPdfCompleted, isPreviewGenerated]);
 
   const getLockReason = useCallback((step: WizardStep): string => {
     if (isPdfCompleted) {
@@ -242,29 +176,10 @@ export const useWizardLockStatus = (): WizardLockStatus => {
 
     initializeData();
 
-    // SOLUCIÓN QUIRÚRGICA v2: Respuesta inmediata al evento de export
+    // Listener para eventos de actualización de status
     const handleStatusUpdate = (event: CustomEvent) => {
-      console.log('[useWizardLockStatus] DEBUG: Evento story-status-updated recibido:', event.detail);
       if (event.detail?.storyId === storyId) {
-        console.log('[useWizardLockStatus] DEBUG: Actualizando estado por export exitoso...');
-        
-        // Actualizar inmediatamente el estado local cuando es un export
-        if (event.detail?.immediate || event.detail?.forced) {
-          console.log('[useWizardLockStatus] ✅ ACTUALIZANDO STATUS A COMPLETED INMEDIATAMENTE');
-          const updatedData = {
-            status: 'completed',
-            dedicatoria_chosen: storyData?.dedicatoria_chosen ?? null,
-            wizard_state: storyData?.wizard_state,
-            completed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          console.log('[useWizardLockStatus] DEBUG: Nuevo estado local:', updatedData);
-          setStoryData(updatedData);
-          setError(null);
-        }
-        
-        // Hacer fetch para confirmar y obtener datos completos
-        // Pequeño delay para dar tiempo a la BD
+        // Refrescar datos después del evento
         setTimeout(() => {
           if (mountedRef.current) {
             fetchStoryData();
@@ -288,17 +203,7 @@ export const useWizardLockStatus = (): WizardLockStatus => {
         },
         (payload) => {
           if (!mountedRef.current) return;
-          console.log('[useWizardLockStatus] DEBUG: Cambio en tiempo real detectado:', payload.new);
           if (payload.new && ('status' in payload.new || 'dedicatoria_chosen' in payload.new)) {
-            // CRÍTICO: No permitir que el status vuelva a 'draft' si ya está 'completed'
-            const currentStatus = storyData?.status;
-            const newStatus = payload.new.status;
-            
-            if (currentStatus === 'completed' && newStatus === 'draft') {
-              console.log('[useWizardLockStatus] ⚠️ IGNORANDO cambio de status completed→draft (protección de bloqueo)');
-              return; // Ignorar este cambio para preservar el bloqueo
-            }
-            
             const updatedData = {
               ...storyData,
               status: payload.new.status || storyData?.status || '',
@@ -306,9 +211,8 @@ export const useWizardLockStatus = (): WizardLockStatus => {
               completed_at: payload.new.completed_at || storyData?.completed_at,
               updated_at: payload.new.updated_at || new Date().toISOString()
             };
-            console.log('[useWizardLockStatus] DEBUG: Actualizando por cambio en tiempo real:', updatedData);
             setStoryData(updatedData);
-            setError(null); // Clear any previous errors on successful update
+            setError(null);
           }
         }
       )

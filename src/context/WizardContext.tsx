@@ -378,12 +378,6 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Story completion function
   const completeStory = async (saveToLibrary: boolean = true): Promise<import('../types').CompletionResult> => {
-    console.log('[WizardContext] DEBUG completeStory INICIO:', {
-      storyId,
-      saveToLibrary,
-      timestamp: new Date().toISOString()
-    });
-
     if (!storyId) {
       return { success: false, error: 'No hay ID de cuento disponible' };
     }
@@ -392,126 +386,19 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setCompletionResult(null);
 
     try {
-      console.log('[WizardContext] DEBUG: Llamando a storyService.completeStory...');
       const result = await storyService.completeStory(storyId, saveToLibrary);
-      
-      console.log('[WizardContext] DEBUG completeStory RESULTADO:', {
-        result,
-        timestamp: new Date().toISOString(),
-        storyId
-      });
       
       setCompletionResult(result);
       // Reset PDF outdated flag if successful
       if (result.success) {
         setIsPdfOutdated(false);
-        console.log('[WizardContext] DEBUG: PDF flag reseteado - story completado exitosamente');
         
-        // SOLUCIÓN QUIRÚRGICA v2: Actualización inmediata del status
-        // Dado que el export real NO actualiza el status, lo hacemos nosotros
-        console.log('[WizardContext] CRÍTICO: Forzando actualización de status a completed...');
-        
-        // Actualizar inmediatamente el status sin esperar
-        (async () => {
-          try {
-            const { error: updateError } = await supabase
-              .from('stories')
-              .update({ 
-                status: 'completed',
-                completed_at: new Date().toISOString()
-              })
-              .eq('id', storyId);
-              
-            if (updateError) {
-              console.error('[WizardContext] ERROR al actualizar status:', updateError);
-            } else {
-              console.log('[WizardContext] ✅ Status actualizado a completed exitosamente');
-              
-              // Disparar evento inmediatamente
-              window.dispatchEvent(new CustomEvent('story-status-updated', { 
-                detail: { storyId, status: 'completed', immediate: true } 
-              }));
-              
-              // CRÍTICO: También actualizar localStorage directamente para que persista
-              const lockCacheKey = `story_lock_status_${storyId}`;
-              const lockData = {
-                status: 'completed',
-                dedicatoria_chosen: true,
-                completed_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              };
-              localStorage.setItem(lockCacheKey, JSON.stringify(lockData));
-              console.log('[WizardContext] ✅ Estado de bloqueo guardado directamente en localStorage');
-            }
-          } catch (error) {
-            console.error('[WizardContext] ERROR crítico:', error);
-          }
-        })();
-        
-        // También mantener la verificación retrasada como backup
-        setTimeout(async () => {
-          console.log('[WizardContext] DEBUG: Verificando status real en BD post-export...');
-          
-          try {
-            // Verificar el status real en la base de datos
-            const { data: currentStory, error } = await supabase
-              .from('stories')
-              .select('status, completed_at')
-              .eq('id', storyId)
-              .single();
-            
-            console.log('[WizardContext] DEBUG: Status real en BD:', {
-              storyId,
-              currentStatus: currentStory?.status,
-              completedAt: currentStory?.completed_at,
-              shouldBeCompleted: true,
-              timestamp: new Date().toISOString()
-            });
-            
-            if (currentStory?.status !== 'completed') {
-              console.log('[WizardContext] CRÍTICO: Export exitoso pero status sigue siendo draft - forzando actualización...');
-              
-              // Forzar actualización del status si no se actualizó automáticamente
-              const { error: updateError } = await supabase
-                .from('stories')
-                .update({ 
-                  status: 'completed',
-                  completed_at: new Date().toISOString()
-                })
-                .eq('id', storyId);
-                
-              if (updateError) {
-                console.error('[WizardContext] ERROR al forzar actualización de status:', updateError);
-              } else {
-                console.log('[WizardContext] ✅ Status forzado a completed exitosamente');
-              }
-            }
-            
-            // Siempre disparar el evento para refrescar el estado de bloqueo
-            console.log('[WizardContext] DEBUG: Disparando evento de actualización...');
-            window.dispatchEvent(new CustomEvent('story-status-updated', { 
-              detail: { storyId, status: 'completed', forced: currentStory?.status !== 'completed' } 
-            }));
-            
-            // También actualizar localStorage como respaldo
-            const lockCacheKey = `story_lock_status_${storyId}`;
-            const lockData = {
-              status: currentStory?.status || 'completed',
-              dedicatoria_chosen: true,
-              completed_at: currentStory?.completed_at || new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            };
-            localStorage.setItem(lockCacheKey, JSON.stringify(lockData));
-            console.log('[WizardContext] ✅ Estado de bloqueo verificado y guardado en localStorage');
-            
-          } catch (verifyError) {
-            console.error('[WizardContext] ERROR al verificar status post-export:', verifyError);
-            // Disparar evento de todos modos para intentar refresh
-            window.dispatchEvent(new CustomEvent('story-status-updated', { 
-              detail: { storyId, status: 'completed', error: true } 
-            }));
-          }
-        }, 2000); // Aumentar tiempo para asegurar que BD se actualice
+        // Disparar evento para refrescar el estado de bloqueo
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('story-status-updated', { 
+            detail: { storyId, status: 'completed' } 
+          }));
+        }, 1000);
       }
       return result;
     } catch (error) {
@@ -535,12 +422,6 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Sincronizar storySettings con state para persistencia correcta
   useEffect(() => {
-    console.log('[WizardContext] DEBUG - Sincronizando storySettings con state:', {
-      storySettingsDedicatoria: storySettings.dedicatoria,
-      hasDedicatoriaText: !!storySettings.dedicatoria?.text,
-      hasDedicatoriaImage: !!storySettings.dedicatoria?.imageUrl
-    });
-    
     setState(prevState => ({
       ...prevState,
       meta: {
