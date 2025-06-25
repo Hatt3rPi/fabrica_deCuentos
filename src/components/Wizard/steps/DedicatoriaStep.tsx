@@ -5,7 +5,7 @@ import { useWizard } from '../../../context/WizardContext';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 import { storyService } from '../../../services/storyService';
-import { useStoryCompletionStatus } from '../../../hooks/useStoryCompletionStatus';
+import { useWizardLockStatus } from '../../../hooks/useWizardLockStatus';
 
 type LayoutOption = 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
 type AlignmentOption = 'centro' | 'izquierda' | 'derecha';
@@ -24,7 +24,16 @@ const DedicatoriaStep: React.FC = () => {
   const { createNotification } = useNotifications();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { storyId } = useParams();
-  const { isCompleted, isLoading, error, retry } = useStoryCompletionStatus();
+  const { 
+    isStepLocked, 
+    getLockReason, 
+    isLoading, 
+    error, 
+    retry 
+  } = useWizardLockStatus();
+  
+  const isLocked = isStepLocked('dedicatoria');
+  const lockReason = getLockReason('dedicatoria');
 
   // Estado inicial de la dedicatoria
   const [dedicatoria, setDedicatoria] = useState<DedicatoriaData>({
@@ -247,10 +256,10 @@ const DedicatoriaStep: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-purple-800 dark:text-purple-300 mb-2">
-          {isCompleted ? 'Dedicatoria Personal - Solo Lectura' : 'Dedicatoria Personal'}
+          {isLocked ? 'Dedicatoria Personal - Solo Lectura' : 'Dedicatoria Personal'}
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          {isCompleted ? 'Vista de solo lectura de tu dedicatoria' : 'Agrega un toque personal y emotivo a tu cuento'}
+          {isLocked ? 'Vista de solo lectura de tu dedicatoria' : 'Agrega un toque personal y emotivo a tu cuento'}
         </p>
       </div>
 
@@ -271,14 +280,14 @@ const DedicatoriaStep: React.FC = () => {
         </div>
       )}
 
-      {isCompleted && !error && (
+      {isLocked && !error && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
           <div className="flex items-center justify-center gap-2 text-yellow-800 dark:text-yellow-200">
             <Lock className="w-5 h-5" />
-            <span className="font-medium">PDF generado - edición bloqueada</span>
+            <span className="font-medium">{lockReason}</span>
           </div>
           <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2 text-center">
-            Los campos de dedicatoria ya no pueden modificarse porque el cuento ha sido finalizado y exportado
+            Los campos de dedicatoria ya no pueden modificarse
           </p>
         </div>
       )}
@@ -295,11 +304,11 @@ const DedicatoriaStep: React.FC = () => {
             <textarea
               value={dedicatoria.text}
               onChange={(e) => handleTextChange(e.target.value)}
-              placeholder={isCompleted ? "No hay texto de dedicatoria" : "Escribe tu mensaje personal..."}
+              placeholder={isLocked ? "No hay texto de dedicatoria" : "Escribe tu mensaje personal..."}
               maxLength={300}
-              disabled={isCompleted || isLoading || error}
+              disabled={isLocked || isLoading || error}
               className={`w-full p-3 border rounded-lg resize-none
-                        ${isCompleted || isLoading || error
+                        ${isLocked || isLoading || error
                           ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                           : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
                         }`}
@@ -313,7 +322,7 @@ const DedicatoriaStep: React.FC = () => {
             </div>
 
             {/* Ejemplos de dedicatoria */}
-            {!isCompleted && (
+            {!isLocked && (
               <div className="mt-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Ejemplos:</p>
                 <div className="space-y-1">
@@ -321,9 +330,9 @@ const DedicatoriaStep: React.FC = () => {
                     <button
                       key={index}
                       onClick={() => handleTextChange(ejemplo)}
-                      disabled={isCompleted || isLoading || error}
+                      disabled={isLocked || isLoading || error}
                       className={`block text-sm text-left
-                                ${isCompleted || isLoading || error
+                                ${isLocked || isLoading || error
                                   ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
                                   : 'text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300'
                                 }`}
@@ -344,9 +353,9 @@ const DedicatoriaStep: React.FC = () => {
             
             {!dedicatoria.imageUrl ? (
               <div
-                onClick={isCompleted || isLoading || error ? undefined : () => fileInputRef.current?.click()}
+                onClick={isLocked || isLoading || error ? undefined : () => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors
-                          ${isCompleted || isLoading || error
+                          ${isLocked || isLoading || error
                             ? 'border-gray-300 dark:border-gray-600 cursor-not-allowed bg-gray-50 dark:bg-gray-700/50'
                             : 'border-gray-300 dark:border-gray-600 cursor-pointer hover:border-purple-400 dark:hover:border-purple-500'
                           }`}
@@ -358,15 +367,15 @@ const DedicatoriaStep: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {isCompleted || isLoading || error ? (
+                    {isLocked || isLoading || error ? (
                       <Lock className="mx-auto h-8 w-8 text-gray-400" />
                     ) : (
                       <Upload className="mx-auto h-8 w-8 text-gray-400" />
                     )}
-                    <p className={`text-sm ${isCompleted || isLoading || error ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                      {isCompleted || isLoading || error ? 'Carga de imagen bloqueada' : 'Haz clic para subir una imagen'}
+                    <p className={`text-sm ${isLocked || isLoading || error ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                      {isLocked || isLoading || error ? 'Carga de imagen bloqueada' : 'Haz clic para subir una imagen'}
                     </p>
-                    {!isCompleted && !isLoading && !error && (
+                    {!isLocked && !isLoading && !error && (
                       <p className="text-xs text-gray-500">
                         PNG, JPG, WebP hasta 5MB
                       </p>
@@ -381,7 +390,7 @@ const DedicatoriaStep: React.FC = () => {
                   alt="Imagen de dedicatoria"
                   className="w-full h-48 object-cover rounded-lg"
                 />
-                {!isCompleted && !isLoading && !error && (
+                {!isLocked && !isLoading && !error && (
                   <button
                     onClick={handleRemoveImage}
                     className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 
@@ -390,7 +399,7 @@ const DedicatoriaStep: React.FC = () => {
                     <X className="w-4 h-4" />
                   </button>
                 )}
-                {isCompleted && (
+                {isLocked && (
                   <div className="absolute top-2 right-2 bg-gray-500 text-white rounded-full p-1">
                     <Lock className="w-4 h-4" />
                   </div>
@@ -403,7 +412,7 @@ const DedicatoriaStep: React.FC = () => {
               type="file"
               accept="image/*"
               onChange={handleImageUpload}
-              disabled={isCompleted || isLoading || error}
+              disabled={isLocked || isLoading || error}
               className="hidden"
             />
           </div>
@@ -412,7 +421,7 @@ const DedicatoriaStep: React.FC = () => {
           {dedicatoria.imageUrl && (
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm space-y-4">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                {isCompleted ? 'Configuración de Layout - Solo Lectura' : 'Configuración de Layout'}
+                {isLocked ? 'Configuración de Layout - Solo Lectura' : 'Configuración de Layout'}
               </h3>
 
               {/* Posición de imagen */}
@@ -430,9 +439,9 @@ const DedicatoriaStep: React.FC = () => {
                     <button
                       key={option.value}
                       onClick={() => handleLayoutChange('layout', option.value)}
-                      disabled={isCompleted || isLoading || error}
+                      disabled={isLocked || isLoading || error}
                       className={`p-2 text-sm rounded-lg border transition-colors ${
-                        isCompleted || isLoading || error
+                        isLocked || isLoading || error
                           ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                           : dedicatoria.layout === option.value
                             ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300'
@@ -459,9 +468,9 @@ const DedicatoriaStep: React.FC = () => {
                     <button
                       key={option.value}
                       onClick={() => handleLayoutChange('imageSize', option.value)}
-                      disabled={isCompleted || isLoading || error}
+                      disabled={isLocked || isLoading || error}
                       className={`p-2 text-sm rounded-lg border transition-colors ${
-                        isCompleted || isLoading || error
+                        isLocked || isLoading || error
                           ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                           : dedicatoria.imageSize === option.value
                             ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300'
@@ -488,9 +497,9 @@ const DedicatoriaStep: React.FC = () => {
                     <button
                       key={option.value}
                       onClick={() => handleLayoutChange('alignment', option.value)}
-                      disabled={isCompleted || isLoading || error}
+                      disabled={isLocked || isLoading || error}
                       className={`p-2 rounded-lg border transition-colors flex items-center justify-center gap-1 ${
-                        isCompleted || isLoading || error
+                        isLocked || isLoading || error
                           ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                           : dedicatoria.alignment === option.value
                             ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300'
