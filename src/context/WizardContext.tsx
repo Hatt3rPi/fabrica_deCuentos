@@ -407,16 +407,89 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setIsPdfOutdated(false);
         console.log('[WizardContext] DEBUG: PDF flag reseteado - story completado exitosamente');
         
-        // SOLUCIÓN QUIRÚRGICA: Refrescar status de bloqueo después de export exitoso
-        // Esto es necesario porque el hook no detecta automáticamente el cambio de status
-        // que hace la Edge Function de 'draft' a 'completed'
-        setTimeout(() => {
-          console.log('[WizardContext] DEBUG: Refrescando estado de bloqueo post-export...');
-          // Forzar re-render de todos los componentes que usan useWizardLockStatus
-          window.dispatchEvent(new CustomEvent('story-status-updated', { 
-            detail: { storyId, status: 'completed' } 
-          }));
-        }, 1000); // Dar tiempo para que la BD se actualice
+        // SOLUCIÓN QUIRÚRGICA v2: Actualización inmediata del status
+        // Dado que el export real NO actualiza el status, lo hacemos nosotros
+        console.log('[WizardContext] CRÍTICO: Forzando actualización de status a completed...');
+        
+        // Actualizar inmediatamente el status sin esperar
+        (async () => {
+          try {
+            const { error: updateError } = await supabase
+              .from('stories')
+              .update({ 
+                status: 'completed',
+                completed_at: new Date().toISOString()
+              })
+              .eq('id', storyId);
+              
+            if (updateError) {
+              console.error('[WizardContext] ERROR al actualizar status:', updateError);
+            } else {
+              console.log('[WizardContext] ✅ Status actualizado a completed exitosamente');
+              
+              // Disparar evento inmediatamente
+              window.dispatchEvent(new CustomEvent('story-status-updated', { 
+                detail: { storyId, status: 'completed', immediate: true } 
+              }));
+            }
+          } catch (error) {
+            console.error('[WizardContext] ERROR crítico:', error);
+          }
+        })();
+        
+        // También mantener la verificación retrasada como backup
+        setTimeout(async () => {
+          console.log('[WizardContext] DEBUG: Verificando status real en BD post-export...');
+          
+          try {
+            // Verificar el status real en la base de datos
+            const { data: currentStory, error } = await supabase
+              .from('stories')
+              .select('status, completed_at')
+              .eq('id', storyId)
+              .single();
+            
+            console.log('[WizardContext] DEBUG: Status real en BD:', {
+              storyId,
+              currentStatus: currentStory?.status,
+              completedAt: currentStory?.completed_at,
+              shouldBeCompleted: true,
+              timestamp: new Date().toISOString()
+            });
+            
+            if (currentStory?.status !== 'completed') {
+              console.log('[WizardContext] CRÍTICO: Export exitoso pero status sigue siendo draft - forzando actualización...');
+              
+              // Forzar actualización del status si no se actualizó automáticamente
+              const { error: updateError } = await supabase
+                .from('stories')
+                .update({ 
+                  status: 'completed',
+                  completed_at: new Date().toISOString()
+                })
+                .eq('id', storyId);
+                
+              if (updateError) {
+                console.error('[WizardContext] ERROR al forzar actualización de status:', updateError);
+              } else {
+                console.log('[WizardContext] ✅ Status forzado a completed exitosamente');
+              }
+            }
+            
+            // Siempre disparar el evento para refrescar el estado de bloqueo
+            console.log('[WizardContext] DEBUG: Disparando evento de actualización...');
+            window.dispatchEvent(new CustomEvent('story-status-updated', { 
+              detail: { storyId, status: 'completed', forced: currentStory?.status !== 'completed' } 
+            }));
+            
+          } catch (verifyError) {
+            console.error('[WizardContext] ERROR al verificar status post-export:', verifyError);
+            // Disparar evento de todos modos para intentar refresh
+            window.dispatchEvent(new CustomEvent('story-status-updated', { 
+              detail: { storyId, status: 'completed', error: true } 
+            }));
+          }
+        }, 2000); // Aumentar tiempo para asegurar que BD se actualice
       }
       return result;
     } catch (error) {

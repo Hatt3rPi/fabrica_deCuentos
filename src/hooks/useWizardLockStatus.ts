@@ -194,12 +194,30 @@ export const useWizardLockStatus = (): WizardLockStatus => {
 
     initializeData();
 
-    // SOLUCIÓN QUIRÚRGICA: Escuchar evento custom para refrescar después de export
+    // SOLUCIÓN QUIRÚRGICA v2: Respuesta inmediata al evento de export
     const handleStatusUpdate = (event: CustomEvent) => {
       console.log('[useWizardLockStatus] DEBUG: Evento story-status-updated recibido:', event.detail);
       if (event.detail?.storyId === storyId) {
-        console.log('[useWizardLockStatus] DEBUG: Refrescando datos por export exitoso...');
-        fetchStoryData();
+        console.log('[useWizardLockStatus] DEBUG: Actualizando estado por export exitoso...');
+        
+        // Actualizar inmediatamente el estado local cuando es un export
+        if (event.detail?.immediate || event.detail?.forced) {
+          console.log('[useWizardLockStatus] ✅ ACTUALIZANDO STATUS A COMPLETED INMEDIATAMENTE');
+          setStoryData(prev => ({
+            ...prev,
+            status: 'completed',
+            completed_at: new Date().toISOString()
+          }));
+          setError(null);
+        }
+        
+        // Hacer fetch para confirmar y obtener datos completos
+        // Pequeño delay para dar tiempo a la BD
+        setTimeout(() => {
+          if (mountedRef.current) {
+            fetchStoryData();
+          }
+        }, 500);
       }
     };
     
