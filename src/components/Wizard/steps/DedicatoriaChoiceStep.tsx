@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Heart, ArrowRight, Lock, Check } from 'lucide-react';
 import { useWizard } from '../../../context/WizardContext';
 import { useWizardFlowStore } from '../../../stores/wizardFlowStore';
@@ -25,6 +25,42 @@ const DedicatoriaChoiceStep: React.FC = () => {
   
   const isLocked = isStepLocked('dedicatoria-choice');
   const lockReason = getLockReason('dedicatoria-choice');
+  
+  // Memoizar estilos de botones para evitar recalcular en cada render
+  const buttonStyles = useMemo(() => ({
+    yes: {
+      disabled: isLocked || isLoading || error,
+      className: `group relative overflow-hidden rounded-xl border-2 p-6 transition-all duration-300
+                 ${isLocked || isLoading || error
+                   ? 'border-gray-300 dark:border-gray-600 cursor-not-allowed bg-gray-100 dark:bg-gray-700' 
+                   : dedicatoriaChoice === true
+                     ? 'border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
+                     : 'border-purple-300 dark:border-purple-600 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-lg hover:scale-105 bg-white dark:bg-gray-800'
+                 }`,
+      icon: isLocked ? Lock : (dedicatoriaChoice === true ? Check : Heart),
+      iconColor: isLocked ? 'text-gray-400' : (dedicatoriaChoice === true ? 'text-green-600 dark:text-green-400' : 'text-purple-600 dark:text-purple-400'),
+      titleColor: isLocked ? 'text-gray-500 dark:text-gray-400' : (dedicatoriaChoice === true ? 'text-green-800 dark:text-green-200' : 'text-gray-900 dark:text-gray-100'),
+      textColor: isLocked ? 'text-gray-400 dark:text-gray-500' : (dedicatoriaChoice === true ? 'text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400'),
+      title: dedicatoriaChoice === true ? 'Sí, agregar dedicatoria ✓' : 'Sí, agregar dedicatoria',
+      text: isLocked ? 'Opción bloqueada' : (dedicatoriaChoice === true ? 'Seleccionado previamente' : 'Personaliza con un mensaje especial')
+    },
+    no: {
+      disabled: isLocked || isLoading || error,
+      className: `group relative overflow-hidden rounded-xl border-2 p-6 transition-all duration-300
+                 ${isLocked || isLoading || error
+                   ? 'border-gray-300 dark:border-gray-600 cursor-not-allowed bg-gray-100 dark:bg-gray-700' 
+                   : dedicatoriaChoice === false
+                     ? 'border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
+                     : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-lg hover:scale-105 bg-white dark:bg-gray-800'
+                 }`,
+      icon: isLocked ? Lock : (dedicatoriaChoice === false ? Check : ArrowRight),
+      iconColor: isLocked ? 'text-gray-400' : (dedicatoriaChoice === false ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'),
+      titleColor: isLocked ? 'text-gray-500 dark:text-gray-400' : (dedicatoriaChoice === false ? 'text-green-800 dark:text-green-200' : 'text-gray-900 dark:text-gray-100'),
+      textColor: isLocked ? 'text-gray-400 dark:text-gray-500' : (dedicatoriaChoice === false ? 'text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400'),
+      title: dedicatoriaChoice === false ? 'No, continuar ✓' : 'No, continuar',
+      text: isLocked ? 'Opción bloqueada' : (dedicatoriaChoice === false ? 'Seleccionado previamente' : 'Ir directamente a la descarga')
+    }
+  }), [isLocked, isLoading, error, dedicatoriaChoice]);
 
   const handleYes = async () => {
     // Persistir elección en BD
@@ -143,29 +179,16 @@ const DedicatoriaChoiceStep: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-lg mx-auto">
         <button
           onClick={handleYes}
-          disabled={isLocked || isLoading || error}
-          className={`group relative overflow-hidden rounded-xl border-2 p-6 transition-all duration-300
-                     ${isLocked || isLoading || error
-                       ? 'border-gray-300 dark:border-gray-600 cursor-not-allowed bg-gray-100 dark:bg-gray-700' 
-                       : dedicatoriaChoice === true
-                         ? 'border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
-                         : 'border-purple-300 dark:border-purple-600 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-lg hover:scale-105 bg-white dark:bg-gray-800'
-                     }`}
+          disabled={buttonStyles.yes.disabled}
+          className={buttonStyles.yes.className}
         >
           <div className="relative z-10">
-            {isLocked ? (
-              <Lock className="w-8 h-8 mx-auto mb-3 text-gray-400" />
-            ) : dedicatoriaChoice === true ? (
-              <Check className="w-8 h-8 text-green-600 dark:text-green-400 mx-auto mb-3" />
-            ) : (
-              <Heart className="w-8 h-8 text-purple-600 dark:text-purple-400 mx-auto mb-3" />
-            )}
-            <h3 className={`font-semibold mb-1 ${isLocked ? 'text-gray-500 dark:text-gray-400' : dedicatoriaChoice === true ? 'text-green-800 dark:text-green-200' : 'text-gray-900 dark:text-gray-100'}`}>
-              Sí, agregar dedicatoria
-              {dedicatoriaChoice === true && ' ✓'}
+            <buttonStyles.yes.icon className={`w-8 h-8 mx-auto mb-3 ${buttonStyles.yes.iconColor}`} />
+            <h3 className={`font-semibold mb-1 ${buttonStyles.yes.titleColor}`}>
+              {buttonStyles.yes.title}
             </h3>
-            <p className={`text-sm ${isLocked ? 'text-gray-400 dark:text-gray-500' : dedicatoriaChoice === true ? 'text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400'}`}>
-              {isLocked ? 'Opción bloqueada' : dedicatoriaChoice === true ? 'Seleccionado previamente' : 'Personaliza con un mensaje especial'}
+            <p className={`text-sm ${buttonStyles.yes.textColor}`}>
+              {buttonStyles.yes.text}
             </p>
           </div>
           {!isLocked && dedicatoriaChoice !== true && (
@@ -176,29 +199,16 @@ const DedicatoriaChoiceStep: React.FC = () => {
 
         <button
           onClick={handleNo}
-          disabled={isLocked || isLoading || error}
-          className={`group relative overflow-hidden rounded-xl border-2 p-6 transition-all duration-300
-                     ${isLocked || isLoading || error
-                       ? 'border-gray-300 dark:border-gray-600 cursor-not-allowed bg-gray-100 dark:bg-gray-700' 
-                       : dedicatoriaChoice === false
-                         ? 'border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
-                         : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-lg hover:scale-105 bg-white dark:bg-gray-800'
-                     }`}
+          disabled={buttonStyles.no.disabled}
+          className={buttonStyles.no.className}
         >
           <div className="relative z-10">
-            {isLocked ? (
-              <Lock className="w-8 h-8 mx-auto mb-3 text-gray-400" />
-            ) : dedicatoriaChoice === false ? (
-              <Check className="w-8 h-8 text-green-600 dark:text-green-400 mx-auto mb-3" />
-            ) : (
-              <ArrowRight className="w-8 h-8 text-gray-600 dark:text-gray-400 mx-auto mb-3" />
-            )}
-            <h3 className={`font-semibold mb-1 ${isLocked ? 'text-gray-500 dark:text-gray-400' : dedicatoriaChoice === false ? 'text-green-800 dark:text-green-200' : 'text-gray-900 dark:text-gray-100'}`}>
-              No, continuar
-              {dedicatoriaChoice === false && ' ✓'}
+            <buttonStyles.no.icon className={`w-8 h-8 mx-auto mb-3 ${buttonStyles.no.iconColor}`} />
+            <h3 className={`font-semibold mb-1 ${buttonStyles.no.titleColor}`}>
+              {buttonStyles.no.title}
             </h3>
-            <p className={`text-sm ${isLocked ? 'text-gray-400 dark:text-gray-500' : dedicatoriaChoice === false ? 'text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400'}`}>
-              {isLocked ? 'Opción bloqueada' : dedicatoriaChoice === false ? 'Seleccionado previamente' : 'Ir directamente a la descarga'}
+            <p className={`text-sm ${buttonStyles.no.textColor}`}>
+              {buttonStyles.no.text}
             </p>
           </div>
           {!isLocked && dedicatoriaChoice !== false && (

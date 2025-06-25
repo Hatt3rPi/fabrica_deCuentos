@@ -42,8 +42,12 @@ export const useWizardLockStatus = (): WizardLockStatus => {
     return storyData?.status === 'completed';
   }, [storyData]);
 
+  // Use ref to track if component is mounted and for timeout management
+  const mountedRef = useRef(true);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const fetchStoryData = useCallback(async () => {
-    if (!storyId) {
+    if (!storyId || !mountedRef.current) {
       setIsLoading(false);
       return;
     }
@@ -62,9 +66,13 @@ export const useWizardLockStatus = (): WizardLockStatus => {
         throw new Error(`Database error: ${fetchError.message}`);
       }
 
-      setStoryData(story);
-      retryCountRef.current = 0; // Reset retry count on success
+      if (mountedRef.current) {
+        setStoryData(story);
+        retryCountRef.current = 0; // Reset retry count on success
+      }
     } catch (err) {
+      if (!mountedRef.current) return;
+      
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       console.error('[useWizardLockStatus] Error fetching story data:', err);
       
@@ -72,16 +80,22 @@ export const useWizardLockStatus = (): WizardLockStatus => {
         retryCountRef.current++;
         console.warn(`[useWizardLockStatus] Retrying... (${retryCountRef.current}/${maxRetries})`);
         // Exponential backoff: 1s, 2s, 4s
-        setTimeout(() => fetchStoryData(), Math.pow(2, retryCountRef.current - 1) * 1000);
+        timeoutRef.current = setTimeout(() => {
+          if (mountedRef.current) {
+            fetchStoryData();
+          }
+        }, Math.pow(2, retryCountRef.current - 1) * 1000);
         return;
       }
       
       setError(errorMessage);
       setStoryData(null);
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [storyId, supabase]);
+  }, [storyId, supabase]); // Keep both deps as they're needed
 
   const retry = useCallback(() => {
     retryCountRef.current = 0;
@@ -121,10 +135,10 @@ export const useWizardLockStatus = (): WizardLockStatus => {
       return;
     }
 
-    let mounted = true;
+    mountedRef.current = true;
     
     const initializeData = async () => {
-      if (!mounted) return;
+      if (!mountedRef.current) return;
       await fetchStoryData();
     };
 
@@ -142,7 +156,7 @@ export const useWizardLockStatus = (): WizardLockStatus => {
           filter: `id=eq.${storyId}`,
         },
         (payload) => {
-          if (!mounted) return;
+          if (!mountedRef.current) return;
           if (payload.new && ('status' in payload.new || 'dedicatoria_chosen' in payload.new)) {
             setStoryData(prev => ({
               ...prev,
@@ -156,10 +170,27 @@ export const useWizardLockStatus = (): WizardLockStatus => {
       .subscribe();
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
+      // Clear any pending timeouts
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      // Unsubscribe from channel
       subscription.unsubscribe();
     };
-  }, [storyId, fetchStoryData]);
+  }, [storyId]);
+
+  // Component unmount cleanup
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   return {
     isStepLocked,
