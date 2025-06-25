@@ -453,7 +453,10 @@ export const storyService = {
       storyId,
       dedicatoria,
       hasText: !!dedicatoria.text,
-      hasImage: !!dedicatoria.imageUrl
+      hasImage: !!dedicatoria.imageUrl,
+      textLength: dedicatoria.text?.length || 0,
+      imageUrlLength: dedicatoria.imageUrl?.length || 0,
+      timestamp: new Date().toISOString()
     });
 
     const updateData = {

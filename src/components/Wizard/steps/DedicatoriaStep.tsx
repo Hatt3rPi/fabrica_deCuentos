@@ -44,6 +44,15 @@ const DedicatoriaStep: React.FC = () => {
   // Función helper para actualizar dedicatoria con persistencia explícita
   const updateDedicatoria = async (updates: Partial<DedicatoriaData>) => {
     const newDedicatoria = { ...dedicatoria, ...updates };
+    console.log('[DedicatoriaStep] 🔄 Actualizando dedicatoria:', {
+      updates,
+      newDedicatoria,
+      storyId,
+      hasText: !!newDedicatoria.text,
+      hasImage: !!newDedicatoria.imageUrl,
+      imageSize: newDedicatoria.imageUrl ? newDedicatoria.imageUrl.length : 0
+    });
+    
     setDedicatoria(newDedicatoria);
     
     // Usar callback para evitar stale closures
@@ -55,6 +64,7 @@ const DedicatoriaStep: React.FC = () => {
     // PERSISTENCIA EXPLÍCITA - Guardar inmediatamente en BD
     if (storyId) {
       try {
+        console.log('[DedicatoriaStep] 🚀 Iniciando persistencia en BD...');
         await storyService.persistDedicatoria(storyId, {
           text: newDedicatoria.text,
           imageUrl: newDedicatoria.imageUrl,
@@ -63,9 +73,25 @@ const DedicatoriaStep: React.FC = () => {
           imageSize: newDedicatoria.imageSize
         });
         
-        console.log('[DedicatoriaStep] ✅ Dedicatoria persistida exitosamente');
+        console.log('[DedicatoriaStep] ✅ Dedicatoria persistida exitosamente:', {
+          storyId,
+          text: newDedicatoria.text,
+          hasImage: !!newDedicatoria.imageUrl
+        });
+        
+        // Notificación silenciosa de éxito para debugging
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Guardado automático',
+          'Cambios guardados exitosamente',
+          NotificationPriority.LOW
+        );
       } catch (error) {
-        console.error('[DedicatoriaStep] ❌ Error persistiendo dedicatoria:', error);
+        console.error('[DedicatoriaStep] ❌ Error persistiendo dedicatoria:', {
+          error,
+          storyId,
+          data: newDedicatoria
+        });
         createNotification(
           NotificationType.SYSTEM_UPDATE,
           'Error al guardar',
@@ -73,6 +99,8 @@ const DedicatoriaStep: React.FC = () => {
           NotificationPriority.HIGH
         );
       }
+    } else {
+      console.warn('[DedicatoriaStep] ⚠️ No hay storyId disponible para persistir');
     }
   };
 
@@ -108,9 +136,15 @@ const DedicatoriaStep: React.FC = () => {
     try {
       // Convertir imagen a base64 para preview
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const imageUrl = e.target?.result as string;
-        updateDedicatoria({ imageUrl });
+        console.log('[DedicatoriaStep] 🖼️ Imagen procesada:', {
+          size: imageUrl.length,
+          type: file.type,
+          name: file.name
+        });
+        
+        await updateDedicatoria({ imageUrl });
 
         createNotification(
           NotificationType.SYSTEM_UPDATE,
