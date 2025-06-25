@@ -136,7 +136,20 @@ export const useWizardLockStatus = (): WizardLockStatus => {
       }
 
       if (mountedRef.current) {
-        setStoryData(story);
+        // CRÍTICO: No permitir que una consulta devuelva 'draft' si ya tenemos 'completed'
+        const currentStatus = storyData?.status;
+        
+        if (currentStatus === 'completed' && story.status === 'draft') {
+          console.log('[useWizardLockStatus] ⚠️ PROTECCIÓN: BD devuelve draft pero tenemos completed - manteniendo completed');
+          // Mantener el status como completed y solo actualizar otros campos
+          setStoryData({
+            ...story,
+            status: 'completed', // Forzar mantener completed
+            completed_at: storyData?.completed_at || story.completed_at
+          });
+        } else {
+          setStoryData(story);
+        }
         retryCountRef.current = 0; // Reset retry count on success
       }
     } catch (err) {
@@ -277,6 +290,15 @@ export const useWizardLockStatus = (): WizardLockStatus => {
           if (!mountedRef.current) return;
           console.log('[useWizardLockStatus] DEBUG: Cambio en tiempo real detectado:', payload.new);
           if (payload.new && ('status' in payload.new || 'dedicatoria_chosen' in payload.new)) {
+            // CRÍTICO: No permitir que el status vuelva a 'draft' si ya está 'completed'
+            const currentStatus = storyData?.status;
+            const newStatus = payload.new.status;
+            
+            if (currentStatus === 'completed' && newStatus === 'draft') {
+              console.log('[useWizardLockStatus] ⚠️ IGNORANDO cambio de status completed→draft (protección de bloqueo)');
+              return; // Ignorar este cambio para preservar el bloqueo
+            }
+            
             const updatedData = {
               ...storyData,
               status: payload.new.status || storyData?.status || '',
