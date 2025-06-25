@@ -342,11 +342,28 @@ export const storyService = {
       })
     });
     
-    const data = await res.json();
-    
     if (!res.ok) {
-      console.error('[StoryService] Edge Function error:', data);
-      throw new Error(data.error || 'Failed to export story');
+      let errorMessage;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error || 'Failed to export story';
+        console.error('[StoryService] Edge Function error:', errorData);
+      } catch (jsonError) {
+        // Si no se puede parsear como JSON, leer como texto
+        const errorText = await res.text();
+        errorMessage = `Edge Function returned non-JSON response (${res.status}): ${errorText.substring(0, 200)}...`;
+        console.error('[StoryService] Edge Function returned HTML/text error:', errorText);
+      }
+      throw new Error(errorMessage);
+    }
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonError) {
+      const responseText = await res.text();
+      console.error('[StoryService] Failed to parse response as JSON:', responseText);
+      throw new Error('Edge Function returned invalid JSON response');
     }
     
     if (!data.success) {
