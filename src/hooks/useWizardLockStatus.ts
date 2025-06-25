@@ -25,14 +25,46 @@ interface StoryData {
 }
 
 export const useWizardLockStatus = (): WizardLockStatus => {
-  const [storyData, setStoryData] = useState<StoryData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const { supabase } = useAuth();
   const { storyId } = useParams();
   const { generatedPages } = useWizard();
+  
+  // SOLUCIÓN ROBUSTA: Usar localStorage como respaldo para persistir estado entre navegaciones
+  const getInitialStoryData = (): StoryData | null => {
+    if (!storyId) return null;
+    
+    const cacheKey = `story_lock_status_${storyId}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        console.log('[useWizardLockStatus] DEBUG: Restaurando estado desde localStorage:', parsed);
+        return parsed;
+      } catch (e) {
+        console.error('[useWizardLockStatus] Error parsing cached data:', e);
+      }
+    }
+    return null;
+  };
+  
+  const [storyData, setStoryDataInternal] = useState<StoryData | null>(getInitialStoryData());
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const retryCountRef = useRef(0);
   const maxRetries = 3;
+  
+  // Wrapper para setStoryData que también guarda en localStorage
+  const setStoryData = (data: StoryData | null | ((prev: StoryData | null) => StoryData | null)) => {
+    setStoryDataInternal((prev) => {
+      const newData = typeof data === 'function' ? data(prev) : data;
+      if (newData && storyId) {
+        const cacheKey = `story_lock_status_${storyId}`;
+        localStorage.setItem(cacheKey, JSON.stringify(newData));
+        console.log('[useWizardLockStatus] DEBUG: Guardando estado en localStorage:', newData);
+      }
+      return newData;
+    });
+  };
 
   // Detectar si la vista previa fue generada (páginas con imágenes existen)
   const isPreviewGenerated = useMemo(() => {
@@ -284,6 +316,14 @@ export const useWizardLockStatus = (): WizardLockStatus => {
       }
     };
   }, []);
+  
+  // Cleanup localStorage when story changes or component unmounts
+  useEffect(() => {
+    return () => {
+      // NO limpiar en unmount para preservar estado entre navegaciones
+      // Solo limpiar si el usuario explícitamente resetea el wizard
+    };
+  }, [storyId]);
 
   return {
     isStepLocked,
