@@ -140,6 +140,13 @@ export const useAutosave = (
 
         logger.debug('Guardando story - Título actual:', state.meta.title, 'Título existente:', existingTitle, 'Título a guardar:', titleToSave, 'Usó cache:', !state.meta.title && titleFetchedRef.current, 'Consultó BD:', !state.meta.title && !titleFetchedRef.current);
         
+        // Obtener status actual para preservar 'completed' si ya está establecido
+        const { data: currentStory } = await supabase
+          .from('stories')
+          .select('status')
+          .eq('id', currentStoryId)
+          .single();
+        
         const { error: storyError } = await supabase
           .from('stories')
           .update({
@@ -157,7 +164,7 @@ export const useAutosave = (
               imageSize: state.dedicatoria.imageSize
             } : null,
             updated_at: new Date().toISOString(),
-            status: 'draft'
+            status: currentStory?.status === 'completed' ? 'completed' : 'draft'
           })
           .eq('id', currentStoryId);
 
