@@ -413,6 +413,12 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Sincronizar storySettings con state para persistencia correcta
   useEffect(() => {
+    console.log('[WizardContext] DEBUG - Sincronizando storySettings con state:', {
+      storySettingsDedicatoria: storySettings.dedicatoria,
+      hasDedicatoriaText: !!storySettings.dedicatoria?.text,
+      hasDedicatoriaImage: !!storySettings.dedicatoria?.imageUrl
+    });
+    
     setState(prevState => ({
       ...prevState,
       meta: {

@@ -4,6 +4,8 @@ import { useStory } from '../../context/StoryContext';
 import { useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Download } from 'lucide-react';
 import { storyService } from '../../services/storyService';
+import { useNotifications } from '../../hooks/useNotifications';
+import { NotificationType, NotificationPriority } from '../../types/notification';
 
 const WizardNav: React.FC = () => {
   const {
@@ -16,9 +18,11 @@ const WizardNav: React.FC = () => {
     setGeneratedPages,
     generateAllImagesParallel,
     completionResult,
+    storySettings,
   } = useWizard();
   const { covers } = useStory();
   const { storyId } = useParams();
+  const { createNotification } = useNotifications();
 
   const generateAllImages = async () => {
     if (!storyId) return;
@@ -45,8 +49,32 @@ const WizardNav: React.FC = () => {
     }
   };
 
-  const handleNextClick = () => {
+  const handleNextClick = async () => {
     if (canProceed()) {
+      // Persistir dedicatoria antes de avanzar desde el paso de dedicatoria
+      if (currentStep === 'dedicatoria' && storyId && storySettings.dedicatoria) {
+        try {
+          console.log('[WizardNav] Persistiendo dedicatoria antes de avanzar:', storySettings.dedicatoria);
+          await storyService.persistDedicatoria(storyId, {
+            text: storySettings.dedicatoria.text,
+            imageUrl: storySettings.dedicatoria.imageUrl,
+            layout: storySettings.dedicatoria.layout,
+            alignment: storySettings.dedicatoria.alignment,
+            imageSize: storySettings.dedicatoria.imageSize
+          });
+          console.log('[WizardNav] ✅ Dedicatoria persistida exitosamente antes de avanzar');
+        } catch (error) {
+          console.error('[WizardNav] ❌ Error persistiendo dedicatoria al avanzar:', error);
+          createNotification(
+            NotificationType.SYSTEM_UPDATE,
+            'Error al guardar dedicatoria',
+            'Hubo un problema guardando la dedicatoria. Inténtalo nuevamente.',
+            NotificationPriority.HIGH
+          );
+          return; // No avanzar si hay error
+        }
+      }
+      
       if (currentStep === 'design') {
         generateAllImages();
       }

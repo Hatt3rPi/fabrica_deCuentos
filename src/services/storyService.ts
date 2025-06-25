@@ -436,5 +436,46 @@ export const storyService = {
     if (error) {
       throw new Error(`Error al actualizar contenido de página: ${error.message}`);
     }
+  },
+
+  /**
+   * Persiste específicamente los datos de dedicatoria
+   */
+  async persistDedicatoria(storyId: string, dedicatoria: {
+    text?: string;
+    imageUrl?: string;
+    layout?: string;
+    alignment?: string;
+    imageSize?: string;
+  }): Promise<void> {
+    console.log('[StoryService] persistDedicatoria LLAMADO', {
+      storyId,
+      dedicatoria,
+      hasText: !!dedicatoria.text,
+      hasImage: !!dedicatoria.imageUrl
+    });
+
+    const updateData = {
+      dedicatoria_text: dedicatoria.text || null,
+      dedicatoria_image_url: dedicatoria.imageUrl || null,
+      dedicatoria_layout: dedicatoria.text ? {
+        layout: dedicatoria.layout || 'imagen-arriba',
+        alignment: dedicatoria.alignment || 'centro',
+        imageSize: dedicatoria.imageSize || 'mediana'
+      } : null,
+      updated_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from('stories')
+      .update(updateData)
+      .eq('id', storyId);
+
+    if (error) {
+      console.error('[StoryService] ERROR EN persistDedicatoria:', error);
+      throw new Error(`Error al persistir dedicatoria: ${error.message}`);
+    } else {
+      console.log('[StoryService] ✅ persistDedicatoria EXITOSO', { storyId, updateData });
+    }
   }
 };

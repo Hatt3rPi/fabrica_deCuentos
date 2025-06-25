@@ -127,7 +127,15 @@ export const useAutosave = (
           titleToSave,
           usedCache: !state.meta.title && titleFetchedRef.current,
           consultedDB: !state.meta.title && !titleFetchedRef.current,
-          hasDedicatoria: !!state.dedicatoria?.text
+          hasDedicatoria: !!state.dedicatoria?.text,
+          dedicatoriaDetails: {
+            text: state.dedicatoria?.text,
+            imageUrl: state.dedicatoria?.imageUrl,
+            layout: state.dedicatoria?.layout,
+            alignment: state.dedicatoria?.alignment,
+            imageSize: state.dedicatoria?.imageSize,
+            fullObject: state.dedicatoria
+          }
         });
 
         logger.debug('Guardando story - Título actual:', state.meta.title, 'Título existente:', existingTitle, 'Título a guardar:', titleToSave, 'Usó cache:', !state.meta.title && titleFetchedRef.current, 'Consultó BD:', !state.meta.title && !titleFetchedRef.current);
