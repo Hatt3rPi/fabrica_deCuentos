@@ -406,6 +406,17 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (result.success) {
         setIsPdfOutdated(false);
         console.log('[WizardContext] DEBUG: PDF flag reseteado - story completado exitosamente');
+        
+        // SOLUCIÓN QUIRÚRGICA: Refrescar status de bloqueo después de export exitoso
+        // Esto es necesario porque el hook no detecta automáticamente el cambio de status
+        // que hace la Edge Function de 'draft' a 'completed'
+        setTimeout(() => {
+          console.log('[WizardContext] DEBUG: Refrescando estado de bloqueo post-export...');
+          // Forzar re-render de todos los componentes que usan useWizardLockStatus
+          window.dispatchEvent(new CustomEvent('story-status-updated', { 
+            detail: { storyId, status: 'completed' } 
+          }));
+        }, 1000); // Dar tiempo para que la BD se actualice
       }
       return result;
     } catch (error) {

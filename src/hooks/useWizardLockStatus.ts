@@ -15,6 +15,8 @@ interface WizardLockStatus {
   dedicatoriaChoice: boolean | null;
   isPreviewGenerated: boolean;
   isPdfCompleted: boolean;
+  // Función para refrescar manualmente después de export exitoso
+  refreshStatus: () => void;
 }
 
 interface StoryData {
@@ -192,6 +194,17 @@ export const useWizardLockStatus = (): WizardLockStatus => {
 
     initializeData();
 
+    // SOLUCIÓN QUIRÚRGICA: Escuchar evento custom para refrescar después de export
+    const handleStatusUpdate = (event: CustomEvent) => {
+      console.log('[useWizardLockStatus] DEBUG: Evento story-status-updated recibido:', event.detail);
+      if (event.detail?.storyId === storyId) {
+        console.log('[useWizardLockStatus] DEBUG: Refrescando datos por export exitoso...');
+        fetchStoryData();
+      }
+    };
+    
+    window.addEventListener('story-status-updated', handleStatusUpdate as EventListener);
+
     // Escuchar cambios en tiempo real
     const subscription = supabase
       .channel(`story-lock-status-${storyId}`)
@@ -224,6 +237,8 @@ export const useWizardLockStatus = (): WizardLockStatus => {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
+      // Remove custom event listener
+      window.removeEventListener('story-status-updated', handleStatusUpdate as EventListener);
       // Unsubscribe from channel
       subscription.unsubscribe();
     };
@@ -248,6 +263,8 @@ export const useWizardLockStatus = (): WizardLockStatus => {
     retry,
     dedicatoriaChoice: storyData?.dedicatoria_chosen ?? null,
     isPreviewGenerated,
-    isPdfCompleted
+    isPdfCompleted,
+    // Función para refrescar manualmente el estado después de export exitoso
+    refreshStatus: fetchStoryData
   };
 };
