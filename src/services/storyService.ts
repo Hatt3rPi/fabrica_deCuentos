@@ -323,7 +323,11 @@ export const storyService = {
   },
 
   async generateRealExport(storyId: string, saveToLibrary: boolean): Promise<string> {
-    console.log(`[StoryService] Generating real export for story ${storyId}, saveToLibrary: ${saveToLibrary}`);
+    console.log(`[StoryService] DEBUG generateRealExport INICIO:`, {
+      storyId,
+      saveToLibrary,
+      timestamp: new Date().toISOString()
+    });
     
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -370,11 +374,17 @@ export const storyService = {
       throw new Error(data.error || 'Export was not successful');
     }
     
-    console.log(`[StoryService] Export successful:`, {
+    console.log(`[StoryService] DEBUG Export EXITOSO:`, {
       downloadUrl: data.downloadUrl,
       fileSize: data.file_size_kb,
-      format: data.format
+      format: data.format,
+      fullResponse: data,
+      timestamp: new Date().toISOString()
     });
+
+    // DEBUG: Verificar si se actualiza el status después del export exitoso
+    console.log(`[StoryService] DEBUG: ¿Se actualiza stories.status a 'completed'? NO - Esta es la causa del problema`);
+    console.log(`[StoryService] DEBUG: El export fue exitoso pero stories.status sigue siendo 'draft'`);
     
     return data.downloadUrl as string;
   },

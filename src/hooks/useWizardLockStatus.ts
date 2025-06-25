@@ -34,26 +34,38 @@ export const useWizardLockStatus = (): WizardLockStatus => {
 
   // Detectar si la vista previa fue generada (páginas con imágenes existen)
   const isPreviewGenerated = useMemo(() => {
-    console.log('[useWizardLockStatus] DEBUG generatedPages:', {
+    console.log('[useWizardLockStatus] DEBUG generatedPages COMPLETO:', {
       length: generatedPages.length,
+      timestamp: new Date().toISOString(),
+      storyId,
       pages: generatedPages.map(p => ({
+        id: p.id,
         pageNumber: p.pageNumber,
         hasImageUrl: !!p.imageUrl,
-        imageUrlLength: p.imageUrl?.length || 0
-      }))
+        imageUrlLength: p.imageUrl?.length || 0,
+        hasText: !!p.text,
+        textLength: p.text?.length || 0,
+        prompt: p.prompt?.substring(0, 50) + '...' || 'sin prompt'
+      })),
+      pagesWithImages: generatedPages.filter(p => p.pageNumber > 0 && p.imageUrl).length,
+      totalNonCoverPages: generatedPages.filter(p => p.pageNumber > 0).length
     });
     return generatedPages.some(page => page.pageNumber > 0 && page.imageUrl);
-  }, [generatedPages]);
+  }, [generatedPages, storyId]);
 
   // Detectar si el PDF fue completado
   const isPdfCompleted = useMemo(() => {
-    console.log('[useWizardLockStatus] DEBUG storyData:', {
+    console.log('[useWizardLockStatus] DEBUG storyData COMPLETO:', {
       storyData,
       status: storyData?.status,
-      isCompleted: storyData?.status === 'completed'
+      dedicatoriaChosen: storyData?.dedicatoria_chosen,
+      allFields: storyData ? Object.keys(storyData) : [],
+      isCompleted: storyData?.status === 'completed',
+      timestamp: new Date().toISOString(),
+      storyId
     });
     return storyData?.status === 'completed';
-  }, [storyData]);
+  }, [storyData, storyId]);
 
   // Use ref to track if component is mounted and for timeout management
   const mountedRef = useRef(true);
@@ -71,9 +83,16 @@ export const useWizardLockStatus = (): WizardLockStatus => {
       
       const { data: story, error: fetchError } = await supabase
         .from('stories')
-        .select('status, dedicatoria_chosen')
+        .select('status, dedicatoria_chosen, wizard_state, completed_at, updated_at')
         .eq('id', storyId)
         .single();
+
+      console.log('[useWizardLockStatus] DEBUG QUERY BD COMPLETA:', {
+        storyId,
+        queryResult: story,
+        error: fetchError,
+        timestamp: new Date().toISOString()
+      });
 
       if (fetchError) {
         throw new Error(`Database error: ${fetchError.message}`);
@@ -118,12 +137,19 @@ export const useWizardLockStatus = (): WizardLockStatus => {
   // Lógica centralizada de bloqueos
   const isStepLocked = useCallback((step: WizardStep): boolean => {
     // DEBUG: Log para diagnosticar problema
-    console.log('[useWizardLockStatus] DEBUG:', {
+    console.log('[useWizardLockStatus] DEBUG FLUJO ESPERADO:', {
       step,
       storyData,
       isPdfCompleted,
       isPreviewGenerated,
-      generatedPagesCount: generatedPages.length
+      generatedPagesCount: generatedPages.length,
+      expectedFlow: {
+        'NIVEL 1 - Vista previa generada': 'Debería bloquear characters, story, design',
+        'NIVEL 2 - PDF completado': 'Debería bloquear dedicatoria-choice, dedicatoria, preview',
+        'Estado actual stories.status': storyData?.status || 'null',
+        'Páginas con imágenes': generatedPages.filter(p => p.pageNumber > 0 && p.imageUrl).length,
+        'Total páginas no-cover': generatedPages.filter(p => p.pageNumber > 0).length
+      }
     });
     
     // Nivel 2: PDF completado - bloquea todas las etapas excepto export

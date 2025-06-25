@@ -378,6 +378,12 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Story completion function
   const completeStory = async (saveToLibrary: boolean = true): Promise<import('../types').CompletionResult> => {
+    console.log('[WizardContext] DEBUG completeStory INICIO:', {
+      storyId,
+      saveToLibrary,
+      timestamp: new Date().toISOString()
+    });
+
     if (!storyId) {
       return { success: false, error: 'No hay ID de cuento disponible' };
     }
@@ -386,11 +392,20 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setCompletionResult(null);
 
     try {
+      console.log('[WizardContext] DEBUG: Llamando a storyService.completeStory...');
       const result = await storyService.completeStory(storyId, saveToLibrary);
+      
+      console.log('[WizardContext] DEBUG completeStory RESULTADO:', {
+        result,
+        timestamp: new Date().toISOString(),
+        storyId
+      });
+      
       setCompletionResult(result);
       // Reset PDF outdated flag if successful
       if (result.success) {
         setIsPdfOutdated(false);
+        console.log('[WizardContext] DEBUG: PDF flag reseteado - story completado exitosamente');
       }
       return result;
     } catch (error) {
