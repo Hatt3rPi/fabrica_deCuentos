@@ -431,6 +431,17 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
               window.dispatchEvent(new CustomEvent('story-status-updated', { 
                 detail: { storyId, status: 'completed', immediate: true } 
               }));
+              
+              // CRÍTICO: También actualizar localStorage directamente para que persista
+              const lockCacheKey = `story_lock_status_${storyId}`;
+              const lockData = {
+                status: 'completed',
+                dedicatoria_chosen: true,
+                completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              localStorage.setItem(lockCacheKey, JSON.stringify(lockData));
+              console.log('[WizardContext] ✅ Estado de bloqueo guardado directamente en localStorage');
             }
           } catch (error) {
             console.error('[WizardContext] ERROR crítico:', error);
@@ -481,6 +492,17 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             window.dispatchEvent(new CustomEvent('story-status-updated', { 
               detail: { storyId, status: 'completed', forced: currentStory?.status !== 'completed' } 
             }));
+            
+            // También actualizar localStorage como respaldo
+            const lockCacheKey = `story_lock_status_${storyId}`;
+            const lockData = {
+              status: currentStory?.status || 'completed',
+              dedicatoria_chosen: true,
+              completed_at: currentStory?.completed_at || new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            localStorage.setItem(lockCacheKey, JSON.stringify(lockData));
+            console.log('[WizardContext] ✅ Estado de bloqueo verificado y guardado en localStorage');
             
           } catch (verifyError) {
             console.error('[WizardContext] ERROR al verificar status post-export:', verifyError);
