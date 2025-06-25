@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useWizard } from '../../../context/WizardContext';
-import { ChevronLeft, ChevronRight, RefreshCw, Pencil, Download, BookOpen, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Pencil, CheckCircle, Lock } from 'lucide-react';
 import { OverlayLoader } from '../../UI/Loader';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
@@ -8,6 +8,7 @@ import { useStoryStyles } from '../../../hooks/useStoryStyles';
 import { useImageDimensions } from '../../../hooks/useImageDimensions';
 import InlineTextEditor from './components/InlineTextEditor';
 import AdvancedEditModal from './components/AdvancedEditModal';
+import { useStoryCompletionStatus } from '../../../hooks/useStoryCompletionStatus';
 
 const PreviewStep: React.FC = () => {
   const { 
@@ -24,9 +25,6 @@ const PreviewStep: React.FC = () => {
     pageStates,
     retryFailedPages,
     // Story completion functionality
-    completeStory,
-    isCompleting,
-    completionResult,
     isPdfOutdated
   } = useWizard();
   const { createNotification } = useNotifications();
@@ -35,6 +33,7 @@ const PreviewStep: React.FC = () => {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showAdvancedModal, setShowAdvancedModal] = useState(false);
   const handleFallback = () => setIsGenerating(false);
+  const { isCompleted, isLoading } = useStoryCompletionStatus();
 
   // Style hooks for dynamic preview
   const { getTextStyles, getContainerStyles, getPosition, getBackgroundImage, styleConfig } = useStoryStyles();
@@ -79,6 +78,15 @@ const PreviewStep: React.FC = () => {
 
   // Función para manejar el modal avanzado
   const handleAdvancedEdit = () => {
+    if (isCompleted || isLoading) {
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Edición bloqueada',
+        'No puedes editar el cuento porque el PDF ya ha sido generado',
+        NotificationPriority.HIGH
+      );
+      return;
+    }
     setShowAdvancedModal(true);
   };
 
@@ -219,10 +227,26 @@ const PreviewStep: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-purple-800">Vista Previa del Cuento</h2>
-        <p className="text-gray-600">
+        <h2 className="text-2xl font-bold text-purple-800 dark:text-purple-300">
+          {isCompleted ? 'Vista Previa - Solo Lectura' : 'Vista Previa del Cuento'}
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400">
           Página {currentPage + 1} de {generatedPages.length}
         </p>
+        
+        {isCompleted && (
+          <div className="mt-4 mx-auto max-w-md">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <div className="flex items-center justify-center gap-2 text-yellow-800 dark:text-yellow-200">
+                <Lock className="w-4 h-4" />
+                <span className="text-sm font-medium">PDF generado - edición bloqueada</span>
+              </div>
+              <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                El contenido ya no puede modificarse
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-center gap-8">
@@ -288,10 +312,19 @@ const PreviewStep: React.FC = () => {
               {currentPageData && !isGenerating && pageStates[currentPageData.id] !== 'generating' && (
                 <button
                   onClick={handleAdvancedEdit}
-                  className="absolute top-2 left-2 w-8 h-8 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center text-gray-700 hover:text-purple-600 transition-all duration-200 z-20 group hover:scale-110"
-                  title="Editar contenido y prompt"
+                  disabled={isCompleted || isLoading}
+                  className={`absolute top-2 left-2 w-8 h-8 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center transition-all duration-200 z-20 group ${
+                    isCompleted || isLoading
+                      ? 'bg-gray-200/90 text-gray-400 cursor-not-allowed'
+                      : 'bg-white/90 hover:bg-white hover:shadow-xl text-gray-700 hover:text-purple-600 hover:scale-110'
+                  }`}
+                  title={isCompleted || isLoading ? 'Edición bloqueada - PDF generado' : 'Editar contenido y prompt'}
                 >
-                  <Pencil className="w-4 h-4 transition-transform group-hover:scale-110" />
+                  {isCompleted || isLoading ? (
+                    <Lock className="w-4 h-4" />
+                  ) : (
+                    <Pencil className="w-4 h-4 transition-transform group-hover:scale-110" />
+                  )}
                 </button>
               )}
               
@@ -319,23 +352,41 @@ const PreviewStep: React.FC = () => {
                         }}
                         className="relative"
                       >
-                        <InlineTextEditor
-                          initialText={currentPage === 0 ? generatedPages[0]?.text || '' : currentPageData.text}
-                          onSave={(newText) => handleSaveText(currentPageData.id, newText)}
-                          textStyles={{
-                            ...textStyles,
-                            width: '100%',
-                            fontSize: exactFontSize,
-                            lineHeight: textStyles.lineHeight || '1.4'
-                          }}
-                          className="text-center sm:text-left"
-                          config={{
-                            autoSaveDelay: 2000,
-                            showIndicators: true,
-                            multiline: true,
-                            placeholder: 'Doble-click para editar el texto...'
-                          }}
-                        />
+                        {isCompleted || isLoading ? (
+                          // Texto de solo lectura cuando está completado
+                          <div
+                            style={{
+                              ...textStyles,
+                              width: '100%',
+                              fontSize: exactFontSize,
+                              lineHeight: textStyles.lineHeight || '1.4',
+                              opacity: 0.8,
+                              cursor: 'default'
+                            }}
+                            className="text-center sm:text-left"
+                            title="Solo lectura - PDF generado"
+                          >
+                            {currentPage === 0 ? generatedPages[0]?.text || '' : currentPageData.text}
+                          </div>
+                        ) : (
+                          <InlineTextEditor
+                            initialText={currentPage === 0 ? generatedPages[0]?.text || '' : currentPageData.text}
+                            onSave={(newText) => handleSaveText(currentPageData.id, newText)}
+                            textStyles={{
+                              ...textStyles,
+                              width: '100%',
+                              fontSize: exactFontSize,
+                              lineHeight: textStyles.lineHeight || '1.4'
+                            }}
+                            className="text-center sm:text-left"
+                            config={{
+                              autoSaveDelay: 2000,
+                              showIndicators: true,
+                              multiline: true,
+                              placeholder: 'Doble-click para editar el texto...'
+                            }}
+                          />
+                        )}
                       </div>
                     </div>
                   </>
