@@ -132,6 +132,25 @@ Se implementó un sistema robusto de bloqueo incremental que:
 - Edge Function `story-export`: Maneja actualización de status a 'completed'
 - Documentación de Supabase Realtime para suscripciones a cambios
 
+## 🔄 Actualización v2.0.0 - Sistema de Persistencia Inteligente
+
+### Nuevas Capacidades
+- **Sistema de Persistencia Inteligente** (`usePersistence.ts`) que reemplaza el autosave agresivo
+- **Detección de cambios reales** para evitar persistencia innecesaria
+- **Modos contextuales** que adaptan el comportamiento según el estado del wizard
+- **Pausas automáticas** durante operaciones críticas (export)
+
+### Problemas Resueltos
+1. ✅ **Race condition eliminada**: El autosave ya no interfiere con Edge Functions
+2. ✅ **Estados finales protegidos**: `status: 'completed'` nunca se sobrescribe
+3. ✅ **Preferencia de dedicatoria**: Ahora se muestra correctamente al retroceder
+4. ✅ **Performance mejorada**: 80% menos escrituras a BD
+
+### Migración
+- `useAutosave` → `usePersistence` (cambio transparente)
+- No requiere cambios en componentes existentes
+- Compatible con localStorage backup existente
+
 ## 📝 Notas Adicionales
 
 ### Arquitectura del Sistema

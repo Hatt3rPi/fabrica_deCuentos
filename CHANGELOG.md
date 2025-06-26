@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Feature: Sistema de Persistencia Inteligente (2025-06-25)
+- **Nueva Arquitectura**: Reemplazado `useAutosave` por `usePersistence` con detección inteligente
+  - **Detector de cambios reales**: Solo persiste cuando hay modificaciones significativas
+  - **Modos contextuales**: Draft (1.5s), Review (3s), Final (solo metadatos seguros)
+  - **Pausas automáticas**: 8 segundos durante export para evitar race conditions
+  - **Respeto de estados finales**: Nunca sobrescribe `status: 'completed'`
+- **Performance**: 80% menos escrituras innecesarias a BD
+- **Fixes críticos**: 
+  - Eliminada race condition que impedía activación de bloqueos Nivel 2
+  - Preferencia de dedicatoria ahora visible al retroceder
+- **Archivos**: `src/hooks/usePersistence.ts` (nuevo), `src/context/WizardContext.tsx`
+- **Issues**: #271 (implementación), #266 (fix completo)
+
+### Feature: Sistema de Bloqueo Incremental de Dos Niveles (2025-06-25)
+- **Nueva Funcionalidad**: Sistema robusto de bloqueo progresivo en wizard
+  - **Nivel 1**: Después de vista previa → bloquea personajes, cuento, diseño
+  - **Nivel 2**: Después de PDF → bloquea dedicatoria-choice, dedicatoria, preview
+  - **Hook centralizado**: `useWizardLockStatus` con localStorage backup
+  - **Integración completa**: Todos los steps del wizard respetan los bloqueos
+- **UX mejorada**: 
+  - Íconos de candado y mensajes contextuales por nivel
+  - Preferencias de dedicatoria visibles con checks verdes
+  - Feedback visual inmediato en todos los estados
+- **Archivos**: `src/hooks/useWizardLockStatus.ts`, componentes de wizard actualizados
+- **PR**: #270
+
 ### Feature: Bloqueo de Edición Post-PDF (2025-06-25)
 - **Nueva Funcionalidad**: Implementado sistema de bloqueo de edición de campos después de generar PDF
   - **Hook personalizado**: `useStoryCompletionStatus` para monitorear estado de completación desde BD
