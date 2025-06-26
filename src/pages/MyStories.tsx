@@ -133,9 +133,10 @@ const MyStories: React.FC = () => {
 
       logger.debug('Historia creada, navegando a wizard');
       navigate(`/wizard/${story.id}`);
-    } catch (err) {
-      logger.error('Error creating story:', err);
-      alert('Error al crear la historia: ' + err.message);
+    } catch (error) {
+      logger.error('Error creating story:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear la historia';
+      alert('Error al crear la historia: ' + errorMessage);
     }
   };
 
@@ -224,21 +225,39 @@ const MyStories: React.FC = () => {
   }, [stories]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-purple-800 dark:text-purple-300 mb-8">Mis Cuentos</h1>
+        <div className="mb-10 text-center sm:text-left">
+          <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 mb-3">
+            Mis Cuentos
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
+            Aquí encontrarás todos tus cuentos creados, tanto los completados como los que están en progreso.
+          </p>
+        </div>
 
         {/* Sección de Cuentos Completados */}
         {completedStories.length > 0 && (
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-6">
-              <BookOpen className="w-6 h-6 text-green-600 dark:text-green-400" />
-              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">
-                Cuentos Completados
-              </h2>
-              <span className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm font-medium">
-                {completedStories.length}
-              </span>
+          <div className="mb-16">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                  <BookOpen className="w-6 h-6 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                    Cuentos Completados
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Disfruta de tus historias finalizadas
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-sm font-medium border border-green-200 dark:border-green-800">
+                  {completedStories.length} {completedStories.length === 1 ? 'cuento' : 'cuentos'}
+                </span>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {completedStories.map((story) => (
@@ -256,15 +275,26 @@ const MyStories: React.FC = () => {
 
         {/* Sección de Borradores */}
         {draftStories.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3 mb-6">
-              <PenTool className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">
-                Cuentos en Borrador
-              </h2>
-              <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded-full text-sm font-medium">
-                {draftStories.length}
-              </span>
+          <div className="mt-16">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                  <PenTool className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                    En Progreso
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Continúa creando tus historias
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-full text-sm font-medium border border-amber-200 dark:border-amber-800">
+                  {draftStories.length} {draftStories.length === 1 ? 'borrador' : 'borradores'}
+                </span>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {draftStories.map((story) => (
@@ -282,37 +312,50 @@ const MyStories: React.FC = () => {
 
         {/* Mensaje cuando no hay cuentos */}
         {stories.length === 0 && (
-          <div className="text-center py-16">
-            <div className="mb-6">
-              <div className="w-24 h-24 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto">
-                <BookOpen className="w-12 h-12 text-purple-600 dark:text-purple-400" />
+          <div className="max-w-2xl mx-auto text-center py-16 px-4 sm:px-6 lg:px-8">
+            <div className="relative">
+              <div className="absolute -top-2 -left-2 w-24 h-24 bg-purple-200 dark:bg-purple-900/40 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+              <div className="absolute -bottom-2 -right-2 w-24 h-24 bg-blue-200 dark:bg-blue-900/40 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+              <div className="relative z-10">
+                <div className="w-28 h-28 bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-600 dark:to-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <BookOpen className="w-12 h-12 text-white" />
+                </div>
               </div>
             </div>
-            <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              No tienes cuentos aún
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">
+              ¡Comienza tu aventura literaria!
             </h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">
-              ¡Comienza creando tu primer cuento mágico!
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
+              Aún no has creado ningún cuento. Da el primer paso para dar vida a historias increíbles.
             </p>
             <button
               onClick={handleNewStory}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-800 transition-colors"
+              className="group relative inline-flex items-center justify-center px-8 py-4 overflow-hidden font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 ease-out shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             >
-              <Plus className="w-5 h-5" />
-              <span>Crear mi primer cuento</span>
+              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-purple-700 to-indigo-700 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out"></span>
+              <Plus className="relative w-5 h-5 mr-2 group-hover:animate-bounce" />
+              <span className="relative font-semibold">Crear mi primer cuento</span>
             </button>
           </div>
         )}
 
       {/* Botón flotante solo se muestra cuando hay cuentos existentes */}
       {stories.length > 0 && (
-        <button
-          onClick={handleNewStory}
-          className="fixed bottom-8 right-8 flex items-center gap-2 px-6 py-3 bg-purple-600 dark:bg-purple-700 text-white rounded-full shadow-lg hover:bg-purple-700 dark:hover:bg-purple-800 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Nuevo cuento</span>
-        </button>
+        <div className="fixed bottom-6 right-6 z-10">
+          <button
+            onClick={handleNewStory}
+            className="group relative inline-flex items-center justify-center p-4 bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 ease-out hover:from-purple-700 hover:to-indigo-700 transform hover:-translate-y-1"
+            aria-label="Crear nuevo cuento"
+          >
+            <Plus className="w-6 h-6 transition-transform duration-300 group-hover:rotate-90" />
+            <span className="absolute opacity-0 group-hover:opacity-100 bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded whitespace-nowrap -top-10 left-1/2 transform -translate-x-1/2 transition-opacity duration-200">
+              Nuevo cuento
+              <svg className="absolute text-gray-900 h-2 w-full left-0 top-full" x="0px" y="0px" viewBox="0 0 255 255" xmlSpace="preserve">
+                <polygon className="fill-current" points="0,0 127.5,127.5 255,0"/>
+              </svg>
+            </span>
+          </button>
+        </div>
       )}
       <ConfirmDialog
         isOpen={storyToDelete !== null}
