@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNotifications } from '../../hooks/useNotifications';
-import NotificationCenter from './NotificationCenter';
+import NotificationSidebar from './NotificationSidebar';
 
 interface NotificationBellProps {
   className?: string;
@@ -45,10 +45,12 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
     <div className={`relative ${className}`} ref={bellRef}>
       <button
         onClick={toggleNotificationCenter}
-        className={`relative p-2 rounded-full hover:bg-purple-100 transition-all duration-300 ${
+        className={`relative p-2 rounded-full hover:bg-purple-100 transition-all duration-300 notification-bell ${
           bellAnimation ? 'animate-bell' : ''
         }`}
         aria-label="Notificaciones"
+        aria-expanded={isOpen}
+        aria-controls="notification-sidebar"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -72,11 +74,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
         )}
       </button>
 
-      {isOpen && (
-        <div className="fixed right-4 top-[calc(var(--header-height,4rem))] mt-0 w-80 sm:w-96 z-50 notification-panel-container" data-testid="notification-panel">
-          <NotificationCenter onClose={() => setIsOpen(false)} />
-        </div>
-      )}
+      <NotificationSidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </div>
   );
 };
