@@ -21,7 +21,7 @@ import {
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 import { styleConfigService } from '../../../services/styleConfigService';
-import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG } from '../../../types/styleConfig';
+import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG } from '../../../types/styleConfig';
 import StylePreview from './components/StylePreview';
 import TypographyPanel from './components/TypographyPanel';
 import PositionPanel from './components/PositionPanel';
@@ -36,7 +36,8 @@ import CreateTemplateModal from './components/CreateTemplateModal';
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
   cover: 'El Mágico Viaje de Luna',
-  page: 'Luna caminaba por el sendero del bosque encantado, donde las luciérnagas bailaban entre los árboles iluminando su camino. El viento susurraba secretos antiguos mientras las hojas doradas crujían bajo sus pequeños pies.'
+  page: 'Luna caminaba por el sendero del bosque encantado, donde las luciérnagas bailaban entre los árboles iluminando su camino. El viento susurraba secretos antiguos mientras las hojas doradas crujían bajo sus pequeños pies.',
+  dedicatoria: 'Para mi querida hija Luna, que siempre sueña con aventuras mágicas y llena nuestros días de alegría.'
 };
 
 const AdminStyleEditor: React.FC = () => {
@@ -50,9 +51,11 @@ const AdminStyleEditor: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string>('');
   const [customCoverImage, setCustomCoverImage] = useState<string>('');
   const [customPageImage, setCustomPageImage] = useState<string>('');
+  const [customDedicatoriaImage, setCustomDedicatoriaImage] = useState<string>('');
   const [customCoverText, setCustomCoverText] = useState<string>(SAMPLE_TEXTS.cover);
   const [customPageText, setCustomPageText] = useState<string>(SAMPLE_TEXTS.page);
-  const [currentPageType, setCurrentPageType] = useState<'cover' | 'page'>('cover');
+  const [customDedicatoriaText, setCustomDedicatoriaText] = useState<string>(SAMPLE_TEXTS.dedicatoria);
+  const [currentPageType, setCurrentPageType] = useState<'cover' | 'page' | 'dedicatoria'>('cover');
   const [activePanel, setActivePanel] = useState<string>('typography');
   
   // Estados de UI
@@ -100,11 +103,14 @@ const AdminStyleEditor: React.FC = () => {
           name: template.name,
           coverConfig: template.configData.cover_config,
           pageConfig: template.configData.page_config,
+          dedicatoriaConfig: template.configData.dedicatoria_config || DEFAULT_DEDICATORIA_CONFIG,
           // Las imágenes custom son solo para preview del editor
           coverBackgroundUrl: undefined,
           pageBackgroundUrl: undefined,
+          dedicatoriaBackgroundUrl: undefined,
           coverSampleText: undefined,
-          pageSampleText: undefined
+          pageSampleText: undefined,
+          dedicatoriaSampleText: undefined
         };
         
         setActiveConfig(config);
@@ -113,8 +119,10 @@ const AdminStyleEditor: React.FC = () => {
         // Limpiar imágenes custom (solo para admin/styles)
         setCustomCoverImage('');
         setCustomPageImage('');
+        setCustomDedicatoriaImage('');
         setCustomCoverText(SAMPLE_TEXTS.cover);
         setCustomPageText(SAMPLE_TEXTS.page);
+        setCustomDedicatoriaText(SAMPLE_TEXTS.dedicatoria);
       }
     } catch (error) {
       createNotification(
@@ -154,7 +162,8 @@ const AdminStyleEditor: React.FC = () => {
         name: activeConfig.name,
         configData: {
           cover_config: activeConfig.coverConfig,
-          page_config: activeConfig.pageConfig
+          page_config: activeConfig.pageConfig,
+          dedicatoria_config: activeConfig.dedicatoriaConfig
         }
       };
       
@@ -248,6 +257,25 @@ const AdminStyleEditor: React.FC = () => {
     });
   }, []);
 
+  const updateDedicatoriaConfig = useCallback((updates: any) => {
+    setActiveConfig(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        dedicatoriaConfig: {
+          ...prev.dedicatoriaConfig,
+          text: {
+            ...prev.dedicatoriaConfig?.text,
+            ...updates
+          },
+          imageSize: prev.dedicatoriaConfig?.imageSize || 'mediana',
+          allowedLayouts: prev.dedicatoriaConfig?.allowedLayouts || ['imagen-arriba', 'imagen-abajo', 'imagen-izquierda', 'imagen-derecha'],
+          allowedAlignments: prev.dedicatoriaConfig?.allowedAlignments || ['centro', 'izquierda', 'derecha']
+        }
+      };
+    });
+  }, []);
+
   const updateContainerStyle = useCallback((containerUpdates: any) => {
     if (currentPageType === 'cover') {
       setActiveConfig(prev => {
@@ -263,6 +291,26 @@ const AdminStyleEditor: React.FC = () => {
                 ...containerUpdates
               }
             }
+          }
+        };
+      });
+    } else if (currentPageType === 'dedicatoria') {
+      setActiveConfig(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          dedicatoriaConfig: {
+            ...prev.dedicatoriaConfig,
+            text: {
+              ...prev.dedicatoriaConfig?.text,
+              containerStyle: {
+                ...prev.dedicatoriaConfig?.text?.containerStyle,
+                ...containerUpdates
+              }
+            },
+            imageSize: prev.dedicatoriaConfig?.imageSize || 'mediana',
+            allowedLayouts: prev.dedicatoriaConfig?.allowedLayouts || ['imagen-arriba', 'imagen-abajo', 'imagen-izquierda', 'imagen-derecha'],
+            allowedAlignments: prev.dedicatoriaConfig?.allowedAlignments || ['centro', 'izquierda', 'derecha']
           }
         };
       });
@@ -288,13 +336,13 @@ const AdminStyleEditor: React.FC = () => {
 
   const getCurrentConfig = () => {
     if (!activeConfig) {
-      return currentPageType === 'cover' 
-        ? DEFAULT_COVER_CONFIG.title 
-        : DEFAULT_PAGE_CONFIG.text;
+      if (currentPageType === 'cover') return DEFAULT_COVER_CONFIG.title;
+      if (currentPageType === 'dedicatoria') return DEFAULT_DEDICATORIA_CONFIG.text;
+      return DEFAULT_PAGE_CONFIG.text;
     }
-    return currentPageType === 'cover' 
-      ? activeConfig.coverConfig.title 
-      : activeConfig.pageConfig.text;
+    if (currentPageType === 'cover') return activeConfig.coverConfig.title;
+    if (currentPageType === 'dedicatoria') return activeConfig.dedicatoriaConfig?.text || DEFAULT_DEDICATORIA_CONFIG.text;
+    return activeConfig.pageConfig.text;
   };
 
   const handleTemplateSelect = async (template: any) => {
@@ -618,14 +666,22 @@ const AdminStyleEditor: React.FC = () => {
             {activePanel === 'typography' && activeConfig && (
               <TypographyPanel
                 config={getCurrentConfig()}
-                onChange={currentPageType === 'cover' ? updateCoverConfig : updatePageConfig}
+                onChange={
+                  currentPageType === 'cover' ? updateCoverConfig :
+                  currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                  updatePageConfig
+                }
               />
             )}
             
             {activePanel === 'position' && activeConfig && (
               <PositionPanel
                 config={getCurrentConfig()}
-                onChange={currentPageType === 'cover' ? updateCoverConfig : updatePageConfig}
+                onChange={
+                  currentPageType === 'cover' ? updateCoverConfig :
+                  currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                  updatePageConfig
+                }
                 pageType={currentPageType}
               />
             )}
@@ -633,7 +689,11 @@ const AdminStyleEditor: React.FC = () => {
             {activePanel === 'colors' && activeConfig && (
               <ColorPanel
                 config={getCurrentConfig()}
-                onChange={currentPageType === 'cover' ? updateCoverConfig : updatePageConfig}
+                onChange={
+                  currentPageType === 'cover' ? updateCoverConfig :
+                  currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                  updatePageConfig
+                }
               />
             )}
             
@@ -666,6 +726,12 @@ const AdminStyleEditor: React.FC = () => {
                   label="Imagen de fondo para Páginas Interiores"
                   pageType="page"
                 />
+                <ImageUploader
+                  currentImage={customDedicatoriaImage}
+                  onImageChange={setCustomDedicatoriaImage}
+                  label="Imagen de fondo para Dedicatoria"
+                  pageType="dedicatoria"
+                />
               </div>
             )}
             
@@ -673,8 +739,10 @@ const AdminStyleEditor: React.FC = () => {
               <TextEditor
                 coverText={customCoverText}
                 pageText={customPageText}
+                dedicatoriaText={customDedicatoriaText}
                 onCoverTextChange={setCustomCoverText}
                 onPageTextChange={setCustomPageText}
+                onDedicatoriaTextChange={setCustomDedicatoriaText}
                 currentPageType={currentPageType}
               />
             )}
@@ -686,10 +754,10 @@ const AdminStyleEditor: React.FC = () => {
           <div className="w-full mx-auto">
             {/* Page Type Switcher */}
             <div className="flex justify-center mb-4 md:mb-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex w-full max-w-xs md:w-auto">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex w-full max-w-lg md:w-auto">
                 <button
                   onClick={() => setCurrentPageType('cover')}
-                  className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPageType === 'cover'
                       ? 'bg-purple-600 text-white'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
@@ -699,14 +767,25 @@ const AdminStyleEditor: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setCurrentPageType('page')}
-                  className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPageType === 'page'
                       ? 'bg-purple-600 text-white'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                   }`}
                 >
-                  <span className="hidden sm:inline">Página Interior</span>
-                  <span className="sm:hidden">Interior</span>
+                  <span className="hidden sm:inline">Interior</span>
+                  <span className="sm:hidden">Int.</span>
+                </button>
+                <button
+                  onClick={() => setCurrentPageType('dedicatoria')}
+                  className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    currentPageType === 'dedicatoria'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <span className="hidden sm:inline">Dedicatoria</span>
+                  <span className="sm:hidden">Ded.</span>
                 </button>
               </div>
             </div>
@@ -716,11 +795,16 @@ const AdminStyleEditor: React.FC = () => {
               <StylePreview
                 config={activeConfig}
                 pageType={currentPageType}
-                sampleImage={currentPageType === 'cover' 
-                  ? (customCoverImage || previewImage)
-                  : (customPageImage || previewImage)
+                sampleImage={
+                  currentPageType === 'cover' ? (customCoverImage || previewImage) :
+                  currentPageType === 'dedicatoria' ? (customDedicatoriaImage || previewImage) :
+                  (customPageImage || previewImage)
                 }
-                sampleText={currentPageType === 'cover' ? customCoverText : customPageText}
+                sampleText={
+                  currentPageType === 'cover' ? customCoverText :
+                  currentPageType === 'dedicatoria' ? customDedicatoriaText :
+                  customPageText
+                }
                 showGrid={showGrid}
                 showRulers={showRulers}
                 zoomLevel={zoomLevel}

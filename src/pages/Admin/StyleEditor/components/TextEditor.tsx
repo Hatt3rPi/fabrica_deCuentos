@@ -4,25 +4,38 @@ import { Type, RotateCcw } from 'lucide-react';
 interface TextEditorProps {
   coverText: string;
   pageText: string;
+  dedicatoriaText?: string;
   onCoverTextChange: (text: string) => void;
   onPageTextChange: (text: string) => void;
-  currentPageType: 'cover' | 'page';
+  onDedicatoriaTextChange?: (text: string) => void;
+  currentPageType: 'cover' | 'page' | 'dedicatoria';
 }
 
 const DEFAULT_TEXTS = {
   cover: 'El Mágico Viaje de Luna',
-  page: 'Luna caminaba por el sendero del bosque encantado, donde las luciérnagas bailaban entre los árboles iluminando su camino. El viento susurraba secretos antiguos mientras las hojas doradas crujían bajo sus pequeños pies.'
+  page: 'Luna caminaba por el sendero del bosque encantado, donde las luciérnagas bailaban entre los árboles iluminando su camino. El viento susurraba secretos antiguos mientras las hojas doradas crujían bajo sus pequeños pies.',
+  dedicatoria: 'Para mi querida hija Luna, que siempre sueña con aventuras mágicas y llena nuestros días de alegría.'
 };
 
 const TextEditor: React.FC<TextEditorProps> = ({
   coverText,
   pageText,
+  dedicatoriaText,
   onCoverTextChange,
   onPageTextChange,
+  onDedicatoriaTextChange,
   currentPageType
 }) => {
-  const currentText = currentPageType === 'cover' ? coverText : pageText;
-  const onTextChange = currentPageType === 'cover' ? onCoverTextChange : onPageTextChange;
+  const currentText = 
+    currentPageType === 'cover' ? coverText :
+    currentPageType === 'dedicatoria' ? (dedicatoriaText || '') :
+    pageText;
+  
+  const onTextChange = 
+    currentPageType === 'cover' ? onCoverTextChange :
+    currentPageType === 'dedicatoria' ? (onDedicatoriaTextChange || (() => {})) :
+    onPageTextChange;
+  
   const defaultText = DEFAULT_TEXTS[currentPageType];
 
   const handleReset = () => {
@@ -34,7 +47,11 @@ const TextEditor: React.FC<TextEditorProps> = ({
       <div className="flex items-center justify-between">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           <Type className="w-4 h-4 inline mr-1" />
-          Texto de {currentPageType === 'cover' ? 'Portada' : 'Página Interior'}
+          Texto de {
+            currentPageType === 'cover' ? 'Portada' :
+            currentPageType === 'dedicatoria' ? 'Dedicatoria' :
+            'Página Interior'
+          }
         </label>
         <button
           onClick={handleReset}
@@ -58,7 +75,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
           value={currentText}
           onChange={(e) => onTextChange(e.target.value)}
           placeholder={defaultText}
-          rows={4}
+          rows={currentPageType === 'dedicatoria' ? 3 : 4}
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
         />
       )}

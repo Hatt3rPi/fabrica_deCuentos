@@ -3,7 +3,7 @@ import { StoryStyleConfig, convertToReactStyle, convertContainerToReactStyle } f
 
 interface StylePreviewProps {
   config: StoryStyleConfig;
-  pageType: 'cover' | 'page';
+  pageType: 'cover' | 'page' | 'dedicatoria';
   sampleImage: string;
   sampleText: string;
   showGrid: boolean;
@@ -67,7 +67,10 @@ const StylePreview: React.FC<StylePreviewProps> = ({
   }, [zoomLevel]);
 
   // Obtener configuración actual según tipo de página
-  const currentConfig = pageType === 'cover' ? config.coverConfig.title : config.pageConfig.text;
+  const currentConfig = 
+    pageType === 'cover' ? config.coverConfig.title :
+    pageType === 'dedicatoria' ? (config.dedicatoriaConfig?.text || config.pageConfig.text) :
+    config.pageConfig.text;
   const textStyle = convertToReactStyle(currentConfig);
   const containerStyle = convertContainerToReactStyle(currentConfig.containerStyle);
 
@@ -227,6 +230,10 @@ const StylePreview: React.FC<StylePreviewProps> = ({
                 <h1 style={textStyle}>
                   {sampleText}
                 </h1>
+              ) : pageType === 'dedicatoria' ? (
+                <div style={textStyle}>
+                  {sampleText}
+                </div>
               ) : (
                 <p style={textStyle}>
                   {sampleText}
@@ -237,7 +244,9 @@ const StylePreview: React.FC<StylePreviewProps> = ({
 
           {/* Position Indicators */}
           <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-            {pageType === 'cover' ? 'Portada' : 'Página Interior'}
+            {pageType === 'cover' ? 'Portada' : 
+             pageType === 'dedicatoria' ? 'Dedicatoria' : 
+             'Página Interior'}
           </div>
         </div>
       </div>
