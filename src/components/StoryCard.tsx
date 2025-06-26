@@ -90,18 +90,22 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
       </div>
       
       {/* Contenido de la tarjeta */}
-      <div className="p-5">
-        <div className="mb-3">
-          <h3 className="text-lg font-bold text-gray-800 dark:text-white line-clamp-2 mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-            {story.title}
+      <div className="p-5 flex flex-col h-[180px]">
+        <div className="mb-3 flex-grow">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white line-clamp-2 mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors min-h-[3rem] flex items-center">
+            {story.title || <span className="text-gray-400 italic">Sin título</span>}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-auto">
             Creado el {new Date(story.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
         
         {/* Acciones */}
+<<<<<<< HEAD
         <div className="space-y-3 mt-4">
+=======
+        <div className="flex gap-2 pt-3 mt-auto">
+>>>>>>> 89727e3 (feat: improve mobile layout and UI consistency)
           {story.status === 'completed' ? (
             <>
               {/* Fila de botones principales */}
