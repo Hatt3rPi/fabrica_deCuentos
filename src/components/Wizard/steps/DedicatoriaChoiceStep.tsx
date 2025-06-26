@@ -20,7 +20,8 @@ const DedicatoriaChoiceStep: React.FC = () => {
     error, 
     retry,
     dedicatoriaChoice,
-    isPdfCompleted
+    isPdfCompleted,
+    refreshStatus
   } = useWizardLockStatus();
   
   const isLocked = isStepLocked('dedicatoria-choice');
@@ -68,6 +69,9 @@ const DedicatoriaChoiceStep: React.FC = () => {
       try {
         await storyService.persistDedicatoria(storyId, { chosen: true });
         console.log('[DedicatoriaChoiceStep] ✅ Elección "sí" persistida exitosamente');
+        
+        // Refrescar estado para mostrar la selección inmediatamente
+        refreshStatus();
       } catch (error) {
         console.error('[DedicatoriaChoiceStep] ❌ Error persistiendo elección "sí":', error);
         createNotification(
@@ -91,6 +95,9 @@ const DedicatoriaChoiceStep: React.FC = () => {
       try {
         await storyService.persistDedicatoria(storyId, { chosen: false });
         console.log('[DedicatoriaChoiceStep] ✅ Elección "no" persistida exitosamente');
+        
+        // Refrescar estado para mostrar la selección inmediatamente
+        refreshStatus();
       } catch (error) {
         console.error('[DedicatoriaChoiceStep] ❌ Error persistiendo elección "no":', error);
         createNotification(
