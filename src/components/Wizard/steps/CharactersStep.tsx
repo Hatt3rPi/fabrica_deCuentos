@@ -7,34 +7,26 @@ import { useWizard } from '../../../context/WizardContext';
 import { useCharacterStore } from '../../../stores/characterStore';
 import CharacterCard from '../../Character/CharacterCard';
 import CharacterSelectionModal from '../../Modal/CharacterSelectionModal';
+import { useWizardLockStatus } from '../../../hooks/useWizardLockStatus';
 
 const CharactersStep: React.FC = () => {
   const { supabase } = useAuth();
   const { storyId } = useParams();
   const navigate = useNavigate();
-  const { characters, setCharacters, generatedPages } = useWizard();
+  const { characters, setCharacters } = useWizard();
   const { setCharacters: setStoreCharacters } = useCharacterStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Check if there are generated story pages (same logic as other steps)
-  const hasGeneratedPages = generatedPages.some(page => page.pageNumber > 0 && page.imageUrl);
-  const isCharactersLocked = hasGeneratedPages;
-
-  // DEBUG: Log para diagnosticar problema de candados
-  React.useEffect(() => {
-    console.log('[CharactersStep] DEBUG - Estado de candado:', {
-      storyId,
-      totalPages: generatedPages.length,
-      pagesWithImages: generatedPages.filter(p => p.imageUrl && p.pageNumber > 0).length,
-      hasGeneratedPages,
-      isCharactersLocked,
-      allPages: generatedPages.map(p => ({ 
-        pageNumber: p.pageNumber, 
-        hasImage: !!p.imageUrl,
-        imageUrl: p.imageUrl?.substring(0, 30) + '...'
-      }))
-    });
-  }, [generatedPages, hasGeneratedPages, isCharactersLocked, storyId]);
+  
+  const { 
+    isStepLocked, 
+    getLockReason, 
+    isLoading, 
+    error, 
+    retry 
+  } = useWizardLockStatus();
+  
+  const isLocked = isStepLocked('characters');
+  const lockReason = getLockReason('characters');
 
   useEffect(() => {
     loadStoryCharacters();
@@ -138,16 +130,16 @@ const CharactersStep: React.FC = () => {
           <h2 className="text-2xl font-bold text-purple-800 dark:text-purple-300">
             Personajes de tu Historia
           </h2>
-          {isCharactersLocked && (
+          {isLocked && (
             <div className="flex items-center text-sm text-amber-700 bg-amber-50 px-3 py-1 rounded-lg">
               <Lock className="w-4 h-4 mr-1" />
-              Personajes bloqueados: páginas ya generadas
+              {lockReason}
             </div>
           )}
         </div>
         <p className="text-gray-600 dark:text-gray-300">
-          {isCharactersLocked 
-            ? 'Los personajes no pueden modificarse una vez generadas las páginas del cuento'
+          {isLocked 
+            ? 'Los personajes no pueden modificarse'
             : 'Crea hasta 3 personajes para tu cuento'
           }
         </p>
@@ -159,9 +151,9 @@ const CharactersStep: React.FC = () => {
             <CharacterCard
               key={character.id}
               character={character}
-              onEdit={!isCharactersLocked ? handleEdit : undefined}
-              onDelete={!isCharactersLocked ? handleDelete : undefined}
-              isLocked={isCharactersLocked}
+              onEdit={!isLocked ? handleEdit : undefined}
+              onDelete={!isLocked ? handleDelete : undefined}
+              isLocked={isLocked}
             />
           ))}
         </AnimatePresence>
@@ -172,16 +164,16 @@ const CharactersStep: React.FC = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            onClick={() => !isCharactersLocked && handleAddCharacter()}
-            disabled={isCharactersLocked}
+            onClick={() => !isLocked && handleAddCharacter()}
+            disabled={isLocked}
             className={`h-full min-h-[400px] border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-colors ${
-              isCharactersLocked
+              isLocked
                 ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
                 : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-300 dark:hover:border-purple-600'
             }`}
             aria-label="Añadir nuevo personaje"
           >
-            {isCharactersLocked ? (
+            {isLocked ? (
               <>
                 <Lock className="w-12 h-12" />
                 <span className="text-lg">Personajes bloqueados</span>

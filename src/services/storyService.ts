@@ -285,13 +285,20 @@ export const storyService = {
         const mockUrl = await this.generateMockExport(storyId, saveToLibrary);
         
         // Still update story status manually for mock
-        await supabase
+        console.log('[StoryService] DEBUG: Mock export - actualizando status a completed...');
+        const { data: updateResult, error: updateError } = await supabase
           .from('stories')
           .update({ 
             status: 'completed',
             completed_at: new Date().toISOString()
           })
           .eq('id', storyId);
+          
+        if (updateError) {
+          console.error('[StoryService] ERROR en mock update:', updateError);
+        } else {
+          console.log('[StoryService] ✅ Mock export: status actualizado a completed');
+        }
         
         return { 
           success: true, 
@@ -323,7 +330,11 @@ export const storyService = {
   },
 
   async generateRealExport(storyId: string, saveToLibrary: boolean): Promise<string> {
-    console.log(`[StoryService] Generating real export for story ${storyId}, saveToLibrary: ${saveToLibrary}`);
+    console.log(`[StoryService] DEBUG generateRealExport INICIO:`, {
+      storyId,
+      saveToLibrary,
+      timestamp: new Date().toISOString()
+    });
     
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -370,11 +381,15 @@ export const storyService = {
       throw new Error(data.error || 'Export was not successful');
     }
     
-    console.log(`[StoryService] Export successful:`, {
+    console.log(`[StoryService] DEBUG Export EXITOSO:`, {
       downloadUrl: data.downloadUrl,
       fileSize: data.file_size_kb,
-      format: data.format
+      format: data.format,
+      fullResponse: data,
+      timestamp: new Date().toISOString()
     });
+
+    // Export successful - Edge Function handles status update to 'completed'
     
     return data.downloadUrl as string;
   },

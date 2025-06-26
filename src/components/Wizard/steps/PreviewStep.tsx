@@ -8,7 +8,7 @@ import { useStoryStyles } from '../../../hooks/useStoryStyles';
 import { useImageDimensions } from '../../../hooks/useImageDimensions';
 import InlineTextEditor from './components/InlineTextEditor';
 import AdvancedEditModal from './components/AdvancedEditModal';
-import { useStoryCompletionStatus } from '../../../hooks/useStoryCompletionStatus';
+import { useWizardLockStatus } from '../../../hooks/useWizardLockStatus';
 
 const PreviewStep: React.FC = () => {
   const { 
@@ -32,7 +32,16 @@ const PreviewStep: React.FC = () => {
   // showCompletionModal removido - funcionalidad movida a ExportStep
   const [showAdvancedModal, setShowAdvancedModal] = useState(false);
   const handleFallback = () => setIsGenerating(false);
-  const { isCompleted, isLoading, error, retry } = useStoryCompletionStatus();
+  const { 
+    isStepLocked, 
+    getLockReason, 
+    isLoading, 
+    error, 
+    retry 
+  } = useWizardLockStatus();
+  
+  const isLocked = isStepLocked('preview');
+  const lockReason = getLockReason('preview');
 
   // Style hooks for dynamic preview
   const { getTextStyles, getContainerStyles, getPosition, getBackgroundImage, styleConfig } = useStoryStyles();
@@ -77,7 +86,7 @@ const PreviewStep: React.FC = () => {
 
   // Función para manejar el modal avanzado
   const handleAdvancedEdit = () => {
-    if (isCompleted || isLoading) {
+    if (isLocked || isLoading) {
       createNotification(
         NotificationType.SYSTEM_UPDATE,
         'Edición bloqueada',
@@ -236,7 +245,7 @@ const PreviewStep: React.FC = () => {
     <div className="space-y-6">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-purple-800 dark:text-purple-300">
-          {isCompleted ? 'Vista Previa - Solo Lectura' : 'Vista Previa del Cuento'}
+          {isLocked ? 'Vista Previa - Solo Lectura' : 'Vista Previa del Cuento'}
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
           Página {currentPage + 1} de {generatedPages.length}
@@ -261,12 +270,12 @@ const PreviewStep: React.FC = () => {
           </div>
         )}
         
-        {isCompleted && !error && (
+        {isLocked && !error && (
           <div className="mt-4 mx-auto max-w-md">
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
               <div className="flex items-center justify-center gap-2 text-yellow-800 dark:text-yellow-200">
                 <Lock className="w-4 h-4" />
-                <span className="text-sm font-medium">PDF generado - edición bloqueada</span>
+                <span className="text-sm font-medium">{lockReason}</span>
               </div>
               <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
                 El contenido ya no puede modificarse
@@ -339,15 +348,15 @@ const PreviewStep: React.FC = () => {
               {currentPageData && !isGenerating && pageStates[currentPageData.id] !== 'generating' && (
                 <button
                   onClick={handleAdvancedEdit}
-                  disabled={isCompleted || isLoading || error}
+                  disabled={isLocked || isLoading || error}
                   className={`absolute top-2 left-2 w-8 h-8 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center transition-all duration-200 z-20 group ${
-                    isCompleted || isLoading || error
+                    isLocked || isLoading || error
                       ? 'bg-gray-200/90 text-gray-400 cursor-not-allowed'
                       : 'bg-white/90 hover:bg-white hover:shadow-xl text-gray-700 hover:text-purple-600 hover:scale-110'
                   }`}
-                  title={isCompleted || isLoading || error ? 'Edición bloqueada' : 'Editar contenido y prompt'}
+                  title={isLocked || isLoading || error ? 'Edición bloqueada' : 'Editar contenido y prompt'}
                 >
-                  {isCompleted || isLoading || error ? (
+                  {isLocked || isLoading || error ? (
                     <Lock className="w-4 h-4" />
                   ) : (
                     <Pencil className="w-4 h-4 transition-transform group-hover:scale-110" />
@@ -379,7 +388,7 @@ const PreviewStep: React.FC = () => {
                         }}
                         className="relative"
                       >
-                        {isCompleted || isLoading || error ? (
+                        {isLocked || isLoading || error ? (
                           // Texto de solo lectura cuando está completado o hay error
                           <div
                             style={{
@@ -507,7 +516,7 @@ const PreviewStep: React.FC = () => {
           </div>
 
           {/* PDF outdated state - only show if user can edit */}
-          {!isCompleted && !error && isPdfOutdated && (
+          {!isLocked && !error && isPdfOutdated && (
             <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-amber-800">
                 <span className="font-semibold">⚠️ PDF desactualizado:</span> Has regenerado algunas imágenes. Finaliza el cuento nuevamente para actualizar el PDF.

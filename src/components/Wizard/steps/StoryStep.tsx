@@ -5,6 +5,7 @@ import { BookOpen, Lock } from 'lucide-react';
 import { storyService } from '../../../services/storyService';
 import { useStory } from '../../../context/StoryContext';
 import { OverlayLoader } from '../../UI/Loader';
+import { useWizardLockStatus } from '../../../hooks/useWizardLockStatus';
 
 const StoryStep: React.FC = () => {
   const {
@@ -22,10 +23,17 @@ const StoryStep: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [generated, setGenerated] = React.useState<{ title: string; paragraphs: string[] } | null>(null);
   const [loaders, setLoaders] = React.useState<string[]>([]);
-
-  // Check if there are generated story pages (same logic as DesignStep)
-  const hasGeneratedPages = generatedPages.some(page => page.pageNumber > 0 && page.imageUrl);
-  const isStoryLocked = hasGeneratedPages;
+  
+  const { 
+    isStepLocked, 
+    getLockReason, 
+    isLoading: isLockLoading, 
+    error: lockError, 
+    retry 
+  } = useWizardLockStatus();
+  
+  const isLocked = isStepLocked('story');
+  const lockReason = getLockReason('story');
 
   const handleFallback = () => {
     setIsLoading(false);
@@ -127,11 +135,42 @@ const StoryStep: React.FC = () => {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-purple-800 mb-2">Configura tu Historia</h2>
+        <h2 className="text-2xl font-bold text-purple-800 mb-2">
+          {isLocked ? 'Configuración de Historia - Solo Lectura' : 'Configura tu Historia'}
+        </h2>
         <p className="text-gray-600">
-          Define los elementos clave que darán forma a tu cuento
+          {isLocked ? 'Vista de solo lectura de tu configuración' : 'Define los elementos clave que darán forma a tu cuento'}
         </p>
       </div>
+
+      {lockError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="flex items-center justify-center gap-2 text-red-800 dark:text-red-200">
+            <span className="font-medium">Error al verificar estado del cuento</span>
+          </div>
+          <p className="text-sm text-red-700 dark:text-red-300 mt-2 text-center">
+            {lockError}
+          </p>
+          <button
+            onClick={retry}
+            className="mt-3 mx-auto block px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {isLocked && !lockError && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-center justify-center gap-2 text-yellow-800 dark:text-yellow-200">
+            <Lock className="w-5 h-5" />
+            <span className="font-medium">{lockReason}</span>
+          </div>
+          <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2 text-center">
+            La configuración de historia ya no puede modificarse
+          </p>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-8">
         <div className="space-y-6">
@@ -140,20 +179,20 @@ const StoryStep: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700">
                 Temática del cuento
               </label>
-              {isStoryLocked && (
+              {isLocked && (
                 <div className="flex items-center text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">
                   <Lock className="w-3 h-3 mr-1" />
-                  Temática bloqueada: páginas ya generadas
+                  {lockReason}
                 </div>
               )}
             </div>
             <textarea
               value={storySettings.theme}
-              onChange={(e) => !isStoryLocked && handleChange('theme', e.target.value)}
-              placeholder="Describe la temática de tu cuento..."
-              disabled={isStoryLocked}
+              onChange={(e) => !isLocked && handleChange('theme', e.target.value)}
+              placeholder={isLocked ? "Temática bloqueada" : "Describe la temática de tu cuento..."}
+              disabled={isLocked || isLockLoading || lockError}
               className={`w-full h-24 px-4 py-2 border border-gray-300 rounded-lg resize-none ${
-                isStoryLocked 
+                isLocked || isLockLoading || lockError
                   ? 'bg-gray-50 text-gray-500 cursor-not-allowed'
                   : 'focus:ring-2 focus:ring-purple-500 focus:border-transparent'
               }`}
@@ -163,10 +202,10 @@ const StoryStep: React.FC = () => {
                 <button
                   key={i}
                   type="button"
-                  onClick={() => !isStoryLocked && handleChange('theme', s)}
-                  disabled={isStoryLocked}
+                  onClick={() => !isLocked && handleChange('theme', s)}
+                  disabled={isLocked || isLockLoading || lockError}
                   className={`text-xs px-2 py-1 rounded ${
-                    isStoryLocked
+                    isLocked || isLockLoading || lockError
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-purple-100 hover:bg-purple-200'
                   }`}
@@ -176,10 +215,10 @@ const StoryStep: React.FC = () => {
               ))}
               <button
                 type="button"
-                onClick={() => !isStoryLocked && handleSurprise()}
-                disabled={isStoryLocked}
+                onClick={() => !isLocked && handleSurprise()}
+                disabled={isLocked || isLockLoading || lockError}
                 className={`text-xs px-2 py-1 rounded ${
-                  isStoryLocked
+                  isLocked || isLockLoading || lockError
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-purple-500 text-white hover:bg-purple-600'
                 }`}
@@ -226,15 +265,15 @@ const StoryStep: React.FC = () => {
         <button
           type="button"
           onClick={handleGenerate}
-          disabled={isLoading || !storySettings.theme || isStoryLocked}
+          disabled={isLoading || !storySettings.theme || isLocked || isLockLoading || lockError}
           className={`px-5 py-2 rounded-lg flex items-center justify-center gap-2 ${
-            !storySettings.theme || isLoading || isStoryLocked
+            !storySettings.theme || isLoading || isLocked || isLockLoading || lockError
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-purple-600 text-white hover:bg-purple-700'
           }`}
         >
-          {isStoryLocked 
-            ? 'Historia bloqueada: páginas generadas' 
+          {isLocked 
+            ? `Historia bloqueada: ${lockReason}` 
             : isLoading 
             ? 'Generando...' 
             : 'Generar la Historia'
@@ -246,14 +285,14 @@ const StoryStep: React.FC = () => {
             <button
               type="button"
               onClick={handleGenerate}
-              disabled={isLoading || isStoryLocked}
+              disabled={isLoading || isLocked || isLockLoading || lockError}
               className={`mt-4 px-4 py-2 rounded ${
-                isLoading || isStoryLocked
+                isLoading || isLocked || isLockLoading || lockError
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-purple-500 text-white hover:bg-purple-600'
               }`}
             >
-              {isStoryLocked 
+              {isLocked 
                 ? 'Regeneración bloqueada' 
                 : isLoading 
                 ? 'Generando...' 

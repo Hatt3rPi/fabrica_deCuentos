@@ -8,6 +8,7 @@ import { getOptimizedImageUrl } from '../../../lib/image';
 import { characterService } from '../../../services/characterService';
 import { storyService } from '../../../services/storyService';
 import { ThumbnailStyle } from '../../../types/character';
+import { useWizardLockStatus } from '../../../hooks/useWizardLockStatus';
 
 const STYLE_TO_KEY: Record<string, ThumbnailStyle | 'default'> = {
   default: 'default',
@@ -33,10 +34,17 @@ const DesignStep: React.FC = () => {
   const { storyId } = useParams();
   const [images, setImages] = useState<Record<string, string>>({});
   const coverState = storyId ? covers[storyId] : undefined;
-
-  // Check if there are generated story pages (not cover)
-  const hasGeneratedPages = generatedPages.some(page => page.pageNumber > 0 && page.imageUrl);
-  const isStyleLocked = hasGeneratedPages;
+  
+  const { 
+    isStepLocked, 
+    getLockReason, 
+    isLoading: isLockLoading, 
+    error: lockError, 
+    retry 
+  } = useWizardLockStatus();
+  
+  const isLocked = isStepLocked('design');
+  const lockReason = getLockReason('design');
 
   const selectedStyle = designSettings.visualStyle;
   const rawPreviewUrl =
@@ -101,11 +109,42 @@ const DesignStep: React.FC = () => {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-purple-800 mb-2">Diseño Visual</h2>
+        <h2 className="text-2xl font-bold text-purple-800 mb-2">
+          {isLocked ? 'Diseño Visual - Solo Lectura' : 'Diseño Visual'}
+        </h2>
         <p className="text-gray-600">
-          Personaliza el aspecto visual de tu cuento
+          {isLocked ? 'Vista de solo lectura del diseño' : 'Personaliza el aspecto visual de tu cuento'}
         </p>
       </div>
+
+      {lockError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="flex items-center justify-center gap-2 text-red-800 dark:text-red-200">
+            <span className="font-medium">Error al verificar estado del cuento</span>
+          </div>
+          <p className="text-sm text-red-700 dark:text-red-300 mt-2 text-center">
+            {lockError}
+          </p>
+          <button
+            onClick={retry}
+            className="mt-3 mx-auto block px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {isLocked && !lockError && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-center justify-center gap-2 text-yellow-800 dark:text-yellow-200">
+            <Lock className="w-5 h-5" />
+            <span className="font-medium">{lockReason}</span>
+          </div>
+          <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2 text-center">
+            El diseño visual ya no puede modificarse
+          </p>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-8">
         <div className="space-y-6">
@@ -114,10 +153,10 @@ const DesignStep: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700">
                 Estilo visual
               </label>
-              {isStyleLocked && (
+              {isLocked && (
                 <div className="flex items-center text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">
                   <Lock className="w-3 h-3 mr-1" />
-                  Estilo bloqueado: páginas ya generadas
+                  {lockReason}
                 </div>
               )}
             </div>
@@ -136,7 +175,7 @@ const DesignStep: React.FC = () => {
                 const isGenerating = variantStatus === 'generating';
                 const hasError = variantStatus === 'error';
                 const isCurrentlySelected = designSettings.visualStyle === option.value;
-                const isDisabled = isStyleLocked && !isCurrentlySelected;
+                const isDisabled = (isLocked || isLockLoading || lockError) && !isCurrentlySelected;
                 
                 return (
                   <div

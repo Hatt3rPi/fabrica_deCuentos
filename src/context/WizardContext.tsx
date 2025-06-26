@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { useAutosave } from '../hooks/useAutosave';
+import { usePersistence } from '../hooks/usePersistence';
 import { Character, StorySettings, DesignSettings, WizardState, EstadoFlujo } from '../types';
 import { useWizardFlowStore } from '../stores/wizardFlowStore';
 import { storyService } from '../services/storyService';
@@ -385,12 +385,25 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setIsCompleting(true);
     setCompletionResult(null);
 
+    // Notify persistence system that export is starting
+    window.dispatchEvent(new CustomEvent('export-start', { 
+      detail: { storyId } 
+    }));
+
     try {
       const result = await storyService.completeStory(storyId, saveToLibrary);
+      
       setCompletionResult(result);
       // Reset PDF outdated flag if successful
       if (result.success) {
         setIsPdfOutdated(false);
+        
+        // Disparar evento para refrescar el estado de bloqueo
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('story-status-updated', { 
+            detail: { storyId, status: 'completed' } 
+          }));
+        }, 1000);
       }
       return result;
     } catch (error) {
@@ -405,7 +418,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
-  useAutosave(state, estado, storyId || null);
+  const { pausePersistence, resumePersistence } = usePersistence(state, estado, storyId || null);
 
   // Mantener sincronizado el conteo de personajes en el store de flujo
   useEffect(() => {
@@ -414,12 +427,6 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Sincronizar storySettings con state para persistencia correcta
   useEffect(() => {
-    console.log('[WizardContext] DEBUG - Sincronizando storySettings con state:', {
-      storySettingsDedicatoria: storySettings.dedicatoria,
-      hasDedicatoriaText: !!storySettings.dedicatoria?.text,
-      hasDedicatoriaImage: !!storySettings.dedicatoria?.imageUrl
-    });
-    
     setState(prevState => ({
       ...prevState,
       meta: {
