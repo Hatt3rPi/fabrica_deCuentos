@@ -781,12 +781,45 @@ function generateHTMLContent(
     console.log(`[story-export] 🎯 generateDedicatoriaPage llamada con:`, {
       dedicatoria_text: story.dedicatoria_text,
       dedicatoria_image_url: story.dedicatoria_image_url,
-      dedicatoria_layout: story.dedicatoria_layout
+      dedicatoria_layout: story.dedicatoria_layout,
+      dedicatoria_chosen: story.dedicatoria_chosen
     });
     
-    if (!story.dedicatoria_text) {
-      console.log(`[story-export] ❌ No hay texto de dedicatoria, retornando página vacía`);
-      return ''; // No mostrar página si no hay texto de dedicatoria
+    if (!story.dedicatoria_chosen) {
+      console.log(`[story-export] ❌ Usuario no eligió dedicatoria (dedicatoria_chosen=false), retornando página vacía`);
+      return ''; // No mostrar página si usuario no eligió tener dedicatoria
+    }
+    
+    console.log(`[story-export] ✅ Usuario eligió dedicatoria (dedicatoria_chosen=true), generando página`);
+    console.log(`[story-export] 📝 Contenido: texto="${story.dedicatoria_text || 'VACÍO'}", imagen="${story.dedicatoria_image_url ? 'SÍ' : 'NO'}"`);
+    
+    // Si no hay texto ni imagen, mostrar página de dedicatoria vacía pero estilizada
+    if (!story.dedicatoria_text && !story.dedicatoria_image_url) {
+      console.log(`[story-export] 🖼️ Generando página de dedicatoria vacía (sin texto ni imagen)`);
+      return `
+        <div class="story-page dedicatoria-page" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+          <div class="page-overlay" style="
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 60px; 
+            text-align: center;
+          ">
+            <div class="dedicatoria-placeholder" style="
+              font-family: ${pageConfig.fontFamily || "'Indie Flower', cursive"}; 
+              font-size: 28px; 
+              line-height: 1.8; 
+              color: #9ca3af; 
+              font-style: italic;
+              max-width: 400px;
+              text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            ">
+              <!-- Página de dedicatoria reservada -->
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     const layout = story.dedicatoria_layout || { layout: 'imagen-arriba', alignment: 'centro', imageSize: 'mediana' };
@@ -828,17 +861,19 @@ function generateHTMLContent(
               <img src="${story.dedicatoria_image_url}" alt="Imagen de dedicatoria" style="width: 100%; height: 100%; object-fit: cover; border-radius: 15px;" />
             </div>
           ` : ''}
-          <div class="dedicatoria-text" style="
-            font-family: ${pageConfig.fontFamily || "'Indie Flower', cursive"}; 
-            font-size: 24px; 
-            line-height: 1.8; 
-            color: #4a5568; 
-            font-style: italic;
-            max-width: 600px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          ">
-            ${textToHTML(story.dedicatoria_text)}
-          </div>
+          ${story.dedicatoria_text ? `
+            <div class="dedicatoria-text" style="
+              font-family: ${pageConfig.fontFamily || "'Indie Flower', cursive"}; 
+              font-size: 24px; 
+              line-height: 1.8; 
+              color: #4a5568; 
+              font-style: italic;
+              max-width: 600px;
+              text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            ">
+              ${textToHTML(story.dedicatoria_text)}
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
