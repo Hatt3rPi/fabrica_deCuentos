@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Menu, BookOpen } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import NotificationBell from '../Notifications/NotificationBell';
 import ThemeToggleButton from './ThemeToggleButton';
 import MobileSidebar from './MobileSidebar';
+import ProfileDropdown from './ProfileDropdown';
 
 const Header: React.FC = () => {
-  const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -67,33 +66,33 @@ const Header: React.FC = () => {
           </div>
 
           {/* Controles de la derecha */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 ml-2">
             <ThemeToggleButton />
             <div className="relative">
               <NotificationBell />
             </div>
-            <span className="hidden md:inline ml-2 text-sm font-medium text-gray-500 dark:text-gray-300 truncate max-w-[100px]">
-              {user?.email}
-            </span>
+            <div className="hidden md:block">
+              <ProfileDropdown />
+            </div>
           </div>
         </div>
 
-        {/* Logo and title */}
-        <div className="hidden lg:flex items-center gap-2">
-          <BookOpen className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-          <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
-            La CuenterIA
-          </h1>
-        </div>
+        <div className="hidden lg:flex items-center flex-1">
+          {/* Logo and title */}
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
+              La CuenterIA
+            </h1>
+          </div>
 
-        {/* User info and controls */}
-        <div className="hidden lg:flex items-center gap-2">
-          <ThemeToggleButton />
-          <div className="h-6 w-px bg-gray-200 dark:bg-gray-600 mx-1"></div>
-          <NotificationBell />
-          <span className="text-sm font-medium text-gray-500 dark:text-gray-300 ml-2">
-            {user?.email}
-          </span>
+          {/* User info and controls - Empujado a la derecha */}
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggleButton />
+            <div className="h-6 w-px bg-gray-200 dark:bg-gray-600 mx-1"></div>
+            <NotificationBell />
+            <ProfileDropdown />
+          </div>
         </div>
       </div>
 

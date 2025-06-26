@@ -65,11 +65,9 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
     e.stopPropagation();
   };
 
-  if (!isOpen) return null;
-
   return (
     <>
-      {/* Overlay con efecto de desenfoque */}
+      {/* Fondo semitransparente con transición */}
       <div 
         className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -80,13 +78,16 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       </div>
       
-      {/* Sidebar */}
+      {/* Sidebar con transición */}
       <div 
         id="mobile-sidebar"
         onClick={handleSidebarClick}
         className={`fixed inset-y-0 left-0 z-50 w-11/12 max-w-xs bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-2xl transform transition-all duration-300 ease-in-out lg:hidden flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
+        aria-modal="true"
+        role="dialog"
+        aria-label="Menú de navegación"
       >
         {/* Header con degradado */}
         <div className="p-6 bg-gradient-to-r from-purple-600 to-blue-500 dark:from-purple-800 dark:to-blue-700 text-white">
