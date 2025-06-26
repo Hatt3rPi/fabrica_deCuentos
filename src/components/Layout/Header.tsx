@@ -50,8 +50,8 @@ const Header: React.FC = () => {
   }, []);
 
   return (
-    <header ref={headerRef} className="bg-white shadow-md py-4 px-4 md:px-6 dark:bg-gray-800 dark:text-white">
-      <div className="flex items-center justify-between">
+    <header ref={headerRef} className="bg-white shadow-md dark:bg-gray-800 dark:text-white h-[81px] flex items-center">
+      <div className="w-full flex items-center justify-between px-4 md:px-6">
         {/* Mobile menu button - Only visible on mobile */}
         <div className="w-full lg:hidden flex items-center justify-between">
           {/* Botón de menú a la izquierda */}

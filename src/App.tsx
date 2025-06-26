@@ -63,11 +63,13 @@ function AnimatedRoutes() {
         ) : (
           // Authenticated layout
           <div className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex flex-col lg:flex-row">
-            <div className="hidden lg:block lg:w-60 lg:flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+            {/* Sidebar fijo en desktop */}
+            <div className="hidden lg:block lg:fixed lg:top-0 lg:left-0 lg:h-screen lg:z-10">
               <Sidebar />
             </div>
 
-            <div className="flex-1 flex flex-col min-h-screen">
+            {/* Contenido principal con margen para el sidebar */}
+            <div className="flex-1 flex flex-col min-h-screen lg:ml-64">
               <Header />
               <main className="flex-grow p-4 md:p-6 lg:p-8">
                 <Routes location={location}>
