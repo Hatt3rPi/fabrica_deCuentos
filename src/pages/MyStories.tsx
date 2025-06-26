@@ -259,7 +259,7 @@ const MyStories: React.FC = () => {
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {completedStories.map((story) => (
                 <StoryCard
                   key={story.id}
@@ -296,7 +296,7 @@ const MyStories: React.FC = () => {
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {draftStories.map((story) => (
                 <StoryCard
                   key={story.id}
@@ -344,16 +344,11 @@ const MyStories: React.FC = () => {
         <div className="fixed bottom-6 right-6 z-10">
           <button
             onClick={handleNewStory}
-            className="group relative inline-flex items-center justify-center p-4 bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 ease-out hover:from-purple-700 hover:to-indigo-700 transform hover:-translate-y-1"
+            className="group relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 ease-out hover:from-purple-700 hover:to-indigo-700 transform hover:-translate-y-1"
             aria-label="Crear nuevo cuento"
           >
-            <Plus className="w-6 h-6 transition-transform duration-300 group-hover:rotate-90" />
-            <span className="absolute opacity-0 group-hover:opacity-100 bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded whitespace-nowrap -top-10 left-1/2 transform -translate-x-1/2 transition-opacity duration-200">
-              Nuevo cuento
-              <svg className="absolute text-gray-900 h-2 w-full left-0 top-full" x="0px" y="0px" viewBox="0 0 255 255" xmlSpace="preserve">
-                <polygon className="fill-current" points="0,0 127.5,127.5 255,0"/>
-              </svg>
-            </span>
+            <Plus className="w-5 h-5 transition-transform duration-300 group-hover:rotate-90" />
+            <span className="text-sm font-medium pr-1">Nuevo cuento</span>
           </button>
         </div>
       )}
