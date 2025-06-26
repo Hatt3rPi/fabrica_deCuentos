@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Fix: Dedicatoria Siempre Aparece en PDF (2025-06-26)
+- **Problema resuelto**: Dedicatoria no aparecía en PDF cuando usuario elegía incluirla pero no escribía texto
+- **Lógica corregida**: Edge Function ahora usa `dedicatoria_chosen` en lugar de solo `dedicatoria_text`
+- **Casos soportados**:
+  - Usuario elige "SÍ" + texto → aparece con texto personalizado
+  - Usuario elige "SÍ" + solo imagen → aparece solo con imagen  
+  - Usuario elige "SÍ" + nada → aparece página de dedicatoria reservada
+  - Usuario elige "NO" → no aparece dedicatoria
+- **Consistencia mejorada**: WizardContext carga dedicatoria basado en elección del usuario
+- **Archivos**: `supabase/functions/story-export/index.ts`, `src/context/WizardContext.tsx`
+- **Issue**: #267
+
 ### Feature: Sistema de Persistencia Inteligente (2025-06-25)
 - **Nueva Arquitectura**: Reemplazado `useAutosave` por `usePersistence` con detección inteligente
   - **Detector de cambios reales**: Solo persiste cuando hay modificaciones significativas
