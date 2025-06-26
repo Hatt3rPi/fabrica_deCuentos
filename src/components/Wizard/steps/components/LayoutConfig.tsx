@@ -11,6 +11,10 @@ interface LayoutConfigProps {
   imageSize: ImageSizeOption;
   isDisabled: boolean;
   onLayoutChange: <K extends keyof LayoutConfigData>(field: K, value: LayoutConfigData[K]) => void;
+  // Nuevas props para restricciones admin
+  allowedLayouts?: LayoutOption[];
+  allowedAlignments?: AlignmentOption[];
+  adminImageSize?: ImageSizeOption;
 }
 
 interface LayoutConfigData {
@@ -24,7 +28,10 @@ const LayoutConfig: React.FC<LayoutConfigProps> = ({
   alignment,
   imageSize,
   isDisabled,
-  onLayoutChange
+  onLayoutChange,
+  allowedLayouts = ['imagen-arriba', 'imagen-abajo', 'imagen-izquierda', 'imagen-derecha'],
+  allowedAlignments = ['centro', 'izquierda', 'derecha'],
+  adminImageSize
 }) => {
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm space-y-4">
@@ -43,7 +50,7 @@ const LayoutConfig: React.FC<LayoutConfigProps> = ({
             { value: 'imagen-abajo' as const, label: 'Abajo' },
             { value: 'imagen-izquierda' as const, label: 'Izquierda' },
             { value: 'imagen-derecha' as const, label: 'Derecha' }
-          ].map((option) => (
+          ].filter(option => allowedLayouts.includes(option.value)).map((option) => (
             <button
               key={option.value}
               onClick={() => onLayoutChange('layout', option.value)}
@@ -63,33 +70,46 @@ const LayoutConfig: React.FC<LayoutConfigProps> = ({
       </div>
 
       {/* Tamaño de imagen */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Tamaño de imagen
-        </label>
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { value: 'pequena' as const, label: 'Pequeña' },
-            { value: 'mediana' as const, label: 'Mediana' },
-            { value: 'grande' as const, label: 'Grande' }
-          ].map((option) => (
-            <button
-              key={option.value}
-              onClick={() => onLayoutChange('imageSize', option.value)}
-              disabled={isDisabled}
-              className={`p-2 text-sm rounded-lg border transition-colors ${
-                isDisabled
-                  ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-                  : imageSize === option.value
-                    ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+      {adminImageSize ? (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Tamaño de imagen
+          </label>
+          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              Tamaño configurado por el administrador: <strong>{adminImageSize === 'pequena' ? 'Pequeña' : adminImageSize === 'mediana' ? 'Mediana' : 'Grande'}</strong>
+            </span>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Tamaño de imagen
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: 'pequena' as const, label: 'Pequeña' },
+              { value: 'mediana' as const, label: 'Mediana' },
+              { value: 'grande' as const, label: 'Grande' }
+            ].map((option) => (
+              <button
+                key={option.value}
+                onClick={() => onLayoutChange('imageSize', option.value)}
+                disabled={isDisabled}
+                className={`p-2 text-sm rounded-lg border transition-colors ${
+                  isDisabled
+                    ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                    : imageSize === option.value
+                      ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900/30 dark:border-purple-400 dark:text-purple-300'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Alineación de texto */}
       <div>
@@ -101,7 +121,7 @@ const LayoutConfig: React.FC<LayoutConfigProps> = ({
             { value: 'izquierda' as const, label: 'Izquierda', icon: AlignLeft },
             { value: 'centro' as const, label: 'Centro', icon: AlignCenter },
             { value: 'derecha' as const, label: 'Derecha', icon: AlignRight }
-          ].map((option) => (
+          ].filter(option => allowedAlignments.includes(option.value)).map((option) => (
             <button
               key={option.value}
               onClick={() => onLayoutChange('alignment', option.value)}

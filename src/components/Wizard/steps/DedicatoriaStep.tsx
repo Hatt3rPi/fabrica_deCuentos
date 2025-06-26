@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { useWizard } from '../../../context/WizardContext';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 import { storyService } from '../../../services/storyService';
+import { styleConfigService } from '../../../services/styleConfigService';
 import { useWizardLockStatus } from '../../../hooks/useWizardLockStatus';
+import { DedicatoriaConfig } from '../../../types/styleConfig';
 import DedicatoriaTextEditor from './components/DedicatoriaTextEditor';
 import ImageUploader from './components/ImageUploader';
 import LayoutConfig from './components/LayoutConfig';
@@ -37,6 +39,10 @@ const DedicatoriaStep: React.FC = () => {
   
   const isLocked = isStepLocked('dedicatoria');
   const lockReason = getLockReason('dedicatoria');
+  
+  // Estado para configuración admin
+  const [adminConfig, setAdminConfig] = useState<DedicatoriaConfig | null>(null);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
 
   // Estado inicial de la dedicatoria
   const [dedicatoria, setDedicatoria] = useState<DedicatoriaData>({
@@ -48,6 +54,33 @@ const DedicatoriaStep: React.FC = () => {
   });
 
   const [isUploading, setIsUploading] = useState(false);
+
+  // Cargar configuración admin al montar el componente
+  useEffect(() => {
+    const loadAdminConfig = async () => {
+      try {
+        setIsLoadingConfig(true);
+        const styleConfig = await styleConfigService.getActiveStyle();
+        if (styleConfig?.dedicatoriaConfig) {
+          setAdminConfig(styleConfig.dedicatoriaConfig);
+          console.log('[DedicatoriaStep] 📋 Configuración admin cargada:', styleConfig.dedicatoriaConfig);
+        }
+      } catch (error) {
+        console.error('[DedicatoriaStep] ❌ Error cargando configuración admin:', error);
+        // Usar configuración por defecto si no se puede cargar
+        setAdminConfig({
+          text: { fontSize: 16, fontFamily: 'Inter', color: '#000000', textAlign: 'center', position: 'center', containerStyle: {} },
+          imageSize: 'mediana',
+          allowedLayouts: ['imagen-arriba', 'imagen-abajo', 'imagen-izquierda', 'imagen-derecha'],
+          allowedAlignments: ['centro', 'izquierda', 'derecha']
+        });
+      } finally {
+        setIsLoadingConfig(false);
+      }
+    };
+
+    loadAdminConfig();
+  }, []);
 
   // Función helper para actualizar dedicatoria con persistencia explícita
   const updateDedicatoria = async (updates: Partial<DedicatoriaData>) => {
@@ -201,8 +234,22 @@ const DedicatoriaStep: React.FC = () => {
     field: K, 
     value: DedicatoriaData[K]
   ) => {
-    updateDedicatoria({ [field]: value });
+    // Si se trata de cambiar el tamaño de imagen y hay configuración admin, usar la admin
+    if (field === 'imageSize' && adminConfig?.imageSize) {
+      console.log('[DedicatoriaStep] 🔒 Usando tamaño de imagen configurado por admin:', adminConfig.imageSize);
+      updateDedicatoria({ [field]: adminConfig.imageSize as DedicatoriaData[K] });
+    } else {
+      updateDedicatoria({ [field]: value });
+    }
   };
+  
+  // Efecto para sincronizar el tamaño de imagen con la configuración admin
+  useEffect(() => {
+    if (adminConfig?.imageSize && dedicatoria.imageSize !== adminConfig.imageSize) {
+      console.log('[DedicatoriaStep] 🔄 Sincronizando tamaño de imagen con configuración admin');
+      updateDedicatoria({ imageSize: adminConfig.imageSize });
+    }
+  }, [adminConfig?.imageSize]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -261,14 +308,27 @@ const DedicatoriaStep: React.FC = () => {
             onRemoveImage={handleRemoveImage}
           />
 
-          {dedicatoria.imageUrl && (
+          {dedicatoria.imageUrl && adminConfig && (
             <LayoutConfig
               layout={dedicatoria.layout}
               alignment={dedicatoria.alignment}
               imageSize={dedicatoria.imageSize}
-              isDisabled={isLocked || isLoading || !!error}
+              isDisabled={isLocked || isLoading || !!error || isLoadingConfig}
               onLayoutChange={handleLayoutChange}
+                  allowedLayouts={adminConfig.allowedLayouts}
+              allowedAlignments={adminConfig.allowedAlignments}
+              adminImageSize={adminConfig.imageSize}
             />
+          )}
+          
+          {isLoadingConfig && (
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+              </div>
+            </div>
           )}
         </div>
 
