@@ -29,62 +29,86 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
   const isLoading = state?.status === 'generating';
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform hover:scale-[1.02]">
-      <div className="aspect-video bg-gray-100 dark:bg-gray-700 relative">
+    <div className="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-transparent hover:-translate-y-1">
+      {/* Efecto de resplandor en hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none"></div>
+      
+      {/* Imagen de portada */}
+      <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 relative overflow-hidden">
         {imageUrl ? (
-          <img src={imageUrl} alt={story.title} loading="lazy" className="w-full h-full object-cover" />
+          <img 
+            src={imageUrl} 
+            alt={story.title} 
+            loading="lazy" 
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
         ) : (
-          <div className="w-full h-full bg-gray-200 dark:bg-gray-600" />
-        )}
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-gray-800/60">
-            <Loader className="w-6 h-6 animate-spin text-purple-600" />
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+            <BookOpen className="w-10 h-10 text-gray-400 dark:text-gray-600" />
           </div>
         )}
-      </div>
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{story.title}</h3>
+        
+        {/* Estado de carga */}
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+            <Loader className="w-8 h-8 animate-spin text-indigo-600 dark:text-indigo-400" />
+          </div>
+        )}
+        
+        {/* Badge de estado */}
+        <div className="absolute top-3 right-3">
           {story.status === 'draft' ? (
-            <span className="px-3 py-1 text-xs font-medium bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-700">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-amber-500 dark:bg-amber-400 rounded-full animate-pulse"></div>
-                En progreso
-              </div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100/90 dark:bg-amber-900/80 text-amber-800 dark:text-amber-100 border border-amber-200 dark:border-amber-800 backdrop-blur-sm shadow-sm">
+              <span className="w-2 h-2 bg-amber-500 dark:bg-amber-400 rounded-full mr-1.5 animate-pulse"></span>
+              En progreso
             </span>
           ) : (
-            <span className="px-3 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full border border-green-200 dark:border-green-700">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full"></div>
-                Completado
-              </div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100/90 dark:bg-green-900/80 text-green-800 dark:text-green-100 border border-green-200 dark:border-green-800 backdrop-blur-sm shadow-sm">
+              <span className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full mr-1.5"></span>
+              Completado
             </span>
           )}
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          {new Date(story.created_at).toLocaleDateString()}
-        </p>
-        <div className="flex gap-2">
+      </div>
+      
+      {/* Contenido de la tarjeta */}
+      <div className="p-5">
+        <div className="mb-3">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white line-clamp-2 mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+            {story.title}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Creado el {new Date(story.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+        </div>
+        
+        {/* Acciones */}
+        <div className="flex gap-2 mt-4">
           {story.status === 'completed' ? (
             <button
               onClick={() => onRead(story.id)}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-700 dark:to-emerald-700 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 dark:hover:from-green-800 dark:hover:to-emerald-800 shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 dark:from-green-600 dark:to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-600 dark:hover:from-green-700 dark:hover:to-emerald-700 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800"
             >
-              <BookOpen className="w-4 h-4" />
-              <span className="font-medium">Leer cuento</span>
+              <BookOpen className="w-4 h-4 flex-shrink-0" />
+              <span>Leer cuento</span>
             </button>
           ) : (
             <button
               onClick={() => onContinue(story.id)}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 dark:bg-amber-600 text-white rounded-lg hover:bg-amber-600 dark:hover:bg-amber-700 shadow-sm hover:shadow-md transition-all duration-200 border-2 border-amber-400 dark:border-amber-500"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 dark:from-amber-600 dark:to-orange-600 text-white text-sm font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 dark:hover:from-amber-700 dark:hover:to-orange-700 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 dark:focus:ring-offset-gray-800"
             >
-              <Pencil className="w-4 h-4" />
-              <span className="font-medium">Continuar editando</span>
+              <Pencil className="w-4 h-4 flex-shrink-0" />
+              <span>Continuar</span>
             </button>
           )}
+          
           <button
-            onClick={() => onDelete(story)}
-            className="flex items-center justify-center px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(story);
+            }}
+            className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
+            aria-label="Eliminar cuento"
           >
             <Trash2 className="w-4 h-4" />
           </button>

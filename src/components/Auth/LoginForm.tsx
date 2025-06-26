@@ -365,7 +365,7 @@ const LoginForm: React.FC = () => {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full py-3 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full py-3 px-4 bg-amber-700 text-white rounded-lg hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
       >
         {isLoading ? (
           <>
@@ -402,6 +402,15 @@ const LoginForm: React.FC = () => {
           
           {/* Página del libro */}
           <div className="relative bg-amber-50/95 backdrop-blur-sm p-8 pl-12 rounded-lg shadow-[8px_8px_20px_rgba(0,0,0,0.2)] border-l-4 border-amber-200 min-h-[500px] flex flex-col">
+            {/* Botón de retroceso */}
+            <button 
+              onClick={() => window.history.back()}
+              className="absolute top-4 left-4 p-2 rounded-full hover:bg-amber-100 transition-colors text-amber-700"
+              aria-label="Volver a la página anterior"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            
             {/* Decoración de esquina */}
             <div className="absolute top-4 right-4 w-16 h-16 border-t-4 border-r-4 border-amber-200 rounded-tr-lg" />
             
