@@ -1,5 +1,6 @@
 -- Agregar sistema de tracking de fulfillment para pedidos de cuentos completados
 -- Esta migración agrega funcionalidad para gestionar el flujo operacional post-completación
+-- IMPORTANTE: Requiere migración 20250627110806_add_user_roles_system.sql ejecutada primero
 
 -- 1. Agregar campo fulfillment_status a stories
 ALTER TABLE stories ADD COLUMN IF NOT EXISTS fulfillment_status VARCHAR(20);
@@ -109,63 +110,33 @@ WHERE status = 'completed';
 -- Políticas para fulfillment_history
 ALTER TABLE fulfillment_history ENABLE ROW LEVEL SECURITY;
 
--- Admins pueden ver todo el historial
-CREATE POLICY "Admins can view all fulfillment history" ON fulfillment_history
+-- Admins y operadores pueden ver todo el historial
+CREATE POLICY "Admins and operators can view fulfillment history" ON fulfillment_history
   FOR SELECT
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.is_admin = true
-    )
-  );
+  USING (has_permission('orders.view'));
 
--- Admins pueden insertar historial
-CREATE POLICY "Admins can insert fulfillment history" ON fulfillment_history
+-- Admins y operadores pueden insertar historial
+CREATE POLICY "Admins and operators can insert fulfillment history" ON fulfillment_history
   FOR INSERT
   TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.is_admin = true
-    )
-  );
+  WITH CHECK (has_permission('orders.update'));
 
 -- Políticas para shipping_info
 ALTER TABLE shipping_info ENABLE ROW LEVEL SECURITY;
 
--- Admins pueden ver toda la información de envío
-CREATE POLICY "Admins can view all shipping info" ON shipping_info
+-- Admins y operadores pueden ver toda la información de envío
+CREATE POLICY "Admins and operators can view shipping info" ON shipping_info
   FOR SELECT
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.is_admin = true
-    )
-  );
+  USING (has_permission('orders.view'));
 
--- Admins pueden gestionar información de envío
-CREATE POLICY "Admins can manage shipping info" ON shipping_info
+-- Admins y operadores pueden gestionar información de envío
+CREATE POLICY "Admins and operators can manage shipping info" ON shipping_info
   FOR ALL
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.is_admin = true
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.is_admin = true
-    )
-  );
+  USING (has_permission('orders.update'))
+  WITH CHECK (has_permission('orders.update'));
 
 -- Usuarios pueden ver su propia información de envío
 CREATE POLICY "Users can view own shipping info" ON shipping_info
