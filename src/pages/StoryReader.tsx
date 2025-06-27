@@ -54,7 +54,10 @@ const StoryReader: React.FC = () => {
   const textStyles = getTextStyles(currentPageIndex);
   const containerStyles = getContainerStyles(currentPageIndex);
   const position = getPosition(currentPageIndex);
-  const backgroundImage = getBackgroundImage(currentPageIndex, currentPage?.image_url);
+  // Para dedicatoria, usar background_url si está disponible
+  const backgroundImage = currentPage?.page_type === 'dedicatoria' 
+    ? (currentPage.background_url || getBackgroundImage(currentPageIndex, currentPage?.image_url))
+    : getBackgroundImage(currentPageIndex, currentPage?.image_url);
   const imageDimensions = useImageDimensions(backgroundImage);
 
   // Use exact fontSize from configuration to ensure consistency with PDF and template
@@ -95,6 +98,44 @@ const StoryReader: React.FC = () => {
   const renderPageText = () => {
     if (currentPageIndex === 0) {
       return story.title;
+    }
+    
+    // Special rendering for dedicatoria page
+    if (currentPage?.page_type === 'dedicatoria') {
+      const layout = story.dedicatoria_layout || { layout: 'imagen-arriba', alignment: 'centro', imageSize: 'mediana' };
+      const hasImage = !!currentPage.image_url;
+      
+      const imageSizeClass = {
+        'pequena': 'w-20 h-20',
+        'mediana': 'w-32 h-32',
+        'grande': 'w-40 h-40'
+      }[layout.imageSize] || 'w-32 h-32';
+      
+      const flexDirection = {
+        'imagen-arriba': 'flex-col',
+        'imagen-abajo': 'flex-col-reverse',
+        'imagen-izquierda': 'flex-row',
+        'imagen-derecha': 'flex-row-reverse'
+      }[layout.layout] || 'flex-col';
+      
+      return (
+        <div className={`flex ${flexDirection} items-center gap-6`}>
+          {hasImage && (
+            <div className={`${imageSizeClass} flex-shrink-0`}>
+              <img 
+                src={currentPage.image_url} 
+                alt="Imagen de dedicatoria" 
+                className="w-full h-full object-cover rounded-lg shadow-lg"
+              />
+            </div>
+          )}
+          {currentPage.text && (
+            <div className="text-lg sm:text-xl italic" style={{ textAlign: layout.alignment }}>
+              {currentPage.text}
+            </div>
+          )}
+        </div>
+      );
     }
 
     // Handle edge case where text might not exist
@@ -186,10 +227,14 @@ const StoryReader: React.FC = () => {
                   backgroundRepeat: 'no-repeat'
                 }}
               >
+                {/* Overlay para mejorar legibilidad en dedicatoria con imagen de fondo */}
+                {currentPage?.page_type === 'dedicatoria' && currentPage?.background_url && (
+                  <div className="absolute inset-0 bg-black/20"></div>
+                )}
                 {/* Text overlay with dynamic positioning */}
                 <div 
                   className={`
-                    absolute inset-0 flex justify-center
+                    absolute inset-0 flex justify-center z-10
                     px-3 sm:px-6 md:px-8
                     ${position === 'top' 
                       ? 'items-start pt-4 sm:pt-6 md:pt-8' 
@@ -215,7 +260,12 @@ const StoryReader: React.FC = () => {
                         ...textStyles,
                         width: '100%',
                         fontSize: exactFontSize, // Use exact configured fontSize
-                        lineHeight: textStyles.lineHeight || '1.4'
+                        lineHeight: textStyles.lineHeight || '1.4',
+                        // Mejorar legibilidad en dedicatoria con imagen de fondo
+                        ...(currentPage?.page_type === 'dedicatoria' && currentPage?.background_url && {
+                          color: '#ffffff',
+                          textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                        })
                       }}
                       className="text-center sm:text-left"
                     >

@@ -39,6 +39,7 @@ interface StoryData {
   dedicatoria_text?: string;
   dedicatoria_image_url?: string;
   dedicatoria_chosen?: boolean; // NULL = no eligió, TRUE = sí, FALSE = no
+  dedicatoria_background_url?: string; // URL de imagen de fondo configurada por admin
   dedicatoria_layout?: {
     layout: 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
     alignment: 'centro' | 'izquierda' | 'derecha';
@@ -211,7 +212,7 @@ async function getCompleteStoryData(storyId: string, userId: string) {
   // Obtener datos del cuento incluyendo campos de dedicatoria
   const { data: story, error: storyError } = await supabaseAdmin
     .from('stories')
-    .select('*, dedicatoria_text, dedicatoria_image_url, dedicatoria_chosen, dedicatoria_layout')
+    .select('*, dedicatoria_text, dedicatoria_image_url, dedicatoria_chosen, dedicatoria_layout, dedicatoria_background_url')
     .eq('id', storyId)
     .eq('user_id', userId)
     .single();
@@ -845,9 +846,21 @@ function generateHTMLContent(
       'imagen-derecha': 'row-reverse'
     }[layout.layout] || 'column';
 
+    // Usar imagen de fondo si está configurada por admin
+    const backgroundStyle = story.dedicatoria_background_url 
+      ? `background-image: url('${story.dedicatoria_background_url}'); background-size: cover; background-position: center;`
+      : `background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);`;
+    
+    console.log(`[story-export] 🖼️ Imagen de fondo de dedicatoria: ${story.dedicatoria_background_url ? 'SÍ' : 'NO'}`);
+
     return `
-      <div class="story-page dedicatoria-page" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+      <div class="story-page dedicatoria-page" style="${backgroundStyle}">
+        ${story.dedicatoria_background_url ? `
+          <!-- Overlay para mejorar legibilidad cuando hay imagen de fondo -->
+          <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.2);"></div>
+        ` : ''}
         <div class="page-overlay" style="
+          position: relative;
           display: flex; 
           flex-direction: ${flexDirection}; 
           align-items: ${alignmentClass}; 
@@ -855,6 +868,7 @@ function generateHTMLContent(
           padding: 60px; 
           gap: 30px;
           text-align: ${layout.alignment === 'centro' ? 'center' : layout.alignment === 'izquierda' ? 'left' : 'right'};
+          z-index: 1;
         ">
           ${hasImage ? `
             <div class="dedicatoria-image" style="${imageSizeClass} object-fit: cover; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
@@ -866,10 +880,10 @@ function generateHTMLContent(
               font-family: ${pageConfig.fontFamily || "'Indie Flower', cursive"}; 
               font-size: 24px; 
               line-height: 1.8; 
-              color: #4a5568; 
+              color: ${story.dedicatoria_background_url ? '#ffffff' : '#4a5568'}; 
               font-style: italic;
               max-width: 600px;
-              text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              text-shadow: ${story.dedicatoria_background_url ? '2px 2px 4px rgba(0,0,0,0.8)' : '0 2px 4px rgba(0,0,0,0.1)'};
             ">
               ${textToHTML(story.dedicatoria_text)}
             </div>

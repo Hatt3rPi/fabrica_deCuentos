@@ -8,6 +8,15 @@ interface StoryData {
   title: string;
   status: 'draft' | 'completed';
   export_url?: string;
+  dedicatoria_text?: string;
+  dedicatoria_image_url?: string;
+  dedicatoria_background_url?: string;
+  dedicatoria_layout?: {
+    layout: 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
+    alignment: 'centro' | 'izquierda' | 'derecha';
+    imageSize: 'pequena' | 'mediana' | 'grande';
+  };
+  dedicatoria_chosen?: boolean;
 }
 
 interface StoryPage {
@@ -15,6 +24,8 @@ interface StoryPage {
   page_number: number;
   text: string;
   image_url: string;
+  page_type?: 'story' | 'cover' | 'dedicatoria';
+  background_url?: string;
 }
 
 export const useStoryReader = (storyId: string | undefined) => {
@@ -42,7 +53,7 @@ export const useStoryReader = (storyId: string | undefined) => {
       // Fetch story - validate user ownership
       const { data: storyData, error: storyError } = await supabase
         .from('stories')
-        .select('id, title, status, export_url')
+        .select('id, title, status, export_url, dedicatoria_text, dedicatoria_image_url, dedicatoria_background_url, dedicatoria_layout, dedicatoria_chosen')
         .eq('id', storyId)
         .eq('user_id', user?.id)
         .single();
@@ -93,7 +104,28 @@ export const useStoryReader = (storyId: string | undefined) => {
         return;
       }
 
-      setPages(pagesData || []);
+      // Agregar página de dedicatoria al inicio si existe
+      let allPages = pagesData || [];
+      
+      if (storyData.dedicatoria_chosen && (storyData.dedicatoria_text || storyData.dedicatoria_image_url)) {
+        const dedicatoriaPage: StoryPage = {
+          id: 'dedicatoria-page',
+          page_number: -1, // Número especial para dedicatoria
+          text: storyData.dedicatoria_text || '',
+          image_url: storyData.dedicatoria_image_url || '',
+          page_type: 'dedicatoria',
+          background_url: storyData.dedicatoria_background_url
+        };
+        
+        // Insertar dedicatoria después de la portada (índice 1)
+        allPages = [
+          allPages[0], // Portada
+          dedicatoriaPage,
+          ...allPages.slice(1) // Resto de páginas
+        ];
+      }
+      
+      setPages(allPages);
     } catch (err) {
       console.error('Error fetching story:', err);
       const errorMsg = 'Error cargando el cuento';
