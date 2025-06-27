@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   
   -- Un usuario puede tener múltiples roles, pero no duplicados activos
-  UNIQUE(user_id, role, is_active) DEFERRABLE INITIALLY DEFERRED
+  UNIQUE(user_id, role, is_active)
 );
 
 -- Índices para performance
