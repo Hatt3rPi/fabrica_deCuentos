@@ -2,6 +2,61 @@
 
 ## Unreleased
 
+### Feature: Sistema Robusto de Roles de Usuario (2025-06-27)
+- **Reemplazo de emails hardcodeados**: Sistema escalable de roles admin/operator/user
+- **Base de Datos**:
+  - Tabla `user_roles` con soporte para roles temporales y múltiples
+  - Tabla `user_role_history` para auditoría completa de cambios
+  - Vista `users_with_roles` optimizada para consultas eficientes
+  - Funciones RPC: `has_role()`, `has_permission()`, `assign_role()`, `revoke_role()`
+- **Sistema de Permisos Granular**:
+  - Permisos específicos por funcionalidad (orders.view, config.admin, etc.)
+  - Verificación centralizada en BD y frontend
+  - Roles jerárquicos: admin > operator > user
+- **Frontend**:
+  - `UserRoleContext` para manejo de estado de roles
+  - `useRoleGuard` hook para protección de componentes/rutas
+  - `useRoleCheck` hook para verificaciones condicionales
+  - Página `/admin/users` para gestión de roles con UI completa
+- **Migración Automática**: Usuarios hardcodeados convertidos automáticamente a roles admin
+- **Compatibilidad**: AdminContext mantiene retrocompatibilidad temporal
+- **Auditoría**: Tracking completo de cambios con IP, timestamps y razones
+- **Seguridad**: Políticas RLS actualizadas, validaciones y rate limiting
+
+### Feature: Sistema de Gestión de Pedidos - Admin Fulfillment (2025-06-27)
+- **Implementación Issue #263**: Nueva pantalla `/admin/pedidos` para gestión completa de pedidos de cuentos finalizados
+- **Integrado con sistema de roles**: Accesible para admins y operadores
+- **Separación de Estados**:
+  - Campo `fulfillment_status` separado del wizard (`status`)
+  - Estados: pendiente → imprimiendo → enviando → entregado / cancelado
+  - Trigger automático asigna 'pendiente' cuando cuento se completa
+- **Gestión Completa**:
+  - Dashboard en tiempo real con estadísticas
+  - Cambio de estados con historial de trazabilidad
+  - Información completa de envío y tracking
+  - Filtros por estado, búsqueda por texto, exportación CSV
+- **Notificaciones**:
+  - Nuevos pedidos aparecen en tiempo real
+  - Badges con contadores en navegación (nuevos + pendientes)
+  - Notificaciones browser nativas y toasts
+  - Sistema de alertas para pedidos antiguos
+- **Base de Datos**:
+  - Tabla `fulfillment_history` para trazabilidad completa
+  - Tabla `shipping_info` para datos de courier y direcciones
+  - Vista `pedidos_view` optimizada para consultas admin
+  - Función RPC `update_fulfillment_status` con historial automático
+- **Componentes Principales**:
+  - `AdminPedidos.tsx`: Página principal con dashboard
+  - `TarjetaPedido.tsx`: Vista individual con acciones rápidas
+  - `ModalEnvio.tsx`: Gestión completa de información de envío
+  - `EstadisticasPedidos.tsx`: Dashboard de métricas en tiempo real
+- **Servicios y Hooks**:
+  - `fulfillmentService.ts`: API completa para gestión de pedidos
+  - `useNotificacionesPedidos.ts`: Sistema de notificaciones en tiempo real
+  - Funciones realtime para suscripciones a cambios
+- **Documentación**: Completa en `/docs/tech/fulfillment-system.md` y `/docs/solutions/sistema-gestion-pedidos/`
+- **Archivos de migración**: `20250627092838_add_fulfillment_tracking.sql`
+
 ### Feature: Sistema Completo de Configuración Admin de Dedicatoria (2025-06-27)
 - **Implementación Issue #267**: Sistema completo de configuración administrativa para dedicatorias
 - **Admin/Style Mejorado**:

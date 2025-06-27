@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { AdminProvider } from './context/AdminContext';
+import { UserRoleProvider } from './context/UserRoleContext';
 import { WizardProvider } from './context/WizardContext';
 import { StoryProvider } from './context/StoryContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -21,6 +22,8 @@ import PromptsManager from './pages/Admin/Prompts/PromptsManager';
 import PromptAnalytics from './pages/Admin/Analytics/PromptAnalytics';
 import AdminFlujo from './pages/Admin/Flujo';
 import AdminStyleEditor from './pages/Admin/StyleEditor/AdminStyleEditor';
+import AdminPedidos from './pages/Admin/Pedidos';
+import AdminUsers from './pages/Admin/Users';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -162,6 +165,22 @@ function AnimatedRoutes() {
                       </PrivateRoute>
                     }
                   />
+                  <Route
+                    path="/admin/pedidos"
+                    element={
+                      <PrivateRoute>
+                        <AdminPedidos />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/users"
+                    element={
+                      <PrivateRoute>
+                        <AdminUsers />
+                      </PrivateRoute>
+                    }
+                  />
                   <Route path="*" element={<Navigate to="/home" replace />} />
                 </Routes>
               </main>
@@ -206,11 +225,13 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <ThemeProvider>
-          <AdminProvider>
-            <AppContent />
-          </AdminProvider>
-        </ThemeProvider>
+        <UserRoleProvider>
+          <ThemeProvider>
+            <AdminProvider>
+              <AppContent />
+            </AdminProvider>
+          </ThemeProvider>
+        </UserRoleProvider>
       </AuthProvider>
     </Router>
   );
