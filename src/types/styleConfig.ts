@@ -99,6 +99,16 @@ export interface StyleTemplate {
     page_config: PageConfig;
     dedicatoria_config?: DedicatoriaConfig;
   };
+  customImages?: {
+    cover_url?: string;
+    page_url?: string;
+    dedicatoria_url?: string;
+  };
+  customTexts?: {
+    cover_text?: string;
+    page_text?: string;
+    dedicatoria_text?: string;
+  };
   isPremium: boolean;
   isActive?: boolean;
   createdAt: string;

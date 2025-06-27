@@ -122,13 +122,28 @@ const AdminStyleEditor: React.FC = () => {
         setActiveConfig(config);
         setOriginalConfig(config);
         
-        // Limpiar imágenes custom (solo para admin/styles)
-        setCustomCoverImage('');
-        setCustomPageImage('');
-        setCustomDedicatoriaImage('');
-        setCustomCoverText(SAMPLE_TEXTS.cover);
-        setCustomPageText(SAMPLE_TEXTS.page);
-        setCustomDedicatoriaText(SAMPLE_TEXTS.dedicatoria);
+        // Cargar imágenes y textos custom si existen
+        if (template.customImages) {
+          setCustomCoverImage(template.customImages.cover_url || '');
+          setCustomPageImage(template.customImages.page_url || '');
+          setCustomDedicatoriaImage(template.customImages.dedicatoria_url || '');
+          console.log('🖼️ Imágenes custom cargadas desde BD:', template.customImages);
+        } else {
+          setCustomCoverImage('');
+          setCustomPageImage('');
+          setCustomDedicatoriaImage('');
+        }
+        
+        if (template.customTexts) {
+          setCustomCoverText(template.customTexts.cover_text || SAMPLE_TEXTS.cover);
+          setCustomPageText(template.customTexts.page_text || SAMPLE_TEXTS.page);
+          setCustomDedicatoriaText(template.customTexts.dedicatoria_text || SAMPLE_TEXTS.dedicatoria);
+          console.log('📝 Textos custom cargados desde BD:', template.customTexts);
+        } else {
+          setCustomCoverText(SAMPLE_TEXTS.cover);
+          setCustomPageText(SAMPLE_TEXTS.page);
+          setCustomDedicatoriaText(SAMPLE_TEXTS.dedicatoria);
+        }
       }
     } catch (error) {
       createNotification(
@@ -179,6 +194,18 @@ const AdminStyleEditor: React.FC = () => {
           cover_config: activeConfig.coverConfig,
           page_config: activeConfig.pageConfig,
           dedicatoria_config: activeConfig.dedicatoriaConfig
+        },
+        // Agregar imágenes custom si existen
+        customImages: {
+          cover_url: customCoverImage || undefined,
+          page_url: customPageImage || undefined,
+          dedicatoria_url: customDedicatoriaImage || undefined
+        },
+        // Agregar textos custom
+        customTexts: {
+          cover_text: customCoverText !== SAMPLE_TEXTS.cover ? customCoverText : undefined,
+          page_text: customPageText !== SAMPLE_TEXTS.page ? customPageText : undefined,
+          dedicatoria_text: customDedicatoriaText !== SAMPLE_TEXTS.dedicatoria ? customDedicatoriaText : undefined
         }
       };
       

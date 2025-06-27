@@ -27,6 +27,8 @@ class StyleConfigService {
           category: data.category,
           thumbnailUrl: data.thumbnail_url,
           configData: data.config_data,
+          customImages: data.custom_images,
+          customTexts: data.custom_texts,
           isPremium: data.is_premium,
           isActive: data.is_active,
           createdAt: data.created_at
@@ -230,6 +232,8 @@ class StyleConfigService {
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.category !== undefined) updateData.category = updates.category;
       if (updates.configData !== undefined) updateData.config_data = updates.configData;
+      if (updates.customImages !== undefined) updateData.custom_images = updates.customImages;
+      if (updates.customTexts !== undefined) updateData.custom_texts = updates.customTexts;
       
       console.log('Updating active template with:', updateData);
 
@@ -248,6 +252,8 @@ class StyleConfigService {
         category: data.category,
         thumbnailUrl: data.thumbnail_url,
         configData: data.config_data,
+        customImages: data.custom_images,
+        customTexts: data.custom_texts,
         isPremium: data.is_premium,
         isActive: data.is_active,
         createdAt: data.created_at
