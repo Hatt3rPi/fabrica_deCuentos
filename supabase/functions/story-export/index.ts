@@ -306,6 +306,7 @@ async function getCompleteStoryData(storyId: string, userId: string) {
     name: activeTemplate.name,
     coverConfig: activeTemplate.config_data.cover_config,
     pageConfig: activeTemplate.config_data.page_config,
+    dedicatoriaConfig: activeTemplate.config_data.dedicatoria_config,
     coverBackgroundUrl: undefined, // Templates no tienen backgrounds custom
     pageBackgroundUrl: undefined
   } : null;
@@ -578,6 +579,7 @@ function generateHTMLContent(
   // Definir configuraciones fuera del scope para uso global
   const coverConfig = styleConfig?.coverConfig?.title || {};
   const pageConfig = styleConfig?.pageConfig?.text || {};
+  const dedicatoriaConfig = styleConfig?.dedicatoriaConfig?.text || pageConfig;
   
   if (styleConfig) {
     console.log('[story-export] 🎨 Configuración de estilos detectada:');
@@ -808,13 +810,13 @@ function generateHTMLContent(
             text-align: center;
           ">
             <div class="dedicatoria-placeholder" style="
-              font-family: ${pageConfig.fontFamily || "'Indie Flower', cursive"}; 
-              font-size: 28px; 
-              line-height: 1.8; 
+              font-family: ${dedicatoriaConfig.text.fontFamily || "'Indie Flower', cursive"}; 
+              font-size: ${dedicatoriaConfig.text.fontSize || '28px'}; 
+              line-height: ${dedicatoriaConfig.text.lineHeight || '1.8'}; 
               color: #9ca3af; 
               font-style: italic;
               max-width: 400px;
-              text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              text-shadow: ${dedicatoriaConfig.text.textShadow || '0 2px 4px rgba(0,0,0,0.1)'};
             ">
               <!-- Página de dedicatoria reservada -->
             </div>
@@ -877,13 +879,15 @@ function generateHTMLContent(
           ` : ''}
           ${story.dedicatoria_text ? `
             <div class="dedicatoria-text" style="
-              font-family: ${pageConfig.fontFamily || "'Indie Flower', cursive"}; 
-              font-size: 24px; 
-              line-height: 1.8; 
-              color: ${story.dedicatoria_background_url ? '#ffffff' : '#4a5568'}; 
+              font-family: ${dedicatoriaConfig.text.fontFamily || "'Indie Flower', cursive"}; 
+              font-size: ${dedicatoriaConfig.text.fontSize || '24px'}; 
+              line-height: ${dedicatoriaConfig.text.lineHeight || '1.8'}; 
+              color: ${story.dedicatoria_background_url ? '#ffffff' : dedicatoriaConfig.text.color || '#4a5568'}; 
               font-style: italic;
               max-width: 600px;
-              text-shadow: ${story.dedicatoria_background_url ? '2px 2px 4px rgba(0,0,0,0.8)' : '0 2px 4px rgba(0,0,0,0.1)'};
+              text-shadow: ${story.dedicatoria_background_url ? '2px 2px 4px rgba(0,0,0,0.8)' : dedicatoriaConfig.text.textShadow || '0 2px 4px rgba(0,0,0,0.1)'};
+              font-weight: ${dedicatoriaConfig.text.fontWeight || 'normal'};
+              text-align: ${dedicatoriaConfig.text.textAlign || layout.alignment};
             ">
               ${textToHTML(story.dedicatoria_text)}
             </div>

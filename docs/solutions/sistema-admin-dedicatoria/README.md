@@ -96,6 +96,8 @@ Se implementó un sistema completo que separa las responsabilidades:
 - [x] Verificar imagen de fondo en PDF generado con overlay y texto blanco
 - [x] Verificar imagen de fondo en visualización de cuento (StoryReader)
 - [x] Verificar que dedicatoria aparece en PDF cuando usuario elige "SÍ" sin texto
+- [x] Verificar controles de imagen de usuario en admin/style funcionales
+- [x] Verificar estilos de dedicatoria se aplican correctamente en PDF
 - [ ] Testing completo del flujo: configurar admin → crear cuento → PDF → visualización
 
 ### Automatizado
