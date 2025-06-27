@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Feature: Sistema Completo de Configuración Admin de Dedicatoria (2025-06-27)
+- **Implementación Issue #267**: Sistema completo de configuración administrativa para dedicatorias
+- **Admin/Style Mejorado**:
+  - Nueva sección "Dedicatoria" junto a "Portada" e "Interior"
+  - Sistema de 3 imágenes específicas (portada, interior, dedicatoria)
+  - Persistencia automática de imágenes custom en BD
+  - Preview en tiempo real con imagen de fondo configurada
+- **Restricciones de Usuario**: 
+  - Solo opciones permitidas por admin (layouts, alineaciones)
+  - Tamaño de imagen controlado por admin (read-only para usuario)
+  - Hook `useDedicatoriaConfig` para obtener configuración automáticamente
+- **Sistema de Imagen de Fondo**:
+  - Admin configura imagen de fondo para todas las dedicatorias
+  - Se usa en preview del wizard, PDF y visualización del cuento
+  - Overlay automático y texto blanco para mejor legibilidad
+- **Diferencia clave**: Imagen DE dedicatoria (usuario) vs Imagen DE FONDO (admin)
+- **Archivos principales**: 
+  - Admin: `AdminStyleEditor.tsx`, `StylePreview.tsx`, `styleConfigService.ts`
+  - Usuario: `DedicatoriaStep.tsx`, `LayoutConfig.tsx`, `useDedicatoriaConfig.ts`
+  - PDF: `story-export/index.ts`, StoryReader: `StoryReader.tsx`, `useStoryReader.ts`
+- **Migraciones BD**: Nuevos campos para imágenes custom y URL de fondo
+- **PR**: #273
+
 ### Fix: Dedicatoria Siempre Aparece en PDF (2025-06-26)
 - **Problema resuelto**: Dedicatoria no aparecía en PDF cuando usuario elegía incluirla pero no escribía texto
 - **Lógica corregida**: Edge Function ahora usa `dedicatoria_chosen` en lugar de solo `dedicatoria_text`
