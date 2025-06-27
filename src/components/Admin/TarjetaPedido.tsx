@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, Calendar, User, Mail, MapPin, Truck, Clock } from 'lucide-react';
+import { ChevronRight, Calendar, User, Mail, MapPin, Truck, Clock, FileText } from 'lucide-react';
 import { CuentoConPedido, EstadoFulfillment, ESTADOS_FULFILLMENT } from '../../types';
 
 interface TarjetaPedidoProps {
@@ -30,6 +30,12 @@ const TarjetaPedido: React.FC<TarjetaPedidoProps> = ({
     setMostrarCambioEstado(false);
     setNuevoEstado('');
     setNotasCambio('');
+  };
+
+  const handleVerPDF = () => {
+    if (pedido.export_url) {
+      window.open(pedido.export_url, '_blank');
+    }
   };
 
   const formatearFecha = (fecha: string | undefined) => {
@@ -120,13 +126,26 @@ const TarjetaPedido: React.FC<TarjetaPedidoProps> = ({
         <div className="flex items-center justify-between pt-4 border-t">
           {!mostrarCambioEstado ? (
             <>
-              <button
-                onClick={() => setMostrarCambioEstado(true)}
-                className="px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
-                disabled={actualizando}
-              >
-                Cambiar estado
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setMostrarCambioEstado(true)}
+                  className="px-4 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+                  disabled={actualizando}
+                >
+                  Cambiar estado
+                </button>
+                
+                {pedido.export_url && (
+                  <button
+                    onClick={handleVerPDF}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Ver PDF del cuento"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Ver PDF
+                  </button>
+                )}
+              </div>
               
               <button
                 onClick={onVerDetalles}

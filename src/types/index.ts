@@ -296,6 +296,7 @@ export interface CuentoConPedido {
   completed_at?: string;
   created_at: string;
   updated_at: string;
+  export_url?: string; // URL del PDF exportado
   // Datos del usuario
   user_email?: string;
   user_name?: string;

@@ -160,6 +160,7 @@ SELECT
   s.completed_at,
   s.created_at,
   s.updated_at,
+  s.export_url,
   au.email as user_email,
   COALESCE(up.contact_person, split_part(au.email, '@', 1)) as user_name,
   up.shipping_phone,
