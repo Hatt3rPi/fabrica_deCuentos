@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Home, Palette, Package } from 'lucide-react';
+import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Home, Palette, Package, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useAdmin } from '../../context/AdminContext';
+import { useRoleCheck } from '../../hooks/useRoleGuard';
 import { Link } from 'react-router-dom';
 import { ImageGenerationSettings, ImageEngine, OpenAIModel, StabilityModel, FluxModel } from '../../types';
 import { useNotificacionesPedidos } from '../../hooks/useNotificacionesPedidos';
 
 const Sidebar: React.FC = () => {
   const { signOut, supabase } = useAuth();
-  const isAdmin = useAdmin();
+  
+  // Verificar permisos con el nuevo sistema de roles
+  const canManagePrompts = useRoleCheck([], ['config.prompts']);
+  const canViewAnalytics = useRoleCheck([], ['analytics.operational']);
+  const canManageFlow = useRoleCheck([], ['workflow.admin']);
+  const canManageStyles = useRoleCheck([], ['config.styles']);
+  const canManageOrders = useRoleCheck([], ['orders.view']);
+  const canManageUsers = useRoleCheck([], ['users.manage']);
+  
   const { pedidosPendientes, nuevosPedidos, resetearNuevos } = useNotificacionesPedidos();
   const [settings, setSettings] = useState<ImageGenerationSettings | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
-      if (!isAdmin) return;
+      if (!canManageStyles) return;
       
       try {
         const { data, error } = await supabase
@@ -32,7 +40,7 @@ const Sidebar: React.FC = () => {
     };
 
     loadSettings();
-  }, [supabase, isAdmin]);
+  }, [supabase, canManageStyles]);
 
   const handleEngineChange = async (
     type: 'thumbnail' | 'variations' | 'spriteSheet',
@@ -42,7 +50,7 @@ const Sidebar: React.FC = () => {
     size?: string,
     style?: string
   ) => {
-    if (!isAdmin || !settings) return;
+    if (!canManageStyles || !settings) return;
     setIsLoading(true);
 
     const updatedEngine: ImageEngine = {
@@ -195,7 +203,7 @@ const Sidebar: React.FC = () => {
               <span>Mi Perfil</span>
             </Link>
           </li>
-          {isAdmin && (
+          {canManagePrompts && (
             <li>
               <Link to="/admin/prompts" className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20">
                 <Settings className="w-5 h-5" />
@@ -203,61 +211,76 @@ const Sidebar: React.FC = () => {
               </Link>
             </li>
           )}
-          {isAdmin && (
-            <>
-              <li>
-                <Link
-                  to="/admin/analytics"
-                  className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
-                >
-                  <BarChart3 className="w-5 h-5" />
-                  <span>Analytics</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/admin/flujo"
-                  className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
-                >
-                  <AlertTriangle className="w-5 h-5" />
-                  <span>Flujo</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/admin/style"
-                  className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
-                >
-                  <Palette className="w-5 h-5" />
-                  <span>Estilos</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/admin/pedidos"
-                  onClick={() => resetearNuevos()}
-                  className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20 relative"
-                >
-                  <Package className="w-5 h-5" />
-                  <span>Pedidos</span>
-                  {/* Badge de notificaciones */}
-                  {(nuevosPedidos > 0 || pedidosPendientes > 0) && (
-                    <span className="ml-auto flex items-center gap-1">
-                      {nuevosPedidos > 0 && (
-                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
-                          {nuevosPedidos}
-                        </span>
-                      )}
-                      {pedidosPendientes > 0 && (
-                        <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                          {pedidosPendientes}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            </>
+          {canViewAnalytics && (
+            <li>
+              <Link
+                to="/admin/analytics"
+                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
+              >
+                <BarChart3 className="w-5 h-5" />
+                <span>Analytics</span>
+              </Link>
+            </li>
+          )}
+          {canManageFlow && (
+            <li>
+              <Link
+                to="/admin/flujo"
+                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
+              >
+                <AlertTriangle className="w-5 h-5" />
+                <span>Flujo</span>
+              </Link>
+            </li>
+          )}
+          {canManageStyles && (
+            <li>
+              <Link
+                to="/admin/style"
+                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
+              >
+                <Palette className="w-5 h-5" />
+                <span>Estilos</span>
+              </Link>
+            </li>
+          )}
+          {canManageOrders && (
+            <li>
+              <Link
+                to="/admin/pedidos"
+                onClick={() => resetearNuevos()}
+                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20 relative"
+              >
+                <Package className="w-5 h-5" />
+                <span>Pedidos</span>
+                {/* Badge de notificaciones */}
+                {(nuevosPedidos > 0 || pedidosPendientes > 0) && (
+                  <span className="ml-auto flex items-center gap-1">
+                    {nuevosPedidos > 0 && (
+                      <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                        {nuevosPedidos}
+                      </span>
+                    )}
+                    {pedidosPendientes > 0 && (
+                      <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        {pedidosPendientes}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </Link>
+            </li>
+          )}
+          {canManageUsers && (
+            <li>
+              <Link
+                to="/admin/users"
+                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
+              >
+                <Users className="w-5 h-5" />
+                <span>Usuarios</span>
+              </Link>
+            </li>
           )}
         </ul>
       </nav>

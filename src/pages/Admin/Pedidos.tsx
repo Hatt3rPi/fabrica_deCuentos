@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Package, Search, Filter, Download, RefreshCw } from 'lucide-react';
-import { useAdmin } from '../../context/AdminContext';
+import { useRoleGuard } from '../../hooks/useRoleGuard';
 import { fulfillmentService } from '../../services/fulfillmentService';
 import { CuentoConPedido, EstadoFulfillment, ESTADOS_FULFILLMENT } from '../../types';
 import TarjetaPedido from '../../components/Admin/TarjetaPedido';
@@ -9,7 +9,12 @@ import EstadisticasPedidos from '../../components/Admin/EstadisticasPedidos';
 import { supabase } from '../../lib/supabase';
 
 const AdminPedidos: React.FC = () => {
-  const isAdmin = useAdmin();
+  // Proteger la página con roles - admins y operadores pueden gestionar pedidos
+  const { isAuthorized, isLoading: roleLoading } = useRoleGuard({
+    requiredPermissions: ['orders.view'],
+    redirectTo: '/unauthorized'
+  });
+  
   const [pedidos, setPedidos] = useState<CuentoConPedido[]>([]);
   const [cargando, setCargando] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState<EstadoFulfillment | 'todos'>('todos');
@@ -97,7 +102,7 @@ const AdminPedidos: React.FC = () => {
 
   // Suscripción a cambios en tiempo real
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAuthorized || roleLoading) return;
 
     cargarPedidos();
 
@@ -121,7 +126,7 @@ const AdminPedidos: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isAdmin, filtroEstado]);
+  }, [isAuthorized, roleLoading, filtroEstado]);
 
   // Filtrar pedidos localmente por búsqueda
   const pedidosFiltrados = useMemo(() => {
@@ -156,8 +161,18 @@ const AdminPedidos: React.FC = () => {
     return stats;
   }, [pedidosFiltrados]);
 
-  if (!isAdmin) {
-    return <p className="text-center text-gray-500 mt-8">No autorizado</p>;
+  // Mostrar loader mientras se verifica autorización
+  if (roleLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  // Si no está autorizado, el hook ya redirigirá
+  if (!isAuthorized) {
+    return null;
   }
 
   return (

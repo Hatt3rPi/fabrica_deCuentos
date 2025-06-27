@@ -2,8 +2,30 @@
 
 ## Unreleased
 
+### Feature: Sistema Robusto de Roles de Usuario (2025-06-27)
+- **Reemplazo de emails hardcodeados**: Sistema escalable de roles admin/operator/user
+- **Base de Datos**:
+  - Tabla `user_roles` con soporte para roles temporales y múltiples
+  - Tabla `user_role_history` para auditoría completa de cambios
+  - Vista `users_with_roles` optimizada para consultas eficientes
+  - Funciones RPC: `has_role()`, `has_permission()`, `assign_role()`, `revoke_role()`
+- **Sistema de Permisos Granular**:
+  - Permisos específicos por funcionalidad (orders.view, config.admin, etc.)
+  - Verificación centralizada en BD y frontend
+  - Roles jerárquicos: admin > operator > user
+- **Frontend**:
+  - `UserRoleContext` para manejo de estado de roles
+  - `useRoleGuard` hook para protección de componentes/rutas
+  - `useRoleCheck` hook para verificaciones condicionales
+  - Página `/admin/users` para gestión de roles con UI completa
+- **Migración Automática**: Usuarios hardcodeados convertidos automáticamente a roles admin
+- **Compatibilidad**: AdminContext mantiene retrocompatibilidad temporal
+- **Auditoría**: Tracking completo de cambios con IP, timestamps y razones
+- **Seguridad**: Políticas RLS actualizadas, validaciones y rate limiting
+
 ### Feature: Sistema de Gestión de Pedidos - Admin Fulfillment (2025-06-27)
 - **Implementación Issue #263**: Nueva pantalla `/admin/pedidos` para gestión completa de pedidos de cuentos finalizados
+- **Integrado con sistema de roles**: Accesible para admins y operadores
 - **Separación de Estados**:
   - Campo `fulfillment_status` separado del wizard (`status`)
   - Estados: pendiente → imprimiendo → enviando → entregado / cancelado
