@@ -252,3 +252,94 @@ export interface ExportOptions {
   format?: 'pdf' | 'epub' | 'web';
   includeMetadata?: boolean;
 }
+
+// Tipos para el sistema de fulfillment (gestión de pedidos)
+export type EstadoFulfillment = 'pendiente' | 'imprimiendo' | 'enviando' | 'entregado' | 'cancelado';
+
+export interface HistorialFulfillment {
+  id: string;
+  story_id: string;
+  from_status: EstadoFulfillment | null;
+  to_status: EstadoFulfillment;
+  changed_by: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface InformacionEnvio {
+  id: string;
+  story_id: string;
+  recipient_name?: string;
+  recipient_phone?: string;
+  recipient_email?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  region?: string;
+  postal_code?: string;
+  country?: string;
+  tracking_number?: string;
+  courier?: string;
+  estimated_delivery?: string;
+  delivered_at?: string;
+  delivery_notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CuentoConPedido {
+  id: string;
+  title: string;
+  user_id: string;
+  status: 'draft' | 'completed';
+  fulfillment_status?: EstadoFulfillment;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+  // Datos del usuario
+  user_email?: string;
+  user_name?: string;
+  // Información de envío
+  shipping_info?: InformacionEnvio;
+  // Historial de cambios
+  history?: HistorialFulfillment[];
+}
+
+// Configuración de estados de fulfillment con metadata
+export const ESTADOS_FULFILLMENT: Record<EstadoFulfillment, {
+  label: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+}> = {
+  pendiente: {
+    label: 'Pendiente',
+    icon: '📝',
+    color: 'text-yellow-700',
+    bgColor: 'bg-yellow-100'
+  },
+  imprimiendo: {
+    label: 'Imprimiendo',
+    icon: '🖨️',
+    color: 'text-blue-700',
+    bgColor: 'bg-blue-100'
+  },
+  enviando: {
+    label: 'Enviando',
+    icon: '📦',
+    color: 'text-purple-700',
+    bgColor: 'bg-purple-100'
+  },
+  entregado: {
+    label: 'Entregado',
+    icon: '✅',
+    color: 'text-green-700',
+    bgColor: 'bg-green-100'
+  },
+  cancelado: {
+    label: 'Cancelado',
+    icon: '❌',
+    color: 'text-red-700',
+    bgColor: 'bg-red-100'
+  }
+}

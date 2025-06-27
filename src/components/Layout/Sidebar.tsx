@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Home, Palette } from 'lucide-react';
+import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Home, Palette, Package } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
 import { Link } from 'react-router-dom';
 import { ImageGenerationSettings, ImageEngine, OpenAIModel, StabilityModel, FluxModel } from '../../types';
+import { useNotificacionesPedidos } from '../../hooks/useNotificacionesPedidos';
 
 const Sidebar: React.FC = () => {
   const { signOut, supabase } = useAuth();
   const isAdmin = useAdmin();
+  const { pedidosPendientes, nuevosPedidos, resetearNuevos } = useNotificacionesPedidos();
   const [settings, setSettings] = useState<ImageGenerationSettings | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -228,6 +230,31 @@ const Sidebar: React.FC = () => {
                 >
                   <Palette className="w-5 h-5" />
                   <span>Estilos</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/admin/pedidos"
+                  onClick={() => resetearNuevos()}
+                  className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20 relative"
+                >
+                  <Package className="w-5 h-5" />
+                  <span>Pedidos</span>
+                  {/* Badge de notificaciones */}
+                  {(nuevosPedidos > 0 || pedidosPendientes > 0) && (
+                    <span className="ml-auto flex items-center gap-1">
+                      {nuevosPedidos > 0 && (
+                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                          {nuevosPedidos}
+                        </span>
+                      )}
+                      {pedidosPendientes > 0 && (
+                        <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                          {pedidosPendientes}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </Link>
               </li>
             </>
