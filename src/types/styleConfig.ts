@@ -66,6 +66,8 @@ export interface DedicatoriaConfig {
   imageSize: 'pequena' | 'mediana' | 'grande';
   allowedLayouts: ('imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha')[];
   allowedAlignments: ('centro' | 'izquierda' | 'derecha')[];
+  backgroundImageUrl?: string; // URL de imagen de fondo para páginas de dedicatoria
+  backgroundImagePosition?: 'cover' | 'contain' | 'center'; // Cómo se muestra la imagen de fondo
 }
 
 export interface StoryStyleConfig {

@@ -134,6 +134,12 @@ const AdminStyleEditor: React.FC = () => {
           setCustomDedicatoriaImage('');
         }
         
+        // También cargar imagen de fondo de dedicatoria desde la configuración
+        if (template.configData.dedicatoria_config?.backgroundImageUrl) {
+          setCustomDedicatoriaImage(template.configData.dedicatoria_config.backgroundImageUrl);
+          console.log('🖼️ Imagen de fondo de dedicatoria cargada desde config:', template.configData.dedicatoria_config.backgroundImageUrl);
+        }
+        
         if (template.customTexts) {
           setCustomCoverText(template.customTexts.cover_text || SAMPLE_TEXTS.cover);
           setCustomPageText(template.customTexts.page_text || SAMPLE_TEXTS.page);
@@ -187,13 +193,22 @@ const AdminStyleEditor: React.FC = () => {
     try {
       setIsSaving(true);
       
+      // Actualizar configuración de dedicatoria con imagen de fondo si existe
+      const updatedDedicatoriaConfig = {
+        ...activeConfig.dedicatoriaConfig,
+        ...(customDedicatoriaImage && {
+          backgroundImageUrl: customDedicatoriaImage,
+          backgroundImagePosition: 'cover' as const
+        })
+      };
+      
       // Actualizar template activo con las configuraciones editadas
       const templateUpdate: Partial<StyleTemplate> = {
         name: activeConfig.name,
         configData: {
           cover_config: activeConfig.coverConfig,
           page_config: activeConfig.pageConfig,
-          dedicatoria_config: activeConfig.dedicatoriaConfig
+          dedicatoria_config: updatedDedicatoriaConfig
         },
         // Agregar imágenes custom si existen
         customImages: {

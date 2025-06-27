@@ -8,6 +8,7 @@ import { storyService } from '../../../services/storyService';
 import { styleConfigService } from '../../../services/styleConfigService';
 import { useWizardLockStatus } from '../../../hooks/useWizardLockStatus';
 import { DedicatoriaConfig } from '../../../types/styleConfig';
+import { useDedicatoriaConfig } from '../../../hooks/useDedicatoriaConfig';
 import DedicatoriaTextEditor from './components/DedicatoriaTextEditor';
 import ImageUploader from './components/ImageUploader';
 import LayoutConfig from './components/LayoutConfig';
@@ -43,6 +44,9 @@ const DedicatoriaStep: React.FC = () => {
   // Estado para configuración admin
   const [adminConfig, setAdminConfig] = useState<DedicatoriaConfig | null>(null);
   const [isLoadingConfig, setIsLoadingConfig] = useState(true);
+  
+  // Obtener imagen de fondo de dedicatoria
+  const { backgroundImageUrl: adminBackgroundUrl } = useDedicatoriaConfig();
 
   // Estado inicial de la dedicatoria
   const [dedicatoria, setDedicatoria] = useState<DedicatoriaData>({
@@ -111,7 +115,8 @@ const DedicatoriaStep: React.FC = () => {
           imageUrl: newDedicatoria.imageUrl,
           layout: newDedicatoria.layout,
           alignment: newDedicatoria.alignment,
-          imageSize: newDedicatoria.imageSize
+          imageSize: newDedicatoria.imageSize,
+          backgroundUrl: adminBackgroundUrl || undefined
         });
         
         console.log('[DedicatoriaStep] ✅ Dedicatoria persistida exitosamente:', {

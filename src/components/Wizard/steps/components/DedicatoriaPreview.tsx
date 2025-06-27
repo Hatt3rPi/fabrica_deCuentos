@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image as ImageIcon } from 'lucide-react';
+import { useDedicatoriaConfig } from '../../../../hooks/useDedicatoriaConfig';
 
 type LayoutOption = 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
 type AlignmentOption = 'centro' | 'izquierda' | 'derecha';
@@ -20,6 +21,7 @@ const DedicatoriaPreview: React.FC<DedicatoriaPreviewProps> = ({
   alignment,
   imageSize
 }) => {
+  const { backgroundImageUrl } = useDedicatoriaConfig();
   const getImageSizeClass = () => {
     switch (imageSize) {
       case 'pequena': return 'w-16 h-16';
@@ -59,7 +61,19 @@ const DedicatoriaPreview: React.FC<DedicatoriaPreviewProps> = ({
         Vista Previa
       </h3>
       
-      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-8 min-h-[400px] flex items-center justify-center">
+      <div 
+        className="rounded-lg p-8 min-h-[400px] flex items-center justify-center bg-cover bg-center relative"
+        style={{
+          backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : undefined,
+          backgroundColor: backgroundImageUrl ? undefined : '#f9fafb'
+        }}
+      >
+        {/* Overlay para mejorar legibilidad del texto */}
+        {backgroundImageUrl && (
+          <div className="absolute inset-0 bg-black/20 rounded-lg" />
+        )}
+        
+        <div className="relative z-10 w-full">
         {text ? (
           <div className={`${getLayoutClasses()} max-w-sm`}>
             {imageUrl && (
@@ -83,6 +97,7 @@ const DedicatoriaPreview: React.FC<DedicatoriaPreviewProps> = ({
             <p>Escribe tu dedicatoria para ver la vista previa</p>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
