@@ -1,6 +1,6 @@
 -- Agregar sistema de tracking de fulfillment para pedidos de cuentos completados
 -- Esta migración agrega funcionalidad para gestionar el flujo operacional post-completación
--- IMPORTANTE: Requiere migración 20250627110806_add_user_roles_system.sql ejecutada primero
+-- DEPENDENCIA: Requiere migración 20250627110806_add_user_roles_system.sql (se ejecuta automáticamente antes por timestamp)
 
 -- 1. Agregar campo fulfillment_status a stories
 ALTER TABLE stories ADD COLUMN IF NOT EXISTS fulfillment_status VARCHAR(20);
