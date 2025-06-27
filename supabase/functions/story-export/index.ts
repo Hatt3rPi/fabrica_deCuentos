@@ -39,6 +39,7 @@ interface StoryData {
   dedicatoria_text?: string;
   dedicatoria_image_url?: string;
   dedicatoria_chosen?: boolean; // NULL = no eligió, TRUE = sí, FALSE = no
+  dedicatoria_background_url?: string; // URL de imagen de fondo configurada por admin
   dedicatoria_layout?: {
     layout: 'imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha';
     alignment: 'centro' | 'izquierda' | 'derecha';
@@ -211,7 +212,7 @@ async function getCompleteStoryData(storyId: string, userId: string) {
   // Obtener datos del cuento incluyendo campos de dedicatoria
   const { data: story, error: storyError } = await supabaseAdmin
     .from('stories')
-    .select('*, dedicatoria_text, dedicatoria_image_url, dedicatoria_chosen, dedicatoria_layout')
+    .select('*, dedicatoria_text, dedicatoria_image_url, dedicatoria_chosen, dedicatoria_layout, dedicatoria_background_url')
     .eq('id', storyId)
     .eq('user_id', userId)
     .single();
@@ -781,12 +782,45 @@ function generateHTMLContent(
     console.log(`[story-export] 🎯 generateDedicatoriaPage llamada con:`, {
       dedicatoria_text: story.dedicatoria_text,
       dedicatoria_image_url: story.dedicatoria_image_url,
-      dedicatoria_layout: story.dedicatoria_layout
+      dedicatoria_layout: story.dedicatoria_layout,
+      dedicatoria_chosen: story.dedicatoria_chosen
     });
     
-    if (!story.dedicatoria_text) {
-      console.log(`[story-export] ❌ No hay texto de dedicatoria, retornando página vacía`);
-      return ''; // No mostrar página si no hay texto de dedicatoria
+    if (!story.dedicatoria_chosen) {
+      console.log(`[story-export] ❌ Usuario no eligió dedicatoria (dedicatoria_chosen=false), retornando página vacía`);
+      return ''; // No mostrar página si usuario no eligió tener dedicatoria
+    }
+    
+    console.log(`[story-export] ✅ Usuario eligió dedicatoria (dedicatoria_chosen=true), generando página`);
+    console.log(`[story-export] 📝 Contenido: texto="${story.dedicatoria_text || 'VACÍO'}", imagen="${story.dedicatoria_image_url ? 'SÍ' : 'NO'}"`);
+    
+    // Si no hay texto ni imagen, mostrar página de dedicatoria vacía pero estilizada
+    if (!story.dedicatoria_text && !story.dedicatoria_image_url) {
+      console.log(`[story-export] 🖼️ Generando página de dedicatoria vacía (sin texto ni imagen)`);
+      return `
+        <div class="story-page dedicatoria-page" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+          <div class="page-overlay" style="
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 60px; 
+            text-align: center;
+          ">
+            <div class="dedicatoria-placeholder" style="
+              font-family: ${pageConfig.fontFamily || "'Indie Flower', cursive"}; 
+              font-size: 28px; 
+              line-height: 1.8; 
+              color: #9ca3af; 
+              font-style: italic;
+              max-width: 400px;
+              text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            ">
+              <!-- Página de dedicatoria reservada -->
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     const layout = story.dedicatoria_layout || { layout: 'imagen-arriba', alignment: 'centro', imageSize: 'mediana' };
@@ -812,9 +846,21 @@ function generateHTMLContent(
       'imagen-derecha': 'row-reverse'
     }[layout.layout] || 'column';
 
+    // Usar imagen de fondo si está configurada por admin
+    const backgroundStyle = story.dedicatoria_background_url 
+      ? `background-image: url('${story.dedicatoria_background_url}'); background-size: cover; background-position: center;`
+      : `background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);`;
+    
+    console.log(`[story-export] 🖼️ Imagen de fondo de dedicatoria: ${story.dedicatoria_background_url ? 'SÍ' : 'NO'}`);
+
     return `
-      <div class="story-page dedicatoria-page" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+      <div class="story-page dedicatoria-page" style="${backgroundStyle}">
+        ${story.dedicatoria_background_url ? `
+          <!-- Overlay para mejorar legibilidad cuando hay imagen de fondo -->
+          <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.2);"></div>
+        ` : ''}
         <div class="page-overlay" style="
+          position: relative;
           display: flex; 
           flex-direction: ${flexDirection}; 
           align-items: ${alignmentClass}; 
@@ -822,23 +868,26 @@ function generateHTMLContent(
           padding: 60px; 
           gap: 30px;
           text-align: ${layout.alignment === 'centro' ? 'center' : layout.alignment === 'izquierda' ? 'left' : 'right'};
+          z-index: 1;
         ">
           ${hasImage ? `
             <div class="dedicatoria-image" style="${imageSizeClass} object-fit: cover; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
               <img src="${story.dedicatoria_image_url}" alt="Imagen de dedicatoria" style="width: 100%; height: 100%; object-fit: cover; border-radius: 15px;" />
             </div>
           ` : ''}
-          <div class="dedicatoria-text" style="
-            font-family: ${pageConfig.fontFamily || "'Indie Flower', cursive"}; 
-            font-size: 24px; 
-            line-height: 1.8; 
-            color: #4a5568; 
-            font-style: italic;
-            max-width: 600px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          ">
-            ${textToHTML(story.dedicatoria_text)}
-          </div>
+          ${story.dedicatoria_text ? `
+            <div class="dedicatoria-text" style="
+              font-family: ${pageConfig.fontFamily || "'Indie Flower', cursive"}; 
+              font-size: 24px; 
+              line-height: 1.8; 
+              color: ${story.dedicatoria_background_url ? '#ffffff' : '#4a5568'}; 
+              font-style: italic;
+              max-width: 600px;
+              text-shadow: ${story.dedicatoria_background_url ? '2px 2px 4px rgba(0,0,0,0.8)' : '0 2px 4px rgba(0,0,0,0.1)'};
+            ">
+              ${textToHTML(story.dedicatoria_text)}
+            </div>
+          ` : ''}
         </div>
       </div>
     `;

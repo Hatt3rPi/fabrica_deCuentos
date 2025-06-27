@@ -61,6 +61,15 @@ export interface PageConfig {
   text: PageTextConfig;
 }
 
+export interface DedicatoriaConfig {
+  text: PageTextConfig;
+  imageSize: 'pequena' | 'mediana' | 'grande';
+  allowedLayouts: ('imagen-arriba' | 'imagen-abajo' | 'imagen-izquierda' | 'imagen-derecha')[];
+  allowedAlignments: ('centro' | 'izquierda' | 'derecha')[];
+  backgroundImageUrl?: string; // URL de imagen de fondo para páginas de dedicatoria
+  backgroundImagePosition?: 'cover' | 'contain' | 'center'; // Cómo se muestra la imagen de fondo
+}
+
 export interface StoryStyleConfig {
   id?: string;
   name: string;
@@ -69,10 +78,13 @@ export interface StoryStyleConfig {
   isDefault?: boolean;
   coverConfig: CoverConfig;
   pageConfig: PageConfig;
+  dedicatoriaConfig?: DedicatoriaConfig;
   coverBackgroundUrl?: string;
   pageBackgroundUrl?: string;
+  dedicatoriaBackgroundUrl?: string;
   coverSampleText?: string;
   pageSampleText?: string;
+  dedicatoriaSampleText?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -87,6 +99,17 @@ export interface StyleTemplate {
   configData: {
     cover_config: CoverConfig;
     page_config: PageConfig;
+    dedicatoria_config?: DedicatoriaConfig;
+  };
+  customImages?: {
+    cover_url?: string;
+    page_url?: string;
+    dedicatoria_url?: string;
+  };
+  customTexts?: {
+    cover_text?: string;
+    page_text?: string;
+    dedicatoria_text?: string;
   };
   isPremium: boolean;
   isActive?: boolean;
@@ -131,6 +154,33 @@ export const DEFAULT_PAGE_CONFIG: PageConfig = {
       minHeight: '25%'
     }
   }
+};
+
+export const DEFAULT_DEDICATORIA_CONFIG: DedicatoriaConfig = {
+  text: {
+    fontSize: '2rem',
+    fontFamily: 'Indie Flower',
+    fontWeight: '500',
+    lineHeight: '1.6',
+    color: '#4a5568',
+    textAlign: 'center',
+    textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    position: 'center',
+    horizontalPosition: 'center',
+    verticalAlign: 'center',
+    containerStyle: {
+      background: 'rgba(255, 255, 255, 0.95)',
+      padding: '2rem 3rem',
+      borderRadius: '1rem',
+      maxWidth: '600px',
+      border: '1px solid rgba(0,0,0,0.1)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+      backdropFilter: 'blur(10px)'
+    }
+  },
+  imageSize: 'mediana',
+  allowedLayouts: ['imagen-arriba', 'imagen-abajo', 'imagen-izquierda', 'imagen-derecha'],
+  allowedAlignments: ['centro', 'izquierda', 'derecha']
 };
 
 // Helpers para conversión

@@ -463,6 +463,7 @@ export const storyService = {
     alignment?: string;
     imageSize?: string;
     chosen?: boolean;
+    backgroundUrl?: string;
   }): Promise<void> {
     console.log('[StoryService] persistDedicatoria LLAMADO', {
       storyId,
@@ -483,6 +484,7 @@ export const storyService = {
         imageSize: dedicatoria.imageSize || 'mediana'
       } : null,
       dedicatoria_chosen: dedicatoria.chosen !== undefined ? dedicatoria.chosen : undefined,
+      dedicatoria_background_url: dedicatoria.backgroundUrl || null,
       updated_at: new Date().toISOString()
     };
 

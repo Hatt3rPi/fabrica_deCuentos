@@ -27,6 +27,8 @@ class StyleConfigService {
           category: data.category,
           thumbnailUrl: data.thumbnail_url,
           configData: data.config_data,
+          customImages: data.custom_images,
+          customTexts: data.custom_texts,
           isPremium: data.is_premium,
           isActive: data.is_active,
           createdAt: data.created_at
@@ -230,6 +232,8 @@ class StyleConfigService {
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.category !== undefined) updateData.category = updates.category;
       if (updates.configData !== undefined) updateData.config_data = updates.configData;
+      if (updates.customImages !== undefined) updateData.custom_images = updates.customImages;
+      if (updates.customTexts !== undefined) updateData.custom_texts = updates.customTexts;
       
       console.log('Updating active template with:', updateData);
 
@@ -248,6 +252,8 @@ class StyleConfigService {
         category: data.category,
         thumbnailUrl: data.thumbnail_url,
         configData: data.config_data,
+        customImages: data.custom_images,
+        customTexts: data.custom_texts,
         isPremium: data.is_premium,
         isActive: data.is_active,
         createdAt: data.created_at
@@ -435,7 +441,7 @@ class StyleConfigService {
   }
 
   /**
-   * Obtener una imagen de muestra aleatoria de los cuentos existentes
+   * Obtener una imagen de muestra aleatoria de los cuentos existentes (páginas interiores)
    */
   async getRandomSampleImage(): Promise<string | null> {
     try {
@@ -459,6 +465,105 @@ class StyleConfigService {
       console.error('Error fetching sample image:', error);
       return 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&h=800&fit=crop';
     }
+  }
+
+  /**
+   * Obtener imagen específica para portada
+   */
+  async getCoverSampleImage(): Promise<string> {
+    try {
+      const { data, error } = await supabase
+        .from('story_pages')
+        .select('image_url')
+        .not('image_url', 'is', null)
+        .eq('page_number', 0) // Solo portadas
+        .limit(10);
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const randomIndex = Math.floor(Math.random() * data.length);
+        return data[randomIndex].image_url;
+      }
+
+      // Imagen de fallback específica para portadas
+      return 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&h=800&fit=crop';
+    } catch (error) {
+      console.error('Error fetching cover sample image:', error);
+      return 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&h=800&fit=crop';
+    }
+  }
+
+  /**
+   * Obtener imagen específica para páginas interiores
+   */
+  async getPageSampleImage(): Promise<string> {
+    try {
+      const { data, error } = await supabase
+        .from('story_pages')
+        .select('image_url')
+        .not('image_url', 'is', null)
+        .gt('page_number', 0) // Solo páginas interiores
+        .neq('page_type', 'dedicatoria') // Excluir dedicatorias si existe esta columna
+        .limit(20);
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const randomIndex = Math.floor(Math.random() * data.length);
+        return data[randomIndex].image_url;
+      }
+
+      // Imagen de fallback específica para páginas interiores
+      return 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&h=800&fit=crop';
+    } catch (error) {
+      console.error('Error fetching page sample image:', error);
+      return 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&h=800&fit=crop';
+    }
+  }
+
+  /**
+   * Obtener imagen específica para dedicatoria
+   */
+  async getDedicatoriaSampleImage(): Promise<string> {
+    try {
+      const { data, error } = await supabase
+        .from('story_pages')
+        .select('image_url')
+        .not('image_url', 'is', null)
+        .eq('page_type', 'dedicatoria') // Solo dedicatorias si existe esta columna
+        .limit(10);
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const randomIndex = Math.floor(Math.random() * data.length);
+        return data[randomIndex].image_url;
+      }
+
+      // Imagen de fallback específica para dedicatoria (más suave/emotiva)
+      return 'https://images.unsplash.com/photo-1444927714506-8492d94b5ba0?w=1200&h=800&fit=crop';
+    } catch (error) {
+      console.error('Error fetching dedicatoria sample image:', error);
+      return 'https://images.unsplash.com/photo-1444927714506-8492d94b5ba0?w=1200&h=800&fit=crop';
+    }
+  }
+
+  /**
+   * Obtener todas las imágenes de muestra de una vez
+   */
+  async getAllSampleImages(): Promise<{
+    cover: string;
+    page: string;
+    dedicatoria: string;
+  }> {
+    const [cover, page, dedicatoria] = await Promise.all([
+      this.getCoverSampleImage(),
+      this.getPageSampleImage(),
+      this.getDedicatoriaSampleImage()
+    ]);
+
+    return { cover, page, dedicatoria };
   }
 }
 

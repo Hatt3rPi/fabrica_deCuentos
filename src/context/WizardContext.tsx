@@ -497,8 +497,8 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         literaryStyle: s.literary_style || '',
         centralMessage: s.central_message || '',
         additionalDetails: s.additional_details || '',
-        dedicatoria: s.dedicatoria_text ? {
-          text: s.dedicatoria_text,
+        dedicatoria: (s.dedicatoria_chosen || s.dedicatoria_text || s.dedicatoria_image_url) ? {
+          text: s.dedicatoria_text || '',
           imageUrl: s.dedicatoria_image_url || undefined,
           layout: s.dedicatoria_layout?.layout || 'imagen-arriba',
           alignment: s.dedicatoria_layout?.alignment || 'centro',
