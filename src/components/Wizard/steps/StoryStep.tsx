@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useWizard } from '../../../context/WizardContext';
-import { BookOpen, Lock } from 'lucide-react';
+import { BookOpen, Lock, Loader2 } from 'lucide-react';
 import { storyService } from '../../../services/storyService';
 import { useStory } from '../../../context/StoryContext';
 import { OverlayLoader } from '../../UI/Loader';
@@ -20,7 +20,8 @@ const StoryStep: React.FC = () => {
   } = useWizard();
   const { generateCover, generateCoverVariants } = useStory();
   const { storyId } = useParams();
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoadingStory, setIsLoadingStory] = React.useState(false);
+  const [isGeneratingExtras, setIsGeneratingExtras] = React.useState(false);
   const [generated, setGenerated] = React.useState<{ title: string; paragraphs: string[] } | null>(null);
   const [loaders, setLoaders] = React.useState<string[]>([]);
   
@@ -36,7 +37,8 @@ const StoryStep: React.FC = () => {
   const lockReason = getLockReason('story');
 
   const handleFallback = () => {
-    setIsLoading(false);
+    setIsLoadingStory(false);
+    setIsGeneratingExtras(false);
     setIsGenerating(false);
   };
 
@@ -65,7 +67,7 @@ const StoryStep: React.FC = () => {
   ];
 
   const handleGenerate = async () => {
-    setIsLoading(true);
+    setIsLoadingStory(true);
     setIsGenerating(true);
     setGenerated(null);
     setLoaders([]);
@@ -78,6 +80,10 @@ const StoryStep: React.FC = () => {
       });
       if (result && result.title && Array.isArray(result.paragraphs)) {
         setGenerated(result);
+        // Ocultar el loader principal tan pronto como el cuento esté listo
+        setIsLoadingStory(false);
+        // Indicar que se están generando elementos adicionales
+        setIsGeneratingExtras(true);
         // Actualizar el título en el estado del wizard para que se persista correctamente
         updateStoryTitle(result.title);
         const draft = await storyService.getStoryDraft(storyId!);
@@ -115,7 +121,8 @@ const StoryStep: React.FC = () => {
       console.error('Error generating story:', err);
       alert('No fue posible generar la historia');
     } finally {
-      setIsLoading(false);
+      setIsLoadingStory(false);
+      setIsGeneratingExtras(false);
       setIsGenerating(false);
     }
   };
@@ -265,16 +272,16 @@ const StoryStep: React.FC = () => {
         <button
           type="button"
           onClick={handleGenerate}
-          disabled={isLoading || !storySettings.theme || isLocked || isLockLoading || lockError}
+          disabled={isLoadingStory || isGeneratingExtras || !storySettings.theme || isLocked || isLockLoading || lockError}
           className={`px-5 py-2 rounded-lg flex items-center justify-center gap-2 ${
-            !storySettings.theme || isLoading || isLocked || isLockLoading || lockError
+            !storySettings.theme || isLoadingStory || isGeneratingExtras || isLocked || isLockLoading || lockError
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-purple-600 text-white hover:bg-purple-700'
           }`}
         >
           {isLocked 
             ? `Historia bloqueada: ${lockReason}` 
-            : isLoading 
+            : isLoadingStory || isGeneratingExtras
             ? 'Generando...' 
             : 'Generar la Historia'
           }
@@ -285,16 +292,16 @@ const StoryStep: React.FC = () => {
             <button
               type="button"
               onClick={handleGenerate}
-              disabled={isLoading || isLocked || isLockLoading || lockError}
+              disabled={isLoadingStory || isGeneratingExtras || isLocked || isLockLoading || lockError}
               className={`mt-4 px-4 py-2 rounded ${
-                isLoading || isLocked || isLockLoading || lockError
+                isLoadingStory || isGeneratingExtras || isLocked || isLockLoading || lockError
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-purple-500 text-white hover:bg-purple-600'
               }`}
             >
               {isLocked 
                 ? 'Regeneración bloqueada' 
-                : isLoading 
+                : isLoadingStory || isGeneratingExtras
                 ? 'Generando...' 
                 : 'Generar nuevamente'
               }
@@ -302,13 +309,28 @@ const StoryStep: React.FC = () => {
           </div>
         )}
       </div>
-      {isLoading && (
+      {isLoadingStory && (
         <OverlayLoader
           etapa="cuento_fase1"
           context={{ personaje: characters[0]?.name || 'tus personajes' }}
           messages={loaders}
           onFallback={handleFallback}
         />
+      )}
+      
+      {/* Indicador discreto para procesos secundarios */}
+      {isGeneratingExtras && !isLoadingStory && (
+        <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex items-center gap-3 z-40">
+          <Loader2 className="w-5 h-5 text-purple-600 animate-spin" />
+          <div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              Preparando elementos adicionales...
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Generando portada y variantes
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
