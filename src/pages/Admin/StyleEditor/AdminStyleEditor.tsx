@@ -32,6 +32,7 @@ import TemplatesModal from './components/TemplatesModal';
 import ImageUploader from './components/ImageUploader';
 import TextEditor from './components/TextEditor';
 import CreateTemplateModal from './components/CreateTemplateModal';
+import DedicatoriaImagePanel from './components/DedicatoriaImagePanel';
 
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
@@ -704,8 +705,21 @@ const AdminStyleEditor: React.FC = () => {
                 }`}
               >
                 <Image className="w-4 h-4 inline mr-1" />
-                Imágenes
+                Fondo
               </button>
+              {currentPageType === 'dedicatoria' && (
+                <button
+                  onClick={() => setActivePanel('userImage')}
+                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activePanel === 'userImage'
+                      ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <Image className="w-4 h-4 inline mr-1" />
+                  Usuario
+                </button>
+              )}
               <button
                 onClick={() => setActivePanel('text')}
                 className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -790,6 +804,13 @@ const AdminStyleEditor: React.FC = () => {
                   pageType="dedicatoria"
                 />
               </div>
+            )}
+            
+            {activePanel === 'userImage' && currentPageType === 'dedicatoria' && activeConfig?.dedicatoriaConfig && (
+              <DedicatoriaImagePanel
+                config={activeConfig.dedicatoriaConfig}
+                onChange={updateDedicatoriaConfig}
+              />
             )}
             
             {activePanel === 'text' && (
