@@ -29,6 +29,15 @@ const AdminPedidos: React.FC = () => {
       setCargando(true);
       const filtros = filtroEstado !== 'todos' ? { estado: filtroEstado } : undefined;
       const data = await fulfillmentService.obtenerCuentosConPedido(filtros);
+      
+      // Debug temporal para verificar export_url
+      console.log('[AdminPedidos] Datos recibidos:', data?.map(p => ({
+        id: p.id,
+        title: p.title,
+        export_url: p.export_url,
+        hasExportUrl: !!p.export_url
+      })));
+      
       setPedidos(data);
     } catch (error) {
       console.error('Error cargando pedidos:', error);
@@ -239,6 +248,35 @@ const AdminPedidos: React.FC = () => {
           </select>
         </div>
       </div>
+
+      {/* Debug temporal - tabla de datos */}
+      {process.env.NODE_ENV === 'development' && pedidos.length > 0 && (
+        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-yellow-800 mb-2">🐛 Debug: Datos de pedidos</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-xs">
+              <thead>
+                <tr className="bg-yellow-100">
+                  <th className="p-2 text-left">ID</th>
+                  <th className="p-2 text-left">Título</th>
+                  <th className="p-2 text-left">export_url</th>
+                  <th className="p-2 text-left">Tiene URL?</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pedidos.slice(0, 5).map((pedido) => (
+                  <tr key={pedido.id} className="border-t border-yellow-200">
+                    <td className="p-2 font-mono">{pedido.id.slice(0, 8)}...</td>
+                    <td className="p-2">{pedido.title}</td>
+                    <td className="p-2 font-mono">{pedido.export_url ? pedido.export_url.slice(0, 50) + '...' : 'NULL'}</td>
+                    <td className="p-2">{pedido.export_url && pedido.export_url.trim() ? '✅ SÍ' : '❌ NO'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Lista de pedidos */}
       <div className="space-y-4">

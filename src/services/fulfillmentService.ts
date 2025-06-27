@@ -163,6 +163,14 @@ export const fulfillmentService = {
       .order('completed_at', { ascending: false });
 
     if (error) throw error;
+    
+    // Debug temporal para verificar export_url en búsqueda
+    console.log('[fulfillmentService] Búsqueda - Cuentos encontrados:', data?.map(c => ({
+      id: c.id,
+      title: c.title,
+      export_url: c.export_url
+    })));
+    
     return data as CuentoConPedido[];
   },
 
