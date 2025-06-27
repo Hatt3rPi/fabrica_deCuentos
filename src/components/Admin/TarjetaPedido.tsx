@@ -19,9 +19,6 @@ const TarjetaPedido: React.FC<TarjetaPedidoProps> = ({
   const [nuevoEstado, setNuevoEstado] = useState<EstadoFulfillment | ''>('');
   const [notasCambio, setNotasCambio] = useState('');
 
-  // Debug temporal para verificar export_url
-  console.log(`[TarjetaPedido] Pedido ${pedido.id}: export_url =`, pedido.export_url);
-
   const estadoConfig = pedido.fulfillment_status 
     ? ESTADOS_FULFILLMENT[pedido.fulfillment_status]
     : null;
@@ -138,7 +135,7 @@ const TarjetaPedido: React.FC<TarjetaPedidoProps> = ({
                   Cambiar estado
                 </button>
                 
-                {pedido.export_url && (
+                {pedido.export_url && pedido.export_url.trim() !== '' && (
                   <button
                     onClick={handleVerPDF}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"

@@ -31,14 +31,6 @@ export const fulfillmentService = {
     const { data, error } = await query;
     
     if (error) throw error;
-    
-    // Debug temporal para verificar export_url
-    console.log('[fulfillmentService] Cuentos obtenidos:', data?.map(c => ({
-      id: c.id,
-      title: c.title,
-      export_url: c.export_url
-    })));
-    
     return data as CuentoConPedido[];
   },
 
