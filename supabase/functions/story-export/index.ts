@@ -1160,14 +1160,10 @@ async function markStoryAsCompleted(storyId: string, downloadUrl: string, saveTo
   
   const updateData: any = {
     status: 'completed',
-    completed_at: new Date().toISOString()
+    completed_at: new Date().toISOString(),
+    export_url: downloadUrl, // Siempre guardar URL para acceso admin
+    exported_at: new Date().toISOString()
   };
-
-  // Si se debe guardar en biblioteca, agregar metadata adicional
-  if (saveToLibrary) {
-    updateData.export_url = downloadUrl;
-    updateData.exported_at = new Date().toISOString();
-  }
 
   console.log(`[story-export] 📝 Update data:`, JSON.stringify(updateData, null, 2));
 

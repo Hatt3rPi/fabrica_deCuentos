@@ -19,6 +19,9 @@ const TarjetaPedido: React.FC<TarjetaPedidoProps> = ({
   const [nuevoEstado, setNuevoEstado] = useState<EstadoFulfillment | ''>('');
   const [notasCambio, setNotasCambio] = useState('');
 
+  // Debug temporal para verificar export_url
+  console.log(`[TarjetaPedido] Pedido ${pedido.id}: export_url =`, pedido.export_url);
+
   const estadoConfig = pedido.fulfillment_status 
     ? ESTADOS_FULFILLMENT[pedido.fulfillment_status]
     : null;
