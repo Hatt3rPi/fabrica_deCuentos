@@ -48,7 +48,11 @@ const AdminStyleEditor: React.FC = () => {
   const [activeTemplate, setActiveTemplate] = useState<StyleTemplate | null>(null);
   
   const [originalConfig, setOriginalConfig] = useState<StoryStyleConfig | null>(null);
-  const [previewImage, setPreviewImage] = useState<string>('');
+  // Imágenes por defecto para cada sección
+  const [defaultCoverImage, setDefaultCoverImage] = useState<string>('');
+  const [defaultPageImage, setDefaultPageImage] = useState<string>('');
+  const [defaultDedicatoriaImage, setDefaultDedicatoriaImage] = useState<string>('');
+  // Imágenes custom/subidas por admin
   const [customCoverImage, setCustomCoverImage] = useState<string>('');
   const [customPageImage, setCustomPageImage] = useState<string>('');
   const [customDedicatoriaImage, setCustomDedicatoriaImage] = useState<string>('');
@@ -70,10 +74,10 @@ const AdminStyleEditor: React.FC = () => {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
 
-  // Cargar template activo y imagen de muestra
+  // Cargar template activo y imágenes de muestra
   useEffect(() => {
     loadActiveTemplate();
-    loadSampleImage();
+    loadSampleImages();
   }, []);
 
   // Detectar cambios
@@ -82,13 +86,15 @@ const AdminStyleEditor: React.FC = () => {
       const hasConfigChanges = JSON.stringify(activeConfig) !== JSON.stringify(originalConfig);
       const hasImageChanges = 
         (originalConfig.coverBackgroundUrl || '') !== customCoverImage ||
-        (originalConfig.pageBackgroundUrl || '') !== customPageImage;
+        (originalConfig.pageBackgroundUrl || '') !== customPageImage ||
+        (originalConfig.dedicatoriaBackgroundUrl || '') !== customDedicatoriaImage;
       const hasTextChanges = 
         (originalConfig.coverSampleText || SAMPLE_TEXTS.cover) !== customCoverText ||
-        (originalConfig.pageSampleText || SAMPLE_TEXTS.page) !== customPageText;
+        (originalConfig.pageSampleText || SAMPLE_TEXTS.page) !== customPageText ||
+        (originalConfig.dedicatoriaSampleText || SAMPLE_TEXTS.dedicatoria) !== customDedicatoriaText;
       setIsDirty(hasConfigChanges || hasImageChanges || hasTextChanges);
     }
-  }, [activeConfig, originalConfig, customCoverImage, customPageImage, customCoverText, customPageText]);
+  }, [activeConfig, originalConfig, customCoverImage, customPageImage, customDedicatoriaImage, customCoverText, customPageText, customDedicatoriaText]);
 
   const loadActiveTemplate = async () => {
     try {
@@ -136,10 +142,19 @@ const AdminStyleEditor: React.FC = () => {
     }
   };
 
-  const loadSampleImage = async () => {
-    const image = await styleConfigService.getRandomSampleImage();
-    if (image) {
-      setPreviewImage(image);
+  const loadSampleImages = async () => {
+    try {
+      const images = await styleConfigService.getAllSampleImages();
+      setDefaultCoverImage(images.cover);
+      setDefaultPageImage(images.page);
+      setDefaultDedicatoriaImage(images.dedicatoria);
+      console.log('🖼️ Imágenes por defecto cargadas:', images);
+    } catch (error) {
+      console.error('Error cargando imágenes por defecto:', error);
+      // Usar fallbacks si hay error
+      setDefaultCoverImage('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&h=800&fit=crop');
+      setDefaultPageImage('https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&h=800&fit=crop');
+      setDefaultDedicatoriaImage('https://images.unsplash.com/photo-1444927714506-8492d94b5ba0?w=1200&h=800&fit=crop');
     }
   };
 
@@ -796,9 +811,9 @@ const AdminStyleEditor: React.FC = () => {
                 config={activeConfig}
                 pageType={currentPageType}
                 sampleImage={
-                  currentPageType === 'cover' ? (customCoverImage || previewImage) :
-                  currentPageType === 'dedicatoria' ? (customDedicatoriaImage || previewImage) :
-                  (customPageImage || previewImage)
+                  currentPageType === 'cover' ? (customCoverImage || defaultCoverImage) :
+                  currentPageType === 'dedicatoria' ? (customDedicatoriaImage || defaultDedicatoriaImage) :
+                  (customPageImage || defaultPageImage)
                 }
                 sampleText={
                   currentPageType === 'cover' ? customCoverText :
