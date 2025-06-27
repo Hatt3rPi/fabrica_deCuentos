@@ -160,8 +160,13 @@ SELECT
   s.completed_at,
   s.created_at,
   s.updated_at,
-  p.email as user_email,
-  p.display_name as user_name,
+  au.email as user_email,
+  COALESCE(up.contact_person, split_part(au.email, '@', 1)) as user_name,
+  up.shipping_phone,
+  up.shipping_address,
+  up.shipping_comuna,
+  up.shipping_city,
+  up.shipping_region,
   si.recipient_name,
   si.recipient_phone,
   si.city,
@@ -181,7 +186,8 @@ SELECT
     WHERE fh.story_id = s.id
   ) as history
 FROM stories s
-LEFT JOIN profiles p ON s.user_id = p.id
+LEFT JOIN auth.users au ON s.user_id = au.id
+LEFT JOIN user_profiles up ON s.user_id = up.user_id
 LEFT JOIN shipping_info si ON s.id = si.story_id
 WHERE s.status = 'completed';
 
