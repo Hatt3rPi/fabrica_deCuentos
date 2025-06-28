@@ -1,14 +1,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { Resend } from 'npm:resend@3.2.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { handleCorsPreflightResponse, corsResponse, corsErrorResponse } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return handleCorsPreflightResponse(req);
   }
 
   try {
@@ -40,23 +36,14 @@ Deno.serve(async (req) => {
       `
     });
 
-    return new Response(
-      JSON.stringify({ success: true }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
+    return corsResponse({ success: true }, req);
   } catch (error) {
     console.error('Error sending reset email:', error);
     
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'An unexpected error occurred'
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
+    return corsErrorResponse(
+      error instanceof Error ? error : new Error('An unexpected error occurred'),
+      req,
+      500
     );
   }
 });
