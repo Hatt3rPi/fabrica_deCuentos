@@ -47,6 +47,7 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
   width,
   height,
   quality = 85,
+  format = 'webp',
   withWatermark = true,
   loading = 'lazy',
   onLoad,
@@ -58,27 +59,6 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
   disableDevTools = true,
   canvasProtection = false,
 }) => {
-  // 🚨 HOTFIX: En entornos de test, usar img normal para evitar errores de RPC
-  const isTestEnvironment = 
-    typeof window !== 'undefined' && 
-    (window.Cypress || navigator.userAgent?.includes('Electron'));
-
-  if (isTestEnvironment) {
-    return (
-      <img
-        src={src}
-        alt={alt}
-        className={className}
-        style={style}
-        width={width}
-        height={height}
-        loading={loading}
-        onLoad={onLoad}
-        onError={onError}
-        draggable={false}
-      />
-    );
-  }
   const { user } = useAuth();
   const { getProtectedUrl, applyProtections, detectDevTools } = useImageProtection();
   const { renderToCanvas } = useCanvasProtection();
