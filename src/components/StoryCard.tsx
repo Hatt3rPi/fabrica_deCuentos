@@ -1,7 +1,7 @@
 import React from 'react';
 import { BookOpen, Pencil, Trash2, Loader } from 'lucide-react';
 import { useStory } from '../context/StoryContext';
-import ProtectedImage from './UI/ProtectedImage';
+// import ProtectedImage from './UI/ProtectedImage';
 
 interface StoryCardProps {
   story: {
@@ -37,22 +37,18 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
       {/* Imagen de portada */}
       <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 relative overflow-hidden">
         {imageUrl ? (
-          <ProtectedImage
+          <img
             src={imageUrl}
             alt={story.title}
             loading="lazy"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            withWatermark={true}
-            quality={85}
-            format="webp"
-            disableRightClick={true}
-            disableDragDrop={true}
-            fallbackSrc={imageUrl}
-            placeholder={
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
-                <Loader className="w-8 h-8 animate-spin text-gray-400" />
-              </div>
-            }
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const parent = e.currentTarget.parentElement;
+              if (parent) {
+                parent.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800"><svg class="w-10 h-10 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>';
+              }
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
