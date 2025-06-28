@@ -87,8 +87,8 @@ class ImageProtectionService {
 
   private getDefaultConfig(): ProtectedImageConfig {
     return {
-      // ⚠️ FEATURE FLAGS: Ver docs/tech/image-protection-limitations.md
-      watermarkEnabled: false, // ❌ Deshabilitado: solo metadata, no watermark visual
+      // ✅ FEATURE FLAGS: Watermark visual implementado con CSS overlay
+      watermarkEnabled: true, // ✅ Habilitado: watermark visual CSS overlay
       watermarkOpacity: 0.15,
       watermarkPosition: 'bottom-right',
       signedUrlDuration: 300, // 5 minutos

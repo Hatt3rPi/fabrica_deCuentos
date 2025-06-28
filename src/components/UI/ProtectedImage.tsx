@@ -219,6 +219,38 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
   }, [applyImageProtections, canvasProtection, renderImageToCanvas, onLoad]);
 
   /**
+   * Crea un SVG de watermark optimizado para overlay
+   */
+  const createWatermarkSvg = useCallback((): string => {
+    return `
+      <svg width="150" height="50" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="rgba(0,0,0,0.3)"/>
+          </filter>
+        </defs>
+        <g filter="url(#shadow)">
+          <rect x="0" y="0" width="150" height="50" rx="6" fill="rgba(255,255,255,0.85)" stroke="rgba(138,43,226,0.4)" stroke-width="1"/>
+          <text x="75" y="22" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#8A2BE2">
+            La CuenterIA
+          </text>
+          <text x="75" y="38" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#666">
+            Contenido Protegido
+          </text>
+        </g>
+      </svg>
+    `.trim();
+  }, []);
+
+  /**
+   * Obtiene la posición del watermark basada en configuración
+   */
+  const getWatermarkPosition = useCallback((): string => {
+    // Por ahora usamos bottom-right, pero puede ser configurable
+    return 'calc(100% - 160px) calc(100% - 60px)';
+  }, []);
+
+  /**
    * Maneja errores de carga de imagen
    */
   const handleImageError = useCallback(() => {
@@ -352,6 +384,28 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
         />
       )}
 
+      {/* Watermark visual overlay */}
+      {withWatermark && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            pointerEvents: 'none',
+            zIndex: 2,
+            background: `url("data:image/svg+xml,${encodeURIComponent(createWatermarkSvg())}")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: getWatermarkPosition(),
+            backgroundSize: '150px auto',
+            opacity: 0.15,
+            mixBlendMode: 'multiply',
+          }}
+          className="watermark-overlay"
+        />
+      )}
+
       {/* Overlay de protección */}
       <div
         ref={overlayRef}
@@ -361,7 +415,7 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
           left: 0,
           right: 0,
           bottom: 0,
-          zIndex: 1,
+          zIndex: 3,
           pointerEvents: disableRightClick ? 'auto' : 'none',
           background: 'transparent',
         }}
