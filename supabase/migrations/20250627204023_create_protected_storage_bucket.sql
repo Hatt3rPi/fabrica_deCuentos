@@ -89,7 +89,38 @@ CREATE POLICY "Users can view their own signed URLs"
   TO authenticated
   USING (auth.uid() = user_id);
 
--- 4. Crear función para generar URLs firmadas con cache
+-- 4. Función para consultar cache de URLs firmadas
+CREATE OR REPLACE FUNCTION get_cached_signed_url(
+  p_file_path text
+)
+RETURNS TABLE (
+  url text,
+  expires_at timestamptz,
+  is_valid boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Verificar autenticación
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Usuario no autenticado';
+  END IF;
+
+  RETURN QUERY
+  SELECT 
+    suc.signed_url as url,
+    suc.expires_at,
+    (suc.expires_at > now() + interval '30 seconds') as is_valid
+  FROM signed_urls_cache suc
+  WHERE suc.user_id = auth.uid()
+    AND suc.file_path = p_file_path
+  ORDER BY suc.created_at DESC
+  LIMIT 1;
+END;
+$$;
+
+-- 5. Crear función para generar URLs firmadas con cache mejorado
 CREATE OR REPLACE FUNCTION generate_protected_url(
   p_file_path text,
   p_expires_in integer DEFAULT 300 -- 5 minutos por defecto
@@ -101,41 +132,38 @@ AS $$
 DECLARE
   v_signed_url text;
   v_expires_at timestamptz;
-  v_cached_url text;
+  v_cached_result record;
 BEGIN
   -- Verificar si el usuario está autenticado
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'Usuario no autenticado';
   END IF;
   
-  -- Calcular expiración
-  v_expires_at := now() + (p_expires_in || ' seconds')::interval;
+  -- Buscar en cache usando la función separada
+  SELECT * INTO v_cached_result 
+  FROM get_cached_signed_url(p_file_path);
   
-  -- Buscar en cache
-  SELECT signed_url INTO v_cached_url
-  FROM signed_urls_cache
-  WHERE user_id = auth.uid()
-    AND file_path = p_file_path
-    AND expires_at > now() + interval '30 seconds'; -- Buffer de 30 segundos
-  
-  IF v_cached_url IS NOT NULL THEN
+  IF v_cached_result.url IS NOT NULL AND v_cached_result.is_valid THEN
     -- Actualizar contador de acceso
     UPDATE signed_urls_cache
     SET accessed_count = accessed_count + 1,
         last_accessed_at = now()
     WHERE user_id = auth.uid()
-      AND file_path = p_file_path;
+      AND file_path = p_file_path
+      AND expires_at = v_cached_result.expires_at;
     
-    RETURN v_cached_url;
+    RETURN v_cached_result.url;
   END IF;
   
-  -- Generar nueva URL firmada (simulada por ahora)
-  -- En producción, esto llamaría a la API de Supabase Storage
+  -- Calcular expiración para nueva URL
+  v_expires_at := now() + (p_expires_in || ' seconds')::interval;
+  
+  -- Generar nueva URL firmada
+  -- Nota: En producción esto usaría la API real de Supabase Storage
   v_signed_url := format(
-    '%s/storage/v1/object/sign/protected-storage/%s?token=%s&expires=%s',
-    current_setting('app.supabase_url', true),
+    '/functions/v1/serve-protected-image?path=%s&token=%s&expires=%s',
     p_file_path,
-    encode(gen_random_bytes(32), 'base64'),
+    encode(gen_random_bytes(32), 'base64url'),
     extract(epoch from v_expires_at)::bigint
   );
   
@@ -146,7 +174,8 @@ BEGIN
   DO UPDATE SET 
     signed_url = EXCLUDED.signed_url,
     expires_at = EXCLUDED.expires_at,
-    created_at = now();
+    created_at = now(),
+    accessed_count = 1;
   
   RETURN v_signed_url;
 END;

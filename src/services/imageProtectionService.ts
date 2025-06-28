@@ -116,7 +116,7 @@ class ImageProtectionService {
 
       // Intentar usar el cache primero
       const cached = await this.getCachedSignedUrl(filePath);
-      if (cached && this.isUrlValid(cached.url, cached.expiresAt)) {
+      if (cached && cached.isValid) {
         return {
           url: cached.url,
           expiresAt: cached.expiresAt,
@@ -177,21 +177,27 @@ class ImageProtectionService {
   }
 
   /**
-   * Obtiene una URL firmada del cache
+   * Obtiene una URL firmada del cache usando función separada
    */
   private async getCachedSignedUrl(
     filePath: string
-  ): Promise<{ url: string; expiresAt: Date } | null> {
+  ): Promise<{ url: string; expiresAt: Date; isValid: boolean } | null> {
     try {
-      const { data } = await supabase.rpc('generate_protected_url', {
+      const { data, error } = await supabase.rpc('get_cached_signed_url', {
         p_file_path: filePath,
-        p_expires_in: 0, // Solo para consultar cache
       });
 
-      if (data) {
+      if (error) {
+        logger.debug('Error checking cache for protected URL:', error);
+        return null;
+      }
+
+      if (data && data.length > 0) {
+        const cached = data[0];
         return {
-          url: data,
-          expiresAt: new Date(), // Se validará en isUrlValid
+          url: cached.url,
+          expiresAt: new Date(cached.expires_at),
+          isValid: cached.is_valid,
         };
       }
 

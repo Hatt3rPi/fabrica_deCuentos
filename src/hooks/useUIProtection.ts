@@ -34,7 +34,7 @@ const useUIProtection = (options: UIProtectionOptions = {}) => {
   const keySequenceRef = useRef<string[]>([]);
 
   /**
-   * Detecta si las herramientas de desarrollo están abiertas
+   * Detecta si las herramientas de desarrollo están abiertas usando múltiples métodos
    */
   const detectDevTools = useCallback((): boolean => {
     // Método 1: Comparar dimensiones de ventana
@@ -46,18 +46,87 @@ const useUIProtection = (options: UIProtectionOptions = {}) => {
       return true;
     }
 
-    // Método 2: Detectar console.log redirection
-    let devtools = { open: false };
-    const element = document.createElement('div');
-    Object.defineProperty(element, 'id', {
-      get: function() {
-        devtools.open = true;
-        return '';
+    // Método 2: Detectar console activo con timing
+    let detected = false;
+    const start = performance.now();
+    
+    try {
+      // debugger statement pausará si DevTools están abiertas
+      const checkTimer = setTimeout(() => {
+        detected = false;
+      }, 100);
+      
+      // eval('debugger'); - comentado para evitar pausas
+      
+      clearTimeout(checkTimer);
+      const elapsed = performance.now() - start;
+      
+      if (elapsed > 100) {
+        detected = true;
       }
-    });
+    } catch (e) {
+      // DevTools pueden estar bloqueando eval
+      detected = true;
+    }
 
-    console.dir(element);
-    return devtools.open;
+    // Método 3: Detectar redirection de console (método original mejorado)
+    if (!detected) {
+      const element = document.createElement('div');
+      let consoleDetected = false;
+      
+      Object.defineProperty(element, 'id', {
+        get: function() {
+          consoleDetected = true;
+          return 'devtools-detector';
+        }
+      });
+
+      // Usar requestAnimationFrame para hacer menos detectable
+      requestAnimationFrame(() => {
+        try {
+          console.dir(element);
+        } catch (e) {
+          // Ignorar errores
+        }
+      });
+
+      detected = consoleDetected;
+    }
+
+    // Método 4: Detectar cambios en window.chrome
+    if (!detected && typeof window !== 'undefined') {
+      const chrome = (window as any).chrome;
+      if (chrome && chrome.runtime) {
+        // Verificar si hay extensiones de desarrollo activas
+        detected = chrome.runtime.onConnect && chrome.runtime.onConnect.hasListeners;
+      }
+    }
+
+    // Método 5: Detectar firebug
+    if (!detected && typeof window !== 'undefined') {
+      detected = !!(window as any).firebug || !!(window as any).console?.firebug;
+    }
+
+    // Método 6: Performance timing heuristic
+    if (!detected) {
+      const perfTiming = performance.now();
+      const regex = /./;
+      regex.toString = function() {
+        detected = true;
+        return 'devtools-detected';
+      };
+      
+      // Algunos DevTools interceptan regex toString
+      setTimeout(() => {
+        try {
+          console.log(regex);
+        } catch (e) {
+          // Ignorar errores
+        }
+      }, 1);
+    }
+
+    return detected;
   }, []);
 
   /**

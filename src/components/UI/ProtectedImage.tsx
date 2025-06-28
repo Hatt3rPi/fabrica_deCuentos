@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useImageProtection } from '../../services/imageProtectionService';
 import { useAuth } from '../../context/AuthContext';
 import { logger } from '../../utils/logger';
+import useCanvasProtection from '../../hooks/useCanvasProtection';
 
 interface ProtectedImageProps {
   src: string;
@@ -60,6 +61,7 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
 }) => {
   const { user } = useAuth();
   const { getProtectedUrl, applyProtections, detectDevTools } = useImageProtection();
+  const { renderToCanvas } = useCanvasProtection();
   
   const [state, setState] = useState<ProtectedImageState>({
     protectedUrl: null,
@@ -182,49 +184,26 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
   }, [disableRightClick, disableDragDrop, withWatermark, canvasProtection, disableDevTools, applyProtections]);
 
   /**
-   * Renderiza la imagen en canvas para protección adicional
+   * Renderiza la imagen en canvas para protección adicional usando hook especializado
    */
-  const renderToCanvas = useCallback(async () => {
+  const renderImageToCanvas = useCallback(async () => {
     if (!canvasProtection || !imageRef.current || !canvasRef.current) return;
 
     try {
-      const img = imageRef.current;
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
+      const success = await renderToCanvas(imageRef.current, canvasRef.current, {
+        enableNoise: disableDevTools,
+        noiseIntensity: 2,
+        enableFingerprinting: true,
+        hideOriginal: true,
+      });
 
-      if (!ctx) return;
-
-      // Configurar canvas con las mismas dimensiones que la imagen
-      canvas.width = img.naturalWidth || img.width;
-      canvas.height = img.naturalHeight || img.height;
-
-      // Dibujar imagen en canvas
-      ctx.drawImage(img, 0, 0);
-
-      // Aplicar técnicas anti-screenshot
-      if (disableDevTools) {
-        // Añadir ruido invisible
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        
-        for (let i = 0; i < data.length; i += 4) {
-          // Modificar ligeramente los valores RGB (imperceptible al ojo humano)
-          data[i] = Math.min(255, data[i] + Math.random() * 2 - 1);
-          data[i + 1] = Math.min(255, data[i + 1] + Math.random() * 2 - 1);
-          data[i + 2] = Math.min(255, data[i + 2] + Math.random() * 2 - 1);
-        }
-        
-        ctx.putImageData(imageData, 0, 0);
+      if (!success) {
+        logger.warn('Failed to render image to canvas, falling back to normal image');
       }
-
-      // Ocultar imagen original y mostrar canvas
-      img.style.display = 'none';
-      canvas.style.display = 'block';
-
     } catch (error) {
       logger.debug('Error rendering to canvas:', error);
     }
-  }, [canvasProtection, disableDevTools]);
+  }, [canvasProtection, disableDevTools, renderToCanvas]);
 
   /**
    * Maneja la carga exitosa de la imagen
@@ -233,11 +212,11 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
     applyImageProtections();
     
     if (canvasProtection) {
-      renderToCanvas();
+      renderImageToCanvas();
     }
 
     onLoad?.();
-  }, [applyImageProtections, canvasProtection, renderToCanvas, onLoad]);
+  }, [applyImageProtections, canvasProtection, renderImageToCanvas, onLoad]);
 
   /**
    * Maneja errores de carga de imagen
