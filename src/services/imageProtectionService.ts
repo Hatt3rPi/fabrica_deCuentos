@@ -87,14 +87,15 @@ class ImageProtectionService {
 
   private getDefaultConfig(): ProtectedImageConfig {
     return {
-      watermarkEnabled: true,
+      // ⚠️ FEATURE FLAGS: Ver docs/tech/image-protection-limitations.md
+      watermarkEnabled: false, // ❌ Deshabilitado: solo metadata, no watermark visual
       watermarkOpacity: 0.15,
       watermarkPosition: 'bottom-right',
       signedUrlDuration: 300, // 5 minutos
       rateLimitPerMinute: 60,
-      canvasProtectionEnabled: true,
-      rightClickDisabled: true,
-      devToolsDetection: true,
+      canvasProtectionEnabled: true, // ✅ Completamente funcional
+      rightClickDisabled: true, // ✅ Completamente funcional
+      devToolsDetection: true, // ✅ Completamente funcional
     };
   }
 

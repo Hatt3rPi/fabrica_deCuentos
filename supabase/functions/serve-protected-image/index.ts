@@ -252,7 +252,9 @@ async function addWatermark(
   config: WatermarkConfig
 ): Promise<ArrayBuffer> {
   try {
-    console.log('Adding watermark with config:', config)
+    // ⚠️ LIMITACIÓN: Solo metadata, no watermark visual
+    // Ver docs/tech/image-protection-limitations.md para detalles
+    console.log('Adding watermark metadata (visual watermark not implemented):', config)
 
     // Convertir ArrayBuffer a Uint8Array
     const imageBytes = new Uint8Array(imageBuffer)
@@ -261,15 +263,15 @@ async function addWatermark(
     const watermarkSvg = createWatermarkSvg(config)
     const watermarkBytes = new TextEncoder().encode(watermarkSvg)
     
-    // Por ahora, simulamos la aplicación del watermark
-    // En una implementación completa, usaríamos:
+    // TODO: Implementar watermark visual real con imagescript o skia-canvas
+    // Implementación completa requiere:
     // 1. Decodificar la imagen original (JPEG/PNG/WebP)
     // 2. Crear canvas con dimensiones de la imagen
     // 3. Dibujar imagen original
     // 4. Sobreponer watermark SVG en la posición configurada
     // 5. Exportar a buffer del formato deseado
     
-    // Implementación simplificada que agrega metadata del watermark
+    // Implementación actual: Solo agrega metadata del watermark
     const watermarkedBuffer = addWatermarkMetadata(imageBytes, config)
     
     console.log(`Watermark applied: position=${config.position}, opacity=${config.opacity}`)
@@ -356,10 +358,12 @@ async function optimizeImage(
   }
 ): Promise<ArrayBuffer> {
   try {
-    console.log('Optimizing image with options:', options)
+    // ⚠️ LIMITACIÓN: Solo logging, no optimización real
+    // Ver docs/tech/image-protection-limitations.md para detalles
+    console.log('Image optimization logging only (real optimization not implemented):', options)
     
-    // Implementación simplificada que añade headers de optimización
-    // En una implementación completa, usaríamos bibliotecas de procesamiento de imágenes
+    // TODO: Implementar optimización real con Sharp alternativo para Deno
+    // Bibliotecas sugeridas: imagescript, imagemagick, skia-canvas
     
     const imageBytes = new Uint8Array(imageBuffer)
     
@@ -376,14 +380,14 @@ async function optimizeImage(
     
     console.log('Image optimization metadata:', optimizationMetadata)
     
-    // TODO: Para implementación completa:
+    // TODO: Implementación completa:
     // 1. Decodificar imagen usando biblioteca compatible con Deno
     // 2. Redimensionar si se especifican width/height
     // 3. Ajustar calidad según parámetro
     // 4. Convertir a formato deseado (WebP, JPEG, PNG)
     // 5. Recodificar y retornar nuevo buffer
     
-    // Por ahora retornamos la imagen original
+    // ⚠️ ACTUAL: Retorna imagen sin optimizar
     return imageBuffer
   } catch (error) {
     console.error('Error optimizing image:', error)

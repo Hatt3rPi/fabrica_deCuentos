@@ -158,10 +158,15 @@ BEGIN
   -- Calcular expiración para nueva URL
   v_expires_at := now() + (p_expires_in || ' seconds')::interval;
   
-  -- Generar nueva URL firmada
-  -- Nota: En producción esto usaría la API real de Supabase Storage
+  -- Generar nueva URL firmada con URL base desde configuración
+  -- NOTA: Esta función debe actualizarse para usar el servicio real de Supabase Storage
+  -- en lugar de una URL construida manualmente
   v_signed_url := format(
-    '/functions/v1/serve-protected-image?path=%s&token=%s&expires=%s',
+    '%s/functions/v1/serve-protected-image?path=%s&token=%s&expires=%s',
+    coalesce(
+      (SELECT value FROM app_config WHERE key = 'supabase_url'), 
+      'https://your-project.supabase.co'
+    ),
     p_file_path,
     encode(gen_random_bytes(32), 'base64url'),
     extract(epoch from v_expires_at)::bigint
@@ -197,7 +202,38 @@ BEGIN
 END;
 $$;
 
--- 6. Crear tabla para configuración de protección de imágenes
+-- 6. Crear tabla de configuración de aplicación si no existe
+CREATE TABLE IF NOT EXISTS app_config (
+  key text PRIMARY KEY,
+  value text NOT NULL,
+  description text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Insertar configuración de URL base si no existe
+INSERT INTO app_config (key, value, description)
+VALUES ('supabase_url', 'https://your-project.supabase.co', 'URL base de Supabase para generar URLs firmadas')
+ON CONFLICT (key) DO NOTHING;
+
+-- RLS para app_config
+ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
+
+-- Solo admins pueden gestionar configuración de aplicación
+CREATE POLICY "Only admins can manage app config" 
+  ON app_config 
+  FOR ALL 
+  TO authenticated 
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role = 'admin'
+      AND (expires_at IS NULL OR expires_at > now())
+    )
+  );
+
+-- 7. Crear tabla para configuración de protección de imágenes
 CREATE TABLE IF NOT EXISTS image_protection_config (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   watermark_enabled boolean DEFAULT true,
@@ -276,8 +312,13 @@ $$;
 DO $$
 BEGIN
   RAISE NOTICE '✅ Bucket protegido y sistema de URLs firmadas creado exitosamente';
+  RAISE NOTICE '⚙️  Configuración de aplicación creada con URL placeholder';
   RAISE NOTICE '📋 Próximos pasos:';
-  RAISE NOTICE '   1. Implementar edge function serve-protected-image';
-  RAISE NOTICE '   2. Crear servicio imageProtectionService.ts';
-  RAISE NOTICE '   3. Migrar imágenes existentes al nuevo bucket';
+  RAISE NOTICE '   1. Actualizar app_config.supabase_url con la URL real del proyecto';
+  RAISE NOTICE '   2. Implementar edge function serve-protected-image';
+  RAISE NOTICE '   3. Crear servicio imageProtectionService.ts';
+  RAISE NOTICE '   4. Migrar imágenes existentes al nuevo bucket';
+  RAISE NOTICE '';
+  RAISE NOTICE '🔧 Para configurar la URL de Supabase:';
+  RAISE NOTICE '   UPDATE app_config SET value = ''https://tu-proyecto.supabase.co'' WHERE key = ''supabase_url'';';
 END $$;

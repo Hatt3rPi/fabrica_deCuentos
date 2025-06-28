@@ -25,9 +25,9 @@ CREATE INDEX idx_image_access_logs_file_path ON image_access_logs(file_path);
 CREATE INDEX idx_image_access_logs_created_at ON image_access_logs(created_at DESC);
 CREATE INDEX idx_image_access_logs_ip_created ON image_access_logs(ip_address, created_at DESC);
 
--- Índice parcial para rate limiting (solo últimos 5 minutos)
-CREATE INDEX idx_image_access_logs_rate_limit ON image_access_logs(user_id, created_at) 
-WHERE created_at > (now() - interval '5 minutes');
+-- Índice para rate limiting (sin predicado VOLATILE)
+-- Nota: Rate limiting se implementa en aplicación, no en base de datos
+CREATE INDEX idx_image_access_logs_rate_limit ON image_access_logs(user_id, created_at DESC);
 
 -- RLS para la tabla de logs
 ALTER TABLE image_access_logs ENABLE ROW LEVEL SECURITY;

@@ -47,7 +47,7 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
   width,
   height,
   quality = 85,
-  format: _format = 'webp',
+  format = 'webp',
   withWatermark = true,
   loading = 'lazy',
   onLoad,
