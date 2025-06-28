@@ -3,33 +3,17 @@
 -- Descripción: Revierte completamente las migraciones del PR #285 
 --              Sistema de Protección de Imágenes Multi-Capa
 
--- IMPORTANTE: Esta migración revierte los siguientes archivos:
--- - 20250627204023_create_protected_storage_bucket.sql
--- - 20250627204311_create_image_access_logs.sql  
--- - 20250628000000_fix_rate_limit_index.sql
--- - 20250628_create_additional_storage_buckets.sql
+-- IMPORTANTE: Esta migración revierte las migraciones aplicadas en producción:
+-- ✅ 20250627204023_create_protected_storage_bucket.sql (APLICADA)
+-- ✅ 20250627204311_create_image_access_logs.sql (APLICADA)
+-- ✅ 20250628000000_fix_rate_limit_index.sql (APLICADA)
+-- ❌ 20250628_create_additional_storage_buckets.sql (NO APLICADA - solo local)
 
 -- ================================================================================
--- 1. REVERTIR: 20250628_create_additional_storage_buckets.sql
+-- 1. REVERTIR: 20250628_create_additional_storage_buckets.sql (NO APLICADA)
 -- ================================================================================
-
--- Eliminar funciones de la migración más reciente
-DROP FUNCTION IF EXISTS cleanup_temp_exports();
-DROP FUNCTION IF EXISTS get_export_url(text, integer);
-
--- Eliminar políticas de admin-assets
-DROP POLICY IF EXISTS "Admins can manage all assets" ON storage.objects;
-DROP POLICY IF EXISTS "Public read for system assets" ON storage.objects;
-DROP POLICY IF EXISTS "Public read for watermarks" ON storage.objects;
-
--- Eliminar políticas de exports
-DROP POLICY IF EXISTS "Users can upload exports" ON storage.objects;
-DROP POLICY IF EXISTS "Users can view own exports" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update own exports" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete own exports" ON storage.objects;
-
--- Eliminar buckets (solo si están vacíos)
-DELETE FROM storage.buckets WHERE id IN ('exports', 'admin-assets');
+-- NOTA: Esta migración no está aplicada en producción, por lo que no hay nada que revertir
+-- Solo está aplicada localmente, donde ya fue revertida manualmente
 
 -- ================================================================================
 -- 2. REVERTIR: 20250628000000_fix_rate_limit_index.sql
@@ -60,14 +44,24 @@ DROP FUNCTION IF EXISTS generate_protected_url(text, integer);
 DROP FUNCTION IF EXISTS cleanup_expired_signed_urls();
 DROP FUNCTION IF EXISTS migrate_image_to_protected(text, uuid);
 
--- Eliminar políticas de image_protection_config
-DROP POLICY IF EXISTS "Only admins can manage protection config" ON image_protection_config;
+-- Eliminar políticas solo si las tablas existen
+DO $$
+BEGIN
+    -- Eliminar políticas de image_protection_config
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'image_protection_config') THEN
+        DROP POLICY IF EXISTS "Only admins can manage protection config" ON image_protection_config;
+    END IF;
 
--- Eliminar políticas de app_config
-DROP POLICY IF EXISTS "Only admins can manage app config" ON app_config;
+    -- Eliminar políticas de app_config
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'app_config') THEN
+        DROP POLICY IF EXISTS "Only admins can manage app config" ON app_config;
+    END IF;
 
--- Eliminar políticas de signed_urls_cache
-DROP POLICY IF EXISTS "Users can view their own signed URLs" ON signed_urls_cache;
+    -- Eliminar políticas de signed_urls_cache
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'signed_urls_cache') THEN
+        DROP POLICY IF EXISTS "Users can view their own signed URLs" ON signed_urls_cache;
+    END IF;
+END $$;
 
 -- Eliminar tablas del sistema de protección
 DROP TABLE IF EXISTS image_protection_config;
@@ -93,15 +87,15 @@ DECLARE
     v_remaining_tables integer;
     v_remaining_functions integer;
 BEGIN
-    -- Verificar que los buckets fueron eliminados
+    -- Verificar que el bucket fue eliminado (solo protected-storage existe en producción)
     SELECT COUNT(*) INTO v_remaining_buckets 
     FROM storage.buckets 
-    WHERE id IN ('protected-storage', 'exports', 'admin-assets');
+    WHERE id = 'protected-storage';
     
-    -- Verificar que las tablas fueron eliminadas
+    -- Verificar que las tablas fueron eliminadas (solo las que existían en producción)
     SELECT COUNT(*) INTO v_remaining_tables
     FROM information_schema.tables 
-    WHERE table_name IN ('signed_urls_cache', 'image_protection_config', 'app_config', 'image_access_logs');
+    WHERE table_name IN ('signed_urls_cache', 'image_access_logs');
     
     -- Verificar que las funciones fueron eliminadas
     SELECT COUNT(*) INTO v_remaining_functions
