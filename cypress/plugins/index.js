@@ -3,7 +3,7 @@
 // ***********************************************************
 
 // Importar las funciones de base de datos
-import { deleteTestStories, deleteAllTestData } from '../support/db.js';
+import { deleteTestStories, deleteAllTestData, executeQuery } from '../support/db.js';
 
 /**
  * @type {Cypress.PluginConfig}
@@ -44,6 +44,27 @@ export default (on, config) => {
           console.error('[Cypress] Error en deleteAllTestData:', error);
           return { 
             success: false, 
+            error: error.message,
+            stack: error.stack
+          };
+        }
+      },
+
+      // Tarea para ejecutar consultas SQL directas
+      async 'db:query'({ query, params = [] }) {
+        try {
+          console.log(`[Cypress] Ejecutando query: ${query}`);
+          const result = await executeQuery(query, params);
+          return { 
+            success: true, 
+            rows: result.data || [],
+            error: result.error || null
+          };
+        } catch (error) {
+          console.error('[Cypress] Error en db:query:', error);
+          return { 
+            success: false, 
+            rows: [],
             error: error.message,
             stack: error.stack
           };

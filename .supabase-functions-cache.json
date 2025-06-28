@@ -1,58 +1,62 @@
 {
   "analyze-character": {
     "hash": "e6e8d3a8767126673f874bc56b8554a0d8341015f17914c0e93b083afb7a48a0",
-    "updatedAt": "2025-06-18T14:05:52.781Z"
+    "updatedAt": "2025-06-28T18:07:26.457Z"
   },
   "delete-test-stories": {
     "hash": "770bd727a8d4f5875d8f41ed76007516ebbdf884d20c081960848a2aeea84cec",
-    "updatedAt": "2025-06-18T14:05:56.157Z"
+    "updatedAt": "2025-06-28T18:07:29.294Z"
   },
   "describe-and-sketch": {
-    "hash": "541c399f6cbb6c34e25186017a6e42ed41f4e1e23582787b41a08ab7f977dbb5",
-    "updatedAt": "2025-06-18T14:06:00.372Z"
+    "hash": "081de142a5a0b287b7fab6a86b70102dce3df02b22ae6ae4b2cffc7fde70576c",
+    "updatedAt": "2025-06-28T18:07:32.331Z"
   },
   "generate-illustration": {
     "hash": "c74b041e87fa053643b0dd141cb8fadb82034f5e09c2365839da4c96f63a7084",
-    "updatedAt": "2025-06-18T14:06:12.403Z"
+    "updatedAt": "2025-06-28T18:07:42.215Z"
   },
   "generate-scene": {
-    "hash": "a4d98b61a2d1f656ef9f00fd1625d0f997b10f09b7153a2a457466bde07c41f7",
-    "updatedAt": "2025-06-18T14:06:19.905Z"
+    "hash": "16f1c57063acd01b0712b1464fec58ea7a5145fa419e39c982fdc4e545bd69d8",
+    "updatedAt": "2025-06-28T18:07:48.564Z"
   },
   "generate-spreads": {
-    "hash": "13decde1fce5ca931de5a8cbe25fcb38d7e0c8c64bbabe3d10dcb018ff5512ed",
-    "updatedAt": "2025-06-18T14:06:23.762Z"
+    "hash": "3f884f512941252729fdf3f0d75a08c0c1a8a3d279c3ed26c160ec6e773c1c78",
+    "updatedAt": "2025-06-28T18:07:51.734Z"
   },
   "generate-thumbnail-variant": {
-    "hash": "70666ee36517c3373ab4c18b1a6b6437951b42dc464ddf1b59688fcf0a0b4a2c",
-    "updatedAt": "2025-06-18T14:06:31.081Z"
+    "hash": "857f8cfd00279366be9b46c27a683d702b4259c5ffa8b97d25404256f12191d6",
+    "updatedAt": "2025-06-28T18:07:58.039Z"
   },
   "generate-variations": {
-    "hash": "5011c971f43ba4041a8756cc05b0c7e94114f484db598f41f3150ed8b2ed54d8",
-    "updatedAt": "2025-06-18T14:06:34.828Z"
+    "hash": "ba250f1cc1b172c2ff8ea171dce1f571ce73e79dcd21af13b72cd75507a5be1e",
+    "updatedAt": "2025-06-28T18:08:01.027Z"
   },
   "send-reset-email": {
     "hash": "a0141c2fb36c1f0ab79af42fd7b3187b2d7aea605793cff0f68c98de2ca88e24",
-    "updatedAt": "2025-06-18T14:06:39.863Z"
+    "updatedAt": "2025-06-28T18:08:05.971Z"
   },
   "generate-story": {
-    "hash": "bb76c5fec9d690101cfc4aef3b74d9570df28375ebdf65c38864d6cba1884981",
-    "updatedAt": "2025-06-18T14:06:27.397Z"
+    "hash": "945a31d6826b46abd251dd0e0a7d6a403cb1fea65535e51f467cb6bbb1abf54e",
+    "updatedAt": "2025-06-28T18:07:54.866Z"
   },
   "generate-cover": {
-    "hash": "1a08221f4f7b89a5996767e287755a55cb526d043a8145c47eab234444818f35",
-    "updatedAt": "2025-06-18T14:06:04.174Z"
+    "hash": "dcfa81dd21d9ec6a6371b490eb30d3c70a4bbb230e77c9e7cacb3a80bbaf0684",
+    "updatedAt": "2025-06-28T18:07:36.029Z"
   },
   "generate-cover-variant": {
-    "hash": "5cf0006e7570b8d40be4d3281c41211b70e7387527ce9e2b48b53ad2cbb531cf",
-    "updatedAt": "2025-06-18T14:06:08.642Z"
+    "hash": "95cd7b3f76254391adae2ada2eb1512dd655ec52885c3e234bec144cd743aed8",
+    "updatedAt": "2025-06-28T18:07:39.172Z"
   },
   "generate-image-pages": {
-    "hash": "79079336b857d6367d565ca49438eef5c26131d1db6178af34ed5c9a13701002",
-    "updatedAt": "2025-06-18T14:06:16.225Z"
+    "hash": "40d4c83494a10bdaa89521c8addf74bca8d01c0635125ab5a560cc023087dbec",
+    "updatedAt": "2025-06-28T18:07:45.245Z"
   },
   "story-export": {
-    "hash": "90387b97bf257c5e0a46b760eba6707ee4f5878d057b3423a9d3a90985d52b3d",
-    "updatedAt": "2025-06-18T14:06:45.567Z"
+    "hash": "ab5d23646b1895c37a13042fe16116b6921e480bee8255cabdbfe3e988177e77",
+    "updatedAt": "2025-06-28T18:08:20.136Z"
+  },
+  "serve-protected-image": {
+    "hash": "cd1de68cb319724784aa583a97f465999b217d862443aff18ddbd2089384f86f",
+    "updatedAt": "2025-06-28T18:08:09.666Z"
   }
 }

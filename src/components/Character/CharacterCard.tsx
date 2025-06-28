@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Edit2, Trash2, Lock } from 'lucide-react';
 import { Character } from '../../types';
+import ProtectedImage from '../UI/ProtectedImage';
 
 interface CharacterCardProps {
   character: Character;
@@ -47,10 +48,20 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
     >
       <div className="aspect-square relative">
         {character.thumbnailUrl ? (
-          <img
+          <ProtectedImage
             src={character.thumbnailUrl}
             alt={character.name}
             className="w-full h-full object-cover"
+            withWatermark={true}
+            quality={90}
+            format="webp"
+            disableRightClick={true}
+            disableDragDrop={true}
+            placeholder={
+              <div className="w-full h-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                <span className="text-gray-400 dark:text-gray-500">Cargando...</span>
+              </div>
+            }
           />
         ) : (
           <div className="w-full h-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">

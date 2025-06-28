@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, Pencil, Trash2, Loader } from 'lucide-react';
 import { useStory } from '../context/StoryContext';
+import PublicImage from './UI/PublicImage';
 
 interface StoryCardProps {
   story: {
@@ -27,6 +28,9 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
 
   const imageUrl = state?.url || story.cover_url;
   const isLoading = state?.status === 'generating';
+  
+  // Debug log
+  console.log(`[StoryCard] ${story.title}:`, { imageUrl, state, cover_url: story.cover_url });
 
   return (
     <div className="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-transparent hover:-translate-y-1">
@@ -36,11 +40,17 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
       {/* Imagen de portada */}
       <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 relative overflow-hidden">
         {imageUrl ? (
-          <img 
-            src={imageUrl} 
-            alt={story.title} 
-            loading="lazy" 
+          <PublicImage
+            src={imageUrl}
+            alt={story.title}
+            loading="lazy"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            placeholder={
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+                <Loader className="w-8 h-8 animate-spin text-gray-400" />
+              </div>
+            }
+            showErrorIcon={true}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
