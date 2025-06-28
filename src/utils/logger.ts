@@ -3,7 +3,10 @@
  * 
  * Utiliza import.meta.env.DEV para determinar si los logs se muestran.
  * En producción, solo se muestran warnings y errores.
+ * Integrado con Sentry para monitoreo automático en producción.
  */
+
+import * as Sentry from "@sentry/react";
 
 const isDev = import.meta.env.DEV;
 
@@ -27,13 +30,45 @@ export const logger = {
    * Warnings - siempre activos
    * Usar para advertencias que no rompen funcionalidad
    */
-  warn: console.warn,
+  warn: (message: string, ...data: any[]) => {
+    console.warn(message, ...data);
+    
+    // Enviar warnings importantes a Sentry en producción
+    if (!isDev) {
+      Sentry.captureMessage(message, 'warning');
+      if (data.length > 0) {
+        Sentry.setContext('warning_data', { data });
+      }
+    }
+  },
 
   /**
-   * Errores - siempre activos
+   * Errores - siempre activos + Sentry
    * Usar para errores críticos y excepciones
    */
-  error: console.error,
+  error: (message: string, error?: Error | any, context?: Record<string, any>) => {
+    console.error(message, error, context);
+    
+    // Enviar todos los errores a Sentry
+    if (!isDev) {
+      if (error instanceof Error) {
+        // Si es un Error object, usar captureException
+        Sentry.captureException(error, {
+          tags: { source: 'logger' },
+          extra: { message, context }
+        });
+      } else {
+        // Si es solo un mensaje, usar captureMessage
+        Sentry.captureMessage(message, 'error');
+        if (context || error) {
+          Sentry.setContext('error_data', { 
+            additionalData: error,
+            context 
+          });
+        }
+      }
+    }
+  },
 
   /**
    * Log condicional personalizado
@@ -59,6 +94,63 @@ export const logger = {
     start: () => {},
     end: () => {},
     collapsed: () => {}
+  },
+
+  /**
+   * Función específica para errores de red/API
+   */
+  apiError: (endpoint: string, error: Error | any, requestData?: any) => {
+    const message = `API Error en ${endpoint}`;
+    console.error(message, error, requestData);
+    
+    if (!isDev) {
+      Sentry.captureException(error instanceof Error ? error : new Error(message), {
+        tags: { 
+          source: 'api',
+          endpoint 
+        },
+        extra: { 
+          endpoint,
+          requestData,
+          errorDetails: error
+        }
+      });
+    }
+  },
+
+  /**
+   * Función para errores de usuario/UX
+   */
+  userError: (action: string, error: Error | any, userContext?: any) => {
+    const message = `User Error durante ${action}`;
+    console.error(message, error, userContext);
+    
+    if (!isDev) {
+      Sentry.captureException(error instanceof Error ? error : new Error(message), {
+        tags: { 
+          source: 'user_action',
+          action 
+        },
+        extra: { 
+          action,
+          userContext,
+          errorDetails: error
+        }
+      });
+    }
+  },
+
+  /**
+   * Enviar evento personalizado a Sentry
+   */
+  sentryEvent: (eventName: string, data?: Record<string, any>) => {
+    if (!isDev) {
+      Sentry.addBreadcrumb({
+        message: eventName,
+        data,
+        timestamp: Date.now() / 1000,
+      });
+    }
   }
 };
 
@@ -68,6 +160,19 @@ export const logger = {
 export const perfLogger = {
   start: isDev ? (label: string) => console.time(label) : () => {},
   end: isDev ? (label: string) => console.timeEnd(label) : () => {},
+};
+
+/**
+ * Utility para configurar contexto de usuario en Sentry
+ */
+export const setUserContext = (user: { id: string; email?: string; [key: string]: any }) => {
+  if (!isDev) {
+    Sentry.setUser({
+      id: user.id,
+      email: user.email,
+      ...user
+    });
+  }
 };
 
 /**

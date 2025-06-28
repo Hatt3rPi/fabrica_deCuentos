@@ -25,6 +25,7 @@ import AdminStyleEditor from './pages/Admin/StyleEditor/AdminStyleEditor';
 import AdminPedidos from './pages/Admin/Pedidos';
 import AdminUsers from './pages/Admin/Users';
 import { motion, AnimatePresence } from 'framer-motion';
+import SentryTest from './components/Debug/SentryTest';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -189,6 +190,7 @@ function AnimatedRoutes() {
               </footer>
             </div>
             <ToastContainer />
+            <SentryTest />
           </div>
         )}
       </motion.div>

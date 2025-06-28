@@ -21,6 +21,8 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@sentry/react": "^9.33.0",
+    "@sentry/vite-plugin": "^3.5.0",
     "@supabase/supabase-js": "^2.49.8",
     "@tailwindcss/typography": "^0.5.16",
     "@types/react-datepicker": "^7.0.0",

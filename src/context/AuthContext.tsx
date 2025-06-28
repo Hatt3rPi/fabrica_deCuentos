@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { createClient, User, SupabaseClient } from '@supabase/supabase-js';
+import { setUserContext } from '../utils/logger';
 
 interface AuthContextType {
   user: User | null;
@@ -21,7 +22,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      // Configurar contexto de usuario en Sentry
+      if (currentUser) {
+        setUserContext({
+          id: currentUser.id,
+          email: currentUser.email,
+          // Añadir más campos si es necesario
+          created_at: currentUser.created_at,
+          last_sign_in_at: currentUser.last_sign_in_at,
+        });
+      } else {
+        // Limpiar contexto cuando el usuario se desconecta
+        setUserContext({ id: 'anonymous' });
+      }
     });
 
     return () => subscription.unsubscribe();
