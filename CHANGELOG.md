@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fix: Filtro de usuario en "Mis cuentos" (2025-06-28)
+- **Problema**: La página "Mis cuentos" no filtraba explícitamente por usuario, permitiendo que usuarios con roles admin/operator vean cuentos de otros usuarios
+- **Solución**: Agregado filtro explícito `.eq('user_id', user?.id)` en la consulta de MyStories.tsx
+- **Beneficio**: Garantiza que cada usuario solo vea sus propios cuentos, independientemente de sus roles
+
 ### Feature: Sistema Robusto de Roles de Usuario (2025-06-27)
 - **Reemplazo de emails hardcodeados**: Sistema escalable de roles admin/operator/user
 - **Base de Datos**:
