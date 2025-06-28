@@ -5,7 +5,7 @@
  * incluyendo URLs firmadas, watermarks, y medidas de seguridad frontend.
  */
 
-import { supabase } from '../config/supabase';
+import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
 
 export interface ProtectedImageConfig {
