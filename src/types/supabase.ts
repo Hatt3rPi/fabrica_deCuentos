@@ -1308,6 +1308,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      cleanup_temp_exports: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       cleanup_user_content: {
         Args: { p_email: string } | { user_id: string }
         Returns: string
@@ -1354,6 +1358,10 @@ export type Database = {
           expires_at: string
           is_valid: boolean
         }[]
+      }
+      get_export_url: {
+        Args: { p_file_path: string; p_expires_in?: number }
+        Returns: string
       }
       get_image_access_stats: {
         Args: { p_user_id?: string; p_start_date?: string; p_end_date?: string }

@@ -5,7 +5,7 @@
  * Usado para portadas, miniaturas, y otros contenidos no sensibles.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Loader, ImageOff } from 'lucide-react';
 
 interface PublicImageProps {
@@ -39,6 +39,28 @@ const PublicImage: React.FC<PublicImageProps> = ({
 }) => {
   const [imageState, setImageState] = useState<'loading' | 'loaded' | 'error'>('loading');
   const [currentSrc, setCurrentSrc] = useState(src);
+
+  // Actualizar currentSrc cuando cambia src
+  useEffect(() => {
+    if (src && src !== currentSrc) {
+      setCurrentSrc(src);
+      setImageState('loading');
+    }
+  }, [src]);
+
+  // Si no hay src, mostrar error directamente
+  if (!src && !fallbackSrc) {
+    return (
+      <div 
+        className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 ${className}`}
+        style={{ width, height, ...style }}
+      >
+        {showErrorIcon && (
+          <ImageOff className="w-8 h-8 text-gray-400 dark:text-gray-600" />
+        )}
+      </div>
+    );
+  }
 
   const handleLoad = useCallback(() => {
     setImageState('loaded');

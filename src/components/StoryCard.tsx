@@ -28,6 +28,9 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
 
   const imageUrl = state?.url || story.cover_url;
   const isLoading = state?.status === 'generating';
+  
+  // Debug log
+  console.log(`[StoryCard] ${story.title}:`, { imageUrl, state, cover_url: story.cover_url });
 
   return (
     <div className="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-transparent hover:-translate-y-1">
