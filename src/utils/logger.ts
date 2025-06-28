@@ -3,7 +3,10 @@
  * 
  * Utiliza import.meta.env.DEV para determinar si los logs se muestran.
  * En producción, solo se muestran warnings y errores.
+ * Integrado con Sentry para monitoreo de errores en producción.
  */
+
+import * as Sentry from "@sentry/react";
 
 const isDev = import.meta.env.DEV;
 
@@ -33,7 +36,15 @@ export const logger = {
    * Errores - siempre activos
    * Usar para errores críticos y excepciones
    */
-  error: console.error,
+  error: (message: string, error?: Error | any, context?: Record<string, any>) => {
+    console.error(message, error, context);
+    if (!isDev && error instanceof Error) {
+      Sentry.captureException(error, {
+        tags: { source: 'logger' },
+        extra: { message, context }
+      });
+    }
+  },
 
   /**
    * Log condicional personalizado
@@ -80,6 +91,12 @@ export const wizardLogger = {
   
   error: (step: string, error: Error) => {
     console.error(`🧙‍♂️ [Wizard Error] ${step}:`, error);
+    if (!isDev) {
+      Sentry.captureException(error, {
+        tags: { source: 'wizard', step },
+        extra: { wizardStep: step }
+      });
+    }
   }
 };
 
@@ -97,5 +114,71 @@ export const autosaveLogger = {
   
   error: (error: Error) => {
     console.error('💾 [AutoSave] ❌ Error al persistir:', error);
+    if (!isDev) {
+      Sentry.captureException(error, {
+        tags: { source: 'autosave' },
+        extra: { context: 'save_failed' }
+      });
+    }
+  }
+};
+
+/**
+ * Funciones especializadas para Sentry
+ */
+export const sentryLogger = {
+  /**
+   * Capturar mensaje personalizado
+   */
+  captureMessage: (message: string, level: 'info' | 'warning' | 'error' = 'info') => {
+    if (!isDev) {
+      Sentry.captureMessage(message, level);
+    }
+  },
+
+  /**
+   * Capturar excepción con contexto adicional
+   */
+  captureException: (error: Error, context?: Record<string, any>) => {
+    if (!isDev) {
+      Sentry.captureException(error, {
+        extra: context
+      });
+    }
+  },
+
+  /**
+   * Establecer contexto de usuario
+   */
+  setUserContext: (user: { id: string; email?: string }) => {
+    if (!isDev) {
+      Sentry.setUser({
+        id: user.id,
+        email: user.email
+      });
+    }
+  },
+
+  /**
+   * Limpiar contexto de usuario (logout)
+   */
+  clearUserContext: () => {
+    if (!isDev) {
+      Sentry.setUser(null);
+    }
+  },
+
+  /**
+   * Añadir breadcrumb personalizado
+   */
+  addBreadcrumb: (message: string, category: string, data?: Record<string, any>) => {
+    if (!isDev) {
+      Sentry.addBreadcrumb({
+        message,
+        category,
+        data,
+        level: 'info'
+      });
+    }
   }
 };
