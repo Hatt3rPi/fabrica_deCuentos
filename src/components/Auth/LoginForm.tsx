@@ -39,7 +39,7 @@ const loginThemes: ThemeType[] = [
 
 const LoginForm: React.FC = () => {
   // Mantenemos el estado del tema actual para posibles usos futuros
-  const [_, setCurrentTheme] = useState<ThemeType>(loginThemes[0]);
+  const [, setCurrentTheme] = useState<ThemeType>(loginThemes[0]);
   
   const handleThemeChange = useCallback((theme: ThemeType) => {
     setCurrentTheme(theme);
@@ -62,7 +62,7 @@ const LoginForm: React.FC = () => {
       emailSchema.parse(email);
       setEmailError('');
       return true;
-    } catch (err) {
+    } catch {
       if (err instanceof z.ZodError) {
         setEmailError(err.errors[0].message);
       }
@@ -75,7 +75,7 @@ const LoginForm: React.FC = () => {
       passwordSchema.parse(password);
       setPasswordError('');
       return true;
-    } catch (err) {
+    } catch {
       if (err instanceof z.ZodError) {
         setPasswordError(err.errors[0].message);
       }
@@ -96,7 +96,7 @@ const LoginForm: React.FC = () => {
       await signIn(email, password);
       // After successful login, navigate to home page
       navigate('/home');
-    } catch (err) {
+    } catch {
       setError('Error al iniciar sesión. Por favor, verifica tus credenciales.');
       setIsLoading(false);
     }
@@ -134,7 +134,7 @@ const LoginForm: React.FC = () => {
       }
 
       setTokenSent(true);
-    } catch (err) {
+    } catch {
       setError('Error al enviar el correo de recuperación. Por favor, intenta de nuevo.');
     } finally {
       setIsLoading(false);
@@ -147,7 +147,7 @@ const LoginForm: React.FC = () => {
 
     try {
       tokenSchema.parse(recoveryToken);
-    } catch (err) {
+    } catch {
       setError('El código de recuperación debe tener 8 caracteres');
       return;
     }
@@ -170,7 +170,7 @@ const LoginForm: React.FC = () => {
       setNewPassword('');
       setError('');
       alert('Contraseña actualizada correctamente. Por favor, inicia sesión.');
-    } catch (err) {
+    } catch {
       setError('Error al restablecer la contraseña. Por favor, verifica el código e intenta de nuevo.');
     } finally {
       setIsLoading(false);

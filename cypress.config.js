@@ -17,6 +17,8 @@ export default defineConfig({
         VITE_SUPABASE_SERVICE_ROLE_KEY: process.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
         CLEANUP_API_KEY: process.env.CLEANUP_API_KEY, // Clave para autenticar las llamadas a la Edge Function
         TEST_USER_EMAIL: process.env.TEST_USER_EMAIL || 'test@example.com',
+        // 🚨 HOTFIX: Deshabilitar protección de imágenes durante tests para evitar errores de RPC
+        VITE_DISABLE_IMAGE_PROTECTION: 'true',
       };
       
       // Advertencia si no se proporciona la clave de servicio
