@@ -198,8 +198,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- 8. Índices para performance
+CREATE INDEX IF NOT EXISTS idx_product_prices_lookup ON product_prices(product_type_id, valid_from DESC, valid_to);
 CREATE INDEX IF NOT EXISTS idx_product_prices_active ON product_prices(product_type_id, valid_from DESC)
-WHERE valid_to IS NULL OR valid_to > now();
+WHERE valid_to IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_orders_user_status ON orders(user_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_orders_status_expires ON orders(status, expires_at);
