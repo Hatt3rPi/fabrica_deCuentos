@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, Pencil, Trash2, Loader } from 'lucide-react';
 import { useStory } from '../context/StoryContext';
+import AddToCartButton from './Cart/AddToCartButton';
 
 interface StoryCardProps {
   story: {
@@ -83,35 +84,63 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
         </div>
         
         {/* Acciones */}
-        <div className="flex gap-2 mt-4">
+        <div className="space-y-3 mt-4">
           {story.status === 'completed' ? (
-            <button
-              onClick={() => onRead(story.id)}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 dark:from-green-600 dark:to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-600 dark:hover:from-green-700 dark:hover:to-emerald-700 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800"
-            >
-              <BookOpen className="w-4 h-4 flex-shrink-0" />
-              <span>Leer cuento</span>
-            </button>
+            <>
+              {/* Fila de botones principales */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onRead(story.id)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 dark:from-green-600 dark:to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-600 dark:hover:from-green-700 dark:hover:to-emerald-700 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800"
+                >
+                  <BookOpen className="w-4 h-4 flex-shrink-0" />
+                  <span>Leer cuento</span>
+                </button>
+                
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(story);
+                  }}
+                  className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
+                  aria-label="Eliminar cuento"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+              
+              {/* Botón de agregar al carrito */}
+              <AddToCartButton
+                storyId={story.id}
+                storyTitle={story.title}
+                storyThumbnail={imageUrl}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              />
+            </>
           ) : (
-            <button
-              onClick={() => onContinue(story.id)}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 dark:from-amber-600 dark:to-orange-600 text-white text-sm font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 dark:hover:from-amber-700 dark:hover:to-orange-700 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 dark:focus:ring-offset-gray-800"
-            >
-              <Pencil className="w-4 h-4 flex-shrink-0" />
-              <span>Continuar</span>
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onContinue(story.id)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 dark:from-amber-600 dark:to-orange-600 text-white text-sm font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 dark:hover:from-amber-700 dark:hover:to-orange-700 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 dark:focus:ring-offset-gray-800"
+              >
+                <Pencil className="w-4 h-4 flex-shrink-0" />
+                <span>Continuar</span>
+              </button>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(story);
+                }}
+                className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
+                aria-label="Eliminar cuento"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           )}
-          
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(story);
-            }}
-            className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
-            aria-label="Eliminar cuento"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </div>
