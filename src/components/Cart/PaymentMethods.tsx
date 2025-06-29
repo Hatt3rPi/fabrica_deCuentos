@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, Smartphone, University, Check } from 'lucide-react';
+import { CreditCard, Smartphone, Building2, Check } from 'lucide-react';
 import Button from '../UI/Button';
 
 interface PaymentMethod {
@@ -37,7 +37,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
     {
       id: 'transbank',
       name: 'Webpay Plus',
-      icon: University,
+      icon: Building2,
       description: 'Pago seguro con Transbank',
       available: true
     },
