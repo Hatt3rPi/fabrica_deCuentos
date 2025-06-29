@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Package, Search, Filter, Download, RefreshCw } from 'lucide-react';
 import { useRoleGuard } from '../../hooks/useRoleGuard';
-import { fulfillmentService } from '../../services/fulfillmentService';
+import { fulfillmentService, OrderWithPayment } from '../../services/fulfillmentService';
 import { CuentoConPedido, EstadoFulfillment, ESTADOS_FULFILLMENT } from '../../types';
 import TarjetaPedido from '../../components/Admin/TarjetaPedido';
 import ModalEnvio from '../../components/Admin/ModalEnvio';
 import EstadisticasPedidos from '../../components/Admin/EstadisticasPedidos';
+import OrderCard from '../../components/Admin/OrderCard';
 import { supabase } from '../../lib/supabase';
 
 const AdminPedidos: React.FC = () => {
@@ -16,12 +17,14 @@ const AdminPedidos: React.FC = () => {
   });
   
   const [pedidos, setPedidos] = useState<CuentoConPedido[]>([]);
+  const [ordenes, setOrdenes] = useState<OrderWithPayment[]>([]);
   const [cargando, setCargando] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState<EstadoFulfillment | 'todos'>('todos');
   const [textoBusqueda, setTextoBusqueda] = useState('');
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<CuentoConPedido | null>(null);
   const [mostrarModalEnvio, setMostrarModalEnvio] = useState(false);
   const [actualizando, setActualizando] = useState(false);
+  const [vistaActiva, setVistaActiva] = useState<'historias' | 'ordenes'>('historias');
 
   // Cargar pedidos
   const cargarPedidos = async () => {
@@ -32,6 +35,19 @@ const AdminPedidos: React.FC = () => {
       setPedidos(data);
     } catch (error) {
       console.error('Error cargando pedidos:', error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  // Cargar órdenes
+  const cargarOrdenes = async () => {
+    try {
+      setCargando(true);
+      const data = await fulfillmentService.obtenerOrdenesConPago({ limit: 100 });
+      setOrdenes(data);
+    } catch (error) {
+      console.error('Error cargando órdenes:', error);
     } finally {
       setCargando(false);
     }
@@ -100,11 +116,20 @@ const AdminPedidos: React.FC = () => {
     }
   };
 
+  // Cargar datos según vista activa
+  const cargarDatos = async () => {
+    if (vistaActiva === 'historias') {
+      await cargarPedidos();
+    } else {
+      await cargarOrdenes();
+    }
+  };
+
   // Suscripción a cambios en tiempo real
   useEffect(() => {
     if (!isAuthorized || roleLoading) return;
 
-    cargarPedidos();
+    cargarDatos();
 
     // Suscribirse a cambios en stories completadas
     const channel = supabase
@@ -118,7 +143,7 @@ const AdminPedidos: React.FC = () => {
           filter: 'status=eq.completed'
         },
         () => {
-          cargarPedidos();
+          cargarDatos();
         }
       )
       .subscribe();
@@ -126,7 +151,7 @@ const AdminPedidos: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isAuthorized, roleLoading, filtroEstado]);
+  }, [isAuthorized, roleLoading, filtroEstado, vistaActiva]);
 
   // Filtrar pedidos localmente por búsqueda
   const pedidosFiltrados = useMemo(() => {
@@ -186,7 +211,7 @@ const AdminPedidos: React.FC = () => {
         
         <div className="flex gap-2">
           <button
-            onClick={cargarPedidos}
+            onClick={cargarDatos}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             disabled={cargando}
           >
@@ -201,6 +226,34 @@ const AdminPedidos: React.FC = () => {
             <Download className="w-4 h-4" />
             Exportar CSV
           </button>
+        </div>
+      </div>
+
+      {/* Pestañas de vista */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8 px-4">
+            <button
+              onClick={() => setVistaActiva('historias')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                vistaActiva === 'historias'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Historias Individuales
+            </button>
+            <button
+              onClick={() => setVistaActiva('ordenes')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                vistaActiva === 'ordenes'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Órdenes de Carrito
+            </button>
+          </nav>
         </div>
       </div>
 
@@ -240,30 +293,52 @@ const AdminPedidos: React.FC = () => {
         </div>
       </div>
 
-      {/* Lista de pedidos */}
+      {/* Contenido según vista activa */}
       <div className="space-y-4">
         {cargando ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
           </div>
-        ) : pedidosFiltrados.length === 0 ? (
-          <div className="bg-gray-50 rounded-lg p-12 text-center">
-            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No se encontraron pedidos</p>
-          </div>
+        ) : vistaActiva === 'historias' ? (
+          // Vista de historias individuales
+          pedidosFiltrados.length === 0 ? (
+            <div className="bg-gray-50 rounded-lg p-12 text-center">
+              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No se encontraron historias</p>
+            </div>
+          ) : (
+            pedidosFiltrados.map(pedido => (
+              <TarjetaPedido
+                key={pedido.id}
+                pedido={pedido}
+                onActualizarEstado={actualizarEstado}
+                onVerDetalles={() => {
+                  setPedidoSeleccionado(pedido);
+                  setMostrarModalEnvio(true);
+                }}
+                actualizando={actualizando}
+              />
+            ))
+          )
         ) : (
-          pedidosFiltrados.map(pedido => (
-            <TarjetaPedido
-              key={pedido.id}
-              pedido={pedido}
-              onActualizarEstado={actualizarEstado}
-              onVerDetalles={() => {
-                setPedidoSeleccionado(pedido);
-                setMostrarModalEnvio(true);
-              }}
-              actualizando={actualizando}
-            />
-          ))
+          // Vista de órdenes de carrito
+          ordenes.length === 0 ? (
+            <div className="bg-gray-50 rounded-lg p-12 text-center">
+              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No se encontraron órdenes</p>
+            </div>
+          ) : (
+            ordenes.map(orden => (
+              <OrderCard
+                key={orden.id}
+                order={orden}
+                onUpdateStatus={(orderId, status) => {
+                  // Recargar datos después de actualizar
+                  cargarDatos();
+                }}
+              />
+            ))
+          )
         )}
       </div>
 
@@ -275,7 +350,7 @@ const AdminPedidos: React.FC = () => {
             setMostrarModalEnvio(false);
             setPedidoSeleccionado(null);
           }}
-          onUpdate={cargarPedidos}
+          onUpdate={cargarDatos}
         />
       )}
     </div>

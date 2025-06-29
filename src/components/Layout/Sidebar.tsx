@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Home, Palette, Package, Users } from 'lucide-react';
+import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Home, Palette, Package, Users, DollarSign } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRoleCheck } from '../../hooks/useRoleGuard';
 import { Link } from 'react-router-dom';
@@ -16,6 +16,7 @@ const Sidebar: React.FC = () => {
   const canManageStyles = useRoleCheck([], ['config.styles']);
   const canManageOrders = useRoleCheck([], ['orders.view']);
   const canManageUsers = useRoleCheck([], ['users.manage']);
+  const canManageProducts = useRoleCheck([], ['products.manage']);
   
   const { pedidosPendientes, nuevosPedidos, resetearNuevos } = useNotificacionesPedidos();
   const [settings, setSettings] = useState<ImageGenerationSettings | null>(null);
@@ -279,6 +280,17 @@ const Sidebar: React.FC = () => {
               >
                 <Users className="w-5 h-5" />
                 <span>Usuarios</span>
+              </Link>
+            </li>
+          )}
+          {canManageProducts && (
+            <li>
+              <Link
+                to="/admin/precios"
+                className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
+              >
+                <DollarSign className="w-5 h-5" />
+                <span>Precios</span>
               </Link>
             </li>
           )}
