@@ -27,6 +27,7 @@ import AdminPedidos from './pages/Admin/Pedidos';
 import AdminUsers from './pages/Admin/Users';
 import PriceManager from './components/Admin/PriceManager';
 import { motion, AnimatePresence } from 'framer-motion';
+import DevelopmentBanner from './components/Dev/DevelopmentBanner';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -48,6 +49,7 @@ function AnimatedRoutes() {
         transition={{ duration: 0.2, ease: 'easeInOut' }}
         className="w-full h-full"
       >
+        <DevelopmentBanner />
         {!user ? (
           // Unauthenticated layout
           <Routes location={location}>
