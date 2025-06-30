@@ -1,4 +1,6 @@
 import React, { createContext, useContext } from 'react';
+import { useCartStore } from '../hooks/state-management/useCartStore';
+import { priceService } from '../services/priceService';
 
 // Tipos simplificados para el contexto del carrito
 export interface CartItem {
@@ -60,54 +62,103 @@ interface CartProviderProps {
 }
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
-  // Estado simplificado
-  const [items, setItems] = React.useState<CartItem[]>([]);
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  // Usar Zustand store gradualmente
+  const cartStore = useCartStore();
   const [isProcessingOrder, setIsProcessingOrder] = React.useState(false);
 
-  // Cálculos derivados
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce((sum, item) => sum + item.totalPrice, 0);
+  // Cálculos derivados del store
+  const { items, totalItems, totalPrice, isOpen, isLoading, error } = cartStore;
   const isEmpty = items.length === 0;
 
-  // Funciones básicas (implementación simple para no bloquear la app)
-  const addStoryToCart = async (_storyId: string, _storyTitle: string, _storyThumbnail?: string) => {
-    console.log('CartProvider: addStoryToCart called (simple implementation)');
-    setError('Carrito en desarrollo - funcionalidad disponible próximamente');
-  };
+  // Funciones con implementación real usando Zustand store
+  const addStoryToCart = async (storyId: string, storyTitle: string, storyThumbnail?: string) => {
+    try {
+      cartStore.setLoading(true);
+      cartStore.setError(null);
 
-  const removeItem = (itemId: string) => {
-    setItems(prev => prev.filter(item => item.id !== itemId));
-  };
+      // Obtener el tipo de producto por defecto
+      const defaultProductType = await priceService.getDefaultProductType();
+      if (!defaultProductType) {
+        throw new Error('No hay productos disponibles en este momento');
+      }
 
-  const updateQuantity = (itemId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeItem(itemId);
-      return;
+      // Obtener precio actual
+      const priceInfo = await priceService.getCurrentPrice(defaultProductType.id);
+      if (!priceInfo) {
+        throw new Error('No se pudo obtener el precio del producto');
+      }
+
+      // Agregar al carrito usando el store
+      cartStore.addItem({
+        storyId,
+        storyTitle,
+        storyThumbnail,
+        quantity: 1,
+        unitPrice: priceInfo.final_price,
+        productTypeId: defaultProductType.id,
+        productTypeName: defaultProductType.name
+      });
+
+      console.log(`Historia "${storyTitle}" agregada al carrito`);
+    } catch (error) {
+      console.error('Error agregando al carrito:', error);
+      cartStore.setError(error instanceof Error ? error.message : 'Error desconocido');
+    } finally {
+      cartStore.setLoading(false);
     }
-    setItems(prev => prev.map(item => 
-      item.id === itemId 
-        ? { ...item, quantity, totalPrice: item.unitPrice * quantity }
-        : item
-    ));
   };
 
-  const clearCart = () => {
-    setItems([]);
-    setError(null);
-  };
-
-  const openCart = () => setIsOpen(true);
-  const closeCart = () => setIsOpen(false);
-  const toggleCart = () => setIsOpen(prev => !prev);
+  // Delegar funciones al store de Zustand
+  const removeItem = cartStore.removeItem;
+  const updateQuantity = cartStore.updateQuantity;
+  const clearCart = cartStore.clearCart;
+  const openCart = cartStore.openCart;
+  const closeCart = cartStore.closeCart;
+  const toggleCart = cartStore.toggleCart;
 
   const createOrderFromCart = async () => {
-    console.log('CartProvider: createOrderFromCart called (simple implementation)');
-    return { success: false, error: 'Carrito en desarrollo' };
+    try {
+      setIsProcessingOrder(true);
+      cartStore.setError(null);
+
+      if (isEmpty) {
+        throw new Error('El carrito está vacío');
+      }
+
+      // Crear orden usando el servicio de precios
+      const orderData = {
+        order_type: 'cart' as const,
+        items: items.map(item => ({
+          product_type_id: item.productTypeId,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          story_id: item.storyId,
+          story_title: item.storyTitle,
+          story_thumbnail: item.storyThumbnail
+        })),
+        subtotal: totalPrice,
+        total_amount: totalPrice // Por ahora sin impuestos ni descuentos
+      };
+
+      const order = await priceService.createOrder(orderData);
+      
+      if (order) {
+        console.log('Orden creada exitosamente:', order.id);
+        return { success: true, orderId: order.id };
+      } else {
+        throw new Error('No se pudo crear la orden');
+      }
+    } catch (error) {
+      console.error('Error creando orden:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      cartStore.setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setIsProcessingOrder(false);
+    }
   };
 
+  // Usar funciones del store de Zustand
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -115,12 +166,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }).format(amount);
   };
 
-  const hasItem = (storyId: string) => {
-    return items.some(item => item.storyId === storyId);
-  };
-
+  const hasItem = cartStore.hasItem;
   const canCheckout = () => {
-    return items.length > 0 && !isLoading;
+    return items.length > 0 && !isLoading && !isProcessingOrder;
   };
 
   // Valor del contexto

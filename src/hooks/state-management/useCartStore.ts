@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { devtools } from 'zustand/middleware';
 
 // Tipos para el carrito
 export interface CartItem {
@@ -78,9 +77,8 @@ const generateCartItemId = () => {
 };
 
 export const useCartStore = create<CartStore>()(
-  devtools(
-    persist(
-      (set, get) => ({
+  persist(
+    (set, get) => ({
         ...initialState,
 
         // Gestión de items
@@ -245,12 +243,7 @@ export const useCartStore = create<CartStore>()(
           return persistedState;
         }
       }
-    ),
-    {
-      name: 'CartStore',
-      enabled: process.env.NODE_ENV === 'development'
-    }
-  )
+    )
 );
 
 // Hook personalizado con funcionalidades adicionales
