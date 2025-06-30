@@ -38,7 +38,9 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     // Gestión de usuarios
     'users.manage', 'roles.assign',
     // Flujo de trabajo
-    'workflow.admin'
+    'workflow.admin',
+    // Gestión de productos y precios
+    'products.manage'
   ],
   operator: [
     // Gestión de pedidos
