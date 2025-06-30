@@ -7,8 +7,8 @@ export default defineConfig({
   plugins: [
     react(),
     sentryVitePlugin({
-      org: "customware",
-      project: "la-cuenteria",
+      org: "lacuenteria",
+      project: "lacuenteriacl",
       authToken: process.env.SENTRY_AUTH_TOKEN,
       sourcemaps: {
         assets: "./dist/**",
