@@ -436,12 +436,11 @@ const LoginForm: React.FC = () => {
               </div>
             </div>
             
-            {/* Botón de prueba de Sentry - Solo en desarrollo */}
-            {import.meta.env.DEV && (
-              <div className="mt-4 flex justify-center">
-                <SentryTestButton />
-              </div>
-            )}
+            {/* Botón de prueba de Sentry - Temporal para testing */}
+            {/* TODO: Remover después de confirmar que Sentry funciona */}
+            <div className="mt-4 flex justify-center">
+              <SentryTestButton />
+            </div>
             
             {/* Pie de página decorativo */}
             <div className="mt-8 pt-4 border-t border-amber-200 text-center text-amber-600 text-sm">
