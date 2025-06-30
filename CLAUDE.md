@@ -204,3 +204,10 @@ docs/
 
 ### Supabase Migrations
 - Las Migrations de supabase deben tener el siguiente formato aaaaMMddhhmmss_
+
+### MCP Server Integration
+- **Claude Code mantiene su propia configuración MCP** separada de settings.local.json
+- Para agregar servidores MCP usar: `claude mcp add` o `claude mcp add-json` para configuraciones complejas
+- Siempre incluir variables de entorno si son necesarias
+- Actualizar también settings.local.json y permisos para mantener consistencia
+- Ver guía completa en `/docs/maintenance/mcp-integration-guide.md`
