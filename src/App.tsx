@@ -17,7 +17,6 @@ import StoryReader from './pages/StoryReader';
 import CharacterForm from './components/Character/CharacterForm';
 import CharactersGrid from './components/Character/CharactersGrid';
 import ToastContainer from './components/UI/ToastContainer';
-import SentryTestButton from './components/UI/SentryTestButton';
 import ProfileSettings from './pages/ProfileSettings';
 import PromptsManager from './pages/Admin/Prompts/PromptsManager';
 import PromptAnalytics from './pages/Admin/Analytics/PromptAnalytics';
@@ -190,8 +189,6 @@ function AnimatedRoutes() {
               </footer>
             </div>
             <ToastContainer />
-            {/* Botón de prueba de Sentry - REMOVER ANTES DE PRODUCCIÓN */}
-            {import.meta.env.DEV && <SentryTestButton />}
           </div>
         )}
       </motion.div>
