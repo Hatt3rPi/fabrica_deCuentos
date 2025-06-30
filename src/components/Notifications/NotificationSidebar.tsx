@@ -131,7 +131,10 @@ const NotificationSidebar: React.FC<NotificationSidebarProps> = ({ isOpen, onClo
   );
 
   // Group notifications by date and convert to array for rendering
-  const groupedNotifications = Object.entries(groupNotificationsByDate() as unknown as Record<string, Notification[]>);
+  const groupedNotifications = Object.entries(groupNotificationsByDate().reduce((acc, group) => {
+    acc[group.date] = group.notifications;
+    return acc;
+  }, {} as Record<string, Notification[]>));
 
   // Efecto para manejar el scroll del body cuando el sidebar está abierto
   useEffect(() => {
