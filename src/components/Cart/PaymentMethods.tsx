@@ -197,9 +197,8 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
       </Button>
 
       {/* Nota de seguridad */}
-      <div className="text-xs text-gray-500 text-center space-y-1">
+      <div className="text-xs text-gray-500 text-center">
         <p>🔒 Pago 100% seguro y encriptado</p>
-        <p>Simulación de pago - No se realizará cargo real</p>
       </div>
     </div>
   );

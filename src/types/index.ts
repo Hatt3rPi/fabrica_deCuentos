@@ -15,6 +15,7 @@ export interface Character {
 }
 
 export * from './profile';
+export * from './orders';
 
 // Tipos para la configuración del sistema
 export interface SystemSettings {

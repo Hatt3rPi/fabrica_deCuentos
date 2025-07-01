@@ -1,18 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { priceService } from '../services/priceService';
-
-interface OrderItem {
-  story_id: string;
-  story_title?: string;
-}
-
-interface OrderWithItems {
-  id: string;
-  status: string;
-  user_id: string;
-  items: OrderItem[];
-}
+import { OrderForFulfillment, FulfillmentResult } from '../types';
 
 export const useOrderFulfillment = (orderId: string | null) => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -47,35 +36,69 @@ export const useOrderFulfillment = (orderId: string | null) => {
   };
 
   // Función para procesar fulfillment de una orden
-  const processFulfillment = async (order: OrderWithItems) => {
+  const processFulfillment = async (order: OrderForFulfillment) => {
     try {
       setIsProcessing(true);
       setError(null);
       
       const generatedPdfs: Record<string, string> = {};
       
-      // Generar PDFs para cada historia en la orden
-      for (const item of order.items) {
-        try {
-          const pdfUrl = await generateStoryPdf(item.story_id);
-          generatedPdfs[item.story_id] = pdfUrl;
-          
-          // Actualizar la historia con la URL del PDF
-          const { error: updateError } = await supabase
-            .from('stories')
-            .update({ 
-              pdf_url: pdfUrl,
-              pdf_generated_at: new Date().toISOString()
-            })
-            .eq('id', item.story_id)
-            .eq('user_id', order.user_id); // Seguridad: solo actualizar historias del usuario
+      // Rate limiting: Procesar en lotes de máximo 3 PDFs simultáneamente
+      const BATCH_SIZE = 3;
+      const DELAY_BETWEEN_BATCHES = 2000; // 2 segundos entre lotes
+      
+      const batches = [];
+      for (let i = 0; i < order.items.length; i += BATCH_SIZE) {
+        batches.push(order.items.slice(i, i + BATCH_SIZE));
+      }
+      
+      for (const [batchIndex, batch] of batches.entries()) {
+        console.log(`Procesando lote ${batchIndex + 1}/${batches.length} con ${batch.length} historias...`);
+        
+        // Procesar lote en paralelo con Promise.allSettled para robustez
+        const batchPromises = batch.map(async (item) => {
+          try {
+            const pdfUrl = await Promise.race([
+              generateStoryPdf(item.story_id),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout después de 30 segundos')), 30000)
+              )
+            ]) as string;
             
-          if (updateError) {
-            console.error(`Error actualizando historia ${item.story_id}:`, updateError);
+            // Actualizar la historia con la URL del PDF
+            const { error: updateError } = await supabase
+              .from('stories')
+              .update({ 
+                pdf_url: pdfUrl,
+                pdf_generated_at: new Date().toISOString()
+              })
+              .eq('id', item.story_id)
+              .eq('user_id', order.user_id); // Seguridad: solo actualizar historias del usuario
+              
+            if (updateError) {
+              console.error(`Error actualizando historia ${item.story_id}:`, updateError);
+              throw updateError;
+            }
+            
+            return { storyId: item.story_id, pdfUrl, success: true };
+          } catch (err) {
+            console.error(`Error procesando historia ${item.story_id}:`, err);
+            return { storyId: item.story_id, error: err, success: false };
           }
-        } catch (err) {
-          console.error(`Error procesando historia ${item.story_id}:`, err);
-          // Continuar con las demás historias aunque una falle
+        });
+        
+        const batchResults = await Promise.allSettled(batchPromises);
+        
+        // Procesar resultados del lote
+        batchResults.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value.success) {
+            generatedPdfs[result.value.storyId] = result.value.pdfUrl;
+          }
+        });
+        
+        // Esperar entre lotes (excepto el último)
+        if (batchIndex < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
         }
       }
       
