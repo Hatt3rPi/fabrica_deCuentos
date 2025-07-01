@@ -20,7 +20,7 @@ import {
 
 const AdminDebug: React.FC = () => {
   const { user } = useAuth();
-  const { role, permissions } = useUserRole();
+  const { primaryRole, roles, hasPermission, isAdmin } = useUserRole();
   const { addStoryToCart } = useCartContext();
   const [debugInfo, setDebugInfo] = useState<any>({});
   const [loading, setLoading] = useState(false);
@@ -83,8 +83,36 @@ const AdminDebug: React.FC = () => {
     
     try {
       addLog(`👤 Usuario actual: ${user?.email}`);
-      addLog(`🎭 Rol actual: ${role || 'undefined'}`);
-      addLog(`🔑 Permisos: ${permissions ? Object.keys(permissions).length : 'undefined'}`);
+      addLog(`🎭 Rol primario: ${primaryRole || 'undefined'}`);
+      addLog(`📋 Todos los roles: ${JSON.stringify(roles)}`);
+      addLog(`🔑 Es admin: ${isAdmin}`);
+      
+      // DIAGNÓSTICO ESPECÍFICO DE ROLES
+      addLog('🔬 Diagnóstico detallado de roles...');
+      
+      // Verificar directamente en user_roles
+      addLog('📊 Consultando user_roles directamente...');
+      const { data: userRoles, error: userRolesError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('is_active', true);
+        
+      if (userRolesError) {
+        addLog(`❌ Error consultando user_roles: ${userRolesError.message}`);
+      } else {
+        addLog(`✅ Roles en BD: ${JSON.stringify(userRoles)}`);
+      }
+      
+      // Verificar función get_user_roles si existe
+      addLog('🔍 Probando función get_user_roles...');
+      const { data: rpcRoles, error: rpcError } = await supabase.rpc('get_user_roles');
+      
+      if (rpcError) {
+        addLog(`❌ Error en get_user_roles: ${rpcError.message}`);
+      } else {
+        addLog(`✅ get_user_roles retorna: ${JSON.stringify(rpcRoles)}`);
+      }
       
       // Verificar productos en base de datos
       addLog('🗄️ Consultando productos en base de datos...');
@@ -134,14 +162,20 @@ const AdminDebug: React.FC = () => {
 
   const loadSystemInfo = async () => {
     try {
+      // Obtener todos los permisos del usuario
+      const allPermissions = ['orders.view', 'orders.update', 'orders.export', 'config.admin', 'config.styles', 'config.prompts', 'analytics.full', 'analytics.operational', 'users.manage', 'roles.assign', 'workflow.admin', 'products.manage']
+        .filter(permission => hasPermission(permission));
+      
       const info = {
         timestamp: new Date().toISOString(),
         user: {
           id: user?.id,
           email: user?.email,
-          role: role,
-          permissions: permissions ? Object.keys(permissions) : [],
-          permissionCount: permissions ? Object.keys(permissions).length : 0
+          primaryRole: primaryRole,
+          allRoles: roles,
+          permissions: allPermissions,
+          permissionCount: allPermissions.length,
+          isAdmin: isAdmin
         },
         environment: {
           isDev: import.meta.env.DEV,
@@ -164,7 +198,7 @@ const AdminDebug: React.FC = () => {
   useEffect(() => {
     addLog('🔧 Página de debug cargada');
     loadSystemInfo();
-  }, [user, role, permissions]);
+  }, [user, primaryRole, roles, isAdmin]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
@@ -232,7 +266,7 @@ const AdminDebug: React.FC = () => {
                   <div>
                     <span className="font-medium text-gray-700 dark:text-gray-300">Rol:</span>
                     <p className="text-gray-600 dark:text-gray-400">
-                      {debugInfo.user.role || 'Sin rol asignado'}
+                      {debugInfo.user.primaryRole || 'Sin rol asignado'}
                     </p>
                   </div>
                   <div>
