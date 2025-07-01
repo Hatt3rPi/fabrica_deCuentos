@@ -8,7 +8,7 @@ BEGIN
   VALUES ('exports', 'exports', true)
   ON CONFLICT (id) DO NOTHING;
   
-  -- Create RLS policy for exports bucket - users can read their own exports
+  -- Create RLS policy for exports bucket - users can read their own exports, admins and operators can read all
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies 
     WHERE tablename = 'objects' 
@@ -19,7 +19,12 @@ BEGIN
       ON storage.objects
       FOR SELECT
       TO authenticated
-      USING (bucket_id = 'exports' AND (storage.foldername(name))[1] = auth.uid()::text);
+      USING (
+        bucket_id = 'exports' AND (
+          (storage.foldername(name))[1] = auth.uid()::text OR
+          has_permission('orders.view')
+        )
+      );
   END IF;
   
   -- Create RLS policy for exports bucket - service role can insert exports
