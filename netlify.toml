@@ -1,0 +1,41 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+[build.environment]
+  # Variables para detectar entorno en el banner de desarrollo
+  VITE_NETLIFY_CONTEXT = "$CONTEXT"
+  VITE_NETLIFY_BRANCH = "$BRANCH"
+  VITE_NETLIFY_URL = "$URL"
+  VITE_NETLIFY_DEPLOY_URL = "$DEPLOY_URL"
+
+# Configuración para preview deployments (PRs)
+[context.deploy-preview]
+  [context.deploy-preview.environment]
+    VITE_NETLIFY_CONTEXT = "deploy-preview"
+
+# Configuración para branch deployments
+[context.branch-deploy]
+  [context.branch-deploy.environment]
+    VITE_NETLIFY_CONTEXT = "branch-deploy"
+
+# Configuración para producción
+[context.production]
+  [context.production.environment]
+    VITE_NETLIFY_CONTEXT = "production"
+    VITE_NETLIFY_BRANCH = "main"
+
+# Headers de seguridad
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Redirects para SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

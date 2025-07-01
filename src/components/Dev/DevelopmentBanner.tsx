@@ -28,22 +28,64 @@ const useSupabaseEnvironment = () => {
   return { environment: 'Remoto', color: 'bg-purple-500', icon: Globe };
 };
 
-const DevelopmentBanner: React.FC = () => {
-  // Solo mostrar en desarrollo
-  const isDevelopment = import.meta.env.DEV;
+// Hook para detectar el entorno de deployment
+const useDeploymentEnvironment = () => {
+  // Variables de entorno de Netlify
+  const netlifyContext = import.meta.env.VITE_NETLIFY_CONTEXT; // production, deploy-preview, branch-deploy
+  const netlifyBranch = import.meta.env.VITE_NETLIFY_BRANCH;
+  const netlifyUrl = import.meta.env.VITE_NETLIFY_URL;
   
-  if (!isDevelopment) {
+  // Variables de entorno de Vercel
+  const vercelEnv = import.meta.env.VITE_VERCEL_ENV; // production, preview, development
+  const vercelUrl = import.meta.env.VITE_VERCEL_URL;
+  
+  // Si hay variables de Netlify
+  if (netlifyContext) {
+    if (netlifyContext === 'production') {
+      return { deployment: 'Netlify Producción', branch: netlifyBranch || 'main' };
+    } else if (netlifyContext === 'deploy-preview') {
+      return { deployment: 'Netlify Preview', branch: netlifyBranch || 'feature' };
+    } else {
+      return { deployment: 'Netlify Branch', branch: netlifyBranch || 'unknown' };
+    }
+  }
+  
+  // Si hay variables de Vercel
+  if (vercelEnv) {
+    if (vercelEnv === 'production') {
+      return { deployment: 'Vercel Producción', branch: 'main' };
+    } else {
+      return { deployment: 'Vercel Preview', branch: 'feature' };
+    }
+  }
+  
+  // Desarrollo local
+  return { deployment: 'Local', branch: 'feature/shopping-cart-system' };
+};
+
+const DevelopmentBanner: React.FC = () => {
+  const { environment, color, icon: Icon } = useSupabaseEnvironment();
+  const { deployment, branch } = useDeploymentEnvironment();
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  
+  // NO mostrar en producción real
+  const isProduction = deployment === 'Netlify Producción' || deployment === 'Vercel Producción';
+  const isDevelopmentMode = import.meta.env.DEV;
+  
+  // Solo mostrar si:
+  // 1. Está en modo desarrollo (npm run dev), O
+  // 2. Es preview/staging de Netlify (NO producción)
+  if (isProduction || (!isDevelopmentMode && deployment === 'Netlify Producción')) {
     return null;
   }
-
-  const { environment, color, icon: Icon } = useSupabaseEnvironment();
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
   return (
     <div className={`${color} text-white py-2 px-4 text-center text-sm font-medium shadow-lg`}>
       <div className="flex items-center justify-center gap-2 max-w-4xl mx-auto">
         <Icon className="w-4 h-4" />
-        <span className="font-bold">ENTORNO DE DESARROLLO</span>
+        <span className="font-bold">
+          {deployment === 'Local' ? 'DESARROLLO LOCAL' : `${deployment.toUpperCase()}`}
+        </span>
         <span className="mx-2">•</span>
         <span>Supabase: {environment}</span>
         {supabaseUrl && (
@@ -56,7 +98,7 @@ const DevelopmentBanner: React.FC = () => {
         )}
         <span className="mx-2">•</span>
         <span className="text-xs opacity-75">
-          Branch: feature/shopping-cart-system
+          Branch: {branch}
         </span>
       </div>
     </div>
