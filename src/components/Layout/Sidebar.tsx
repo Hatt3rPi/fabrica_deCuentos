@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Home, Palette, Package, Users, DollarSign, Bug } from 'lucide-react';
+import { BookOpen, User, Settings, LogOut, AlertTriangle, BarChart3, Home, Palette, Package, Users, DollarSign, Bug, ShoppingBag } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRoleCheck } from '../../hooks/useRoleGuard';
 import { Link } from 'react-router-dom';
@@ -203,6 +203,12 @@ const Sidebar: React.FC = () => {
             <Link to="/perfil" className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20">
               <User className="w-5 h-5" />
               <span>Mi Perfil</span>
+            </Link>
+          </li>
+          <li>
+            <Link to="/my-purchases" className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20">
+              <ShoppingBag className="w-5 h-5" />
+              <span>Mis Compras</span>
             </Link>
           </li>
           {canManagePrompts && (
