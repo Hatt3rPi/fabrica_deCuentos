@@ -30,6 +30,7 @@ import Debug from './pages/Debug';
 import Unauthorized from './pages/Unauthorized';
 import { motion, AnimatePresence } from 'framer-motion';
 import DevelopmentBanner from './components/Dev/DevelopmentBanner';
+import TestingButtons from './components/Dev/TestingButtons';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -212,6 +213,7 @@ function AnimatedRoutes() {
               </footer>
             </div>
             <ToastContainer />
+            <TestingButtons />
           </div>
         )}
       </motion.div>
