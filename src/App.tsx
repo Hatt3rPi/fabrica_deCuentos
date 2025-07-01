@@ -26,11 +26,10 @@ import AdminStyleEditor from './pages/Admin/StyleEditor/AdminStyleEditor';
 import AdminPedidos from './pages/Admin/Pedidos';
 import AdminUsers from './pages/Admin/Users';
 import PriceManager from './components/Admin/PriceManager';
-import Debug from './pages/Debug';
+import AdminDebug from './pages/Admin/AdminDebug';
 import Unauthorized from './pages/Unauthorized';
 import { motion, AnimatePresence } from 'framer-motion';
 import DevelopmentBanner from './components/Dev/DevelopmentBanner';
-import TestingButtons from './components/Dev/TestingButtons';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -197,10 +196,10 @@ function AnimatedRoutes() {
                     }
                   />
                   <Route
-                    path="/debug"
+                    path="/admin/debug"
                     element={
                       <PrivateRoute>
-                        <Debug />
+                        <AdminDebug />
                       </PrivateRoute>
                     }
                   />
@@ -213,7 +212,6 @@ function AnimatedRoutes() {
               </footer>
             </div>
             <ToastContainer />
-            <TestingButtons />
           </div>
         )}
       </motion.div>
