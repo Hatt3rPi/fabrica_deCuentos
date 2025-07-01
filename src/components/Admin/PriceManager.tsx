@@ -52,6 +52,30 @@ const PriceManager: React.FC<PriceManagerProps> = ({ className }) => {
     status: 'active' as const
   });
 
+  const loadProductTypes = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Obtener todos los productos, no solo activos
+      const { data, error } = await supabase
+        .from('product_types')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      
+      setProductTypes(data || []);
+      
+      // Seleccionar el primero por defecto
+      if (data && data.length > 0 && !selectedProduct) {
+        setSelectedProduct(data[0]);
+      }
+    } catch (error) {
+      console.error('Error loading product types:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedProduct]);
+
   // Cargar datos iniciales
   useEffect(() => {
     if (!isAuthorized || roleLoading) return;
@@ -77,30 +101,6 @@ const PriceManager: React.FC<PriceManagerProps> = ({ className }) => {
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [actionMenuOpen]);
-
-  const loadProductTypes = useCallback(async () => {
-    try {
-      setLoading(true);
-      // Obtener todos los productos, no solo activos
-      const { data, error } = await supabase
-        .from('product_types')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      
-      setProductTypes(data || []);
-      
-      // Seleccionar el primero por defecto
-      if (data && data.length > 0 && !selectedProduct) {
-        setSelectedProduct(data[0]);
-      }
-    } catch (error) {
-      console.error('Error loading product types:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedProduct]);
 
   const loadCurrentPrice = async (productTypeId: string) => {
     try {
