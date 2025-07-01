@@ -5,8 +5,12 @@ import { Bug, ShieldOff, ShoppingCart, DollarSign, Wrench } from 'lucide-react';
 const TestingButtons: React.FC = () => {
   const navigate = useNavigate();
   
-  // Solo mostrar en desarrollo
-  if (import.meta.env.PROD) {
+  // Detectar si estamos en producción real (no en previews)
+  const netlifyContext = import.meta.env.VITE_NETLIFY_CONTEXT;
+  const isRealProduction = import.meta.env.PROD && netlifyContext === 'production';
+  
+  // Mostrar en: desarrollo local, Netlify previews, pero NO en producción real
+  if (isRealProduction) {
     return null;
   }
 
@@ -70,7 +74,7 @@ const TestingButtons: React.FC = () => {
         
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Solo visible en desarrollo
+            {import.meta.env.DEV ? 'Desarrollo local' : 'Netlify preview'}
           </p>
         </div>
       </div>
