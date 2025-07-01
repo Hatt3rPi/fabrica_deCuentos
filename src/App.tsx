@@ -26,6 +26,8 @@ import AdminStyleEditor from './pages/Admin/StyleEditor/AdminStyleEditor';
 import AdminPedidos from './pages/Admin/Pedidos';
 import AdminUsers from './pages/Admin/Users';
 import PriceManager from './components/Admin/PriceManager';
+import AdminDebug from './pages/Admin/AdminDebug';
+import Unauthorized from './pages/Unauthorized';
 import { motion, AnimatePresence } from 'framer-motion';
 import DevelopmentBanner from './components/Dev/DevelopmentBanner';
 
@@ -193,6 +195,15 @@ function AnimatedRoutes() {
                       </PrivateRoute>
                     }
                   />
+                  <Route
+                    path="/admin/debug"
+                    element={
+                      <PrivateRoute>
+                        <AdminDebug />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route path="/unauthorized" element={<Unauthorized />} />
                   <Route path="*" element={<Navigate to="/home" replace />} />
                 </Routes>
               </main>

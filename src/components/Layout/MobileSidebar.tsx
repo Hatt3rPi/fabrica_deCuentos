@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Home, User, Settings, BarChart3, AlertTriangle, Palette, LogOut, BookOpen } from 'lucide-react';
+import { X, Home, User, Settings, BarChart3, AlertTriangle, Palette, LogOut, BookOpen, Bug } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
@@ -187,6 +187,17 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
                       <Palette className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
                     </div>
                     <span className="font-medium">Estilos</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link 
+                    to="/admin/debug" 
+                    className="group flex items-center gap-3 px-4 py-3 text-gray-800 hover:bg-purple-50 dark:text-gray-200 dark:hover:bg-white/5 rounded-xl transition-colors duration-200"
+                  >
+                    <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/50 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/70 transition-colors duration-200">
+                      <Bug className="w-5 h-5 text-orange-600 dark:text-orange-300" />
+                    </div>
+                    <span className="font-medium">Diagnóstico</span>
                   </Link>
                 </li>
               </>
