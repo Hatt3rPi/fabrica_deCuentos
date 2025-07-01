@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Package, DollarSign, Plus, Edit, Calendar, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Package, DollarSign, Plus, Edit, Calendar, TrendingUp, MoreVertical, Trash2, Pause, Play, AlertTriangle } from 'lucide-react';
 import { useRoleGuard } from '../../hooks/useRoleGuard';
 import { priceService, ProductType, ProductPrice, PriceInfo } from '../../services/priceService';
+import { supabase } from '../../lib/supabase';
 import Button from '../UI/Button';
 
 interface PriceManagerProps {
@@ -22,6 +23,11 @@ const PriceManager: React.FC<PriceManagerProps> = ({ className }) => {
   const [loading, setLoading] = useState(true);
   const [showNewPriceForm, setShowNewPriceForm] = useState(false);
   const [showNewProductForm, setShowNewProductForm] = useState(false);
+  const [showEditProductForm, setShowEditProductForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<ProductType | null>(null);
+  const [productToDelete, setProductToDelete] = useState<ProductType | null>(null);
+  const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
 
   // Estados para formularios
   const [newPriceForm, setNewPriceForm] = useState({
@@ -39,11 +45,42 @@ const PriceManager: React.FC<PriceManagerProps> = ({ className }) => {
     status: 'active' as const
   });
 
+  const [editProductForm, setEditProductForm] = useState({
+    name: '',
+    description: '',
+    category: 'digital' as const,
+    status: 'active' as const
+  });
+
+  const loadProductTypes = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Obtener todos los productos, no solo activos
+      const { data, error } = await supabase
+        .from('product_types')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      
+      setProductTypes(data || []);
+      
+      // Seleccionar el primero por defecto
+      if (data && data.length > 0 && !selectedProduct) {
+        setSelectedProduct(data[0]);
+      }
+    } catch (error) {
+      console.error('Error loading product types:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedProduct]);
+
   // Cargar datos iniciales
   useEffect(() => {
     if (!isAuthorized || roleLoading) return;
     loadProductTypes();
-  }, [isAuthorized, roleLoading]);
+  }, [isAuthorized, roleLoading, loadProductTypes]);
 
   // Cargar precio actual cuando se selecciona producto
   useEffect(() => {
@@ -53,22 +90,17 @@ const PriceManager: React.FC<PriceManagerProps> = ({ className }) => {
     }
   }, [selectedProduct]);
 
-  const loadProductTypes = async () => {
-    try {
-      setLoading(true);
-      const types = await priceService.getProductTypes();
-      setProductTypes(types);
-      
-      // Seleccionar el primero por defecto
-      if (types.length > 0 && !selectedProduct) {
-        setSelectedProduct(types[0]);
-      }
-    } catch (error) {
-      console.error('Error loading product types:', error);
-    } finally {
-      setLoading(false);
+  // Cerrar menús cuando se hace click fuera
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setActionMenuOpen(null);
+    };
+
+    if (actionMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
     }
-  };
+  }, [actionMenuOpen]);
 
   const loadCurrentPrice = async (productTypeId: string) => {
     try {
@@ -150,6 +182,93 @@ const PriceManager: React.FC<PriceManagerProps> = ({ className }) => {
     }
   };
 
+  const handleEditProduct = (product: ProductType) => {
+    setProductToEdit(product);
+    setEditProductForm({
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      status: product.status
+    });
+    setShowEditProductForm(true);
+    setActionMenuOpen(null);
+  };
+
+  const handleUpdateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productToEdit) return;
+
+    try {
+      await priceService.updateProductType(productToEdit.id, editProductForm);
+
+      // Recargar lista
+      await loadProductTypes();
+      
+      // Si el producto editado está seleccionado, actualizar la selección
+      if (selectedProduct?.id === productToEdit.id) {
+        const updatedProduct = { ...productToEdit, ...editProductForm };
+        setSelectedProduct(updatedProduct);
+      }
+      
+      // Reset form
+      setShowEditProductForm(false);
+      setProductToEdit(null);
+      
+    } catch (error) {
+      console.error('Error updating product:', error);
+    }
+  };
+
+  const handleToggleProductStatus = async (product: ProductType) => {
+    try {
+      const newStatus = product.status === 'active' ? 'inactive' : 'active';
+      await priceService.updateProductType(product.id, { status: newStatus });
+
+      // Recargar lista
+      await loadProductTypes();
+      
+      // Si el producto editado está seleccionado, actualizar la selección
+      if (selectedProduct?.id === product.id) {
+        setSelectedProduct({ ...product, status: newStatus });
+      }
+      
+      setActionMenuOpen(null);
+    } catch (error) {
+      console.error('Error toggling product status:', error);
+    }
+  };
+
+  const handleDeleteProduct = (product: ProductType) => {
+    setProductToDelete(product);
+    setShowDeleteConfirm(true);
+    setActionMenuOpen(null);
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+
+    try {
+      // Soft delete: cambiar status a discontinued
+      await priceService.updateProductType(productToDelete.id, { 
+        status: 'discontinued' 
+      });
+
+      // Recargar lista
+      await loadProductTypes();
+      
+      // Si el producto eliminado estaba seleccionado, seleccionar otro
+      if (selectedProduct?.id === productToDelete.id) {
+        const remainingProducts = productTypes.filter(p => p.id !== productToDelete.id && p.status !== 'discontinued');
+        setSelectedProduct(remainingProducts[0] || null);
+      }
+      
+      setShowDeleteConfirm(false);
+      setProductToDelete(null);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-CL', {
       year: 'numeric',
@@ -208,21 +327,82 @@ const PriceManager: React.FC<PriceManagerProps> = ({ className }) => {
               {productTypes.map(product => (
                 <div
                   key={product.id}
-                  onClick={() => setSelectedProduct(product)}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                  className={`p-3 rounded-lg border-2 transition-colors relative ${
                     selectedProduct?.id === product.id
-                      ? 'bg-purple-100 border-2 border-purple-300'
-                      : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                      ? 'bg-purple-100 border-purple-300'
+                      : 'bg-gray-50 hover:bg-gray-100 border-transparent'
                   }`}
                 >
-                  <div className="font-medium">{product.name}</div>
-                  <div className="text-sm text-gray-600">{product.category}</div>
-                  <div className={`text-xs inline-block px-2 py-1 rounded-full ${
-                    product.status === 'active' 
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {product.status}
+                  <div 
+                    onClick={() => setSelectedProduct(product)}
+                    className="cursor-pointer"
+                  >
+                    <div className="font-medium pr-8">{product.name}</div>
+                    <div className="text-sm text-gray-600">{product.category}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className={`text-xs inline-block px-2 py-1 rounded-full ${
+                        product.status === 'active' 
+                          ? 'bg-green-100 text-green-800'
+                          : product.status === 'inactive'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {product.status === 'active' ? 'Activo' : 
+                         product.status === 'inactive' ? 'Inactivo' : 'Discontinuado'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Menú de acciones */}
+                  <div className="absolute top-2 right-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActionMenuOpen(actionMenuOpen === product.id ? null : product.id);
+                      }}
+                      className="p-1 hover:bg-white rounded-full transition-colors"
+                    >
+                      <MoreVertical className="w-4 h-4 text-gray-500" />
+                    </button>
+
+                    {actionMenuOpen === product.id && (
+                      <div className="absolute right-0 top-8 bg-white border rounded-lg shadow-lg py-1 z-10 min-w-[150px]">
+                        <button
+                          onClick={() => handleEditProduct(product)}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                        >
+                          <Edit className="w-3 h-3" />
+                          Editar
+                        </button>
+                        
+                        <button
+                          onClick={() => handleToggleProductStatus(product)}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                        >
+                          {product.status === 'active' ? (
+                            <>
+                              <Pause className="w-3 h-3" />
+                              Desactivar
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-3 h-3" />
+                              Activar
+                            </>
+                          )}
+                        </button>
+
+                        {product.status !== 'discontinued' && (
+                          <button
+                            onClick={() => handleDeleteProduct(product)}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -464,6 +644,118 @@ const PriceManager: React.FC<PriceManagerProps> = ({ className }) => {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar producto */}
+      {showEditProductForm && productToEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4">Editar Producto</h3>
+            <form onSubmit={handleUpdateProduct} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nombre</label>
+                <input
+                  type="text"
+                  value={editProductForm.name}
+                  onChange={(e) => setEditProductForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Descripción</label>
+                <textarea
+                  value={editProductForm.description}
+                  onChange={(e) => setEditProductForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Categoría</label>
+                <select
+                  value={editProductForm.category}
+                  onChange={(e) => setEditProductForm(prev => ({ ...prev, category: e.target.value as 'digital' | 'physical' | 'premium' }))}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="digital">Digital</option>
+                  <option value="physical">Físico</option>
+                  <option value="premium">Premium</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Estado</label>
+                <select
+                  value={editProductForm.status}
+                  onChange={(e) => setEditProductForm(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="active">Activo</option>
+                  <option value="inactive">Inactivo</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowEditProductForm(false);
+                    setProductToEdit(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  Actualizar Producto
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmación de eliminación */}
+      {showDeleteConfirm && productToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-500" />
+              <h3 className="text-lg font-semibold">Confirmar Eliminación</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-4">
+              ¿Estás seguro de que quieres eliminar el producto <strong>"{productToDelete.name}"</strong>?
+            </p>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-yellow-800">
+                <strong>Nota:</strong> El producto será marcado como discontinuado, pero no se eliminará permanentemente. 
+                Esto preserva la integridad de las órdenes existentes.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setProductToDelete(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={confirmDeleteProduct}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Sí, Eliminar
+              </Button>
+            </div>
           </div>
         </div>
       )}
