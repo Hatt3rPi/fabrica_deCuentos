@@ -50,7 +50,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   // Handler para pago exitoso
-  const handlePaymentSuccess = (_paymentMethod: string) => {
+  const handlePaymentSuccess = () => {
     // Pago exitoso
     clearCart();
     setCurrentStep('success');
@@ -129,8 +129,20 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <div className="space-y-3">
                     {items.map(item => (
                       <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <Package className="w-6 h-6 text-purple-600" />
+                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          {item.storyThumbnail ? (
+                            <img 
+                              src={item.storyThumbnail} 
+                              alt={item.storyTitle}
+                              className="w-full h-full object-cover rounded-lg"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.innerHTML = '<div class="w-6 h-6 text-purple-600"><svg class="lucide lucide-package" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>';
+                              }}
+                            />
+                          ) : (
+                            <Package className="w-6 h-6 text-purple-600" />
+                          )}
                         </div>
                         <div className="flex-1">
                           <h4 className="font-medium text-sm truncate">

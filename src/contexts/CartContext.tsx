@@ -126,18 +126,16 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       }
 
       // Crear orden usando el servicio de precios
+      // Obtener el primer producto (todos los items deberían tener el mismo productTypeId)
+      const firstItem = items[0];
+      if (!firstItem) {
+        throw new Error('El carrito está vacío');
+      }
+
       const orderData = {
-        order_type: 'cart' as const,
-        items: items.map(item => ({
-          product_type_id: item.productTypeId,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          story_id: item.storyId,
-          story_title: item.storyTitle,
-          story_thumbnail: item.storyThumbnail
-        })),
-        subtotal: totalPrice,
-        total_amount: totalPrice // Por ahora sin impuestos ni descuentos
+        storyIds: items.map(item => item.storyId),
+        productTypeId: firstItem.productTypeId,
+        paymentMethod: 'pending' // Se definirá en el paso de pago
       };
 
       const order = await priceService.createOrder(orderData);
