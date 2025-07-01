@@ -3,6 +3,7 @@ import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
 import puppeteer from 'npm:puppeteer';
+import { configureForEdgeFunction, withErrorCapture, captureException, setUser, setTags, addBreadcrumb } from '../_shared/sentry.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,6 +70,9 @@ interface DesignSettings {
 }
 
 Deno.serve(async (req) => {
+  // Configurar Sentry para esta Edge Function
+  configureForEdgeFunction('story-export', req);
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -93,6 +97,19 @@ Deno.serve(async (req) => {
     }
     
     console.log(`[story-export] 👤 User ID: ${userId}`);
+    
+    // Configurar contexto de usuario en Sentry
+    setUser({ id: userId });
+    
+    // Configurar tags específicos para esta función
+    setTags({
+      'story.id': story_id,
+      'export.format': format,
+      'export.save_to_library': save_to_library.toString(),
+      'export.include_metadata': include_metadata.toString()
+    });
+    
+    addBreadcrumb('PDF export started', 'export', 'info', { story_id, format });
 
     const enabled = await isActivityEnabled(STAGE, ACTIVITY);
     if (!enabled) {
@@ -113,20 +130,62 @@ Deno.serve(async (req) => {
     start = Date.now();
 
     // 1. Obtener datos completos del cuento
-    const storyData = await getCompleteStoryData(story_id, userId);
+    const storyData = await withErrorCapture(
+      () => getCompleteStoryData(story_id, userId),
+      'fetch-story-data',
+      { story_id, userId }
+    );
+    
+    addBreadcrumb('Story data fetched', 'export', 'info');
     
     // 2. Generar PDF
-    const pdfBuffer = await generateStoryPDF(storyData, format, include_metadata);
+    const pdfBuffer = await withErrorCapture(
+      () => generateStoryPDF(storyData, format, include_metadata),
+      'generate-pdf',
+      { 
+        story_id, 
+        format, 
+        include_metadata,
+        pageCount: storyData.pages?.length || 0
+      }
+    );
+    
+    addBreadcrumb('PDF generated', 'export', 'info', { 
+      bufferSize: pdfBuffer.length,
+      format 
+    });
     
     // 3. Subir a Supabase Storage
-    const downloadUrl = await uploadPDFToStorage(story_id, pdfBuffer, userId, storyData.story.title);
+    const downloadUrl = await withErrorCapture(
+      () => uploadPDFToStorage(story_id, pdfBuffer, userId, storyData.story.title),
+      'upload-pdf-storage',
+      { 
+        story_id, 
+        userId,
+        bufferSize: pdfBuffer.length,
+        title: storyData.story.title
+      }
+    );
+    
+    addBreadcrumb('PDF uploaded to storage', 'export', 'info', { downloadUrl });
     
     // 4. Actualizar estado del cuento
     try {
-      await markStoryAsCompleted(story_id, downloadUrl, save_to_library);
+      await withErrorCapture(
+        () => markStoryAsCompleted(story_id, downloadUrl, save_to_library),
+        'mark-story-completed',
+        { story_id, downloadUrl, save_to_library }
+      );
       console.log('[story-export] ✅ Estado del cuento actualizado exitosamente');
     } catch (markError) {
       console.error('[story-export] ❌ Error marcando cuento como completado:', markError);
+      await captureException(markError as Error, {
+        function: 'story-export',
+        operation: 'mark-story-completed',
+        story_id,
+        downloadUrl,
+        save_to_library
+      });
       // No lanzar el error para que el PDF se pueda descargar igual
       console.log('[story-export] ⚠️ Continuando con descarga a pesar del error de estado');
     }
@@ -174,6 +233,17 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error('[story-export] Error:', err);
+    
+    // Capturar error en Sentry con contexto completo
+    await captureException(err as Error, {
+      function: 'story-export',
+      userId,
+      stage: STAGE,
+      activity: ACTIVITY,
+      elapsed: Date.now() - start,
+      format,
+      story_id: req.url.includes('story_id') ? req.url : undefined
+    });
     
     const elapsed = Date.now() - start;
     await logPromptMetric({

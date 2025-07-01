@@ -3,6 +3,7 @@ import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
+import { configureForEdgeFunction, withErrorCapture, captureException, setUser, setTags } from '../_shared/sentry.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,6 +21,9 @@ const STAGE = 'historia';
 const ACTIVITY = 'generar_historia';
 
 Deno.serve(async (req) => {
+  // Configurar Sentry para esta Edge Function
+  configureForEdgeFunction('generate-story', req);
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -38,6 +42,19 @@ Deno.serve(async (req) => {
     }
 
     userId = await getUserId(req);
+    
+    // Configurar contexto de usuario en Sentry
+    if (userId) {
+      setUser({ id: userId });
+    }
+    
+    // Configurar tags específicos para esta función
+    setTags({
+      'story.id': story_id,
+      'characters.count': characters.length.toString(),
+      'theme': theme || 'none'
+    });
+    
     const enabled = await isActivityEnabled(STAGE, ACTIVITY);
     if (!enabled) {
       return new Response(
@@ -46,11 +63,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { data: promptRow } = await supabaseAdmin
-      .from('prompts')
-      .select('id, content, endpoint, model, size, quality, width, height')
-      .eq('type', 'PROMPT_GENERADOR_CUENTOS')
-      .single();
+    // Obtener configuración del prompt
+    const { data: promptRow } = await withErrorCapture(
+      async () => {
+        const { data, error } = await supabaseAdmin
+          .from('prompts')
+          .select('id, content, endpoint, model, size, quality, width, height')
+          .eq('type', 'PROMPT_GENERADOR_CUENTOS')
+          .single();
+        if (error) throw new Error(`Error obteniendo prompt: ${error.message}`);
+        return data;
+      },
+      'fetch-story-prompt',
+      { promptType: 'PROMPT_GENERADOR_CUENTOS' }
+    );
+    
     const storyPrompt = promptRow?.content || '';
     promptId = promptRow?.id;
     if (!storyPrompt) throw new Error('Prompt not configured');
@@ -108,37 +135,54 @@ Deno.serve(async (req) => {
     }
 
     console.log('[generate-story] [REQUEST]', JSON.stringify(storyPayload));
-    const resp = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
+    
+    // Llamada a OpenAI con monitoreo de Sentry
+    const { respData, elapsed, resp } = await withErrorCapture(
+      async () => {
+        const resp = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(storyPayload),
+        });
+        const elapsed = Date.now() - start;
+        const rawResponse = await resp.text();
+        
+        let respData;
+        try {
+          respData = JSON.parse(rawResponse);
+        } catch (_err) {
+          await logPromptMetric({
+            prompt_id: promptId,
+            modelo_ia: model,
+            tiempo_respuesta_ms: elapsed,
+            estado: 'error',
+            error_type: 'invalid_json',
+            tokens_entrada: 0,
+            tokens_salida: 0,
+            tokens_entrada_cacheados: 0,
+            tokens_salida_cacheados: 0,
+            usuario_id: userId,
+            actividad: 'generar_historia',
+            edge_function: 'generate-story',
+          });
+          console.error('Respuesta inválida de OpenAI:', rawResponse.slice(0, 100));
+          throw new Error('Formato de respuesta de OpenAI inválido');
+        }
+        
+        return { respData, elapsed, resp };
       },
-      body: JSON.stringify(storyPayload),
-    });
-    const elapsed = Date.now() - start;
-    const rawResponse = await resp.text();
-    let respData;
-    try {
-      respData = JSON.parse(rawResponse);
-    } catch (_err) {
-      await logPromptMetric({
-        prompt_id: promptId,
-        modelo_ia: model,
-        tiempo_respuesta_ms: elapsed,
-        estado: 'error',
-        error_type: 'invalid_json',
-        tokens_entrada: 0,
-        tokens_salida: 0,
-        tokens_entrada_cacheados: 0,
-        tokens_salida_cacheados: 0,
-        usuario_id: userId,
-        actividad: 'generar_historia',
-        edge_function: 'generate-story',
-      });
-      console.error('Respuesta inválida de OpenAI:', rawResponse.slice(0, 100));
-      throw new Error('Formato de respuesta de OpenAI inválido');
-    }
+      'openai-api-call',
+      { 
+        model, 
+        endpoint: apiEndpoint,
+        maxTokens,
+        isOModel,
+        promptLength: finalPrompt.length
+      }
+    );
 
     await logPromptMetric({
       prompt_id: promptId,
@@ -351,6 +395,19 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error('[generate-story] Error:', err);
+    
+    // Capturar error en Sentry con contexto completo
+    await captureException(err as Error, {
+      function: 'generate-story',
+      userId,
+      storyId: req.url.includes('story_id') ? req.url : undefined,
+      model,
+      promptId,
+      stage: STAGE,
+      activity: ACTIVITY,
+      elapsed: Date.now() - start
+    });
+    
     if (promptId) {
       await logPromptMetric({
         prompt_id: promptId,
