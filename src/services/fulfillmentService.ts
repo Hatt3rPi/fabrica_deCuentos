@@ -1,6 +1,42 @@
 import { supabase } from '../lib/supabase';
 import { CuentoConPedido, EstadoFulfillment, InformacionEnvio } from '../types';
 
+// Tipos para órdenes de carrito
+export interface OrderWithPayment {
+  id: string;
+  user_id: string;
+  order_type: 'cart' | 'individual' | 'subscription';
+  status: 'pending' | 'paid' | 'failed' | 'refunded' | 'expired';
+  subtotal: number;
+  discount_amount: number;
+  tax_amount: number;
+  total_amount: number;
+  currency: string;
+  payment_method?: string;
+  payment_data: Record<string, any>;
+  expires_at: string;
+  paid_at?: string;
+  created_at: string;
+  updated_at: string;
+  user_email?: string;
+  user_name?: string;
+  items: OrderItem[];
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  story_id: string;
+  story_title?: string;
+  product_type_id: string;
+  product_type_name?: string;
+  quantity: number;
+  unit_price: number;
+  discount_amount: number;
+  total_price: number;
+  created_at: string;
+}
+
 export const fulfillmentService = {
   /**
    * Obtiene todos los cuentos completados con información de pedido
@@ -201,5 +237,178 @@ export const fulfillmentService = {
     ].join('\n');
 
     return csv;
+  },
+
+  // ==========================================
+  // MÉTODOS PARA ÓRDENES DE CARRITO
+  // ==========================================
+
+  /**
+   * Obtiene órdenes con información de pago y items
+   */
+  async obtenerOrdenesConPago(filtros?: {
+    status?: string;
+    orderType?: string;
+    desde?: string;
+    hasta?: string;
+    limit?: number;
+  }): Promise<OrderWithPayment[]> {
+    const { data, error } = await supabase
+      .from('orders_with_items')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(filtros?.limit || 50);
+
+    if (error) throw error;
+    return data as OrderWithPayment[];
+  },
+
+  /**
+   * Crea registros de fulfillment para todas las historias de una orden
+   */
+  async crearFulfillmentParaOrden(orderId: string): Promise<void> {
+    // Obtener items de la orden
+    const { data: orderItems, error: itemsError } = await supabase
+      .from('order_items')
+      .select(`
+        story_id,
+        quantity,
+        orders!inner(
+          user_id,
+          payment_method,
+          total_amount
+        )
+      `)
+      .eq('order_id', orderId);
+
+    if (itemsError) throw itemsError;
+
+    if (!orderItems || orderItems.length === 0) {
+      throw new Error('No se encontraron items para la orden');
+    }
+
+    // Actualizar fulfillment_status para todas las historias de la orden
+    const storyIds = orderItems.map(item => item.story_id);
+    
+    const { error: updateError } = await supabase
+      .from('stories')
+      .update({ 
+        fulfillment_status: 'pendiente',
+        updated_at: new Date().toISOString()
+      })
+      .in('id', storyIds)
+      .is('fulfillment_status', null); // Solo actualizar si no tiene estado
+
+    if (updateError) throw updateError;
+
+    // Crear historial de fulfillment para cada historia
+    const historialEntries = orderItems.map(item => ({
+      story_id: item.story_id,
+      from_status: null,
+      to_status: 'pendiente' as EstadoFulfillment,
+      notes: `Orden de carrito procesada. ID: ${orderId.slice(0, 8)}...`
+    }));
+
+    const { error: historyError } = await supabase
+      .from('fulfillment_history')
+      .insert(historialEntries);
+
+    if (historyError) throw historyError;
+  },
+
+  /**
+   * Obtiene órdenes con fulfillment pendiente
+   */
+  async obtenerOrdenesPendientes(): Promise<OrderWithPayment[]> {
+    const { data, error } = await supabase
+      .from('orders_with_items')
+      .select('*')
+      .eq('status', 'paid')
+      .order('paid_at', { ascending: true });
+
+    if (error) throw error;
+    
+    // Filtrar órdenes que tienen historias con fulfillment pendiente
+    const ordenesConPendientes = [];
+    
+    for (const orden of data) {
+      if (orden.items && orden.items.length > 0) {
+        // Verificar si alguna historia de la orden tiene fulfillment pendiente
+        const storyIds = orden.items.map(item => item.story_id);
+        
+        const { data: stories, error: storiesError } = await supabase
+          .from('stories')
+          .select('id, fulfillment_status')
+          .in('id', storyIds);
+
+        if (!storiesError && stories) {
+          const tienePendientes = stories.some(story => 
+            story.fulfillment_status === 'pendiente' || story.fulfillment_status === null
+          );
+          
+          if (tienePendientes) {
+            ordenesConPendientes.push(orden);
+          }
+        }
+      }
+    }
+
+    return ordenesConPendientes as OrderWithPayment[];
+  },
+
+  /**
+   * Actualiza el estado de fulfillment para todas las historias de una orden
+   */
+  async actualizarFulfillmentOrden(
+    orderId: string,
+    nuevoEstado: EstadoFulfillment,
+    notas?: string
+  ): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuario no autenticado');
+
+    // Obtener historias de la orden
+    const { data: orderItems, error: itemsError } = await supabase
+      .from('order_items')
+      .select('story_id')
+      .eq('order_id', orderId);
+
+    if (itemsError) throw itemsError;
+    if (!orderItems || orderItems.length === 0) {
+      throw new Error('No se encontraron historias para la orden');
+    }
+
+    // Actualizar cada historia usando la función RPC
+    for (const item of orderItems) {
+      await this.actualizarEstadoFulfillment(
+        item.story_id,
+        nuevoEstado,
+        notas ? `${notas} (Orden: ${orderId.slice(0, 8)}...)` : `Actualización masiva de orden ${orderId.slice(0, 8)}...`
+      );
+    }
+  },
+
+  /**
+   * Obtiene estadísticas combinadas (historias individuales + órdenes)
+   */
+  async obtenerEstadisticasCompletas() {
+    const [estadisticasIndividuales, ordenesData] = await Promise.all([
+      this.obtenerEstadisticasPedidos(),
+      this.obtenerOrdenesConPago({ limit: 1000 })
+    ]);
+
+    const ordenesStats = {
+      totalOrdenes: ordenesData.length,
+      ordenesPagadas: ordenesData.filter(o => o.status === 'paid').length,
+      ordenesPendientes: ordenesData.filter(o => o.status === 'pending').length,
+      ingresosTotales: ordenesData
+        .filter(o => o.status === 'paid')
+        .reduce((sum, o) => sum + o.total_amount, 0)
+    };
+
+    return {
+      ...estadisticasIndividuales,
+      ordenes: ordenesStats
+    };
   }
 };

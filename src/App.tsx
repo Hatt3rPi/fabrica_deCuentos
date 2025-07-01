@@ -6,6 +6,7 @@ import { UserRoleProvider } from './context/UserRoleContext';
 import { WizardProvider } from './context/WizardContext';
 import { StoryProvider } from './context/StoryContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { CartProvider } from './contexts/CartContext';
 import { useAuth } from './context/AuthContext';
 import StoryCreationWizard from './pages/StoryCreationWizard';
 import Header from './components/Layout/Header';
@@ -24,7 +25,9 @@ import AdminFlujo from './pages/Admin/Flujo';
 import AdminStyleEditor from './pages/Admin/StyleEditor/AdminStyleEditor';
 import AdminPedidos from './pages/Admin/Pedidos';
 import AdminUsers from './pages/Admin/Users';
+import PriceManager from './components/Admin/PriceManager';
 import { motion, AnimatePresence } from 'framer-motion';
+import DevelopmentBanner from './components/Dev/DevelopmentBanner';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -46,6 +49,7 @@ function AnimatedRoutes() {
         transition={{ duration: 0.2, ease: 'easeInOut' }}
         className="w-full h-full"
       >
+        <DevelopmentBanner />
         {!user ? (
           // Unauthenticated layout
           <Routes location={location}>
@@ -181,6 +185,14 @@ function AnimatedRoutes() {
                       </PrivateRoute>
                     }
                   />
+                  <Route
+                    path="/admin/precios"
+                    element={
+                      <PrivateRoute>
+                        <PriceManager />
+                      </PrivateRoute>
+                    }
+                  />
                   <Route path="*" element={<Navigate to="/home" replace />} />
                 </Routes>
               </main>
@@ -228,7 +240,9 @@ function App() {
         <UserRoleProvider>
           <ThemeProvider>
             <AdminProvider>
-              <AppContent />
+              <CartProvider>
+                <AppContent />
+              </CartProvider>
             </AdminProvider>
           </ThemeProvider>
         </UserRoleProvider>

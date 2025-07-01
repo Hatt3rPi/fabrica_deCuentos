@@ -21,9 +21,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const user = session?.user ?? null;
       setUser(user);
+      
+      // Manejar errores de token corrupto
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        console.warn('Token refresh failed, clearing session');
+        supabase.auth.signOut();
+      }
       
       // Configurar contexto de usuario en Sentry
       if (user) {
@@ -33,6 +39,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       } else {
         sentryLogger.clearUserContext();
+      }
+    });
+
+    // Verificar sesión inicial y limpiar si está corrupta
+    supabase.auth.getSession().catch((error) => {
+      if (error.message.includes('Invalid Refresh Token')) {
+        console.warn('Invalid refresh token detected, clearing session');
+        supabase.auth.signOut();
       }
     });
 
