@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useUserRole } from '../context/UserRoleContext';
-import { useCart } from '../contexts/CartContext';
+import { useCartContext } from '../contexts/CartContext';
 import { priceService } from '../services/priceService';
 import * as Sentry from '@sentry/react';
 
 const Debug: React.FC = () => {
   const { user } = useAuth();
   const { role, permissions } = useUserRole();
-  const { addStoryToCart } = useCart();
+  const { addStoryToCart } = useCartContext();
   const [debugInfo, setDebugInfo] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
