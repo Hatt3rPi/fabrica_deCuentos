@@ -28,6 +28,7 @@ import AdminUsers from './pages/Admin/Users';
 import PriceManager from './components/Admin/PriceManager';
 import AdminDebug from './pages/Admin/AdminDebug';
 import Unauthorized from './pages/Unauthorized';
+import MyPurchases from './pages/MyPurchases';
 import { motion, AnimatePresence } from 'framer-motion';
 import DevelopmentBanner from './components/Dev/DevelopmentBanner';
 
@@ -128,6 +129,14 @@ function AnimatedRoutes() {
                     element={
                       <PrivateRoute>
                         <StoryReader />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/my-purchases"
+                    element={
+                      <PrivateRoute>
+                        <MyPurchases />
                       </PrivateRoute>
                     }
                   />

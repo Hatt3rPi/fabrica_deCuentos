@@ -2,6 +2,45 @@
 
 ## Unreleased
 
+## [2025-07-01] - Flujo Completo de Compra Post-Pago
+
+### ✨ Nuevas Funcionalidades
+- **Fulfillment automático**: PDFs se generan automáticamente después del pago exitoso
+- **Página "Mis Compras"**: Nueva página `/my-purchases` para gestionar historial de compras
+- **Estado visual de compra**: Historias compradas muestran badge "Comprado" y botón "Descargar PDF"
+- **Proceso de pago real**: Integración completa con base de datos para actualizar estado de órdenes
+- **Suscripciones realtime**: UI se actualiza automáticamente cuando se completa el fulfillment
+
+### 🔧 Mejoras Técnicas
+- **Hook useOrderFulfillment**: Maneja automáticamente la generación de PDFs post-pago
+- **Hook useStoryPurchaseStatus**: Verifica el estado de compra de historias individuales
+- **Migración de BD**: Nuevos campos de tracking para fulfillment y PDFs
+- **Función RPC**: `get_pending_fulfillment_orders()` para identificar órdenes pendientes
+
+### 🎨 Mejoras de UX
+- **CheckoutModal mejorado**: Feedback visual durante generación de PDFs
+- **StoryCard inteligente**: Cambia comportamiento según estado de compra
+- **Navegación mejorada**: Enlace "Mis Compras" en sidebar principal
+- **Descarga directa**: PDFs accesibles desde múltiples puntos de la interfaz
+
+### 🗃️ Base de Datos
+- Nuevos campos en `orders`: `fulfillment_status`, `fulfilled_at`, `fulfillment_notes`
+- Nuevos campos en `stories`: `pdf_url`, `pdf_generated_at`
+- Índices optimizados para consultas de compras
+- Función RPC para obtener órdenes pendientes de fulfillment
+
+### 📋 Issues Creados
+- **#298**: Implementar envío automático de correo con PDFs post-compra
+
+### 🔗 Archivos Principales
+- `src/hooks/useOrderFulfillment.ts` - Fulfillment automático
+- `src/hooks/useStoryPurchaseStatus.ts` - Estado de compra
+- `src/pages/MyPurchases.tsx` - Gestión de compras
+- `src/components/StoryCard.tsx` - UI estado de compra
+- `supabase/migrations/20250701120000_add_fulfillment_tracking.sql` - BD
+
+---
+
 ### Fix: Filtro de usuario en "Mis cuentos" (2025-06-28)
 - **Problema**: La página "Mis cuentos" no filtraba explícitamente por usuario, permitiendo que usuarios con roles admin/operator vean cuentos de otros usuarios
 - **Solución**: Agregado filtro explícito `.eq('user_id', user?.id)` en la consulta de MyStories.tsx
