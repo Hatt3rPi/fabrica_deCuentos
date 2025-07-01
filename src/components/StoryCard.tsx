@@ -1,6 +1,7 @@
 import React from 'react';
-import { BookOpen, Pencil, Trash2, Loader } from 'lucide-react';
+import { BookOpen, Pencil, Trash2, Loader, FileDown, CheckCircle } from 'lucide-react';
 import { useStory } from '../context/StoryContext';
+import { useStoryPurchaseStatus } from '../hooks/useStoryPurchaseStatus';
 import AddToCartButton from './Cart/AddToCartButton';
 
 interface StoryCardProps {
@@ -25,9 +26,17 @@ interface StoryCardProps {
 const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDelete }) => {
   const { covers } = useStory();
   const state = covers[story.id];
+  const purchaseStatus = useStoryPurchaseStatus(story.id);
 
   const imageUrl = state?.url || story.cover_url;
   const isLoading = state?.status === 'generating';
+  
+  // Función para descargar PDF
+  const handleDownloadPdf = () => {
+    if (purchaseStatus.pdfUrl) {
+      window.open(purchaseStatus.pdfUrl, '_blank');
+    }
+  };
 
   return (
     <div className="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-transparent hover:-translate-y-1">
@@ -57,7 +66,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
         )}
         
         {/* Badge de estado */}
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
           {story.status === 'draft' ? (
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100/90 dark:bg-amber-900/80 text-amber-800 dark:text-amber-100 border border-amber-200 dark:border-amber-800 backdrop-blur-sm shadow-sm">
               <span className="w-2 h-2 bg-amber-500 dark:bg-amber-400 rounded-full mr-1.5 animate-pulse"></span>
@@ -67,6 +76,14 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100/90 dark:bg-green-900/80 text-green-800 dark:text-green-100 border border-green-200 dark:border-green-800 backdrop-blur-sm shadow-sm">
               <span className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full mr-1.5"></span>
               Completado
+            </span>
+          )}
+          
+          {/* Badge de comprado */}
+          {purchaseStatus.isPurchased && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100/90 dark:bg-purple-900/80 text-purple-800 dark:text-purple-100 border border-purple-200 dark:border-purple-800 backdrop-blur-sm shadow-sm">
+              <CheckCircle className="w-3 h-3 mr-1.5" />
+              Comprado
             </span>
           )}
         </div>
@@ -109,15 +126,28 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
                 </button>
               </div>
               
-              {/* Botón de agregar al carrito */}
-              <AddToCartButton
-                storyId={story.id}
-                storyTitle={story.title}
-                storyThumbnail={imageUrl}
-                variant="outline"
-                size="sm"
-                className="w-full"
-              />
+              {/* Botón de agregar al carrito o descargar PDF */}
+              {purchaseStatus.isPurchased ? (
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={!purchaseStatus.pdfUrl}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 dark:from-purple-600 dark:to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-purple-600 hover:to-indigo-600 dark:hover:from-purple-700 dark:hover:to-indigo-700 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FileDown className="w-4 h-4 flex-shrink-0" />
+                  <span>
+                    {purchaseStatus.pdfUrl ? 'Descargar PDF' : 'Generando PDF...'}
+                  </span>
+                </button>
+              ) : (
+                <AddToCartButton
+                  storyId={story.id}
+                  storyTitle={story.title}
+                  storyThumbnail={imageUrl}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                />
+              )}
             </>
           ) : (
             <div className="flex gap-2">

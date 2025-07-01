@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CreditCard, Smartphone, Building2, Check } from 'lucide-react';
 import Button from '../UI/Button';
+import { priceService } from '../../services/priceService';
 
 interface PaymentMethod {
   id: string;
@@ -13,6 +14,7 @@ interface PaymentMethod {
 interface PaymentMethodsProps {
   onPaymentSuccess: (method: string) => void;
   totalAmount: number;
+  orderId?: string;
   currency?: string;
   disabled?: boolean;
 }
@@ -20,6 +22,7 @@ interface PaymentMethodsProps {
 const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   onPaymentSuccess,
   totalAmount,
+  orderId,
   currency = 'CLP',
   disabled = false
 }) => {
@@ -50,28 +53,44 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
     }
   ];
 
-  // Simular proceso de pago
+  // Proceso de pago real
   const handlePayment = async (methodId: string) => {
     if (!methodId || isProcessing) return;
 
     try {
       setIsProcessing(true);
 
-      // Simular delay de procesamiento
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Si tenemos orderId, procesar el pago real
+      if (orderId) {
+        const paymentData = {
+          amount: totalAmount,
+          currency,
+          method: methodId,
+          timestamp: new Date().toISOString()
+        };
 
-      // Simular éxito del pago (90% de éxito)
-      const isSuccess = Math.random() > 0.1;
-
-      if (isSuccess) {
-        onPaymentSuccess(methodId);
+        const result = await priceService.processPayment(orderId, methodId, paymentData);
+        
+        if (result.success) {
+          onPaymentSuccess(methodId);
+        } else {
+          throw new Error(result.error || 'Error en el procesamiento del pago');
+        }
       } else {
-        throw new Error('Error en el procesamiento del pago');
+        // Fallback: simulación si no hay orderId
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const isSuccess = Math.random() > 0.1;
+        
+        if (isSuccess) {
+          onPaymentSuccess(methodId);
+        } else {
+          throw new Error('Error en el procesamiento del pago');
+        }
       }
 
     } catch (error) {
       console.error('Payment failed:', error);
-      alert('Error en el pago. Por favor intenta nuevamente.');
+      alert(error instanceof Error ? error.message : 'Error en el pago. Por favor intenta nuevamente.');
     } finally {
       setIsProcessing(false);
     }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, ArrowLeft, Check, Package } from 'lucide-react';
+import { X, ArrowLeft, Check, Package, FileDown, Loader2 } from 'lucide-react';
 import { useCartOperations } from '../../contexts/CartContext';
+import { useOrderFulfillment } from '../../hooks/useOrderFulfillment';
 import PaymentMethods from './PaymentMethods';
 import Button from '../UI/Button';
 
@@ -28,6 +29,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('review');
   const [orderId, setOrderId] = useState<string>('');
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  
+  // Hook para procesar fulfillment
+  const { isProcessing: isGeneratingPdfs, pdfUrls, error: fulfillmentError } = useOrderFulfillment(
+    currentStep === 'success' ? orderId : null
+  );
 
   // Handler para proceder al pago
   const handleProceedToPayment = async () => {
@@ -188,6 +194,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <PaymentMethods
                 onPaymentSuccess={handlePaymentSuccess}
                 totalAmount={totalPrice}
+                orderId={orderId}
                 currency="CLP"
               />
             )}
@@ -215,8 +222,25 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <p className="text-sm text-green-700">
-                    📧 Recibirás un correo electrónico con los detalles de tu pedido.
+                    {isGeneratingPdfs ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generando tus libros digitales...
+                      </span>
+                    ) : Object.keys(pdfUrls).length > 0 ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <FileDown className="w-4 h-4" />
+                        ¡Tus libros están listos para descargar!
+                      </span>
+                    ) : (
+                      <span>📧 Recibirás un correo electrónico con los detalles de tu pedido.</span>
+                    )}
                   </p>
+                  {fulfillmentError && (
+                    <p className="text-sm text-red-600 mt-2">
+                      ⚠️ Hubo un problema generando los PDFs. Por favor contacta soporte.
+                    </p>
+                  )}
                 </div>
 
                 <Button
