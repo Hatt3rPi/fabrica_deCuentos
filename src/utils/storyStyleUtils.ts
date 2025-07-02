@@ -44,12 +44,22 @@ export interface UnifiedStyleConfig {
 // FUNCIONES DE CONVERSIÓN ESTÁNDAR (migradas desde styleConfig.ts)
 // ============================================================================
 
+// Cache para memoización de estilos convertidos
+const styleCache = new WeakMap<TitleConfig | PageTextConfig, React.CSSProperties>();
+
 /**
  * Convierte configuración de texto a estilos CSS de React
+ * OPTIMIZADO: Con memoización via WeakMap para mejorar performance
  * ESTÁNDAR: Usado por Admin, debe ser usado por PDF y Wizard
  */
 export function convertToReactStyle(config: TitleConfig | PageTextConfig): React.CSSProperties {
-  return {
+  // Verificar cache primero
+  if (styleCache.has(config)) {
+    return styleCache.get(config)!;
+  }
+  
+  // Calcular estilos si no están en cache
+  const style: React.CSSProperties = {
     fontSize: config.fontSize,
     fontFamily: config.fontFamily,
     fontWeight: config.fontWeight,
@@ -60,14 +70,28 @@ export function convertToReactStyle(config: TitleConfig | PageTextConfig): React
     lineHeight: 'lineHeight' in config ? config.lineHeight : undefined,
     textTransform: 'textTransform' in config ? config.textTransform as React.CSSProperties['textTransform'] : undefined,
   };
+  
+  // Guardar en cache y devolver
+  styleCache.set(config, style);
+  return style;
 }
+
+// Cache para memoización de estilos de contenedor
+const containerStyleCache = new WeakMap<ContainerStyle, React.CSSProperties>();
 
 /**
  * Convierte configuración de contenedor a estilos CSS de React
+ * OPTIMIZADO: Con memoización via WeakMap para mejorar performance
  * ESTÁNDAR: Usado por Admin, debe ser usado por PDF y Wizard
  */
 export function convertContainerToReactStyle(containerStyle: ContainerStyle): React.CSSProperties {
-  return {
+  // Verificar cache primero
+  if (containerStyleCache.has(containerStyle)) {
+    return containerStyleCache.get(containerStyle)!;
+  }
+  
+  // Calcular estilos si no están en cache
+  const style: React.CSSProperties = {
     background: containerStyle.background,
     padding: containerStyle.padding,
     margin: containerStyle.margin,
@@ -78,6 +102,10 @@ export function convertContainerToReactStyle(containerStyle: ContainerStyle): Re
     boxShadow: containerStyle.boxShadow,
     backdropFilter: containerStyle.backdropFilter,
   };
+  
+  // Guardar en cache y devolver
+  containerStyleCache.set(containerStyle, style);
+  return style;
 }
 
 // ============================================================================

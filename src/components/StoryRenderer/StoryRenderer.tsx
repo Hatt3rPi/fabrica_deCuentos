@@ -95,19 +95,15 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
     // ========================================================================
     
     const containerRef = React.useRef<HTMLDivElement>(null);
-    const [appliedStyles, setAppliedStyles] = React.useState(() => 
-      applyStandardStyles(config, pageType, context)
-    );
     
     // ========================================================================
-    // EFECTOS
+    // MEMOIZACIÓN DE ESTILOS (OPTIMIZADO)
     // ========================================================================
     
-    // Recalcular estilos cuando cambien las props
-    React.useEffect(() => {
+    // Memoizar el cálculo de estilos para evitar recálculos innecesarios
+    const appliedStyles = React.useMemo(() => {
       try {
-        const newStyles = applyStandardStyles(config, pageType, context);
-        setAppliedStyles(newStyles);
+        const styles = applyStandardStyles(config, pageType, context);
         
         if (debug) {
           console.log(`[StoryRenderer:${instanceId}] Estilos aplicados:`, {
@@ -116,10 +112,15 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
             config: debugStyleConfig(config, pageType)
           });
         }
+        
+        return styles;
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         console.error(`[StoryRenderer:${instanceId}] Error aplicando estilos:`, err);
         onError?.(err);
+        
+        // Devolver estilos por defecto en caso de error
+        return applyStandardStyles(null, pageType, context);
       }
     }, [config, pageType, context, debug, instanceId, onError]);
     
