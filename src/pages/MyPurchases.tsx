@@ -67,7 +67,7 @@ const MyPurchases: React.FC = () => {
           const storyIds = items.map(item => item.story_id);
           const { data: storiesData } = await supabase
             .from('stories')
-            .select('id, title, cover_url, pdf_url')
+            .select('id, title, cover_url, pdf_url, export_url')
             .in('id', storyIds);
           
           // Mapear historias con items
@@ -235,15 +235,15 @@ const MyPurchases: React.FC = () => {
                             
                             <Button
                               onClick={() => item.story && handleDownloadPdf(
-                                item.story.pdf_url || '',
+                                item.story.pdf_url || item.story.export_url || '',
                                 item.story.title
                               )}
                               size="sm"
                               className="flex items-center gap-2"
-                              disabled={!item.story?.pdf_url}
+                              disabled={!(item.story?.pdf_url || item.story?.export_url)}
                             >
                               <FileDown className="w-4 h-4" />
-                              {item.story?.pdf_url ? 'Descargar PDF' : 'Generando...'}
+                              {(item.story?.pdf_url || item.story?.export_url) ? 'Descargar PDF' : 'Generando...'}
                             </Button>
                           </div>
                         </div>
