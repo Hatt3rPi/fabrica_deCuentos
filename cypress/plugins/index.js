@@ -3,7 +3,7 @@
 // ***********************************************************
 
 // Importar las funciones de base de datos
-import { deleteTestStories, deleteAllTestData } from '../support/db.js';
+import { deleteTestStories, deleteAllTestData, createTestStyleConfig, deleteStyleConfig, activateStyleConfig, createTestStory, deleteStory } from '../support/db.js';
 
 /**
  * @type {Cypress.PluginConfig}
@@ -47,6 +47,62 @@ export default (on, config) => {
             error: error.message,
             stack: error.stack
           };
+        }
+      },
+
+      // Tareas para sistema de estilos unificado
+      async createTestStyleConfig(styleConfig) {
+        try {
+          console.log(`[Cypress] Creando configuración de estilo de prueba: ${styleConfig.name}`);
+          const result = await createTestStyleConfig(styleConfig);
+          return result;
+        } catch (error) {
+          console.error('[Cypress] Error en createTestStyleConfig:', error);
+          return null;
+        }
+      },
+
+      async deleteStyleConfig(configId) {
+        try {
+          console.log(`[Cypress] Eliminando configuración de estilo: ${configId}`);
+          const result = await deleteStyleConfig(configId);
+          return { success: true, ...result };
+        } catch (error) {
+          console.error('[Cypress] Error en deleteStyleConfig:', error);
+          return { success: false, error: error.message };
+        }
+      },
+
+      async activateStyleConfig(configId) {
+        try {
+          console.log(`[Cypress] Activando configuración de estilo: ${configId}`);
+          const result = await activateStyleConfig(configId);
+          return { success: true, ...result };
+        } catch (error) {
+          console.error('[Cypress] Error en activateStyleConfig:', error);
+          return { success: false, error: error.message };
+        }
+      },
+
+      async createTestStory(storyData) {
+        try {
+          console.log(`[Cypress] Creando historia de prueba: ${storyData.title}`);
+          const result = await createTestStory(storyData);
+          return result;
+        } catch (error) {
+          console.error('[Cypress] Error en createTestStory:', error);
+          return null;
+        }
+      },
+
+      async deleteStory(storyId) {
+        try {
+          console.log(`[Cypress] Eliminando historia: ${storyId}`);
+          const result = await deleteStory(storyId);
+          return { success: true, ...result };
+        } catch (error) {
+          console.error('[Cypress] Error en deleteStory:', error);
+          return { success: false, error: error.message };
         }
       },
     });

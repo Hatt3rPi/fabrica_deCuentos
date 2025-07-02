@@ -197,6 +197,10 @@ export function applyStandardStyles(
 ): StyleApplication {
   const currentConfig = getCurrentConfigWithDefaults(config, pageType);
   
+  // El contexto se usa para optimizaciones futuras específicas
+  // Por ahora, mantenemos la lógica unificada
+  void context; // Evita el warning de variable no usada
+  
   return {
     textStyle: convertToReactStyle(currentConfig),
     containerStyle: convertContainerToReactStyle(currentConfig.containerStyle),

@@ -334,6 +334,7 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
         data-page-type={pageType}
         data-context={context}
         data-instance={instanceId}
+        data-testid="story-renderer"
       >
         {/* Overlays de admin (grid, rulers) */}
         {renderAdminOverlays()}
