@@ -4,6 +4,7 @@ import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
 import { encode as base64Encode } from "https://deno.land/std@0.203.0/encoding/base64.ts";
 import { generateWithOpenAI } from "../_shared/openai.ts";
+import { configureForEdgeFunction, captureException, setUser, setTags } from '../_shared/sentry.ts';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
@@ -100,7 +101,17 @@ Deno.serve(async (req) => {
     if (!characterPrompt) throw new Error('Falta el prompt de generación de personaje');
 
     userId = await getUserId(req);
-    const enabled = await isActivityEnabled(STAGE, ACTIVITY);
+    
+    // Configurar contexto de usuario en Sentry
+    if (userId) {
+      setUser({ id: userId });
+    }
+    
+    // Configurar tags básicos
+    setTags({
+      'function.name': 'describe-and-sketch'
+    });
+const enabled = await isActivityEnabled(STAGE, ACTIVITY);
     if (!enabled) {
       return new Response(
         JSON.stringify({ error: 'Actividad deshabilitada' }),

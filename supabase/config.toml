@@ -337,8 +337,11 @@ verify_jwt = false
 enabled = true
 verify_jwt = true
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+[edge_runtime.secrets]
+# Sentry DSN para Edge Functions
+SENTRY_DSN = "env(SENTRY_DSN)"
+# Environment para Sentry (development/production)  
+DENO_ENV = "env(DENO_ENV)"
 
 [analytics]
 enabled = true

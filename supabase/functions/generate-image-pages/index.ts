@@ -4,6 +4,9 @@ import { generateWithOpenAI } from '../_shared/openai.ts';
 import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
 
+import { configureForEdgeFunction, captureException, setUser, setTags } from '../_shared/sentry.ts';
+import { createEdgeFunctionLogger } from '../_shared/logger.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -147,6 +150,8 @@ function base64ToBlob(b64: string): Blob {
 }
 
 Deno.serve(async (req) => {
+  const logger = createEdgeFunctionLogger('generate-image-pages');
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -164,7 +169,17 @@ Deno.serve(async (req) => {
 
     userId = await getUserId(req);
 
-    // Obtener texto y prompt base de la página
+    
+    // Configurar contexto de usuario en Sentry
+    if (userId) {
+      setUser({ id: userId });
+    }
+    
+    // Configurar tags básicos
+    setTags({
+      'function.name': 'generate-image-pages'
+    });
+// Obtener texto y prompt base de la página
     const { data: pageRow, error: pageError } = await supabaseAdmin
       .from('story_pages')
       .select('prompt')
