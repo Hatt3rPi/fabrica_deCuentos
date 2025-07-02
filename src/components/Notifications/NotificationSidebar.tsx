@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../hooks/useNotifications';
+import { Notification as INotification } from '../../types/notification';
 import { format, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -19,15 +20,15 @@ const NotificationSidebar: React.FC<NotificationSidebarProps> = ({ isOpen, onClo
   const { 
     notifications, 
     unreadCount, 
-    loading, 
+    loading,
     error,
     fetchNotifications,
-    markAsRead,
-    markAllAsRead,
-    groupNotificationsByDate
+    markAsRead, 
+    markAllAsRead
   } = useNotifications();
 
-  const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
+  type TabType = 'all' | 'unread' | 'read';
+  const [activeTab, setActiveTab] = useState<TabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<NotificationType | ''>('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -151,23 +152,49 @@ const NotificationSidebar: React.FC<NotificationSidebarProps> = ({ isOpen, onClo
     );
   };
 
-  // Filter notifications by search query
-  const filteredNotifications = React.useMemo(() => 
-    notifications.filter(notification => 
-      notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      notification.message.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
-    [notifications, searchQuery]
-  );
+  // Filter and group notifications by search query, active tab, and type
+  const { groupedNotifications, filteredNotifications } = React.useMemo((): { 
+    groupedNotifications: [string, INotification[]][];
+    filteredNotifications: INotification[];
+  } => {
+    // First filter the notifications
+    const filtered = notifications.filter(notification => {
+      // Apply search filter
+      const matchesSearch = !searchQuery || 
+        notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (notification.message || '').toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Apply type filter if filterType is set
+      const matchesType = !filterType || notification.type === filterType;
+      
+      // Apply read/unread filter based on activeTab
+      const matchesTab = 
+        activeTab === 'all' || 
+        (activeTab === 'unread' && !notification.read) ||
+        (activeTab === 'read' && notification.read);
+      
+      return matchesSearch && matchesType && matchesTab;
+    });
 
-  // Group notifications by date and convert to array for rendering
-  const groupedNotifications = React.useMemo(() => 
-    Object.entries(groupNotificationsByDate().reduce((acc, group) => {
-      acc[group.date] = group.notifications;
-      return acc;
-    }, {} as Record<string, Notification[]>)),
-    [groupNotificationsByDate, notifications] // groupNotificationsByDate ya está memoizado con useCallback
-  );
+    // Then group by date
+    const groups: Record<string, INotification[]> = {};
+    
+    filtered.forEach(notification => {
+      const date = new Date(notification.createdAt).toLocaleDateString();
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(notification);
+    });
+    
+    // Convert to array of [date, notifications] pairs
+    const grouped = Object.entries(groups).map(([date, notes]) => [date, notes] as [string, INotification[]]);
+    
+    return {
+      groupedNotifications: grouped,
+      filteredNotifications: filtered
+    };
+  }, [notifications, searchQuery, activeTab, filterType]);
 
   // Efecto para manejar el scroll del body cuando el sidebar está abierto
   useEffect(() => {
@@ -195,37 +222,42 @@ const NotificationSidebar: React.FC<NotificationSidebarProps> = ({ isOpen, onClo
       
       {/* Sidebar */}
       <div 
-        className={`fixed inset-y-0 right-0 w-11/12 max-w-xs bg-white dark:bg-gray-800 shadow-xl transform transition-all duration-300 ease-in-out z-50 flex flex-col ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
-        aria-modal="true"
-        role="dialog"
-        aria-label="Panel de notificaciones"
+        className={`fixed inset-y-0 right-0 w-full sm:max-w-md bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Notificaciones</h2>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
-            aria-label="Filtrar"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
-            </svg>
-          </button>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
-            aria-label="Cerrar"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
-      </div>
+        <div className="h-full flex flex-col">
+          {/* Header */}
+          <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Notificaciones</h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
+                aria-label="Filtrar notificaciones"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <button
+                onClick={onClose}
+                className="hidden sm:block text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
+                aria-label="Cerrar notificaciones"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <button
+                onClick={onClose}
+                className="sm:hidden p-2 -mr-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
+                aria-label="Cerrar notificaciones"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
 
       {/* Filter panel */}
       {isFilterOpen && (
@@ -290,8 +322,8 @@ const NotificationSidebar: React.FC<NotificationSidebarProps> = ({ isOpen, onClo
       {/* Notification list */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+          <div className="flex justify-center p-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
           </div>
         ) : error ? (
           <div className="p-4 text-center text-red-500">
@@ -367,7 +399,8 @@ const NotificationSidebar: React.FC<NotificationSidebarProps> = ({ isOpen, onClo
           Marcar todas como leídas
         </button>
       </div>
-    </div>
+        </div>
+      </div>
     </>
   );
 };

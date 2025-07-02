@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { X, Home, User, Settings, BarChart3, AlertTriangle, Palette, LogOut, BookOpen, Bug } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { X, Home, User, Settings, BarChart3, AlertTriangle, LogOut, BookOpen, Bug, Moon, Sun, Palette } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
-import ProfileDropdown from './ProfileDropdown';
+
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -11,14 +11,38 @@ interface MobileSidebarProps {
 }
 
 const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const isAdmin = useAdmin();
   const location = useLocation();
+  const [darkMode, setDarkMode] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return false;
+  });
+  const isMounted = useRef(true);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Cerrar el menú al cambiar de ruta
   useEffect(() => {
     onClose();
   }, [location.pathname, onClose]);
+
+  // Efecto para manejar el cambio de tema
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    }
+  }, [darkMode]);
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
 
   // Prevenir el scroll del cuerpo cuando el menú está abierto
   useEffect(() => {
@@ -36,14 +60,10 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleClick = (event: MouseEvent) => {
-      const sidebar = document.getElementById('mobile-sidebar');
-      const menuButton = document.getElementById('mobile-menu-button');
-      
-      if (!sidebar || !menuButton) return;
-      
+    const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      const isClickInside = sidebar.contains(target) || menuButton.contains(target);
+      const isClickInside = sidebarRef.current?.contains(target) || 
+                          menuButtonRef.current?.contains(target);
       
       if (!isClickInside) {
         onClose();
@@ -51,25 +71,26 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
     };
 
     // Usar un pequeño retraso para evitar que el clic del botón active el cierre
-    // y verificar que el componente siga montado antes de agregar el listener
     const timer = setTimeout(() => {
-      // Verificar que el menú siga abierto antes de agregar el listener
-      if (isOpen) {
-        document.addEventListener('click', handleClick);
+      // Verificar que el menú siga abierto y el componente esté montado
+      if (isOpen && isMounted.current) {
+        document.addEventListener('click', handleClickOutside);
       }
     }, 10);
     
     return () => {
+      // Marcar el componente como desmontado
+      isMounted.current = false;
+      
+      // Limpiar el timeout si aún está pendiente
       clearTimeout(timer);
-      // Asegurarse de limpiar el listener en la limpieza
-      document.removeEventListener('click', handleClick);
+      
+      // Asegurarse de limpiar el listener
+      document.removeEventListener('click', handleClickOutside);
     };
   }, [isOpen, onClose]);
 
-  // Prevenir el cierre del menú al hacer clic dentro de él
-  const handleSidebarClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
+
 
   return (
     <>
@@ -84,16 +105,16 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       </div>
       
-      {/* Sidebar con transición */}
-      <div 
-        id="mobile-sidebar"
-        onClick={handleSidebarClick}
-        className={`fixed inset-y-0 left-0 z-50 w-11/12 max-w-xs bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-2xl transform transition-all duration-300 ease-in-out lg:hidden flex flex-col ${
+      {/* Sidebar móvil */}
+      <div
+        ref={sidebarRef}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out lg:hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-modal="true"
         role="dialog"
         aria-label="Menú de navegación"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header con degradado */}
         <div className="p-4 bg-gradient-to-r from-purple-600 to-blue-500 dark:from-purple-800 dark:to-blue-700 text-white">
@@ -102,28 +123,15 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
               <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <div className="text-lg font-bold tracking-tight">CuenterIA</div>
-                {user?.email && (
-                  <div className="text-xs text-white/80 truncate max-w-[180px]">
-                    {user.email}
-                  </div>
-                )}
-              </div>
+              <div className="text-lg font-bold tracking-tight">CuenterIA</div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <ProfileDropdown />
-              </div>
-              <button 
-                onClick={onClose}
-                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/30"
-                aria-label="Cerrar menú"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/30"
+              aria-label="Cerrar menú"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
@@ -222,6 +230,25 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200/50 dark:border-gray-700/50 mt-auto">
+          {/* Botón de cambio de tema */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              onClick={toggleDarkMode}
+              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            >
+              {darkMode ? (
+                <>
+                  <Sun className="w-5 h-5 mr-3" />
+                  <span>Modo Claro</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-5 h-5 mr-3" />
+                  <span>Modo Oscuro</span>
+                </>
+              )}
+            </button>
+          </div>
           <button
             onClick={() => {
               signOut();
