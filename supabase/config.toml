@@ -339,7 +339,7 @@ verify_jwt = true
 
 [edge_runtime.secrets]
 # Sentry DSN para Edge Functions
-SENTRY_DSN = "env(SENTRY_DSN)"
+SENTRY_DSN = "env(VITE_SENTRY_DSN)"
 # Environment para Sentry (development/production)  
 DENO_ENV = "env(DENO_ENV)"
 
