@@ -1,174 +1,174 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Este archivo proporciona orientación a Claude Code (claude.ai/code) cuando trabaja con código en este repositorio.
 
-## Common Development Commands
+## Comandos de Desarrollo Comunes
 
-### Development
-- `npm run dev` - Start development server with Vite
-- `npm run build` - Build production bundle
-- `npm run lint` - Run ESLint
-- `npm run preview` - Preview production build
+### Desarrollo
+- `npm run dev` - Iniciar servidor de desarrollo con Vite
+- `npm run build` - Construir bundle de producción
+- `npm run lint` - Ejecutar ESLint
+- `npm run preview` - Previsualizar build de producción
 
 ### Testing
-- `npm run cypress:open` - Open Cypress GUI for interactive testing
-- `npm run cypress:run` - Run all Cypress tests in headless mode (26 tests)
-- `npm run test:e2e` - Run end-to-end tests (alias for cypress:run)
-- `npm run test:complete-flow` - Run ONLY the complete story flow test (recommended)
-- `npx cypress run --spec "cypress/e2e/flows/3_creacion_personaje.cy.js"` - Run specific test
+- `npm run cypress:open` - Abrir interfaz gráfica de Cypress para testing interactivo
+- `npm run cypress:run` - Ejecutar todas las pruebas de Cypress en modo headless (26 pruebas)
+- `npm run test:e2e` - Ejecutar pruebas end-to-end (alias para cypress:run)
+- `npm run test:complete-flow` - Ejecutar SOLO la prueba de flujo completo (recomendado)
+- `npx cypress run --spec "cypress/e2e/flows/3_creacion_personaje.cy.js"` - Ejecutar prueba específica
 
 ### Supabase
-- `npm run supabase:start` - Start local Supabase development environment
-- `npm run supabase:pull` - Pull database schema and functions from remote
+- `npm run supabase:start` - Iniciar entorno de desarrollo local de Supabase
+- `npm run supabase:pull` - Extraer esquema de base de datos y funciones del remoto
 
-## Architecture Overview
+## Vista General de la Arquitectura
 
-**La CuenterIA** is a React-based platform for creating personalized children's stories with AI-generated illustrations. The app uses a wizard-based flow to guide users through character creation, story design, and book generation.
+**La CuenterIA** es una plataforma basada en React para crear cuentos infantiles personalizados con ilustraciones generadas por IA. La aplicación usa un flujo tipo asistente para guiar a los usuarios a través de la creación de personajes, diseño de historias y generación de libros.
 
-### Key Architecture Components
+### Componentes Clave de la Arquitectura
 
-1. **Wizard Flow System**: Centralized state management for the multi-step story creation process
-   - `WizardContext` - Manages wizard state and UI flow
-   - `useWizardFlowStore` - Zustand store for step validation and progression
-   - Sequential step progression with validation requirements
-   - Auto-save functionality with localStorage backup
+1. **Sistema de Flujo Wizard**: Gestión centralizada de estado para el proceso de creación de historias de múltiples pasos
+   - `WizardContext` - Gestiona el estado del wizard y flujo de UI
+   - `useWizardFlowStore` - Store de Zustand para validación y progresión de pasos
+   - Progresión secuencial de pasos con requisitos de validación
+   - Funcionalidad de autoguardado con respaldo en localStorage
 
-2. **Character Management**: 
-   - Character creation with AI-generated thumbnails
-   - Reusable character library across stories
-   - Validation requires name, description, and generated thumbnail
+2. **Gestión de Personajes**: 
+   - Creación de personajes con miniaturas generadas por IA
+   - Biblioteca de personajes reutilizable entre historias
+   - La validación requiere nombre, descripción y miniatura generada
 
-3. **Supabase Integration**:
-   - Authentication via Supabase Auth
-   - PostgreSQL database with RLS policies
-   - Edge Functions for AI generation (story, images, variations)
-   - Real-time updates for admin analytics
+3. **Integración con Supabase**:
+   - Autenticación vía Supabase Auth
+   - Base de datos PostgreSQL con políticas RLS
+   - Edge Functions para generación de IA (historia, imágenes, variaciones)
+   - Actualizaciones en tiempo real para analíticas de admin
 
-4. **AI Generation Pipeline**:
-   - Multiple providers (OpenAI, Flux, Stable Diffusion)
-   - Edge functions in `supabase/functions/` directory
-   - Metrics tracking for prompt usage and performance
+4. **Pipeline de Generación de IA**:
+   - Múltiples proveedores (OpenAI, Flux, Stable Diffusion)
+   - Edge functions en directorio `supabase/functions/`
+   - Seguimiento de métricas para uso de prompts y rendimiento
 
-### Important Patterns
+### Patrones Importantes
 
-- **Context Providers**: App uses nested providers (Auth, Admin, Wizard, Story)
-- **Page Routing**: React Router with protected routes and animated transitions
-- **State Management**: Mix of Context API and Zustand stores
-- **Auto-save**: Critical for wizard flow persistence with dual localStorage/Supabase strategy
+- **Context Providers**: La app usa providers anidados (Auth, Admin, Wizard, Story)
+- **Enrutamiento de Páginas**: React Router con rutas protegidas y transiciones animadas
+- **Gestión de Estado**: Mezcla de Context API y stores de Zustand
+- **Autoguardado**: Crítico para persistencia del flujo wizard con estrategia dual localStorage/Supabase
 
-## Development Guidelines
+## Guías de Desarrollo
 
-### Testing Requirements
-- Maintain `data-testid` attributes used by Cypress tests
-- Run `npm run cypress:run` before creating PRs
-- Tests use service role key for database cleanup between runs
+### Requisitos de Testing
+- Mantener atributos `data-testid` usados por las pruebas de Cypress
+- Ejecutar `npm run cypress:run` antes de crear PRs
+- Las pruebas usan clave de rol de servicio para limpieza de base de datos entre ejecuciones
 
 ### Edge Functions
-- Located in `supabase/functions/` with shared utilities in `_shared/`
-- All functions require JWT verification except `send-reset-email`
-- Use `metrics.ts` helper for tracking prompt usage
+- Ubicadas en `supabase/functions/` con utilidades compartidas en `_shared/`
+- Todas las funciones requieren verificación JWT excepto `send-reset-email`
+- Usar helper `metrics.ts` para seguimiento de uso de prompts
 
-### Wizard Flow Rules
-1. Sequential progression - cannot skip steps
-2. Previous step must be completed before advancing
-3. Editing previous steps resets subsequent steps to draft
-4. Auto-save runs continuously with story ID context
-5. Cleanup controlled by `skipCleanup` flag for character editing
+### Reglas del Flujo Wizard
+1. Progresión secuencial - no se pueden saltar pasos
+2. El paso anterior debe completarse antes de avanzar
+3. Editar pasos anteriores restablece pasos subsecuentes a borrador
+4. Autoguardado funciona continuamente con contexto de ID de historia
+5. Limpieza controlada por flag `skipCleanup` para edición de personajes
 
-### Admin Features
-- `/admin/flujo` - Real-time monitoring of active AI function calls
-- Analytics dashboard tracks prompt usage and costs
-- Activity can be enabled/disabled per edge function
+### Características de Admin
+- `/admin/flujo` - Monitoreo en tiempo real de llamadas activas a funciones de IA
+- Dashboard de analíticas rastrea uso de prompts y costos
+- La actividad puede habilitarse/deshabilitarse por edge function
 
-## Environment Setup
+## Configuración del Entorno
 
-Required environment variables:
+Variables de entorno requeridas:
 ```bash
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key (for tests)
+VITE_SUPABASE_URL=tu-url-de-supabase
+VITE_SUPABASE_ANON_KEY=tu-clave-anon
+VITE_SUPABASE_SERVICE_ROLE_KEY=tu-clave-de-rol-de-servicio (para pruebas)
 ```
 
-Demo credentials:
+Credenciales de demo:
 - Email: tester@lacuenteria.cl
 - Password: test123
 
-## Claude Code Best Practices
+## Mejores Prácticas de Claude Code
 
-### Task Management
-- **Always use TodoWrite/TodoRead tools** for complex tasks (3+ steps)
-- Mark todos as `in_progress` BEFORE starting work
-- Complete todos IMMEDIATELY after finishing each task
-- Only have ONE task `in_progress` at any time
-- Break large tasks into specific, actionable items
+### Gestión de Tareas
+- **Siempre usar herramientas TodoWrite/TodoRead** para tareas complejas (3+ pasos)
+- Marcar todos como `in_progress` ANTES de comenzar el trabajo
+- Completar todos INMEDIATAMENTE después de finalizar cada tarea
+- Tener solo UNA tarea `in_progress` a la vez
+- Dividir tareas grandes en elementos específicos y accionables
 
-### Database Operations
-- **Use RPC functions for complex operations** (e.g., `link_character_to_story`)
-- Handle duplicates with `ON CONFLICT DO NOTHING` pattern
-- Always verify user permissions in database functions
-- Use `supabase.rpc()` for safer database operations than direct inserts
+### Operaciones de Base de Datos
+- **Usar funciones RPC para operaciones complejas** (ej., `link_character_to_story`)
+- Manejar duplicados con patrón `ON CONFLICT DO NOTHING`
+- Siempre verificar permisos de usuario en funciones de base de datos
+- Usar `supabase.rpc()` para operaciones de base de datos más seguras que inserts directos
 
-### Error Handling & Race Conditions
-- Add loading states to prevent multiple simultaneous requests
-- Implement proper error handling with user-friendly messages
-- Use `try/catch/finally` blocks for async operations
-- Log errors with context for debugging
+### Manejo de Errores y Condiciones de Carrera
+- Agregar estados de carga para prevenir múltiples solicitudes simultáneas
+- Implementar manejo adecuado de errores con mensajes amigables al usuario
+- Usar bloques `try/catch/finally` para operaciones asíncronas
+- Registrar errores con contexto para depuración
 
-### Testing Strategy
-- **Run tests before every commit**: `npm run cypress:run`
-- Use descriptive test names that explain the user flow
-- Include cleanup at the beginning of comprehensive tests
-- Update test credentials to match current demo user
-- Use `data-testid` attributes for reliable test selectors
+### Estrategia de Testing
+- **Ejecutar pruebas antes de cada commit**: `npm run cypress:run`
+- Usar nombres de prueba descriptivos que expliquen el flujo del usuario
+- Incluir limpieza al inicio de pruebas comprehensivas
+- Actualizar credenciales de prueba para coincidir con usuario demo actual
+- Usar atributos `data-testid` para selectores de prueba confiables
 
-### Code Quality
-- **Run linting before commits**: `npm run lint`
-- Follow existing code patterns and conventions
-- Use TypeScript types consistently
-- Keep functions focused and single-purpose
+### Calidad de Código
+- **Ejecutar linting antes de commits**: `npm run lint`
+- Seguir patrones y convenciones de código existentes
+- Usar tipos de TypeScript consistentemente
+- Mantener funciones enfocadas y de un solo propósito
 
-### State Management
-- **Separate concerns**: auto-save (content) vs wizard state (flow)
-- Use direct persistence for critical state changes
-- Implement backup strategies (localStorage + database)
-- Clean up state properly on component unmount
+### Gestión de Estado
+- **Separar responsabilidades**: auto-save (contenido) vs estado de wizard (flujo)
+- Usar persistencia directa para cambios críticos de estado
+- Implementar estrategias de respaldo (localStorage + base de datos)
+- Limpiar estado apropiadamente al desmontar componente
 
-### Git Workflow
-- **NEVER make changes directly to main branch**
-- Always create feature/fix branches for any changes
-- Use descriptive commit messages following the established pattern
-- Include context about WHY changes were made
-- Test functionality before committing
-- Create PRs for all changes, even documentation
+### Flujo de Trabajo Git
+- **NUNCA hacer cambios directamente a la rama main**
+- Siempre crear ramas feature/fix para cualquier cambio
+- Usar mensajes de commit descriptivos siguiendo el patrón establecido
+- Incluir contexto sobre POR QUÉ se hicieron los cambios
+- Probar funcionalidad antes de hacer commit
+- Crear PRs para todos los cambios, incluso documentación
 
-### Development Commands Priority
-1. **Before starting**: `npm run dev` (check app works)
-2. **During development**: `npm run lint` (check code quality)
-3. **Before committing**: `npm run cypress:run` (verify tests pass)
-4. **For database changes**: `npm run supabase:pull` (sync schema)
+### Prioridad de Comandos de Desarrollo
+1. **Antes de comenzar**: `npm run dev` (verificar que la app funciona)
+2. **Durante desarrollo**: `npm run lint` (verificar calidad de código)
+3. **Antes de commit**: `npm run cypress:run` (verificar que las pruebas pasen)
+4. **Para cambios de base de datos**: `npm run supabase:pull` (sincronizar esquema)
 
-### Common Pitfalls to Avoid
-- Don't skip wizard flow validation rules
-- Don't mix auto-save with wizard state persistence
-- Don't create commits without running tests
-- Don't use direct database inserts for complex operations
-- Don't forget to handle race conditions in UI interactions
-- **NEVER commit directly to main** - always use branches and PRs
+### Errores Comunes a Evitar
+- No saltarse reglas de validación del flujo wizard
+- No mezclar auto-save con persistencia de estado del wizard
+- No crear commits sin ejecutar pruebas
+- No usar inserts directos de base de datos para operaciones complejas
+- No olvidar manejar condiciones de carrera en interacciones de UI
+- **NUNCA hacer commit directamente a main** - siempre usar ramas y PRs
 
-### File Organization
-- Place new test files in appropriate directories
-- Back up old tests before major changes
-- Keep database functions in `supabase/migrations/`
-- Use clear, descriptive filenames
-- Document new patterns in this file
+### Organización de Archivos
+- Colocar nuevos archivos de prueba en directorios apropiados
+- Hacer respaldo de pruebas antiguas antes de cambios mayores
+- Mantener funciones de base de datos en `supabase/migrations/`
+- Usar nombres de archivos claros y descriptivos
+- Documentar nuevos patrones en este archivo
 
-### Issue Generation Guidelines
+### Guías de Generación de Issues
 - Cuando crees issues, genéralos en español y en el título pon [auto][prioridad alta/media/baja]
 
-### Documentation Practices
+### Prácticas de Documentación
 - **NUNCA crear archivos de documentación aislados en root** (ej: SOLUTION.md, FIX.md, etc.)
 - **SIEMPRE usar sistema centralizado** en `/docs/` con templates estandarizados
-- siempre documenta los cambios en CHANGELOG.md y en el readme que corresponda
+- Siempre documenta los cambios en CHANGELOG.md y en el readme que corresponda
 
 #### Sistema de Documentación Centralizado
 
@@ -202,10 +202,10 @@ docs/
 └── templates/         # Templates estandarizados
 ```
 
-### Supabase Migrations
+### Migraciones de Supabase
 - Las Migrations de supabase deben tener el siguiente formato aaaaMMddhhmmss_
 
-### MCP Server Integration
+### Integración de Servidor MCP
 - **Claude Code mantiene su propia configuración MCP** separada de settings.local.json
 - Para agregar servidores MCP usar: `claude mcp add` o `claude mcp add-json` para configuraciones complejas
 - Siempre incluir variables de entorno si son necesarias
