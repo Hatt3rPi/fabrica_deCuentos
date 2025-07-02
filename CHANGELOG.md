@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## [2025-07-02] - Fix: Acceso Público para Descarga de PDFs
+
+### 🔧 Corrección
+- **Problema**: Los usuarios no podían descargar sus cuentos en PDF debido a políticas RLS restrictivas
+- **Solución**: Agregada política de lectura pública para el bucket `exports`
+- **Resultado**: Los PDFs ahora se pueden descargar directamente sin autenticación
+
+### 🗃️ Base de Datos
+- Nueva política: "Public can read exports" para el bucket storage
+- Permite operaciones SELECT (lectura) sin requerir autenticación
+- Mantiene la seguridad al permitir solo lectura, no modificación
+
+### 📄 Archivos
+- `supabase/migrations/20250702084058_fix_exports_bucket_public_access.sql` - Migración de política
+- `docs/solutions/fix-pdf-download-public-access/README.md` - Documentación completa
+
 ## [2025-07-01] - Flujo Completo de Compra Post-Pago
 
 ### ✨ Nuevas Funcionalidades
