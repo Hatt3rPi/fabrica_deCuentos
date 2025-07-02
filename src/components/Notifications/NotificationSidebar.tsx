@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../hooks/useNotifications';
+import { format, parseISO, isValid } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { 
   Notification, 
   NotificationType, 
@@ -29,6 +31,31 @@ const NotificationSidebar: React.FC<NotificationSidebarProps> = ({ isOpen, onClo
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<NotificationType | ''>('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Función para formatear la etiqueta de fecha accesible
+  const getFormattedDateLabel = (dateString: string): string => {
+    try {
+      let date: Date;
+      
+      // Intentar parsear como ISO string primero
+      date = parseISO(dateString);
+      
+      // Si no es una fecha válida, intentar con el constructor de Date
+      if (!isValid(date)) {
+        date = new Date(dateString);
+      }
+      
+      // Si aún no es válida, devolver un mensaje genérico
+      if (!isValid(date)) {
+        return `Notificaciones (${dateString})`;
+      }
+      
+      return `Notificaciones del ${format(date, "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}`;
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return `Notificaciones (${dateString})`;
+    }
+  };
 
   // Close sidebar when clicking outside
   useEffect(() => {
@@ -125,16 +152,22 @@ const NotificationSidebar: React.FC<NotificationSidebarProps> = ({ isOpen, onClo
   };
 
   // Filter notifications by search query
-  const filteredNotifications = notifications.filter(notification => 
-    notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    notification.message.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredNotifications = React.useMemo(() => 
+    notifications.filter(notification => 
+      notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      notification.message.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [notifications, searchQuery]
   );
 
   // Group notifications by date and convert to array for rendering
-  const groupedNotifications = Object.entries(groupNotificationsByDate().reduce((acc, group) => {
-    acc[group.date] = group.notifications;
-    return acc;
-  }, {} as Record<string, Notification[]>));
+  const groupedNotifications = React.useMemo(() => 
+    Object.entries(groupNotificationsByDate().reduce((acc, group) => {
+      acc[group.date] = group.notifications;
+      return acc;
+    }, {} as Record<string, Notification[]>)),
+    [groupNotificationsByDate, notifications] // groupNotificationsByDate ya está memoizado con useCallback
+  );
 
   // Efecto para manejar el scroll del body cuando el sidebar está abierto
   useEffect(() => {
@@ -272,7 +305,10 @@ const NotificationSidebar: React.FC<NotificationSidebarProps> = ({ isOpen, onClo
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {groupedNotifications.map(([date, notifications]) => (
               <div key={date} className="p-4">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                <h3 
+                  className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2"
+                  aria-label={getFormattedDateLabel(date)}
+                >
                   {date}
                 </h3>
                 <div className="space-y-2">

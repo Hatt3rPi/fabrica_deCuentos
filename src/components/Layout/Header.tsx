@@ -79,9 +79,6 @@ const Header: React.FC = () => {
             <div className="relative">
               <NotificationBell />
             </div>
-            <span className="hidden md:inline ml-2 text-sm font-medium text-gray-500 dark:text-gray-300 truncate max-w-[100px]">
-              {user?.email}
-            </span>
           </div>
         </div>
 
@@ -100,9 +97,6 @@ const Header: React.FC = () => {
           <ThemeToggleButton />
           <div className="h-6 w-px bg-gray-200 dark:bg-gray-600 mx-1"></div>
           <NotificationBell />
-          <span className="text-sm font-medium text-gray-500 dark:text-gray-300 ml-2">
-            {user?.email}
-          </span>
         </div>
       </div>
 

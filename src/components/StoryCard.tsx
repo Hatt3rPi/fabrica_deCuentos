@@ -101,11 +101,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
         </div>
         
         {/* Acciones */}
-<<<<<<< HEAD
         <div className="space-y-3 mt-4">
-=======
-        <div className="flex gap-2 pt-3 mt-auto">
->>>>>>> 89727e3 (feat: improve mobile layout and UI consistency)
           {story.status === 'completed' ? (
             <>
               {/* Fila de botones principales */}

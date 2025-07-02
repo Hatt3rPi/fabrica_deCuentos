@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Home, User, Settings, BarChart3, AlertTriangle, Palette, LogOut, BookOpen, Bug } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
+import ProfileDropdown from './ProfileDropdown';
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -50,12 +51,17 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
     };
 
     // Usar un pequeño retraso para evitar que el clic del botón active el cierre
+    // y verificar que el componente siga montado antes de agregar el listener
     const timer = setTimeout(() => {
-      document.addEventListener('click', handleClick);
+      // Verificar que el menú siga abierto antes de agregar el listener
+      if (isOpen) {
+        document.addEventListener('click', handleClick);
+      }
     }, 10);
     
     return () => {
       clearTimeout(timer);
+      // Asegurarse de limpiar el listener en la limpieza
       document.removeEventListener('click', handleClick);
     };
   }, [isOpen, onClose]);
@@ -90,27 +96,35 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose }) => {
         aria-label="Menú de navegación"
       >
         {/* Header con degradado */}
-        <div className="p-6 bg-gradient-to-r from-purple-600 to-blue-500 dark:from-purple-800 dark:to-blue-700 text-white">
+        <div className="p-4 bg-gradient-to-r from-purple-600 to-blue-500 dark:from-purple-800 dark:to-blue-700 text-white">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold tracking-tight">CuenterIA</span>
+              <div>
+                <div className="text-lg font-bold tracking-tight">CuenterIA</div>
+                {user?.email && (
+                  <div className="text-xs text-white/80 truncate max-w-[180px]">
+                    {user.email}
+                  </div>
+                )}
+              </div>
             </div>
-            <button 
-              onClick={onClose}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/30"
-              aria-label="Cerrar menú"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <ProfileDropdown />
+              </div>
+              <button 
+                onClick={onClose}
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/30"
+                aria-label="Cerrar menú"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
-          {user?.email && (
-            <div className="mt-4 text-sm text-white/90 truncate">
-              {user.email}
-            </div>
-          )}
         </div>
 
         {/* Navigation */}
