@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, BookOpen, PenTool } from 'lucide-react';
+import { Plus, BookOpen, PenTool, ChevronLeft, ChevronRight } from 'lucide-react';
 import ConfirmDialog from '../components/UI/ConfirmDialog';
 import { storyService } from '../services/storyService';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -24,6 +24,31 @@ const MyStories: React.FC = () => {
   const [storyToDelete, setStoryToDelete] = useState<Story | null>(null);
   const [deleteCharacters, setDeleteCharacters] = useState<boolean>(true);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<{completed: number, drafts: number}>({completed: 1, drafts: 1});
+  // Número de cuentos por página según el tamaño de la pantalla
+  const [storiesPerPage, setStoriesPerPage] = useState<number>(8); // Valor por defecto, se actualizará en el efecto
+  
+  // Ajustar el número de cuentos por página según el ancho de la pantalla
+  useEffect(() => {
+    const updateStoriesPerPage = () => {
+      if (window.innerWidth >= 1280) { // desktop (xl)
+        setStoriesPerPage(12); // 6 columnas x 2 filas = 12 cuentos
+      } else if (window.innerWidth >= 768) { // tablet (md)
+        setStoriesPerPage(8); // 4 columnas x 2 filas = 8 cuentos
+      } else { // móvil
+        setStoriesPerPage(4); // 2 columnas x 2 filas = 4 cuentos
+      }
+    };
+    
+    // Actualizar al montar
+    updateStoriesPerPage();
+    
+    // Actualizar al cambiar el tamaño de la ventana
+    window.addEventListener('resize', updateStoriesPerPage);
+    
+    // Limpiar el event listener al desmontar
+    return () => window.removeEventListener('resize', updateStoriesPerPage);
+  }, []);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -215,15 +240,59 @@ const MyStories: React.FC = () => {
 
   const cancelDelete = () => setStoryToDelete(null);
 
-  // Agrupar cuentos por estado
-  const { completedStories, draftStories } = useMemo(() => {
+  // Agrupar cuentos por estado y manejar paginación
+  const { completedStories, draftStories, paginatedCompleted, paginatedDrafts, totalCompletedPages, totalDraftPages } = useMemo(() => {
     const completed = stories.filter(story => story.status === 'completed');
     const drafts = stories.filter(story => story.status === 'draft');
+    
+    // Calcular páginas
+    const totalCompletedPages = Math.ceil(completed.length / storiesPerPage);
+    const totalDraftPages = Math.ceil(drafts.length / storiesPerPage);
+    
+    // Asegurar que la página actual no sea mayor que el total de páginas
+    const currentCompletedPage = Math.min(currentPage.completed, Math.max(1, totalCompletedPages || 1));
+    const currentDraftPage = Math.min(currentPage.drafts, Math.max(1, totalDraftPages || 1));
+    
+    // Obtener cuentos para la página actual
+    const indexOfLastCompleted = currentCompletedPage * storiesPerPage;
+    const indexOfFirstCompleted = indexOfLastCompleted - storiesPerPage;
+    const paginatedCompleted = completed.slice(indexOfFirstCompleted, indexOfLastCompleted);
+    
+    const indexOfLastDraft = currentDraftPage * storiesPerPage;
+    const indexOfFirstDraft = indexOfLastDraft - storiesPerPage;
+    const paginatedDrafts = drafts.slice(indexOfFirstDraft, indexOfLastDraft);
+    
+    // Actualizar el estado de la página si es necesario
+    if (currentCompletedPage !== currentPage.completed || currentDraftPage !== currentPage.drafts) {
+      setCurrentPage({
+        completed: currentCompletedPage,
+        drafts: currentDraftPage
+      });
+    }
+    
     return {
       completedStories: completed,
-      draftStories: drafts
+      draftStories: drafts,
+      paginatedCompleted,
+      paginatedDrafts,
+      totalCompletedPages: totalCompletedPages || 1,
+      totalDraftPages: totalDraftPages || 1
     };
-  }, [stories]);
+  }, [stories, currentPage, storiesPerPage]);
+  
+  // Cambiar página
+  const paginate = (type: 'completed' | 'drafts', pageNumber: number) => {
+    setCurrentPage(prev => ({
+      ...prev,
+      [type]: pageNumber
+    }));
+    // Desplazarse al inicio de la sección
+    const sectionId = type === 'completed' ? 'completed-stories' : 'draft-stories';
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 sm:p-6">
@@ -239,7 +308,7 @@ const MyStories: React.FC = () => {
 
         {/* Sección de Cuentos Completados */}
         {completedStories.length > 0 && (
-          <div className="mb-16">
+          <div id="completed-stories" className="mb-16">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
@@ -260,8 +329,8 @@ const MyStories: React.FC = () => {
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {completedStories.map((story) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4">
+              {paginatedCompleted.map((story) => (
                 <StoryCard
                   key={story.id}
                   story={story}
@@ -271,12 +340,65 @@ const MyStories: React.FC = () => {
                 />
               ))}
             </div>
+            {/* Paginación */}
+            {totalCompletedPages > 1 && (
+              <div className="mt-6 flex justify-center">
+                <nav className="flex items-center gap-1" aria-label="Paginación de cuentos completados">
+                  <button
+                    onClick={() => paginate('completed', currentPage.completed - 1)}
+                    disabled={currentPage.completed === 1}
+                    className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Página anterior"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  
+                  {Array.from({ length: Math.min(5, totalCompletedPages) }, (_, i) => {
+                    // Mostrar máximo 5 páginas en la navegación
+                    let pageNum;
+                    if (totalCompletedPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage.completed <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage.completed >= totalCompletedPages - 2) {
+                      pageNum = totalCompletedPages - 4 + i;
+                    } else {
+                      pageNum = currentPage.completed - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => paginate('completed', pageNum)}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          currentPage.completed === pageNum
+                            ? 'bg-indigo-600 text-white'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                        aria-current={currentPage.completed === pageNum ? 'page' : undefined}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  
+                  <button
+                    onClick={() => paginate('completed', currentPage.completed + 1)}
+                    disabled={currentPage.completed === totalCompletedPages}
+                    className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Página siguiente"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
         )}
 
         {/* Sección de Borradores */}
         {draftStories.length > 0 && (
-          <div className="mt-16">
+          <div id="draft-stories" className="mt-16">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
@@ -297,8 +419,8 @@ const MyStories: React.FC = () => {
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {draftStories.map((story) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4">
+              {paginatedDrafts.map((story) => (
                 <StoryCard
                   key={story.id}
                   story={story}
@@ -308,6 +430,59 @@ const MyStories: React.FC = () => {
                 />
               ))}
             </div>
+            {/* Paginación */}
+            {totalDraftPages > 1 && (
+              <div className="mt-6 flex justify-center">
+                <nav className="flex items-center gap-1" aria-label="Paginación de borradores">
+                  <button
+                    onClick={() => paginate('drafts', currentPage.drafts - 1)}
+                    disabled={currentPage.drafts === 1}
+                    className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Página anterior"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  
+                  {Array.from({ length: Math.min(5, totalDraftPages) }, (_, i) => {
+                    // Mostrar máximo 5 páginas en la navegación
+                    let pageNum;
+                    if (totalDraftPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage.drafts <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage.drafts >= totalDraftPages - 2) {
+                      pageNum = totalDraftPages - 4 + i;
+                    } else {
+                      pageNum = currentPage.drafts - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => paginate('drafts', pageNum)}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          currentPage.drafts === pageNum
+                            ? 'bg-amber-600 text-white'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                        aria-current={currentPage.drafts === pageNum ? 'page' : undefined}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  
+                  <button
+                    onClick={() => paginate('drafts', currentPage.drafts + 1)}
+                    disabled={currentPage.drafts === totalDraftPages}
+                    className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Página siguiente"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
         )}
 
