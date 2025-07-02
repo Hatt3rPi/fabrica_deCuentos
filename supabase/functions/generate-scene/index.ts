@@ -2,6 +2,8 @@ import { logPromptMetric } from '../_shared/metrics.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
 import { generateWithOpenAI } from '../_shared/openai.ts';
 
+import { configureForEdgeFunction, captureException, setUser, setTags } from '../_shared/sentry.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

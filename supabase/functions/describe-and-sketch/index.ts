@@ -101,7 +101,17 @@ Deno.serve(async (req) => {
     if (!characterPrompt) throw new Error('Falta el prompt de generación de personaje');
 
     userId = await getUserId(req);
-    const enabled = await isActivityEnabled(STAGE, ACTIVITY);
+    
+    // Configurar contexto de usuario en Sentry
+    if (userId) {
+      setUser({ id: userId });
+    }
+    
+    // Configurar tags básicos
+    setTags({
+      'function.name': 'describe-and-sketch'
+    });
+const enabled = await isActivityEnabled(STAGE, ACTIVITY);
     if (!enabled) {
       return new Response(
         JSON.stringify({ error: 'Actividad deshabilitada' }),
