@@ -4,8 +4,8 @@ export interface StoryDetails {
   id: string;
   title: string;
   cover_url?: string;
-  pdf_url?: string;
-  pdf_generated_at?: string;
+  export_url?: string;
+  exported_at?: string;
 }
 
 export interface OrderItem {
