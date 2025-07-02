@@ -214,9 +214,6 @@ const PreviewStep: React.FC = () => {
 
 
 
-  const allPagesCompleted = generatedPages.every(page => 
-    page.imageUrl && pageStates[page.id] !== 'error' && pageStates[page.id] !== 'generating'
-  );
 
   if (!generatedPages || generatedPages.length === 0) {
     return (
@@ -478,56 +475,16 @@ const PreviewStep: React.FC = () => {
         </div>
       )}
 
-      {/* Story Completion Section */}
-      <div className="mt-12 max-w-2xl mx-auto">
-        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
-          <div className="text-center mb-6">
-            <h3 className="text-xl font-bold text-purple-800 mb-2">
-              {allPagesCompleted ? '🎉 ¡Tu cuento está listo!' : '⏳ Preparando tu cuento...'}
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {allPagesCompleted 
-                ? 'Todas las páginas se han generado correctamente. Puedes finalizar tu cuento.'
-                : 'Algunas páginas aún están en proceso. Puedes finalizar cuando estén listas.'
-              }
+      {/* PDF outdated state - only show if user can edit and not generating */}
+      {!isLocked && !error && isPdfOutdated && !isGenerating && (
+        <div className="mt-8 max-w-2xl mx-auto">
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-amber-800 text-center">
+              <span className="font-semibold">⚠️ PDF desactualizado:</span> Has regenerado algunas imágenes. Finaliza el cuento nuevamente para actualizar el PDF.
             </p>
-            
-            {/* Progress indicator when pages are still generating */}
-            {!allPagesCompleted && (
-              <div className="mb-4">
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-2">
-                  <span>Progreso:</span>
-                  <span className="font-semibold">
-                    {generatedPages.filter(p => p.imageUrl && pageStates[p.id] === 'completed').length} / {generatedPages.length} páginas
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${(generatedPages.filter(p => p.imageUrl && pageStates[p.id] === 'completed').length / generatedPages.length) * 100}%`
-                    }}
-                  ></div>
-                </div>
-              </div>
-            )}
           </div>
-
-          {/* Área para botones futuras funcionalidades */}
-          <div className="flex justify-center gap-4">
-            {/* El botón "Finalizar Cuento" se movió a la etapa Export */}
-          </div>
-
-          {/* PDF outdated state - only show if user can edit */}
-          {!isLocked && !error && isPdfOutdated && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-amber-800">
-                <span className="font-semibold">⚠️ PDF desactualizado:</span> Has regenerado algunas imágenes. Finaliza el cuento nuevamente para actualizar el PDF.
-              </p>
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
       {/* Advanced Edit Modal */}
       {showAdvancedModal && currentPageData && (
