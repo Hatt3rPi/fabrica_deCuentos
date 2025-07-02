@@ -25,7 +25,9 @@ const PreviewStep: React.FC = () => {
     pageStates,
     retryFailedPages,
     // Story completion functionality
-    isPdfOutdated
+    isPdfOutdated,
+    // Loader messages from story
+    loaderMessages
   } = useWizard();
   const { createNotification } = useNotifications();
   const [currentPage, setCurrentPage] = useState(0);
@@ -458,6 +460,7 @@ const PreviewStep: React.FC = () => {
             total: bulkGenerationProgress.total.toString(),
             estilo: 'artístico'
           }}
+          messages={loaderMessages.length > 0 ? loaderMessages : undefined}
           onFallback={handleFallback} 
         />
       )}
