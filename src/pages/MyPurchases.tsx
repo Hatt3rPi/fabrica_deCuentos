@@ -57,6 +57,8 @@ const MyPurchases: React.FC = () => {
         .range(offset, offset + ORDERS_PER_PAGE - 1);
 
       if (ordersError) throw ordersError;
+      
+      console.log('🛒 Órdenes pagadas encontradas:', paidOrders?.length || 0);
 
       // Para cada orden, obtener sus items con detalles de historias
       const ordersWithDetails = await Promise.all(
@@ -67,14 +69,37 @@ const MyPurchases: React.FC = () => {
           const storyIds = items.map(item => item.story_id);
           const { data: storiesData } = await supabase
             .from('stories')
-            .select('id, title, cover_url, pdf_url, export_url')
+            .select('id, title, pdf_url, export_url')
             .in('id', storyIds);
           
+          // Obtener portadas de las páginas (page_number = 0)
+          const { data: coverPagesData } = await supabase
+            .from('story_pages')
+            .select('story_id, image_url')
+            .in('story_id', storyIds)
+            .eq('page_number', 0);
+          
+          console.log('📚 Historias encontradas:', storiesData?.length || 0);
+          console.log('🖼️ Portadas encontradas:', coverPagesData?.length || 0);
+          if (storiesData?.length) {
+            console.log('📄 Ejemplo de historia:', storiesData[0]);
+          }
+          
           // Mapear historias con items
-          const itemsWithStories = items.map(item => ({
-            ...item,
-            story: storiesData?.find(story => story.id === item.story_id)
-          }));
+          const itemsWithStories = items.map(item => {
+            const story = storiesData?.find(story => story.id === item.story_id);
+            const coverPage = coverPagesData?.find(page => page.story_id === item.story_id);
+            
+            return {
+              ...item,
+              story: story ? {
+                ...story,
+                cover_url: coverPage?.image_url || null,
+                // Usar misma lógica que useStoryPurchaseStatus: pdf_url || export_url
+                pdfUrl: story.pdf_url || story.export_url
+              } : null
+            };
+          });
 
           return {
             ...order,
@@ -194,17 +219,22 @@ const MyPurchases: React.FC = () => {
                   {/* Order items */}
                   <div className="divide-y divide-gray-200 dark:divide-gray-700">
                     {order.items.map((item) => (
-                      <div key={item.id} className="p-6">
+                      <div key={item.id} className="p-6" data-testid="purchase-item">
                         <div className="flex items-center gap-4">
                           {/* Story thumbnail */}
                           <div className="flex-shrink-0 w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
                             {item.story?.cover_url ? (
                               <img
                                 src={item.story.cover_url}
-                                alt={item.story.title}
+                                alt={item.story.title || 'Historia sin título'}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  console.warn('Error cargando portada:', item.story?.cover_url);
+                                  e.currentTarget.style.display = 'none';
+                                }}
                               />
-                            ) : (
+                            ) : null}
+                            {!item.story?.cover_url && (
                               <div className="w-full h-full flex items-center justify-center">
                                 <BookOpen className="w-8 h-8 text-gray-400" />
                               </div>
@@ -219,6 +249,16 @@ const MyPurchases: React.FC = () => {
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                               Libro Digital × {item.quantity}
                             </p>
+                            {!item.story && (
+                              <p className="text-xs text-red-500 mt-1">
+                                ⚠️ Datos de historia no encontrados
+                              </p>
+                            )}
+                            {item.story && !item.story.pdfUrl && (
+                              <p className="text-xs text-yellow-600 mt-1">
+                                📄 PDF en proceso de generación
+                              </p>
+                            )}
                           </div>
 
                           {/* Actions */}
@@ -235,15 +275,15 @@ const MyPurchases: React.FC = () => {
                             
                             <Button
                               onClick={() => item.story && handleDownloadPdf(
-                                item.story.pdf_url || item.story.export_url || '',
+                                item.story.pdfUrl || '',
                                 item.story.title
                               )}
                               size="sm"
                               className="flex items-center gap-2"
-                              disabled={!(item.story?.pdf_url || item.story?.export_url)}
+                              disabled={!item.story?.pdfUrl}
                             >
                               <FileDown className="w-4 h-4" />
-                              {(item.story?.pdf_url || item.story?.export_url) ? 'Descargar PDF' : 'Generando...'}
+                              {item.story?.pdfUrl ? 'Descargar PDF' : 'Generando...'}
                             </Button>
                           </div>
                         </div>
