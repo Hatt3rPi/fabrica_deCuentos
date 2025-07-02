@@ -114,7 +114,7 @@ console.log('[openai] [REQUEST]', {
 ### Variables de Entorno (ya configuradas):
 ```bash
 # .env
-SENTRY_DSN=https://bad6a4370229b09e6897329d974f30b2@o4509578325524480.ingest.us.sentry.io/4509578341056512
+VITE_SENTRY_DSN=https://bad6a4370229b09e6897329d974f30b2@o4509578325524480.ingest.us.sentry.io/4509578341056512
 DENO_ENV=development
 ```
 
@@ -122,11 +122,11 @@ DENO_ENV=development
 ```toml
 # supabase/config.toml
 [edge_runtime.secrets]
-SENTRY_DSN = "env(SENTRY_DSN)"
+SENTRY_DSN = "env(VITE_SENTRY_DSN)"  # Corregido: apunta a VITE_SENTRY_DSN
 DENO_ENV = "env(DENO_ENV)"
 ```
 
-**Nota**: El SENTRY_DSN ya está configurado. Si aparece el warning en logs, significa que Supabase local necesita reiniciarse para cargar las variables.
+**Nota**: ⚠️ **HOTFIX APLICADO**: Se corrigió la configuración de `SENTRY_DSN` para apuntar a `VITE_SENTRY_DSN` que es la variable de entorno disponible en Supabase. Esto resuelve el warning "SENTRY_DSN not configured" reportado en los logs.
 
 ## 🚀 BENEFICIOS OBTENIDOS
 
@@ -192,6 +192,10 @@ scripts/standardize-edge-function-logging.ts   # Script automatización (NUEVO)
 
 ---
 
-**Estado**: ✅ Completado  
+**Estado**: ✅ Completado + Hotfix aplicado  
 **Fecha**: 2025-07-02  
-**Commit**: `364abb9` - fix: Resolver issues críticos de code review Sentry
+**Commits**: 
+- Original: Implementación completa de monitoreo Sentry
+- Hotfix `5c0b735`: Corregir configuración SENTRY_DSN y logging de story-export
+
+**Verificación**: ⚠️ Pendiente testing en entorno con `VITE_SENTRY_DSN` configurado
