@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'https://esm.sh/resend@2.0.0'
+import { EdgeFunctionLogger } from '../_shared/logger.ts'
+import { configureForEdgeFunction, captureException, withErrorCapture, setTags, setContext } from '../_shared/sentry.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,12 +34,22 @@ interface OrderData {
 }
 
 serve(async (req) => {
+  // Initialize Sentry for this request
+  configureForEdgeFunction('send-purchase-confirmation', req)
+  const logger = new EdgeFunctionLogger('send-purchase-confirmation')
+
   // Handle CORS
   if (req.method === 'OPTIONS') {
+    logger.debug('CORS preflight request handled')
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const operationStart = Date.now()
+  logger.startOperation('send_purchase_confirmation_email')
+
   try {
+    logger.info('Purchase confirmation email request received')
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -45,50 +57,96 @@ serve(async (req) => {
 
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
 
-    const { order_id } = await req.json()
+    let requestBody;
+    try {
+      requestBody = await req.json()
+    } catch (error) {
+      logger.error('Failed to parse request JSON', error)
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { order_id } = requestBody
 
     if (!order_id) {
+      logger.warn('Missing order_id in request', { requestBody })
       return new Response(
         JSON.stringify({ error: 'order_id is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    logger.setContext('order_id', order_id)
+    setTags({ 'order.id': order_id })
+    logger.info('Processing purchase confirmation', { order_id })
+
     // Obtener datos de la orden con items y usuario
-    const { data: orderData, error: orderError } = await supabaseClient
-      .from('orders_with_items')
-      .select(`
-        id,
-        user_id,
-        total_amount,
-        currency,
-        payment_method,
-        paid_at,
-        user_email,
-        items:order_items(
+    logger.debug('Fetching order data from database', { order_id })
+    
+    const orderResult = await withErrorCapture(
+      () => supabaseClient
+        .from('orders_with_items')
+        .select(`
           id,
-          story_id,
-          quantity,
-          unit_price,
-          total_price,
-          story:stories(
+          user_id,
+          total_amount,
+          currency,
+          payment_method,
+          paid_at,
+          user_email,
+          items:order_items(
             id,
-            title,
-            cover_url
+            story_id,
+            quantity,
+            unit_price,
+            total_price,
+            story:stories(
+              id,
+              title,
+              cover_url
+            )
           )
-        )
-      `)
-      .eq('id', order_id)
-      .eq('status', 'paid')
-      .single()
+        `)
+        .eq('id', order_id)
+        .eq('status', 'paid')
+        .single(),
+      'fetch_order_data',
+      { order_id }
+    )
+
+    const { data: orderData, error: orderError } = orderResult
 
     if (orderError || !orderData) {
-      console.error('Error fetching order:', orderError)
+      logger.error('Failed to fetch order data', orderError, { 
+        order_id,
+        error_code: orderError?.code,
+        error_message: orderError?.message 
+      })
+      
+      const errorMessage = orderError?.code === 'PGRST116' 
+        ? 'Order not found or not paid' 
+        : 'Database error while fetching order'
+        
       return new Response(
-        JSON.stringify({ error: 'Order not found or not paid' }),
+        JSON.stringify({ error: errorMessage }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    logger.info('Order data fetched successfully', { 
+      order_id,
+      user_email: orderData.user_email,
+      items_count: orderData.items?.length || 0,
+      total_amount: orderData.total_amount
+    })
+
+    setContext('user', { email: orderData.user_email })
+    setTags({ 
+      'user.email': orderData.user_email,
+      'order.items_count': orderData.items?.length || 0
+    })
 
     const order = orderData as OrderData
 
@@ -321,36 +379,111 @@ serve(async (req) => {
     `
 
     // Enviar email
-    const { data: emailData, error: emailError } = await resend.emails.send({
-      from: 'La CuenterIA <no-reply@fabrica.com>',
-      to: [order.user_email],
-      subject: `✅ Compra confirmada - Orden #${order.id.slice(0, 8)}`,
-      html: emailHtml,
+    logger.info('Sending purchase confirmation email', {
+      order_id,
+      recipient: order.user_email,
+      subject: `✅ Compra confirmada - Orden #${order.id.slice(0, 8)}`
     })
 
+    const emailResult = await withErrorCapture(
+      () => resend.emails.send({
+        from: 'La CuenterIA <no-reply@fabrica.com>',
+        to: [order.user_email],
+        subject: `✅ Compra confirmada - Orden #${order.id.slice(0, 8)}`,
+        html: emailHtml,
+      }),
+      'send_email',
+      { 
+        order_id,
+        recipient: order.user_email 
+      }
+    )
+
+    const { data: emailData, error: emailError } = emailResult
+
     if (emailError) {
-      console.error('Error sending email:', emailError)
+      logger.error('Failed to send purchase confirmation email', emailError, {
+        order_id,
+        recipient: order.user_email,
+        error_type: emailError.name || 'ResendError'
+      })
+      
+      // Enviar alerta crítica a Sentry
+      captureException(emailError, {
+        tags: {
+          'operation': 'send_purchase_confirmation_email',
+          'order.id': order_id,
+          'critical': 'true'
+        },
+        extra: {
+          order_id,
+          recipient: order.user_email,
+          resend_error: emailError
+        }
+      })
+
       return new Response(
-        JSON.stringify({ error: 'Failed to send email', details: emailError }),
+        JSON.stringify({ 
+          error: 'Failed to send confirmation email', 
+          details: emailError.message || 'Unknown email service error'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log('Purchase confirmation email sent:', emailData)
+    const operationDuration = Date.now() - operationStart
+    logger.completeOperation('send_purchase_confirmation_email', operationDuration)
+    
+    logger.info('Purchase confirmation email sent successfully', {
+      order_id,
+      email_id: emailData?.id,
+      recipient: order.user_email,
+      duration_ms: operationDuration
+    })
+
+    setContext('email_result', {
+      email_id: emailData?.id,
+      success: true,
+      duration_ms: operationDuration
+    })
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Purchase confirmation email sent',
-        email_id: emailData?.id 
+        message: 'Purchase confirmation email sent successfully',
+        email_id: emailData?.id,
+        order_id 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('Error in send-purchase-confirmation:', error)
+    const operationDuration = Date.now() - operationStart
+    logger.failOperation('send_purchase_confirmation_email', operationDuration)
+    
+    logger.error('Unexpected error in send-purchase-confirmation', error, {
+      order_id: logger.context.order_id,
+      duration_ms: operationDuration
+    })
+
+    // Captura crítica en Sentry
+    captureException(error, {
+      tags: {
+        'function': 'send-purchase-confirmation',
+        'critical': 'true'
+      },
+      extra: {
+        order_id: logger.context.order_id,
+        duration_ms: operationDuration,
+        request_method: req.method
+      }
+    })
+
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error.message || 'Unknown error occurred'
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

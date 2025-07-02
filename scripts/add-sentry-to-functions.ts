@@ -12,6 +12,8 @@ const IMPLEMENTED_FUNCTIONS = [
   'generate-story',
   'story-export', 
   'generate-cover',
+  'send-purchase-confirmation', // Nueva función post-pago
+  'generate-receipt-pdf', // Nueva función de comprobantes
   '_shared' // directorio compartido
 ];
 

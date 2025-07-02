@@ -98,6 +98,54 @@ DENO_ENV = "env(DENO_ENV)"
 - ✅ Manejo de múltiples reintentos
 - ✅ Contexto enriquecido con datos visuales
 
+#### 4. `send-purchase-confirmation` ⭐ NUEVO
+**Monitoreo implementado:**
+- ✅ Configuración completa de Sentry con EdgeFunctionLogger
+- ✅ Monitoreo de operaciones críticas:
+  - Validación de entrada (order_id)
+  - Consulta de datos de orden desde BD
+  - Generación de template HTML de email
+  - Envío vía Resend API
+- ✅ Alertas críticas para fallos de email (tag: critical=true)
+- ✅ Métricas de performance y duración
+- ✅ Contexto enriquecido con datos de usuario y orden
+
+**Tags específicos:**
+- `order.id`: ID de la orden
+- `user.email`: Email del usuario
+- `order.items_count`: Número de items en la orden
+- `operation`: send_purchase_confirmation_email
+- `critical`: true (para fallos de email)
+
+**Logs estructurados:**
+- Inicio y fin de operación con duración
+- Estados de validación y fetch de datos
+- Éxito/fallo de envío de emails
+- Manejo de errores de Resend API
+
+#### 5. `generate-receipt-pdf` ⭐ NUEVO
+**Monitoreo implementado:**
+- ✅ Configuración completa de Sentry con EdgeFunctionLogger
+- ✅ Monitoreo de operaciones críticas:
+  - Validación de entrada (order_id)
+  - Consulta de datos de orden desde BD
+  - Generación de HTML de comprobante
+  - Métricas de tamaño de output
+- ✅ Tracking de performance de generación
+- ✅ Contexto enriquecido con datos de orden
+
+**Tags específicos:**
+- `order.id`: ID de la orden
+- `user.email`: Email del usuario
+- `order.items_count`: Número de items
+- `function`: generate-receipt-pdf
+- `critical`: true (para errores inesperados)
+
+**Logs estructurados:**
+- Métricas de tamaño de HTML generado
+- Duración de operaciones
+- Estados de consulta de base de datos
+
 **Tags específicos:**
 - `story.id`: ID del cuento
 - `cover.visual_style`: Estilo visual
@@ -177,14 +225,80 @@ Las siguientes funciones tienen implementación básica de Sentry:
 - **Performance degradation**: Alertas por lentitud inusual
 - **Rate limiting**: Detección de problemas con APIs externas
 
-## Configuración de Alertas (Próximo Paso)
+## 🗄️ Monitoreo de Triggers de Base de Datos
 
-### Alertas Recomendadas
+### Trigger: `send_purchase_confirmation_email()`
+
+**Implementación de logging:**
+- ✅ **Logging estructurado** con prefijo `[PURCHASE_CONFIRMATION_TRIGGER]`
+- ✅ **Contexto enriquecido** con datos de orden (ID, user_id, monto, método pago)
+- ✅ **Manejo robusto de errores** sin fallar el flujo principal
+- ✅ **Monitoreo de HTTP calls** con status y respuesta
+- ✅ **Timeout incrementado** a 10 segundos para estabilidad
+
+**Tipos de logs generados:**
+```sql
+-- Log de inicio
+RAISE LOG '[PURCHASE_CONFIRMATION_TRIGGER] Starting email notification for order %'
+
+-- Log de éxito HTTP
+RAISE LOG '[PURCHASE_CONFIRMATION_TRIGGER] HTTP call completed for order %'
+
+-- Warning en fallo HTTP
+RAISE WARNING '[PURCHASE_CONFIRMATION_TRIGGER] HTTP call failed for order % with status %'
+
+-- Warning en excepción
+RAISE WARNING '[PURCHASE_CONFIRMATION_TRIGGER] Failed to send email notification for order %'
+
+-- Debug para skip
+RAISE DEBUG '[PURCHASE_CONFIRMATION_TRIGGER] Skipping order % - status change from % to %'
+```
+
+**Información capturada:**
+- **order_id**: ID de la orden procesada
+- **http_status**: Status code de respuesta de edge function
+- **error_code**: SQLSTATE en caso de error
+- **error_message**: SQLERRM con detalles del error
+- **trigger_context**: Contexto completo de la orden
+
+**Configuración mejorada:**
+- **Timeout**: 10 segundos (vs 5s original) para mayor estabilidad
+- **Manejo de errores**: No falla el trigger principal si email falla
+- **Status verification**: Verificación de códigos HTTP 2xx
+- **Structured logging**: JSON context para mejor parsing
+
+## Configuración de Alertas ⭐ ACTUALIZADO
+
+### Alertas Críticas Post-Pago
+
+**Fallos de Email de Confirmación:**
+```javascript
+// Errores críticos en envío de emails post-compra
+tags.critical = 'true'
+AND function.name = 'send-purchase-confirmation'
+AND level = 'error'
+```
+
+**Triggers de BD Fallando:**
+```sql
+-- Monitoreo en logs de PostgreSQL
+message CONTAINS '[PURCHASE_CONFIRMATION_TRIGGER]'
+AND level IN ['WARNING', 'ERROR']
+```
+
+**Latencia Alta en Post-Pago:**
+```javascript
+// Edge functions de post-pago con más de 10s
+elapsed > 10000
+AND function.name IN ['send-purchase-confirmation', 'generate-receipt-pdf']
+```
+
+### Alertas Recomendadas (Previas)
 
 **Errores Críticos:**
 ```javascript
 // Cualquier error en funciones críticas
-function.name IN ['generate-story', 'story-export', 'generate-cover']
+function.name IN ['generate-story', 'story-export', 'generate-cover', 'send-purchase-confirmation']
 AND level = 'error'
 ```
 

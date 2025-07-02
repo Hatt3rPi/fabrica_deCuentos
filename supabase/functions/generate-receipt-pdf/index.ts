@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { EdgeFunctionLogger } from '../_shared/logger.ts'
+import { configureForEdgeFunction, captureException, withErrorCapture, setTags, setContext } from '../_shared/sentry.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,60 +32,116 @@ interface OrderData {
 }
 
 serve(async (req) => {
+  // Initialize Sentry for this request
+  configureForEdgeFunction('generate-receipt-pdf', req)
+  const logger = new EdgeFunctionLogger('generate-receipt-pdf')
+
   // Handle CORS
   if (req.method === 'OPTIONS') {
+    logger.debug('CORS preflight request handled')
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const operationStart = Date.now()
+  logger.startOperation('generate_receipt_pdf')
+
   try {
+    logger.info('Receipt PDF generation request received')
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { order_id } = await req.json()
+    let requestBody;
+    try {
+      requestBody = await req.json()
+    } catch (error) {
+      logger.error('Failed to parse request JSON', error)
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { order_id } = requestBody
 
     if (!order_id) {
+      logger.warn('Missing order_id in request', { requestBody })
       return new Response(
         JSON.stringify({ error: 'order_id is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    logger.setContext('order_id', order_id)
+    setTags({ 'order.id': order_id })
+    logger.info('Processing receipt generation', { order_id })
+
     // Obtener datos de la orden con items
-    const { data: orderData, error: orderError } = await supabaseClient
-      .from('orders_with_items')
-      .select(`
-        id,
-        user_id,
-        total_amount,
-        currency,
-        payment_method,
-        paid_at,
-        user_email,
-        items:order_items(
+    logger.debug('Fetching order data for receipt', { order_id })
+    
+    const orderResult = await withErrorCapture(
+      () => supabaseClient
+        .from('orders_with_items')
+        .select(`
           id,
-          story_id,
-          quantity,
-          unit_price,
-          total_price,
-          story:stories(
+          user_id,
+          total_amount,
+          currency,
+          payment_method,
+          paid_at,
+          user_email,
+          items:order_items(
             id,
-            title
+            story_id,
+            quantity,
+            unit_price,
+            total_price,
+            story:stories(
+              id,
+              title
+            )
           )
-        )
-      `)
-      .eq('id', order_id)
-      .eq('status', 'paid')
-      .single()
+        `)
+        .eq('id', order_id)
+        .eq('status', 'paid')
+        .single(),
+      'fetch_order_data_for_receipt',
+      { order_id }
+    )
+
+    const { data: orderData, error: orderError } = orderResult
 
     if (orderError || !orderData) {
-      console.error('Error fetching order:', orderError)
+      logger.error('Failed to fetch order data for receipt', orderError, { 
+        order_id,
+        error_code: orderError?.code,
+        error_message: orderError?.message 
+      })
+      
+      const errorMessage = orderError?.code === 'PGRST116' 
+        ? 'Order not found or not paid' 
+        : 'Database error while fetching order'
+        
       return new Response(
-        JSON.stringify({ error: 'Order not found or not paid' }),
+        JSON.stringify({ error: errorMessage }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    logger.info('Order data fetched for receipt generation', { 
+      order_id,
+      user_email: orderData.user_email,
+      items_count: orderData.items?.length || 0,
+      total_amount: orderData.total_amount
+    })
+
+    setContext('user', { email: orderData.user_email })
+    setTags({ 
+      'user.email': orderData.user_email,
+      'order.items_count': orderData.items?.length || 0
+    })
 
     const order = orderData as OrderData
 
@@ -299,19 +357,58 @@ serve(async (req) => {
     // Por ahora retornamos el HTML para que pueda ser usado directamente
     // En el futuro se puede integrar con librerías como Puppeteer o jsPDF
 
+    const operationDuration = Date.now() - operationStart
+    logger.completeOperation('generate_receipt_pdf', operationDuration)
+    
+    logger.info('Receipt HTML generated successfully', {
+      order_id,
+      html_length: receiptHtml.length,
+      duration_ms: operationDuration
+    })
+
+    setContext('receipt_result', {
+      html_length: receiptHtml.length,
+      success: true,
+      duration_ms: operationDuration
+    })
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         receipt_html: receiptHtml,
-        order_id: order.id
+        order_id: order.id,
+        generated_at: new Date().toISOString()
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('Error in generate-receipt-pdf:', error)
+    const operationDuration = Date.now() - operationStart
+    logger.failOperation('generate_receipt_pdf', operationDuration)
+    
+    logger.error('Unexpected error in generate-receipt-pdf', error, {
+      order_id: logger.context.order_id,
+      duration_ms: operationDuration
+    })
+
+    // Captura crítica en Sentry
+    captureException(error, {
+      tags: {
+        'function': 'generate-receipt-pdf',
+        'critical': 'true'
+      },
+      extra: {
+        order_id: logger.context.order_id,
+        duration_ms: operationDuration,
+        request_method: req.method
+      }
+    })
+
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error.message || 'Unknown error occurred'
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
