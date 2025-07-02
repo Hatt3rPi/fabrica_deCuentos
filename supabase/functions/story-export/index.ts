@@ -655,7 +655,14 @@ function generateHTMLContent(
   // Definir configuraciones fuera del scope para uso global
   const coverConfig = styleConfig?.coverConfig?.title || {};
   const pageConfig = styleConfig?.pageConfig?.text || {};
-  const dedicatoriaConfig = styleConfig?.dedicatoriaConfig?.text || pageConfig;
+  const dedicatoriaConfig = styleConfig?.dedicatoriaConfig?.text || pageConfig || {};
+  
+  // Validación defensiva para evitar errores de fontFamily
+  console.log('[story-export] 🔍 Validando configuraciones de estilo:');
+  console.log(`[story-export] - coverConfig:`, coverConfig);
+  console.log(`[story-export] - pageConfig:`, pageConfig);
+  console.log(`[story-export] - dedicatoriaConfig:`, dedicatoriaConfig);
+  console.log(`[story-export] - dedicatoriaConfig.fontFamily:`, dedicatoriaConfig?.fontFamily);
   
   if (styleConfig) {
     console.log('[story-export] 🎨 Configuración de estilos detectada:');
@@ -886,13 +893,13 @@ function generateHTMLContent(
             text-align: center;
           ">
             <div class="dedicatoria-placeholder" style="
-              font-family: ${dedicatoriaConfig.text.fontFamily || "'Indie Flower', cursive"}; 
-              font-size: ${dedicatoriaConfig.text.fontSize || '28px'}; 
-              line-height: ${dedicatoriaConfig.text.lineHeight || '1.8'}; 
+              font-family: ${dedicatoriaConfig.fontFamily || "'Indie Flower', cursive"}; 
+              font-size: ${dedicatoriaConfig.fontSize || '28px'}; 
+              line-height: ${dedicatoriaConfig.lineHeight || '1.8'}; 
               color: #9ca3af; 
               font-style: italic;
               max-width: 400px;
-              text-shadow: ${dedicatoriaConfig.text.textShadow || '0 2px 4px rgba(0,0,0,0.1)'};
+              text-shadow: ${dedicatoriaConfig.textShadow || '0 2px 4px rgba(0,0,0,0.1)'};
             ">
               <!-- Página de dedicatoria reservada -->
             </div>
@@ -955,15 +962,15 @@ function generateHTMLContent(
           ` : ''}
           ${story.dedicatoria_text ? `
             <div class="dedicatoria-text" style="
-              font-family: ${dedicatoriaConfig.text.fontFamily || "'Indie Flower', cursive"}; 
-              font-size: ${dedicatoriaConfig.text.fontSize || '24px'}; 
-              line-height: ${dedicatoriaConfig.text.lineHeight || '1.8'}; 
-              color: ${story.dedicatoria_background_url ? '#ffffff' : dedicatoriaConfig.text.color || '#4a5568'}; 
+              font-family: ${dedicatoriaConfig.fontFamily || "'Indie Flower', cursive"}; 
+              font-size: ${dedicatoriaConfig.fontSize || '24px'}; 
+              line-height: ${dedicatoriaConfig.lineHeight || '1.8'}; 
+              color: ${story.dedicatoria_background_url ? '#ffffff' : dedicatoriaConfig.color || '#4a5568'}; 
               font-style: italic;
               max-width: 600px;
-              text-shadow: ${story.dedicatoria_background_url ? '2px 2px 4px rgba(0,0,0,0.8)' : dedicatoriaConfig.text.textShadow || '0 2px 4px rgba(0,0,0,0.1)'};
-              font-weight: ${dedicatoriaConfig.text.fontWeight || 'normal'};
-              text-align: ${dedicatoriaConfig.text.textAlign || layout.alignment};
+              text-shadow: ${story.dedicatoria_background_url ? '2px 2px 4px rgba(0,0,0,0.8)' : dedicatoriaConfig.textShadow || '0 2px 4px rgba(0,0,0,0.1)'};
+              font-weight: ${dedicatoriaConfig.fontWeight || 'normal'};
+              text-align: ${dedicatoriaConfig.textAlign || layout.alignment};
             ">
               ${textToHTML(story.dedicatoria_text)}
             </div>
