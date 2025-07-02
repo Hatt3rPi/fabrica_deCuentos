@@ -5,7 +5,9 @@ export interface StoryDetails {
   title: string;
   cover_url?: string;
   export_url?: string;
+  pdf_url?: string;
   exported_at?: string;
+  pdfUrl?: string; // Computed field: pdf_url || export_url
 }
 
 export interface OrderItem {

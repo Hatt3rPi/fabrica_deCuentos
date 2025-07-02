@@ -69,7 +69,7 @@ const MyPurchases: React.FC = () => {
           const storyIds = items.map(item => item.story_id);
           const { data: storiesData } = await supabase
             .from('stories')
-            .select('id, title, export_url')
+            .select('id, title, pdf_url, export_url')
             .in('id', storyIds);
           
           // Obtener portadas de las páginas (page_number = 0)
@@ -94,7 +94,9 @@ const MyPurchases: React.FC = () => {
               ...item,
               story: story ? {
                 ...story,
-                cover_url: coverPage?.image_url || null
+                cover_url: coverPage?.image_url || null,
+                // Usar misma lógica que useStoryPurchaseStatus: pdf_url || export_url
+                pdfUrl: story.pdf_url || story.export_url
               } : null
             };
           });
@@ -252,7 +254,7 @@ const MyPurchases: React.FC = () => {
                                 ⚠️ Datos de historia no encontrados
                               </p>
                             )}
-                            {item.story && !item.story.export_url && (
+                            {item.story && !item.story.pdfUrl && (
                               <p className="text-xs text-yellow-600 mt-1">
                                 📄 PDF en proceso de generación
                               </p>
@@ -273,15 +275,15 @@ const MyPurchases: React.FC = () => {
                             
                             <Button
                               onClick={() => item.story && handleDownloadPdf(
-                                item.story.export_url || '',
+                                item.story.pdfUrl || '',
                                 item.story.title
                               )}
                               size="sm"
                               className="flex items-center gap-2"
-                              disabled={!item.story?.export_url}
+                              disabled={!item.story?.pdfUrl}
                             >
                               <FileDown className="w-4 h-4" />
-                              {item.story?.export_url ? 'Descargar PDF' : 'Generando...'}
+                              {item.story?.pdfUrl ? 'Descargar PDF' : 'Generando...'}
                             </Button>
                           </div>
                         </div>
