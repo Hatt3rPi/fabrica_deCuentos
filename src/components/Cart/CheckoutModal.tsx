@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, ArrowLeft, Check, Package, FileDown, Loader2 } from 'lucide-react';
 import { useCartOperations } from '../../contexts/CartContext';
 import { useOrderFulfillment } from '../../hooks/useOrderFulfillment';
@@ -18,6 +19,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onClose,
   onSuccess
 }) => {
+  const navigate = useNavigate();
   const {
     items,
     totalPrice,
@@ -64,6 +66,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     if (onSuccess && orderId) {
       onSuccess(orderId);
     }
+
+    // Redirigir a página de confirmación después de un breve delay
+    setTimeout(() => {
+      handleClose();
+      navigate(`/purchase-confirmation/${orderId}`);
+    }, 2000);
   };
 
   // Handler para cerrar modal
@@ -212,6 +220,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </h3>
                   <p className="text-gray-600">
                     Tu pedido ha sido procesado correctamente.
+                  </p>
+                  <p className="text-sm text-purple-600 mt-2 font-medium">
+                    Redirigiendo a los detalles de tu compra...
                   </p>
                   {orderId && (
                     <p className="text-sm text-gray-500 mt-2">
