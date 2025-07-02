@@ -279,9 +279,20 @@ export const storyService = {
     } catch (error) {
       console.error('[StoryService] Error completing story:', error);
       
+      // Detectar si es un error de rate limiting
+      const isRateLimitError = error instanceof Error && 
+        (error.message.includes('rate limit') || error.message.includes('429'));
+      
+      const fallbackReason = isRateLimitError ? 'rate_limit' : 'pdf_generation_failed';
+      
+      if (isRateLimitError) {
+        console.log('[StoryService] Rate limiting detected, falling back to mock export...');
+      } else {
+        console.log('[StoryService] PDF generation failed, falling back to mock export...');
+      }
+      
       // Fallback to mock export if real export fails
       try {
-        console.log('[StoryService] Falling back to mock export...');
         const mockUrl = await this.generateMockExport(storyId, saveToLibrary);
         
         // Still update story status manually for mock
@@ -302,12 +313,16 @@ export const storyService = {
         
         return { 
           success: true, 
-          downloadUrl: mockUrl 
+          downloadUrl: mockUrl,
+          usedFallback: true,
+          fallbackReason
         };
       } catch (fallbackError) {
         return { 
           success: false, 
-          error: error instanceof Error ? error.message : 'Error desconocido al finalizar el cuento'
+          error: error instanceof Error ? error.message : 'Error desconocido al finalizar el cuento',
+          usedFallback: true,
+          fallbackReason
         };
       }
     }

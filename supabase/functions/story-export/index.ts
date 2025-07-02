@@ -423,7 +423,7 @@ async function generateStoryPDF(
   const htmlContent = generateHTMLContent(story, pages, characters, design, includeMetadata, aspectRatio, styleConfig);
   
   // Generar PDF usando Browserless.io con aspect ratio específico
-  const pdfContent = await generatePDFFromHTML(htmlContent, aspectRatio);
+  const pdfContent = await generatePDFFromHTML(htmlContent, aspectRatio, storyData.story.id);
   
   return pdfContent;
 }
@@ -1108,7 +1108,7 @@ function generateHTMLContent(
   `;
 }
 
-async function generatePDFFromHTML(htmlContent: string, aspectRatio: string = 'portrait'): Promise<Uint8Array> {
+async function generatePDFFromHTML(htmlContent: string, aspectRatio: string = 'portrait', storyId?: string): Promise<Uint8Array> {
   console.log('[story-export] Iniciando generación de PDF con Browserless.io API...');
   console.log(`[story-export] 📐 Formato de PDF solicitado: ${aspectRatio}`);
   
@@ -1147,22 +1147,112 @@ async function generatePDFFromHTML(htmlContent: string, aspectRatio: string = 'p
     console.log('[story-export] Enviando HTML a Browserless.io API...');
     console.log('[story-export] 🔧 Opciones PDF:', JSON.stringify(pdfOptions));
     
-    // Usar API REST de Browserless.io (endpoint moderno)
-    const response = await fetch(`https://production-sfo.browserless.io/pdf?token=${browserlessToken}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        html: htmlContent,
-        options: pdfOptions
-      })
-    });
+    // Función auxiliar para retry con exponential backoff
+    const retryWithBackoff = async (attemptNumber: number = 1): Promise<Response> => {
+      const maxAttempts = 3;
+      const baseDelay = 2000; // 2 segundos base
+      
+      try {
+        console.log(`[story-export] 🔄 Intento ${attemptNumber}/${maxAttempts} - Browserless.io API`);
+        
+        const response = await fetch(`https://production-sfo.browserless.io/pdf?token=${browserlessToken}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            html: htmlContent,
+            options: pdfOptions
+          })
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Browserless.io API error: ${response.status} - ${errorText}`);
-    }
+        // Si la respuesta es exitosa, retornar inmediatamente
+        if (response.ok) {
+          console.log(`[story-export] ✅ PDF generado exitosamente en intento ${attemptNumber}`);
+          return response;
+        }
+
+        // Detectar rate limiting específicamente
+        if (response.status === 429) {
+          console.log(`[story-export] ⚠️ Rate limit detectado (429) en intento ${attemptNumber}`);
+          
+          // Log específico para Sentry
+          addBreadcrumb({
+            message: `Browserless.io rate limit - Attempt ${attemptNumber}/${maxAttempts}`,
+            category: 'rate_limiting',
+            level: 'warning',
+            data: {
+              attempt_number: attemptNumber,
+              max_attempts: maxAttempts,
+              response_status: response.status,
+              story_id: storyId
+            }
+          });
+          
+          // Si no hemos llegado al máximo de intentos, hacer retry
+          if (attemptNumber < maxAttempts) {
+            const baseDelayMs = baseDelay * Math.pow(2, attemptNumber - 1); // exponential backoff: 2s, 4s, 8s
+            const jitter = Math.random() * 1000; // 0-1s aleatorio para evitar thundering herd
+            const delay = baseDelayMs + jitter;
+            
+            console.log(`[story-export] ⏳ Esperando ${Math.round(delay)}ms (base: ${baseDelayMs}ms + jitter: ${Math.round(jitter)}ms) antes del siguiente intento...`);
+            
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return retryWithBackoff(attemptNumber + 1);
+          } else {
+            // Log cuando se agotan todos los intentos
+            addBreadcrumb({
+              message: 'All retry attempts exhausted for rate limiting',
+              category: 'rate_limiting',
+              level: 'error',
+              data: {
+                total_attempts: maxAttempts,
+                final_status: response.status,
+                story_id: storyId
+              }
+            });
+          }
+        }
+
+        // Para otros errores o cuando se agotaron los intentos
+        const errorText = await response.text();
+        
+        if (response.status === 429) {
+          // Tag específico para rate limiting en Sentry
+          setTags({
+            'browserless.rate_limited': 'true',
+            'browserless.attempts': maxAttempts.toString(),
+            'error.type': 'rate_limiting'
+          });
+          throw new Error(`Browserless.io rate limit exceeded after ${maxAttempts} attempts. Status: ${response.status} - ${errorText}`);
+        } else {
+          setTags({
+            'browserless.error_type': response.status.toString(),
+            'error.type': 'api_error'
+          });
+          throw new Error(`Browserless.io API error: ${response.status} - ${errorText}`);
+        }
+        
+      } catch (error) {
+        // Si es un error de red y aún tenemos intentos disponibles
+        if (attemptNumber < maxAttempts && (error instanceof TypeError || error.message.includes('fetch'))) {
+          const baseDelayMs = baseDelay * Math.pow(2, attemptNumber - 1);
+          const jitter = Math.random() * 1000; // 0-1s aleatorio para evitar thundering herd
+          const delay = baseDelayMs + jitter;
+          
+          console.log(`[story-export] 🔌 Error de conexión en intento ${attemptNumber}, reintentando en ${Math.round(delay)}ms (base: ${baseDelayMs}ms + jitter: ${Math.round(jitter)}ms)...`);
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return retryWithBackoff(attemptNumber + 1);
+        }
+        
+        // Re-lanzar el error si no podemos hacer más intentos
+        throw error;
+      }
+    };
+
+    // Ejecutar la llamada con retry logic
+    const response = await retryWithBackoff();
 
     console.log('[story-export] PDF generado por Browserless.io, descargando...');
     

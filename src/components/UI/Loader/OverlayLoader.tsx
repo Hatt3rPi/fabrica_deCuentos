@@ -15,6 +15,8 @@ export interface OverlayLoaderProps {
   /** Tiempo en milisegundos para activar onFallback. Por defecto 60s */
   fallbackDelayMs?: number;
   progress?: { current: number; total: number };
+  /** Tipo especial de loader para situaciones específicas */
+  variant?: 'default' | 'rate_limit' | 'fallback';
 }
 
 const MESSAGE_INTERVAL = 7000;
@@ -31,13 +33,31 @@ const OverlayLoader: React.FC<OverlayLoaderProps> = ({
   onFallback,
   fallbackDelayMs = DEFAULT_FALLBACK_DELAY,
   progress,
+  variant = 'default',
 }) => {
   const [index, setIndex] = useState(0);
   const [isTimeout, setIsTimeout] = useState(false);
 
-  const computedMessages = messages && messages.length > 0
-    ? messages
-    : getLoaderMessages(etapa, context);
+  // Mensajes específicos según la variante
+  const getVariantMessages = () => {
+    if (variant === 'rate_limit') {
+      return [
+        'El servicio está muy ocupado...',
+        'Reintentando automáticamente...',
+        'Por favor espera unos momentos más...'
+      ];
+    }
+    if (variant === 'fallback') {
+      return [
+        'Preparando tu cuento de forma alternativa...',
+        'Esto puede tomar un poco más de tiempo...',
+        'Generando archivo temporal...'
+      ];
+    }
+    return messages && messages.length > 0 ? messages : getLoaderMessages(etapa, context);
+  };
+
+  const computedMessages = getVariantMessages();
 
   useEffect(() => {
     if (computedMessages.length <= 1) return;
@@ -86,17 +106,21 @@ const OverlayLoader: React.FC<OverlayLoaderProps> = ({
           </p>
         </div>
 
-        {/* 3. "Estamos preparando tu cuento..." */}
+        {/* 3. Título dinámico según variante */}
         <div className="space-y-2">
           <h3 className="text-xl font-bold text-gray-800">
-            Estamos preparando tu cuento...
+            {variant === 'rate_limit' ? 'Servicio muy ocupado...' :
+             variant === 'fallback' ? 'Preparando tu cuento...' :
+             'Estamos preparando tu cuento...'}
           </h3>
         </div>
 
-        {/* 4. "Algunas páginas aún están en proceso..." */}
+        {/* 4. Descripción dinámica según variante */}
         <div className="space-y-2">
           <p className="text-sm text-gray-600 leading-relaxed">
-            Algunas páginas aún están en proceso. Podrás continuar cuando todas estén listas.
+            {variant === 'rate_limit' ? 'Hay mucha demanda en este momento. Estamos reintentando automáticamente...' :
+             variant === 'fallback' ? 'Usando método alternativo para asegurar que recibas tu cuento.' :
+             'Algunas páginas aún están en proceso. Podrás continuar cuando todas estén listas.'}
           </p>
         </div>
 

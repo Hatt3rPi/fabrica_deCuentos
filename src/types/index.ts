@@ -246,6 +246,8 @@ export interface CompletionResult {
   success: boolean;
   downloadUrl?: string;
   error?: string;
+  usedFallback?: boolean;
+  fallbackReason?: 'rate_limit' | 'pdf_generation_failed' | 'unknown';
 }
 
 export interface ExportOptions {

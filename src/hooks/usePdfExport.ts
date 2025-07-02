@@ -43,6 +43,12 @@ export const usePdfExport = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
+        
+        // Detectar rate limiting específicamente
+        if (response.status === 429) {
+          throw new Error('El servicio está muy ocupado. Por favor intenta de nuevo en unos minutos.');
+        }
+        
         throw new Error(`Error generando PDF: ${response.status} - ${errorText}`);
       }
 
