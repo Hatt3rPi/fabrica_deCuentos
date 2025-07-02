@@ -4,6 +4,7 @@ import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
 import puppeteer from 'npm:puppeteer';
 import { configureForEdgeFunction, withErrorCapture, captureException, setUser, setTags, addBreadcrumb } from '../_shared/sentry.ts';
+import { createEdgeFunctionLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

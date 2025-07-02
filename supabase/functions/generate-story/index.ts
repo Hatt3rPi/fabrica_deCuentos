@@ -4,6 +4,7 @@ import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
 import { configureForEdgeFunction, withErrorCapture, captureException, setUser, setTags } from '../_shared/sentry.ts';
+import { createEdgeFunctionLogger, withPerformanceLogging } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +22,8 @@ const STAGE = 'historia';
 const ACTIVITY = 'generar_historia';
 
 Deno.serve(async (req) => {
-  // Configurar Sentry para esta Edge Function
+  // Configurar logging y monitoreo
+  const logger = createEdgeFunctionLogger('generate-story');
   configureForEdgeFunction('generate-story', req);
 
   if (req.method === 'OPTIONS') {
@@ -134,7 +136,12 @@ Deno.serve(async (req) => {
       storyPayload.temperature = 0.8;
     }
 
-    console.log('[generate-story] [REQUEST]', JSON.stringify(storyPayload));
+    logger.info('Initiating story generation request', { 
+      model, 
+      hasPrompt: !!finalPrompt,
+      charactersCount: characters.length,
+      storyId: story_id 
+    });
     
     // Llamada a OpenAI con monitoreo de Sentry
     const { respData, elapsed, resp } = await withErrorCapture(
@@ -168,7 +175,10 @@ Deno.serve(async (req) => {
             actividad: 'generar_historia',
             edge_function: 'generate-story',
           });
-          console.error('Respuesta inválida de OpenAI:', rawResponse.slice(0, 100));
+          logger.error('Invalid OpenAI response format', new Error('Invalid response'), { 
+            responsePreview: rawResponse.slice(0, 100),
+            storyId: story_id 
+          });
           throw new Error('Formato de respuesta de OpenAI inválido');
         }
         
@@ -394,7 +404,11 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err) {
-    console.error('[generate-story] Error:', err);
+    logger.error('Story generation failed', err as Error, { 
+      storyId: story_id,
+      userId,
+      elapsed: Date.now() - start 
+    });
     
     // Capturar error en Sentry con contexto completo
     await captureException(err as Error, {

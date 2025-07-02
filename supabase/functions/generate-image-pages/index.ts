@@ -5,6 +5,7 @@ import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
 
 import { configureForEdgeFunction, captureException, setUser, setTags } from '../_shared/sentry.ts';
+import { createEdgeFunctionLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -149,6 +150,8 @@ function base64ToBlob(b64: string): Blob {
 }
 
 Deno.serve(async (req) => {
+  const logger = createEdgeFunctionLogger('generate-image-pages');
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
