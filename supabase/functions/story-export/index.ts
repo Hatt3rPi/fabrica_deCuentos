@@ -742,102 +742,151 @@ function generateHTMLContent(
   
   console.log(`[story-export] 📚 Fuentes a importar (${fonts.size}):`, Array.from(fonts));
 
-  // Generar estilos dinámicos desde la configuración (misma estructura que /read)
+  // MIGRADO: Generar estilos usando sistema unificado 
+  // Primero necesito importar las funciones del sistema unificado
+  // NOTA: En Edge Functions necesitamos implementar las funciones localmente 
+  // hasta que se pueda configurar el import correctamente
+  
+  const generateUnifiedStyles = (config: any, pageType: 'cover' | 'page' | 'dedicatoria') => {
+    if (!config) return { textCSS: '', containerCSS: '', positionCSS: '' };
+    
+    // Obtener configuración por tipo de página (mismo patrón que storyStyleUtils)
+    let currentConfig;
+    switch (pageType) {
+      case 'cover':
+        currentConfig = config.coverConfig?.title || {};
+        break;
+      case 'dedicatoria':
+        currentConfig = config.dedicatoriaConfig?.text || config.pageConfig?.text || {};
+        break;
+      case 'page':
+      default:
+        currentConfig = config.pageConfig?.text || {};
+        break;
+    }
+    
+    // Convertir a CSS (mismo patrón que convertToHTMLStyle)
+    const textStyle = {
+      fontSize: currentConfig.fontSize,
+      fontFamily: currentConfig.fontFamily,
+      fontWeight: currentConfig.fontWeight,
+      color: currentConfig.color,
+      textAlign: currentConfig.textAlign,
+      textShadow: currentConfig.textShadow,
+      letterSpacing: currentConfig.letterSpacing,
+      lineHeight: currentConfig.lineHeight,
+      textTransform: currentConfig.textTransform,
+    };
+    
+    const containerStyle = {
+      background: currentConfig.containerStyle?.background,
+      padding: currentConfig.containerStyle?.padding,
+      margin: currentConfig.containerStyle?.margin,
+      borderRadius: currentConfig.containerStyle?.borderRadius,
+      maxWidth: currentConfig.containerStyle?.maxWidth,
+      minHeight: currentConfig.containerStyle?.minHeight,
+      border: currentConfig.containerStyle?.border,
+      boxShadow: currentConfig.containerStyle?.boxShadow,
+      backdropFilter: currentConfig.containerStyle?.backdropFilter,
+    };
+    
+    // Posicionamiento (mismo patrón que getContainerPosition)
+    const position = currentConfig.position || 'center';
+    const horizontalPosition = currentConfig.horizontalPosition || 'center';
+    
+    let alignItems = 'center';
+    let justifyContent = 'center';
+    
+    switch (position) {
+      case 'top': alignItems = 'flex-start'; break;
+      case 'center': alignItems = 'center'; break;
+      case 'bottom': alignItems = 'flex-end'; break;
+    }
+    
+    switch (horizontalPosition) {
+      case 'left': justifyContent = 'flex-start'; break;
+      case 'center': justifyContent = 'center'; break;
+      case 'right': justifyContent = 'flex-end'; break;
+    }
+    
+    // Convertir a CSS string
+    const convertToCSS = (obj: any) => 
+      Object.entries(obj)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => {
+          const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+          return `${cssKey}: ${value}`;
+        })
+        .join('; ');
+    
+    return {
+      textCSS: convertToCSS(textStyle),
+      containerCSS: convertToCSS(containerStyle),
+      positionCSS: `display: flex; align-items: ${alignItems}; justify-content: ${justifyContent}`
+    };
+  };
+
   const generateDynamicStyles = () => {
     if (!styleConfig) {
       console.log('[story-export] ⚠️ No styleConfig encontrado, usando estilos por defecto');
       return '';
     }
     
-    // Usar función unificada para procesar fuentes
+    // Usar la función unificada para generar estilos
+    const coverStyles = generateUnifiedStyles(styleConfig, 'cover');
+    const pageStyles = generateUnifiedStyles(styleConfig, 'page');
+    const dedicatoriaStyles = generateUnifiedStyles(styleConfig, 'dedicatoria');
+    
+    // Función para extraer y validar fuentes (mantener para imports)
     const coverFontFamily = extractAndValidateFontName(coverConfig.fontFamily) || CSS_CONSTANTS.DEFAULT_FONTS.FALLBACK;
     const pageFontFamily = extractAndValidateFontName(pageConfig.fontFamily) || CSS_CONSTANTS.DEFAULT_FONTS.FALLBACK;
     
-    // Logs de debug condicionales (solo si hay configuración de debug)
-    if (console.debug) {
-      console.debug(`[story-export] 🔤 Cover font procesada: "${coverFontFamily}" (original: "${coverConfig.fontFamily}")`);
-      console.debug(`[story-export] 🔤 Page font procesada: "${pageFontFamily}" (original: "${pageConfig.fontFamily}")`);
-    }
+    console.log('[story-export] 🎨 Generando estilos unificados:', {
+      cover: { textCSS: coverStyles.textCSS.substring(0, 100) + '...' },
+      page: { textCSS: pageStyles.textCSS.substring(0, 100) + '...' },
+      dedicatoria: { textCSS: dedicatoriaStyles.textCSS.substring(0, 100) + '...' }
+    });
     
     return `
-      /* Estilos dinámicos de portada - Con !important para override */
+      /* MIGRADO: Estilos dinámicos usando sistema unificado */
       .cover-title {
+        ${coverStyles.textCSS} !important;
         font-family: ${coverFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
-        font-size: ${coverConfig.fontSize || '4rem'} !important;
-        font-weight: ${coverConfig.fontWeight || 'bold'} !important;
-        color: ${coverConfig.color || 'white'} !important;
-        text-shadow: ${coverConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.8)'} !important;
-        text-align: ${coverConfig.textAlign || 'center'} !important;
-        ${coverConfig.letterSpacing ? `letter-spacing: ${coverConfig.letterSpacing} !important;` : ''}
-        ${coverConfig.textTransform ? `text-transform: ${coverConfig.textTransform} !important;` : ''}
       }
       
       .cover-overlay {
-        background: ${coverConfig.containerStyle?.background || 'transparent'} !important;
-        padding: ${coverConfig.containerStyle?.padding || '2rem 3rem'} !important;
-        border-radius: ${coverConfig.containerStyle?.borderRadius || '0'} !important;
-        max-width: ${coverConfig.containerStyle?.maxWidth || '85%'} !important;
-        ${coverConfig.containerStyle?.border ? `border: ${coverConfig.containerStyle.border} !important;` : ''}
-        ${coverConfig.containerStyle?.boxShadow ? `box-shadow: ${coverConfig.containerStyle.boxShadow} !important;` : ''}
-        ${coverConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${coverConfig.containerStyle.backdropFilter} !important;` : ''}
+        ${coverStyles.containerCSS} !important;
       }
       
-      /* Posicionamiento dinámico de portada */
+      /* Posicionamiento dinámico de portada usando sistema unificado */
       .cover-page {
-        ${coverConfig.position === 'top' ? 'align-items: flex-start !important; padding-top: 3rem !important;' : ''}
-        ${coverConfig.position === 'center' ? 'align-items: center !important; padding-top: 0 !important;' : ''}
-        ${coverConfig.position === 'bottom' ? 'align-items: flex-end !important; padding-bottom: 3rem !important; padding-top: 0 !important;' : ''}
+        ${coverStyles.positionCSS} !important;
+        ${coverConfig.position === 'top' ? 'padding-top: 3rem !important;' : ''}
+        ${coverConfig.position === 'bottom' ? 'padding-bottom: 3rem !important;' : ''}
       }
       
-      /* Estilos dinámicos de páginas */
+      /* Estilos dinámicos de páginas usando sistema unificado */
       .story-text {
+        ${pageStyles.textCSS} !important;
         font-family: ${pageFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
-        font-size: ${pageConfig.fontSize || '2.2rem'} !important;
-        font-weight: ${pageConfig.fontWeight || '600'} !important;
-        line-height: ${pageConfig.lineHeight || '1.4'} !important;
-        color: ${pageConfig.color || 'white'} !important;
-        text-shadow: ${pageConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.9)'} !important;
-        text-align: ${pageConfig.textAlign || 'center'} !important;
       }
       
       .page-overlay {
+        ${pageStyles.containerCSS} !important;
         position: relative;
-        background: ${pageConfig.containerStyle?.background || 'transparent'} !important;
-        padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'} !important;
-        min-height: ${pageConfig.containerStyle?.minHeight || '25%'} !important;
-        width: ${pageConfig.containerStyle?.maxWidth || '100%'} !important;
-        ${pageConfig.containerStyle?.border ? `border: ${pageConfig.containerStyle.border} !important;` : ''}
-        ${pageConfig.containerStyle?.borderRadius ? `border-radius: ${pageConfig.containerStyle.borderRadius} !important;` : ''}
-        ${pageConfig.containerStyle?.boxShadow ? `box-shadow: ${pageConfig.containerStyle.boxShadow} !important;` : ''}
-        ${pageConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${pageConfig.containerStyle.backdropFilter} !important;` : ''}
-        
-        /* Alineación vertical del contenedor basada en template */
         display: flex !important;
         flex-direction: column !important;
-        ${pageConfig.verticalAlign ? `justify-content: ${pageConfig.verticalAlign} !important;` : 'justify-content: flex-end !important;'}
       }
       
-      /* Gradiente overlay si existe */
-      ${pageConfig.containerStyle?.gradientOverlay ? `
-      .page-overlay::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: ${pageConfig.containerStyle.gradientOverlay};
-        border-radius: inherit;
-        z-index: -1;
-      }
-      ` : ''}
-      
-      /* Posicionamiento dinámico basado en template */
+      /* Posicionamiento dinámico de páginas usando sistema unificado */
       .story-page {
-        justify-content: center !important; /* Centrar horizontalmente */
-        ${pageConfig.position === 'top' ? 'align-items: flex-start !important;' : ''}
-        ${pageConfig.position === 'center' ? 'align-items: center !important;' : ''}
-        ${pageConfig.position === 'bottom' ? 'align-items: flex-end !important;' : 'align-items: flex-end !important;'}
+        ${pageStyles.positionCSS} !important;
+      }
+      
+      /* Estilos de dedicatoria usando sistema unificado */
+      .dedicatoria-text {
+        ${dedicatoriaStyles.textCSS} !important;
+        font-family: ${pageFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
       }
     `;
   };
