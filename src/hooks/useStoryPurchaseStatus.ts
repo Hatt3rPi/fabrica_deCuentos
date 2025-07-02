@@ -53,14 +53,17 @@ export const useStoryPurchaseStatus = (storyId: string) => {
           // Si encontramos una orden pagada, verificar si existe PDF
           const { data: storyData } = await supabase
             .from('stories')
-            .select('pdf_url')
+            .select('pdf_url, export_url')
             .eq('id', storyId)
             .eq('user_id', user.id)
             .single();
 
+          // Verificar ambos campos para URL del PDF
+          const pdfUrl = storyData?.pdf_url || storyData?.export_url;
+
           setStatus({
             isPurchased: true,
-            pdfUrl: storyData?.pdf_url,
+            pdfUrl: pdfUrl,
             orderId: orderData.order_id,
             purchasedAt: orderData.orders.paid_at,
             isLoading: false
@@ -107,10 +110,11 @@ export const useStoryPurchaseStatus = (storyId: string) => {
           filter: `id=eq.${storyId}`
         },
         (payload) => {
-          if (payload.new.pdf_url && status.isPurchased) {
+          const newPdfUrl = payload.new.pdf_url || payload.new.export_url;
+          if (newPdfUrl && status.isPurchased) {
             setStatus(prev => ({
               ...prev,
-              pdfUrl: payload.new.pdf_url
+              pdfUrl: newPdfUrl
             }));
           }
         }
