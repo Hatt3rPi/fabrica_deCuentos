@@ -71,7 +71,8 @@ interface DesignSettings {
 }
 
 Deno.serve(async (req) => {
-  // Configurar Sentry para esta Edge Function
+  // Configurar logging y monitoreo
+  const logger = createEdgeFunctionLogger('story-export');
   configureForEdgeFunction('story-export', req);
 
   if (req.method === 'OPTIONS') {
@@ -85,8 +86,12 @@ Deno.serve(async (req) => {
     const requestData: StoryExportRequest = await req.json();
     const { story_id, save_to_library = true, format = 'pdf', include_metadata = true } = requestData;
 
-    console.log(`[story-export] 🚀 Iniciando export para story: ${story_id}`);
-    console.log(`[story-export] 📋 Parámetros:`, { story_id, save_to_library, format, include_metadata });
+    logger.info('Iniciando export de historia', { 
+      storyId: story_id, 
+      saveToLibrary: save_to_library, 
+      format, 
+      includeMetadata: include_metadata 
+    });
 
     if (!story_id) {
       throw new Error('story_id es requerido');
@@ -97,7 +102,7 @@ Deno.serve(async (req) => {
       throw new Error('Usuario no autenticado');
     }
     
-    console.log(`[story-export] 👤 User ID: ${userId}`);
+    logger.info('Usuario autenticado', { userId });
     
     // Configurar contexto de usuario en Sentry
     setUser({ id: userId });
