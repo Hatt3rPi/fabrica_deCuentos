@@ -34,6 +34,7 @@ import TextEditor from './components/TextEditor';
 import CreateTemplateModal from './components/CreateTemplateModal';
 import DedicatoriaImagePanel from './components/DedicatoriaImagePanel';
 import ComponentsPanel from './components/ComponentsPanel';
+import { useStyleAdapter, SelectionTarget } from '../../../hooks/useStyleAdapter';
 
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
@@ -67,6 +68,9 @@ const AdminStyleEditor: React.FC = () => {
   const [currentPageType, setCurrentPageType] = useState<PageType>('cover');
   const [activePanel, setActivePanel] = useState<string>('typography');
   
+  // Sistema de selección PowerPoint-like
+  const [selectedTarget, setSelectedTarget] = useState<SelectionTarget>({ type: 'page' });
+  
   // Estados de UI
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -84,6 +88,11 @@ const AdminStyleEditor: React.FC = () => {
     loadActiveTemplate();
     loadSampleImages();
   }, []);
+
+  // Resetear selección cuando cambie el tipo de página
+  useEffect(() => {
+    setSelectedTarget({ type: 'page' });
+  }, [currentPageType]);
 
   // Detectar cambios
   useEffect(() => {
@@ -353,6 +362,66 @@ const AdminStyleEditor: React.FC = () => {
       };
     });
   }, []);
+
+  // Función para manejar cambios en componentes
+  const handleComponentChange = useCallback((componentId: string, updates: Partial<ComponentConfig>) => {
+    setActiveConfig(prev => {
+      if (!prev) return prev;
+      
+      const currentComponents = prev.components?.[currentPageType] || [];
+      const updatedComponents = currentComponents.map(comp => 
+        comp.id === componentId ? { ...comp, ...updates } : comp
+      );
+      
+      return {
+        ...prev,
+        components: {
+          ...prev.components,
+          [currentPageType]: updatedComponents
+        }
+      };
+    });
+  }, [currentPageType]);
+
+  // Función para manejar selección de componentes
+  const handleComponentSelection = useCallback((componentId: string | null) => {
+    if (componentId) {
+      const components = activeConfig?.components?.[currentPageType] || [];
+      const component = components.find(c => c.id === componentId);
+      
+      if (component) {
+        setSelectedTarget({
+          type: 'component',
+          componentId: componentId,
+          componentName: component.name,
+          componentType: component.type
+        });
+      }
+    } else {
+      setSelectedTarget({ type: 'page' });
+    }
+  }, [activeConfig, currentPageType]);
+
+  // Hook de adaptación de estilos
+  const styleAdapter = useStyleAdapter(
+    selectedTarget,
+    activeConfig,
+    currentPageType,
+    activeConfig?.components?.[currentPageType] || [],
+    (updates) => {
+      // Actualizar configuración de página según el tipo
+      if (currentPageType === 'cover') {
+        updateCoverConfig(updates);
+      } else if (currentPageType === 'dedicatoria') {
+        updateDedicatoriaConfig(updates);
+      } else if (currentPageType === 'contraportada') {
+        updateContraportadaConfig(updates);
+      } else {
+        updatePageConfig(updates);
+      }
+    },
+    handleComponentChange
+  );
 
   const updateContainerStyle = useCallback((containerUpdates: any) => {
     if (currentPageType === 'cover') {
@@ -767,57 +836,83 @@ const AdminStyleEditor: React.FC = () => {
               </button>
             </div>
 
+            {/* Indicador de Selección */}
+            <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-lg border border-purple-200 dark:border-purple-700">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                  Editando: {styleAdapter.selectionInfo.name}
+                </span>
+              </div>
+              <div className="text-xs text-purple-600 dark:text-purple-300 mt-1">
+                {styleAdapter.selectionInfo.type === 'component' 
+                  ? `Componente ${styleAdapter.selectionInfo.typeName}` 
+                  : 'Texto principal de la página'
+                }
+              </div>
+              {selectedTarget.type === 'component' && (
+                <button
+                  onClick={() => setSelectedTarget({ type: 'page' })}
+                  className="text-xs text-purple-600 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-100 mt-1 underline"
+                >
+                  ← Volver a página principal
+                </button>
+              )}
+            </div>
+
             {/* Active Panel Content */}
-            {activePanel === 'typography' && activeConfig && (
+            {activePanel === 'typography' && activeConfig && styleAdapter.availableControls.typography && (
               <TypographyPanel
-                config={getCurrentConfig()}
-                onChange={
-                  currentPageType === 'cover' ? updateCoverConfig :
-                  currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                  currentPageType === 'contraportada' ? updateContraportadaConfig :
-                  updatePageConfig
-                }
+                config={styleAdapter.currentStyles}
+                onChange={styleAdapter.updateStyles}
               />
             )}
             
-            {activePanel === 'position' && activeConfig && (
+            {activePanel === 'position' && activeConfig && styleAdapter.availableControls.position && (
               <PositionPanel
-                config={getCurrentConfig()}
-                onChange={
-                  currentPageType === 'cover' ? updateCoverConfig :
-                  currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                  currentPageType === 'contraportada' ? updateContraportadaConfig :
-                  updatePageConfig
-                }
+                config={styleAdapter.currentStyles}
+                onChange={styleAdapter.updateStyles}
                 pageType={currentPageType}
               />
             )}
             
-            {activePanel === 'colors' && activeConfig && (
+            {activePanel === 'colors' && activeConfig && styleAdapter.availableControls.colors && (
               <ColorPanel
-                config={getCurrentConfig()}
-                onChange={
-                  currentPageType === 'cover' ? updateCoverConfig :
-                  currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                  currentPageType === 'contraportada' ? updateContraportadaConfig :
-                  updatePageConfig
-                }
+                config={styleAdapter.currentStyles}
+                onChange={styleAdapter.updateStyles}
               />
             )}
             
-            {activePanel === 'effects' && activeConfig && (
+            {activePanel === 'effects' && activeConfig && styleAdapter.availableControls.effects && (
               <EffectsPanel
-                containerStyle={getCurrentConfig().containerStyle}
-                onChange={updateContainerStyle}
+                containerStyle={styleAdapter.currentStyles}
+                onChange={styleAdapter.updateStyles}
               />
             )}
             
-            {activePanel === 'container' && activeConfig && (
+            {activePanel === 'container' && activeConfig && styleAdapter.availableControls.container && (
               <ContainerPanel
-                containerStyle={getCurrentConfig().containerStyle}
-                onChange={updateContainerStyle}
+                containerStyle={styleAdapter.currentStyles}
+                onChange={styleAdapter.updateStyles}
                 pageType={currentPageType}
               />
+            )}
+
+            {/* Mensaje cuando no hay controles disponibles */}
+            {activeConfig && (
+              (activePanel === 'typography' && !styleAdapter.availableControls.typography) ||
+              (activePanel === 'colors' && !styleAdapter.availableControls.colors) ||
+              (activePanel === 'effects' && !styleAdapter.availableControls.effects) ||
+              (activePanel === 'container' && !styleAdapter.availableControls.container)
+            ) && (
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200 text-center">
+                  Este panel no está disponible para el elemento seleccionado.
+                </p>
+                <p className="text-xs text-yellow-600 dark:text-yellow-300 text-center mt-1">
+                  Selecciona un componente de texto o la página principal.
+                </p>
+              </div>
             )}
             
             {activePanel === 'images' && (
@@ -957,6 +1052,8 @@ const AdminStyleEditor: React.FC = () => {
                 showGrid={showGrid}
                 showRulers={showRulers}
                 zoomLevel={zoomLevel}
+                selectedComponentId={selectedTarget.type === 'component' ? selectedTarget.componentId : undefined}
+                onComponentSelect={handleComponentSelection}
               />
             ) : (
               <div className="flex items-center justify-center h-96 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
