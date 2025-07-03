@@ -21,7 +21,7 @@ import {
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 import { styleConfigService } from '../../../services/styleConfigService';
-import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG } from '../../../types/styleConfig';
+import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG, DEFAULT_CONTRAPORTADA_CONFIG, ComponentConfig, PageType } from '../../../types/styleConfig';
 import StylePreview from './components/StylePreview';
 import TypographyPanel from './components/TypographyPanel';
 import PositionPanel from './components/PositionPanel';
@@ -33,12 +33,14 @@ import ImageUploader from './components/ImageUploader';
 import TextEditor from './components/TextEditor';
 import CreateTemplateModal from './components/CreateTemplateModal';
 import DedicatoriaImagePanel from './components/DedicatoriaImagePanel';
+import ComponentsPanel from './components/ComponentsPanel';
 
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
   cover: 'El Mágico Viaje de Luna',
   page: 'Luna caminaba por el sendero del bosque encantado, donde las luciérnagas bailaban entre los árboles iluminando su camino. El viento susurraba secretos antiguos mientras las hojas doradas crujían bajo sus pequeños pies.',
-  dedicatoria: 'Para mi querida hija Luna, que siempre sueña con aventuras mágicas y llena nuestros días de alegría.'
+  dedicatoria: 'Para mi querida hija Luna, que siempre sueña con aventuras mágicas y llena nuestros días de alegría.',
+  contraportada: 'Una historia mágica llena de aventuras, donde Luna descubre que los sueños pueden hacerse realidad cuando tienes el corazón valiente y la imaginación despierta.'
 };
 
 const AdminStyleEditor: React.FC = () => {
@@ -57,10 +59,12 @@ const AdminStyleEditor: React.FC = () => {
   const [customCoverImage, setCustomCoverImage] = useState<string>('');
   const [customPageImage, setCustomPageImage] = useState<string>('');
   const [customDedicatoriaImage, setCustomDedicatoriaImage] = useState<string>('');
+  const [customContraportadaImage, setCustomContraportadaImage] = useState<string>('');
   const [customCoverText, setCustomCoverText] = useState<string>(SAMPLE_TEXTS.cover);
   const [customPageText, setCustomPageText] = useState<string>(SAMPLE_TEXTS.page);
   const [customDedicatoriaText, setCustomDedicatoriaText] = useState<string>(SAMPLE_TEXTS.dedicatoria);
-  const [currentPageType, setCurrentPageType] = useState<'cover' | 'page' | 'dedicatoria'>('cover');
+  const [customContraportadaText, setCustomContraportadaText] = useState<string>(SAMPLE_TEXTS.contraportada);
+  const [currentPageType, setCurrentPageType] = useState<PageType>('cover');
   const [activePanel, setActivePanel] = useState<string>('typography');
   
   // Estados de UI
@@ -329,6 +333,22 @@ const AdminStyleEditor: React.FC = () => {
           imageSize: prev.dedicatoriaConfig?.imageSize || 'mediana',
           allowedLayouts: prev.dedicatoriaConfig?.allowedLayouts || ['imagen-arriba', 'imagen-abajo', 'imagen-izquierda', 'imagen-derecha'],
           allowedAlignments: prev.dedicatoriaConfig?.allowedAlignments || ['centro', 'izquierda', 'derecha']
+        }
+      };
+    });
+  }, []);
+
+  const updateContraportadaConfig = useCallback((updates: any) => {
+    setActiveConfig(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        contraportadaConfig: {
+          ...prev.contraportadaConfig,
+          text: {
+            ...prev.contraportadaConfig?.text || DEFAULT_CONTRAPORTADA_CONFIG.text,
+            ...updates
+          }
         }
       };
     });
@@ -733,6 +753,20 @@ const AdminStyleEditor: React.FC = () => {
               </button>
             </div>
 
+            <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+              <button
+                onClick={() => setActivePanel('components')}
+                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'components'
+                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                }`}
+              >
+                <Layers className="w-4 h-4 inline mr-1" />
+                Componentes
+              </button>
+            </div>
+
             {/* Active Panel Content */}
             {activePanel === 'typography' && activeConfig && (
               <TypographyPanel
@@ -740,6 +774,7 @@ const AdminStyleEditor: React.FC = () => {
                 onChange={
                   currentPageType === 'cover' ? updateCoverConfig :
                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                  currentPageType === 'contraportada' ? updateContraportadaConfig :
                   updatePageConfig
                 }
               />
@@ -751,6 +786,7 @@ const AdminStyleEditor: React.FC = () => {
                 onChange={
                   currentPageType === 'cover' ? updateCoverConfig :
                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                  currentPageType === 'contraportada' ? updateContraportadaConfig :
                   updatePageConfig
                 }
                 pageType={currentPageType}
@@ -763,6 +799,7 @@ const AdminStyleEditor: React.FC = () => {
                 onChange={
                   currentPageType === 'cover' ? updateCoverConfig :
                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                  currentPageType === 'contraportada' ? updateContraportadaConfig :
                   updatePageConfig
                 }
               />
@@ -818,10 +855,31 @@ const AdminStyleEditor: React.FC = () => {
                 coverText={customCoverText}
                 pageText={customPageText}
                 dedicatoriaText={customDedicatoriaText}
+                contraportadaText={customContraportadaText}
                 onCoverTextChange={setCustomCoverText}
                 onPageTextChange={setCustomPageText}
                 onDedicatoriaTextChange={setCustomDedicatoriaText}
+                onContraportadaTextChange={setCustomContraportadaText}
                 currentPageType={currentPageType}
+              />
+            )}
+
+            {activePanel === 'components' && activeConfig && (
+              <ComponentsPanel
+                pageType={currentPageType}
+                components={activeConfig.components?.[currentPageType] || []}
+                onChange={(components) => {
+                  setActiveConfig(prev => {
+                    if (!prev) return prev;
+                    return {
+                      ...prev,
+                      components: {
+                        ...prev.components,
+                        [currentPageType]: components
+                      }
+                    };
+                  });
+                }}
               />
             )}
           </div>
@@ -865,6 +923,17 @@ const AdminStyleEditor: React.FC = () => {
                   <span className="hidden sm:inline">Dedicatoria</span>
                   <span className="sm:hidden">Ded.</span>
                 </button>
+                <button
+                  onClick={() => setCurrentPageType('contraportada')}
+                  className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    currentPageType === 'contraportada'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <span className="hidden sm:inline">Contraportada</span>
+                  <span className="sm:hidden">Cont.</span>
+                </button>
               </div>
             </div>
 
@@ -876,11 +945,13 @@ const AdminStyleEditor: React.FC = () => {
                 sampleImage={
                   currentPageType === 'cover' ? (customCoverImage || defaultCoverImage) :
                   currentPageType === 'dedicatoria' ? (customDedicatoriaImage || defaultDedicatoriaImage) :
+                  currentPageType === 'contraportada' ? (customContraportadaImage || defaultCoverImage) :
                   (customPageImage || defaultPageImage)
                 }
                 sampleText={
                   currentPageType === 'cover' ? customCoverText :
                   currentPageType === 'dedicatoria' ? customDedicatoriaText :
+                  currentPageType === 'contraportada' ? customContraportadaText :
                   customPageText
                 }
                 showGrid={showGrid}

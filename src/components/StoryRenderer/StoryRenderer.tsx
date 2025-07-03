@@ -8,8 +8,10 @@ import {
   applyStandardStyles, 
   PageType, 
   RenderContext,
-  debugStyleConfig 
+  debugStyleConfig,
+  ComponentStyleApplication
 } from '../../utils/storyStyleUtils';
+import { ComponentConfig, TextComponentConfig, ImageComponentConfig } from '../../types/styleConfig';
 
 // ============================================================================
 // TIPOS Y INTERFACES
@@ -155,7 +157,7 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
     // ESTILOS CALCULADOS
     // ========================================================================
     
-    const { textStyle, containerStyle, positioning } = appliedStyles;
+    const { textStyle, containerStyle, positioning, components } = appliedStyles;
     
     // Estilo del contenedor principal de la página
     const pageContainerStyle: React.CSSProperties = {
@@ -191,6 +193,83 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
       } : {})
     };
     
+    // ========================================================================
+    // RENDERIZADO DE COMPONENTES DINÁMICOS
+    // ========================================================================
+    
+    const renderComponent = (componentStyle: ComponentStyleApplication, index: number) => {
+      const { component, styles, positioning: compPositioning } = componentStyle;
+      
+      if (component.type === 'text') {
+        const textComp = component as TextComponentConfig;
+        return (
+          <div
+            key={`${component.id}-${index}`}
+            className={`story-component story-component-text component-${component.name}`}
+            style={{
+              ...styles,
+              display: 'flex',
+              alignItems: compPositioning.alignItems,
+              justifyContent: compPositioning.justifyContent
+            }}
+            data-component-id={component.id}
+            data-component-name={component.name}
+            data-component-type={component.type}
+          >
+            <span style={{ fontSize: 'inherit', color: 'inherit' }}>
+              {textComp.content || `[${component.name}]`}
+            </span>
+          </div>
+        );
+      }
+      
+      if (component.type === 'image') {
+        const imageComp = component as ImageComponentConfig;
+        if (!imageComp.imageUrl) return null;
+        
+        return (
+          <div
+            key={`${component.id}-${index}`}
+            className={`story-component story-component-image component-${component.name}`}
+            style={{
+              ...styles,
+              display: 'flex',
+              alignItems: compPositioning.alignItems,
+              justifyContent: compPositioning.justifyContent
+            }}
+            data-component-id={component.id}
+            data-component-name={component.name}
+            data-component-type={component.type}
+          >
+            <img
+              src={imageComp.imageUrl}
+              alt={component.name}
+              style={{
+                width: 'inherit',
+                height: 'inherit',
+                objectFit: 'inherit',
+                opacity: 'inherit'
+              }}
+            />
+          </div>
+        );
+      }
+      
+      return null;
+    };
+
+    const renderDynamicComponents = () => {
+      if (!components || components.length === 0) return null;
+      
+      return (
+        <>
+          {components.map((componentStyle, index) => 
+            renderComponent(componentStyle, index)
+          )}
+        </>
+      );
+    };
+
     // ========================================================================
     // RENDERIZADO DE CONTENIDO
     // ========================================================================
@@ -358,6 +437,9 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
               {renderTextContent()}
             </div>
           </div>
+          
+          {/* Componentes dinámicos */}
+          {renderDynamicComponents()}
         </div>
         
         {/* Debug info */}

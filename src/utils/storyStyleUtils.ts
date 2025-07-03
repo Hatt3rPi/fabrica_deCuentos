@@ -7,16 +7,23 @@ import {
   TitleConfig, 
   PageTextConfig, 
   ContainerStyle,
+  ComponentConfig,
+  TextComponentConfig,
+  ImageComponentConfig,
+  PageType,
   DEFAULT_COVER_CONFIG,
   DEFAULT_PAGE_CONFIG,
-  DEFAULT_DEDICATORIA_CONFIG
+  DEFAULT_DEDICATORIA_CONFIG,
+  DEFAULT_CONTRAPORTADA_CONFIG,
+  DEFAULT_AUTHOR_COMPONENT,
+  DEFAULT_LOGO_COMPONENT,
+  DEFAULT_SIGNATURE_COMPONENT
 } from '../types/styleConfig';
 
 // ============================================================================
 // TIPOS Y INTERFACES
 // ============================================================================
 
-export type PageType = 'cover' | 'page' | 'dedicatoria';
 export type RenderContext = 'admin' | 'pdf' | 'wizard';
 
 export interface ValidationResult {
@@ -28,6 +35,16 @@ export interface ValidationResult {
 export interface StyleApplication {
   textStyle: React.CSSProperties;
   containerStyle: React.CSSProperties;
+  positioning: {
+    alignItems: string;
+    justifyContent: string;
+  };
+  components?: ComponentStyleApplication[];
+}
+
+export interface ComponentStyleApplication {
+  component: ComponentConfig;
+  styles: React.CSSProperties;
   positioning: {
     alignItems: string;
     justifyContent: string;
@@ -125,6 +142,8 @@ export function getCurrentConfig(
       return config.coverConfig.title;
     case 'dedicatoria':
       return config.dedicatoriaConfig?.text || config.pageConfig.text;
+    case 'contraportada':
+      return config.contraportadaConfig?.text || DEFAULT_CONTRAPORTADA_CONFIG.text;
     case 'page':
     default:
       return config.pageConfig.text;
@@ -160,6 +179,8 @@ function getDefaultConfigForPageType(pageType: PageType): TitleConfig | PageText
       return DEFAULT_COVER_CONFIG.title;
     case 'dedicatoria':
       return DEFAULT_DEDICATORIA_CONFIG.text;
+    case 'contraportada':
+      return DEFAULT_CONTRAPORTADA_CONFIG.text;
     case 'page':
     default:
       return DEFAULT_PAGE_CONFIG.text;
@@ -174,7 +195,7 @@ function getDefaultConfigForPageType(pageType: PageType): TitleConfig | PageText
  * Calcula posicionamiento Flexbox según configuración
  * ESTÁNDAR: Lógica de StylePreview.tsx, debe usarse en todos los contextos
  */
-export function getContainerPosition(config: TitleConfig | PageTextConfig) {
+export function getContainerPosition(config: TitleConfig | PageTextConfig | ComponentConfig) {
   const position = config.position || 'center';
   const horizontalPosition = config.horizontalPosition || 'center';
   
@@ -211,6 +232,130 @@ export function getContainerPosition(config: TitleConfig | PageTextConfig) {
 }
 
 // ============================================================================
+// FUNCIONES PARA COMPONENTES DINÁMICOS
+// ============================================================================
+
+/**
+ * Obtiene los componentes configurados para un tipo de página
+ */
+export function getPageComponents(
+  config: StoryStyleConfig | null | undefined,
+  pageType: PageType
+): ComponentConfig[] {
+  if (!config?.components?.[pageType]) {
+    return getDefaultComponentsForPageType(pageType);
+  }
+  return config.components[pageType];
+}
+
+/**
+ * Obtiene componentes por defecto según tipo de página
+ */
+function getDefaultComponentsForPageType(pageType: PageType): ComponentConfig[] {
+  switch (pageType) {
+    case 'cover':
+      return [
+        { ...DEFAULT_AUTHOR_COMPONENT, enabled: false }, // Deshabilitado por defecto
+        { ...DEFAULT_LOGO_COMPONENT }
+      ];
+    case 'contraportada':
+      return [
+        { ...DEFAULT_SIGNATURE_COMPONENT },
+        { ...DEFAULT_LOGO_COMPONENT }
+      ];
+    case 'dedicatoria':
+    case 'page':
+    default:
+      return [];
+  }
+}
+
+/**
+ * Convierte componente de texto a estilos CSS
+ */
+export function convertTextComponentToReactStyle(component: TextComponentConfig): React.CSSProperties {
+  return {
+    fontSize: component.style.fontSize,
+    fontFamily: component.style.fontFamily,
+    fontWeight: component.style.fontWeight,
+    color: component.style.color,
+    textAlign: component.style.textAlign,
+    textShadow: component.style.textShadow,
+    letterSpacing: component.style.letterSpacing,
+    lineHeight: component.style.lineHeight,
+    textTransform: component.style.textTransform
+  };
+}
+
+/**
+ * Convierte componente de imagen a estilos CSS
+ */
+export function convertImageComponentToReactStyle(component: ImageComponentConfig): React.CSSProperties {
+  const styles: React.CSSProperties = {
+    opacity: component.opacity || 1,
+    objectFit: component.fit || 'contain'
+  };
+
+  // Tamaño según configuración
+  switch (component.size) {
+    case 'small':
+      styles.width = '60px';
+      styles.height = '60px';
+      break;
+    case 'medium':
+      styles.width = '120px';
+      styles.height = '120px';
+      break;
+    case 'large':
+      styles.width = '200px';
+      styles.height = '200px';
+      break;
+    case 'custom':
+      if (component.customSize) {
+        styles.width = component.customSize.width;
+        styles.height = component.customSize.height;
+      }
+      break;
+  }
+
+  return styles;
+}
+
+/**
+ * Aplica estilos a un componente dinámico
+ */
+export function applyComponentStyles(component: ComponentConfig): ComponentStyleApplication {
+  let componentStyles: React.CSSProperties = {};
+  
+  if (component.type === 'text') {
+    componentStyles = convertTextComponentToReactStyle(component as TextComponentConfig);
+  } else if (component.type === 'image') {
+    componentStyles = convertImageComponentToReactStyle(component as ImageComponentConfig);
+  }
+
+  // Estilos del contenedor
+  const containerStyles = component.type === 'text' 
+    ? convertContainerToReactStyle((component as TextComponentConfig).containerStyle)
+    : (component as ImageComponentConfig).containerStyle 
+      ? { ...(component as ImageComponentConfig).containerStyle }
+      : {};
+
+  // Combinar estilos
+  const finalStyles = {
+    ...componentStyles,
+    ...containerStyles,
+    position: 'absolute' as const,
+    zIndex: component.zIndex || 10
+  };
+
+  return {
+    component,
+    styles: finalStyles,
+    positioning: getContainerPosition(component)
+  };
+}
+
+// ============================================================================
 // APLICACIÓN UNIFICADA DE ESTILOS
 // ============================================================================
 
@@ -225,6 +370,11 @@ export function applyStandardStyles(
 ): StyleApplication {
   const currentConfig = getCurrentConfigWithDefaults(config, pageType);
   
+  // Obtener y aplicar componentes dinámicos
+  const pageComponents = getPageComponents(config, pageType);
+  const enabledComponents = pageComponents.filter(comp => comp.enabled);
+  const componentStyles = enabledComponents.map(comp => applyComponentStyles(comp));
+  
   // El contexto se usa para optimizaciones futuras específicas
   // Por ahora, mantenemos la lógica unificada
   void context; // Evita el warning de variable no usada
@@ -232,7 +382,8 @@ export function applyStandardStyles(
   return {
     textStyle: convertToReactStyle(currentConfig),
     containerStyle: convertContainerToReactStyle(currentConfig.containerStyle),
-    positioning: getContainerPosition(currentConfig)
+    positioning: getContainerPosition(currentConfig),
+    components: componentStyles
   };
 }
 
