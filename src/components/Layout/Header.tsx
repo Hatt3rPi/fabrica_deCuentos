@@ -3,12 +3,16 @@ import { Menu, BookOpen } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCartOperations } from '../../contexts/CartContext';
 import NotificationBell from '../Notifications/NotificationBell';
-import ThemeToggleButton from './ThemeToggleButton';
 import MobileSidebar from './MobileSidebar';
+import ProfileDropdown from './ProfileDropdown';
 import CartIcon from '../Cart/CartIcon';
 import ShoppingCart from '../Cart/ShoppingCart';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  className?: string;
+}
+
+const Header: React.FC<HeaderProps> = ({ className = '' }) => {
   const { user } = useAuth();
   const { isOpen: cartOpen, openCart, closeCart } = useCartOperations();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -50,8 +54,8 @@ const Header: React.FC = () => {
   }, []);
 
   return (
-    <header ref={headerRef} className="bg-white shadow-md py-4 px-4 md:px-6 dark:bg-gray-800 dark:text-white">
-      <div className="flex items-center justify-between">
+    <header ref={headerRef} className={`bg-white shadow-md dark:bg-gray-800 dark:text-white h-[81px] flex items-center ${className}`}>
+      <div className="w-full flex items-center justify-between px-4 md:px-6">
         {/* Mobile menu button - Only visible on mobile */}
         <div className="w-full lg:hidden flex items-center justify-between">
           {/* Botón de menú a la izquierda */}
@@ -75,13 +79,12 @@ const Header: React.FC = () => {
           {/* Controles de la derecha */}
           <div className="flex items-center gap-1">
             <CartIcon onClick={openCart} />
-            <ThemeToggleButton />
             <div className="relative">
               <NotificationBell />
             </div>
-            <span className="hidden md:inline ml-2 text-sm font-medium text-gray-500 dark:text-gray-300 truncate max-w-[100px]">
-              {user?.email}
-            </span>
+            <div className="ml-2">
+              <ProfileDropdown />
+            </div>
           </div>
         </div>
 
@@ -97,12 +100,9 @@ const Header: React.FC = () => {
         <div className="hidden lg:flex items-center gap-2">
           <CartIcon onClick={openCart} />
           <div className="h-6 w-px bg-gray-200 dark:bg-gray-600 mx-1"></div>
-          <ThemeToggleButton />
-          <div className="h-6 w-px bg-gray-200 dark:bg-gray-600 mx-1"></div>
           <NotificationBell />
-          <span className="text-sm font-medium text-gray-500 dark:text-gray-300 ml-2">
-            {user?.email}
-          </span>
+          <div className="h-6 w-px bg-gray-200 dark:bg-gray-600 mx-1"></div>
+          <ProfileDropdown />
         </div>
       </div>
 

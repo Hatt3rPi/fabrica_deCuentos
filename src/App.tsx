@@ -63,13 +63,15 @@ function AnimatedRoutes() {
           </Routes>
         ) : (
           // Authenticated layout
-          <div className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex flex-col lg:flex-row">
-            <div className="hidden lg:block lg:w-60 lg:flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+          <div className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex">
+            {/* Sidebar fijo en desktop */}
+            <div className="hidden lg:block flex-shrink-0 w-64 h-screen sticky top-0 overflow-y-auto">
               <Sidebar />
             </div>
 
-            <div className="flex-1 flex flex-col min-h-screen">
-              <Header />
+            {/* Contenido principal */}
+            <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+              <Header className="sticky top-0 z-10" />
               <main className="flex-grow p-4 md:p-6 lg:p-8">
                 <Routes location={location}>
                   <Route path="/" element={<Navigate to="/home" replace />} />

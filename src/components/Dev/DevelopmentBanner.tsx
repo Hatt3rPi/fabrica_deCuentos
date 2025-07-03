@@ -80,26 +80,44 @@ const DevelopmentBanner: React.FC = () => {
   }
 
   return (
-    <div className={`${color} text-white py-2 px-4 text-center text-sm font-medium shadow-lg`}>
-      <div className="flex items-center justify-center gap-2 max-w-4xl mx-auto">
-        <Icon className="w-4 h-4" />
-        <span className="font-bold">
-          {deployment === 'Local' ? 'DESARROLLO LOCAL' : `${deployment.toUpperCase()}`}
-        </span>
-        <span className="mx-2">•</span>
-        <span>Supabase: {environment}</span>
-        {supabaseUrl && (
-          <>
-            <span className="mx-2">•</span>
-            <span className="font-mono text-xs opacity-90">
-              {new URL(supabaseUrl).hostname}
+    <div className={`${color} text-white py-2 px-2 sm:px-4 text-center text-xs sm:text-sm font-medium shadow-lg`}>
+      <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2 max-w-7xl mx-auto">
+        <div className="flex items-center">
+          <Icon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+          <span className="font-bold ml-1">
+            {deployment === 'Local' ? 'DESARROLLO' : deployment.toUpperCase().replace('NETLIFY', '').replace('VERCEL', '').trim()}
+          </span>
+        </div>
+        
+        <span className="hidden sm:inline">•</span>
+        
+        <div className="hidden sm:flex items-center">
+          <span>Supabase: {environment}</span>
+          {supabaseUrl && (
+            <>
+              <span className="mx-2">•</span>
+              <span className="font-mono text-xs opacity-90 truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">
+                {new URL(supabaseUrl).hostname}
+              </span>
+            </>
+          )}
+        </div>
+        
+        <span className="hidden sm:inline">•</span>
+        
+        <div className="text-xs opacity-75 truncate max-w-[150px] sm:max-w-none">
+          {branch}
+        </div>
+        
+        {/* Versión móvil más compacta */}
+        <div className="sm:hidden w-full text-[10px] opacity-75 mt-1">
+          <span>Supabase: {environment}</span>
+          {supabaseUrl && (
+            <span className="font-mono ml-1">
+              {new URL(supabaseUrl).hostname.split('.')[0]}
             </span>
-          </>
-        )}
-        <span className="mx-2">•</span>
-        <span className="text-xs opacity-75">
-          Branch: {branch}
-        </span>
+          )}
+        </div>
       </div>
     </div>
   );
