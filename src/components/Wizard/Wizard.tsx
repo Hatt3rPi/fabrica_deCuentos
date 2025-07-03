@@ -8,7 +8,7 @@ import DesignStep from './steps/DesignStep';
 import PreviewStep from './steps/PreviewStep';
 import DedicatoriaChoiceStep from './steps/DedicatoriaChoiceStep';
 import DedicatoriaStep from './steps/DedicatoriaStep';
-import ExportStep from './steps/ExportStep';
+import CheckoutStep from './steps/CheckoutStep';
 import WizardNav from './WizardNav';
 import StepIndicator from './StepIndicator';
 
@@ -102,8 +102,8 @@ const Wizard: React.FC = () => {
         return <DedicatoriaChoiceStep />;
       case 'dedicatoria':
         return <DedicatoriaStep />;
-      case 'export':
-        return <ExportStep />;
+      case 'checkout':
+        return <CheckoutStep />;
       default:
         return <CharactersStep />;
     }

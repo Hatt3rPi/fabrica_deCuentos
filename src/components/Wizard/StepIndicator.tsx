@@ -1,6 +1,6 @@
 import React from 'react';
 import { useWizard, WizardStep } from '../../context/WizardContext';
-import { UserRound, BookText, Palette, FileText, Heart, Download } from 'lucide-react';
+import { UserRound, BookText, Palette, FileText, Heart, ShoppingCart } from 'lucide-react';
 
 const StepIndicator: React.FC = () => {
   const { currentStep } = useWizard();
@@ -11,7 +11,7 @@ const StepIndicator: React.FC = () => {
     { id: 'design', label: 'Diseño', icon: <Palette className="w-5 h-5" /> },
     { id: 'preview', label: 'Vista Previa', icon: <FileText className="w-5 h-5" /> },
     { id: 'dedicatoria', label: 'Dedicatoria', icon: <Heart className="w-5 h-5" /> },
-    { id: 'export', label: 'Descarga', icon: <Download className="w-5 h-5" /> },
+    { id: 'checkout', label: 'Checkout', icon: <ShoppingCart className="w-5 h-5" /> },
   ];
 
   const getCurrentStepIndex = () => steps.findIndex((step) => step.id === currentStep);
