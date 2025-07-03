@@ -52,16 +52,21 @@ const CheckoutStep: React.FC = () => {
         setIsLoading(true);
         const productTypes = await priceService.getProductTypes();
         
+        console.log('[CheckoutStep] Productos disponibles:', productTypes);
+        
         // Encontrar productos digitales y físicos
         const digitalProduct = productTypes.find(p => 
           p.category === 'digital' && 
-          (p.name.includes('Digital Básico') || p.name === 'Libro Digital')
+          (p.name === 'Libro Digital' || p.name.includes('Digital'))
         );
         
         const physicalProduct = productTypes.find(p => 
           p.category === 'physical' && 
-          p.name.includes('Físico')
+          (p.name === 'Libro Físico Estándar' || p.name.includes('Físico'))
         );
+
+        console.log('[CheckoutStep] Producto digital encontrado:', digitalProduct);
+        console.log('[CheckoutStep] Producto físico encontrado:', physicalProduct);
 
         // Obtener precios actuales
         const [digitalPrice, physicalPrice] = await Promise.all([
