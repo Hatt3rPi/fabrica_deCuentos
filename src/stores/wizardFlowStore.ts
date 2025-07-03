@@ -13,6 +13,7 @@ export interface EstadoFlujo {
   vistaPrevia: EtapaEstado;
   dedicatoriaChoice: EtapaEstado;
   dedicatoria: EtapaEstado;
+  checkout: EtapaEstado;
 }
 
 const logEstado = (estado: EstadoFlujo, accion: string, id?: string | null) => {
@@ -24,6 +25,7 @@ const logEstado = (estado: EstadoFlujo, accion: string, id?: string | null) => {
     vistaPrevia: estado.vistaPrevia,
     dedicatoriaChoice: estado.dedicatoriaChoice,
     dedicatoria: estado.dedicatoria,
+    checkout: estado.checkout,
   });
 };
 
@@ -44,7 +46,8 @@ export const initialFlowState: EstadoFlujo = {
   diseno: 'no_iniciada',
   vistaPrevia: 'no_iniciada',
   dedicatoriaChoice: 'no_iniciada',
-  dedicatoria: 'no_iniciada'
+  dedicatoria: 'no_iniciada',
+  checkout: 'no_iniciada'
 };
 
 export const useWizardFlowStore = create<WizardFlowStore>()(
@@ -113,6 +116,7 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
           } else if (etapa === 'dedicatoria') {
             if (nuevoEstado.dedicatoriaChoice === 'completado') {
               nuevoEstado.dedicatoria = 'completado';
+              nuevoEstado.checkout = 'borrador';
             }
           }
           logEstado(nuevoEstado, 'avanzarEtapa', get().currentStoryId);
@@ -138,6 +142,8 @@ export const useWizardFlowStore = create<WizardFlowStore>()(
             nuevoEstado.dedicatoriaChoice = 'borrador';
           } else if (etapa === 'dedicatoria' && nuevoEstado.dedicatoria !== 'completado') {
             nuevoEstado.dedicatoria = 'borrador';
+          } else if (etapa === 'checkout' && nuevoEstado.checkout !== 'completado') {
+            nuevoEstado.checkout = 'borrador';
           }
           logEstado(nuevoEstado, 'regresarEtapa', get().currentStoryId);
           return { estado: nuevoEstado };

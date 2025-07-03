@@ -8,7 +8,7 @@ import { storyService } from '../services/storyService';
 import { logger, wizardLogger } from '../utils/logger';
 import { useStory } from './StoryContext';
 
-export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'dedicatoria-choice' | 'dedicatoria' | 'export';
+export type WizardStep = 'characters' | 'story' | 'design' | 'preview' | 'dedicatoria-choice' | 'dedicatoria' | 'checkout';
 
 interface WizardContextType {
   currentStep: WizardStep;
@@ -451,7 +451,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (estado.vistaPrevia !== 'completado') return 'preview';
     if (estado.dedicatoriaChoice !== 'completado') return 'dedicatoria-choice';
     if (estado.dedicatoria !== 'completado') return 'dedicatoria';
-    return 'export';
+    return 'checkout';
   };
 
   useEffect(() => {
@@ -563,7 +563,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
   }, [storyId]);
 
-  const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'dedicatoria-choice', 'dedicatoria', 'export'];
+  const steps: WizardStep[] = ['characters', 'story', 'design', 'preview', 'dedicatoria-choice', 'dedicatoria', 'checkout'];
   const stepMap: Record<WizardStep, keyof EstadoFlujo | null> = {
     characters: 'personajes',
     story: 'cuento',
@@ -571,7 +571,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     preview: 'vistaPrevia',
     'dedicatoria-choice': 'dedicatoriaChoice',
     dedicatoria: 'dedicatoria',
-    export: null,
+    checkout: null,
   };
 
   const nextStep = () => {
@@ -689,7 +689,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       case 'dedicatoria':
         // La dedicatoria es opcional, siempre permitir avanzar
         return true;
-      case 'export':
+      case 'checkout':
         return true;
       default:
         return true;
