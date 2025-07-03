@@ -94,58 +94,72 @@ export const useStyleAdapter = (
   
   // Mapear estilos de página a formato unificado
   const mapPageStylesToUnified = useCallback((config: StoryStyleConfig | null, pageType: PageType): UnifiedStyleConfig => {
-    if (!config) return {};
+    if (!config) return {
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '1rem',
+      fontWeight: '400',
+      color: '#000000',
+      textAlign: 'left',
+      textShadow: 'none'
+    };
     
     const getPageConfig = () => {
       switch (pageType) {
-        case 'cover': return config.cover;
-        case 'page': return config.page;
-        case 'dedicatoria': return config.dedicatoria;
-        case 'contraportada': return config.contraportada;
-        default: return config.page;
+        case 'cover': return config.coverConfig?.title;
+        case 'page': return config.pageConfig?.text;
+        case 'dedicatoria': return config.dedicatoriaConfig?.text;
+        case 'contraportada': return config.contraportadaConfig?.text;
+        default: return config.pageConfig?.text;
       }
     };
     
     const pageConfig = getPageConfig();
-    if (!pageConfig) return {};
+    if (!pageConfig) return {
+      fontFamily: 'Inter, sans-serif',
+      fontSize: '1rem',
+      fontWeight: '400',
+      color: '#000000',
+      textAlign: 'left',
+      textShadow: 'none'
+    };
     
     return {
-      fontFamily: pageConfig.fontFamily,
-      fontSize: pageConfig.fontSize,
-      fontWeight: pageConfig.fontWeight,
-      textAlign: pageConfig.textAlign,
+      fontFamily: pageConfig.fontFamily || 'Inter, sans-serif',
+      fontSize: pageConfig.fontSize || '1rem',
+      fontWeight: pageConfig.fontWeight || '400',
+      textAlign: pageConfig.textAlign || 'left',
       lineHeight: pageConfig.lineHeight,
       letterSpacing: pageConfig.letterSpacing,
       textTransform: pageConfig.textTransform,
-      color: pageConfig.color,
-      textShadow: pageConfig.textShadow,
+      color: pageConfig.color || '#000000',
+      textShadow: pageConfig.textShadow || 'none',
       position: pageConfig.position,
-      backgroundColor: pageConfig.backgroundColor,
-      borderRadius: pageConfig.borderRadius,
-      padding: pageConfig.padding,
-      opacity: pageConfig.opacity
+      backgroundColor: pageConfig.containerStyle?.background,
+      borderRadius: pageConfig.containerStyle?.borderRadius,
+      padding: pageConfig.containerStyle?.padding,
+      opacity: 1
     };
   }, []);
   
   // Mapear estilos de componente a formato unificado
   const mapComponentStylesToUnified = useCallback((component: ComponentConfig): UnifiedStyleConfig => {
     const unified: UnifiedStyleConfig = {
-      position: component.position,
-      horizontalPosition: component.horizontalPosition
+      position: component.position || 'center',
+      horizontalPosition: component.horizontalPosition || 'center'
     };
     
     if (component.type === 'text') {
       const textComp = component as TextComponentConfig;
       return {
         ...unified,
-        fontFamily: textComp.style.fontFamily,
-        fontSize: textComp.style.fontSize,
-        fontWeight: textComp.style.fontWeight,
-        textAlign: textComp.style.textAlign,
-        lineHeight: textComp.style.lineHeight,
-        letterSpacing: textComp.style.letterSpacing,
-        color: textComp.style.color,
-        textShadow: textComp.style.textShadow,
+        fontFamily: textComp.style?.fontFamily || 'Inter, sans-serif',
+        fontSize: textComp.style?.fontSize || '1rem',
+        fontWeight: textComp.style?.fontWeight || '400',
+        textAlign: textComp.style?.textAlign || 'left',
+        lineHeight: textComp.style?.lineHeight,
+        letterSpacing: textComp.style?.letterSpacing,
+        color: textComp.style?.color || '#000000',
+        textShadow: textComp.style?.textShadow || 'none',
         content: textComp.content
       };
     }
@@ -154,10 +168,10 @@ export const useStyleAdapter = (
       const imageComp = component as ImageComponentConfig;
       return {
         ...unified,
-        imageUrl: imageComp.imageUrl,
-        size: imageComp.size,
-        opacity: imageComp.opacity,
-        objectFit: imageComp.fit,
+        imageUrl: imageComp.imageUrl || '',
+        size: imageComp.size || 'medium',
+        opacity: imageComp.opacity || 1,
+        objectFit: imageComp.fit || 'cover',
         width: imageComp.customSize?.width,
         height: imageComp.customSize?.height
       };
@@ -200,19 +214,20 @@ export const useStyleAdapter = (
     };
     
     if (selectedComponent.type === 'text') {
+      const currentStyle = (selectedComponent as TextComponentConfig).style || {};
       const textUpdates: Partial<TextComponentConfig> = {
         ...componentUpdates,
         content: updates.content,
         style: {
-          ...(selectedComponent as TextComponentConfig).style,
-          fontFamily: updates.fontFamily,
-          fontSize: updates.fontSize,
-          fontWeight: updates.fontWeight,
-          textAlign: updates.textAlign,
-          lineHeight: updates.lineHeight,
-          letterSpacing: updates.letterSpacing,
-          color: updates.color,
-          textShadow: updates.textShadow
+          fontFamily: updates.fontFamily !== undefined ? updates.fontFamily : currentStyle.fontFamily || 'Inter, sans-serif',
+          fontSize: updates.fontSize !== undefined ? updates.fontSize : currentStyle.fontSize || '1rem',
+          fontWeight: updates.fontWeight !== undefined ? updates.fontWeight : currentStyle.fontWeight || '400',
+          textAlign: updates.textAlign !== undefined ? updates.textAlign : currentStyle.textAlign || 'left',
+          lineHeight: updates.lineHeight !== undefined ? updates.lineHeight : currentStyle.lineHeight,
+          letterSpacing: updates.letterSpacing !== undefined ? updates.letterSpacing : currentStyle.letterSpacing,
+          color: updates.color !== undefined ? updates.color : currentStyle.color || '#000000',
+          textShadow: updates.textShadow !== undefined ? updates.textShadow : currentStyle.textShadow || 'none',
+          textTransform: updates.textTransform !== undefined ? updates.textTransform : currentStyle.textTransform
         }
       };
       onComponentChange(selectedTarget.componentId, textUpdates);
