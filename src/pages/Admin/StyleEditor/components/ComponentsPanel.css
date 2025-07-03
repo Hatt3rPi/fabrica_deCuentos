@@ -1,0 +1,184 @@
+/* Estilos para ComponentsPanel */
+
+.components-panel {
+  @apply space-y-4;
+}
+
+.panel-header {
+  @apply flex items-center justify-between mb-4;
+}
+
+.panel-header h3 {
+  @apply text-lg font-semibold text-gray-800 dark:text-gray-200;
+}
+
+/* Lista de componentes */
+.components-list {
+  @apply space-y-3;
+}
+
+.component-item {
+  @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden;
+}
+
+.component-header {
+  @apply flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700;
+}
+
+.component-info {
+  @apply flex items-center gap-2 flex-1;
+}
+
+.expand-btn {
+  @apply p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors;
+}
+
+.component-name {
+  @apply font-medium text-gray-800 dark:text-gray-200;
+}
+
+.component-type {
+  @apply px-2 py-1 rounded-full text-xs font-medium;
+}
+
+.component-type.text {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+}
+
+.component-type.image {
+  @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+}
+
+.component-type.signature {
+  @apply bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200;
+}
+
+.component-actions {
+  @apply flex items-center gap-2;
+}
+
+.btn-icon {
+  @apply p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-600 transition-colors;
+}
+
+.btn-icon.active {
+  @apply text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900;
+}
+
+.btn-icon.btn-danger {
+  @apply text-red-500 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900;
+}
+
+/* Configuración expandida */
+.component-config {
+  @apply p-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600;
+}
+
+.config-editor {
+  @apply space-y-4;
+}
+
+/* Controles de posición */
+.position-controls {
+  @apply grid grid-cols-2 gap-4 p-4 bg-gray-100 dark:bg-gray-600 rounded-lg;
+}
+
+/* Formularios */
+.form-group {
+  @apply space-y-2;
+}
+
+.form-group label {
+  @apply block text-sm font-medium text-gray-700 dark:text-gray-300;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm;
+  @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+}
+
+.form-group input[type="range"] {
+  @apply w-full;
+}
+
+.form-group input[type="color"] {
+  @apply w-16 h-8 rounded border-none cursor-pointer;
+}
+
+/* Modal */
+.modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+}
+
+.modal-content {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto;
+}
+
+.modal-header {
+  @apply flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700;
+}
+
+.modal-header h3 {
+  @apply text-lg font-semibold text-gray-800 dark:text-gray-200;
+}
+
+.modal-body {
+  @apply p-4;
+}
+
+.modal-actions {
+  @apply flex justify-end gap-2 pt-4;
+}
+
+/* Selector de tipo de componente */
+.component-type-selector {
+  @apply grid grid-cols-3 gap-2;
+}
+
+.type-option {
+  @apply flex flex-col items-center gap-2 p-3 border border-gray-200 dark:border-gray-600 rounded-lg;
+  @apply hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors;
+}
+
+.type-option.selected {
+  @apply border-blue-500 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300;
+}
+
+/* Nombres preestablecidos */
+.preset-names {
+  @apply flex flex-wrap gap-2;
+}
+
+.preset-name {
+  @apply px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300;
+  @apply hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full cursor-pointer transition-colors;
+}
+
+/* Botones */
+.btn-primary {
+  @apply bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md;
+  @apply hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors;
+}
+
+.btn-sm {
+  @apply px-3 py-1 text-sm;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .component-type-selector {
+    @apply grid-cols-1;
+  }
+  
+  .position-controls {
+    @apply grid-cols-1;
+  }
+}

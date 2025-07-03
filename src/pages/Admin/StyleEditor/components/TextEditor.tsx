@@ -1,39 +1,47 @@
 import React from 'react';
 import { Type, RotateCcw } from 'lucide-react';
+import { PageType } from '../../../../types/styleConfig';
 
 interface TextEditorProps {
   coverText: string;
   pageText: string;
   dedicatoriaText?: string;
+  contraportadaText?: string;
   onCoverTextChange: (text: string) => void;
   onPageTextChange: (text: string) => void;
   onDedicatoriaTextChange?: (text: string) => void;
-  currentPageType: 'cover' | 'page' | 'dedicatoria';
+  onContraportadaTextChange?: (text: string) => void;
+  currentPageType: PageType;
 }
 
 const DEFAULT_TEXTS = {
   cover: 'El Mágico Viaje de Luna',
   page: 'Luna caminaba por el sendero del bosque encantado, donde las luciérnagas bailaban entre los árboles iluminando su camino. El viento susurraba secretos antiguos mientras las hojas doradas crujían bajo sus pequeños pies.',
-  dedicatoria: 'Para mi querida hija Luna, que siempre sueña con aventuras mágicas y llena nuestros días de alegría.'
+  dedicatoria: 'Para mi querida hija Luna, que siempre sueña con aventuras mágicas y llena nuestros días de alegría.',
+  contraportada: 'Una historia mágica llena de aventuras, donde Luna descubre que los sueños pueden hacerse realidad cuando tienes el corazón valiente y la imaginación despierta.'
 };
 
 const TextEditor: React.FC<TextEditorProps> = ({
   coverText,
   pageText,
   dedicatoriaText,
+  contraportadaText,
   onCoverTextChange,
   onPageTextChange,
   onDedicatoriaTextChange,
+  onContraportadaTextChange,
   currentPageType
 }) => {
   const currentText = 
     currentPageType === 'cover' ? coverText :
     currentPageType === 'dedicatoria' ? (dedicatoriaText || '') :
+    currentPageType === 'contraportada' ? (contraportadaText || '') :
     pageText;
   
   const onTextChange = 
     currentPageType === 'cover' ? onCoverTextChange :
     currentPageType === 'dedicatoria' ? (onDedicatoriaTextChange || (() => {})) :
+    currentPageType === 'contraportada' ? (onContraportadaTextChange || (() => {})) :
     onPageTextChange;
   
   const defaultText = DEFAULT_TEXTS[currentPageType];
