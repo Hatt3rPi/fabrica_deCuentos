@@ -35,7 +35,7 @@ const CheckoutStep: React.FC = () => {
   const navigate = useNavigate();
   const { generatedPages } = useWizard();
   const { estado } = useWizardFlowStore();
-  const { addStoryToCart, formatPrice } = useCartOperations();
+  const { addStoryToCart } = useCartOperations();
   const { profile } = useProfileStore();
   
   const [selectedFormat, setSelectedFormat] = useState<'digital' | 'physical' | null>(null);
@@ -74,12 +74,15 @@ const CheckoutStep: React.FC = () => {
           physicalProduct ? priceService.getCurrentPrice(physicalProduct.id) : null
         ]);
 
+        console.log('[CheckoutStep] Precio digital obtenido:', digitalPrice);
+        console.log('[CheckoutStep] Precio físico obtenido:', physicalPrice);
+
         const options: FormatOption[] = [
           {
             id: 'digital',
             type: digitalProduct || null,
             title: 'Libro Digital',
-            description: digitalPrice ? formatPrice(digitalPrice.final_price) : 'Precio no disponible',
+            description: digitalPrice ? `$${digitalPrice.final_price.toLocaleString('es-CL')}` : 'Precio no disponible',
             icon: <Download className="w-8 h-8" />,
             badge: 'Descarga inmediata',
             features: [
@@ -94,7 +97,7 @@ const CheckoutStep: React.FC = () => {
             id: 'physical',
             type: physicalProduct || null,
             title: 'Libro Físico',
-            description: physicalPrice ? formatPrice(physicalPrice.final_price) : 'Precio no disponible',
+            description: physicalPrice ? `$${physicalPrice.final_price.toLocaleString('es-CL')}` : 'Precio no disponible',
             icon: <Package className="w-8 h-8" />,
             badge: 'Envío incluido',
             features: [
@@ -118,7 +121,7 @@ const CheckoutStep: React.FC = () => {
     };
 
     loadProductTypes();
-  }, [formatPrice]);
+  }, []);
 
   // Función para verificar si se necesita información de envío
   const needsShippingInfo = () => {
