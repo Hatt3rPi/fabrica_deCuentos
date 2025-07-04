@@ -15,6 +15,8 @@ export interface OverlayLoaderProps {
   /** Tiempo en milisegundos para activar onFallback. Por defecto 60s */
   fallbackDelayMs?: number;
   progress?: { current: number; total: number };
+  /** Tipo especial de loader para situaciones específicas */
+  variant?: 'default' | 'rate_limit' | 'fallback';
 }
 
 const MESSAGE_INTERVAL = 7000;
@@ -31,13 +33,31 @@ const OverlayLoader: React.FC<OverlayLoaderProps> = ({
   onFallback,
   fallbackDelayMs = DEFAULT_FALLBACK_DELAY,
   progress,
+  variant = 'default',
 }) => {
   const [index, setIndex] = useState(0);
   const [isTimeout, setIsTimeout] = useState(false);
 
-  const computedMessages = messages && messages.length > 0
-    ? messages
-    : getLoaderMessages(etapa, context);
+  // Mensajes específicos según la variante
+  const getVariantMessages = () => {
+    if (variant === 'rate_limit') {
+      return [
+        'El servicio está muy ocupado...',
+        'Reintentando automáticamente...',
+        'Por favor espera unos momentos más...'
+      ];
+    }
+    if (variant === 'fallback') {
+      return [
+        'Preparando tu cuento de forma alternativa...',
+        'Esto puede tomar un poco más de tiempo...',
+        'Generando archivo temporal...'
+      ];
+    }
+    return messages && messages.length > 0 ? messages : getLoaderMessages(etapa, context);
+  };
+
+  const computedMessages = getVariantMessages();
 
   useEffect(() => {
     if (computedMessages.length <= 1) return;
@@ -68,17 +88,71 @@ const OverlayLoader: React.FC<OverlayLoaderProps> = ({
     : computedMessages[index] || '';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" aria-live="polite" role="alert">
-      <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xs text-center space-y-4 focus:outline-none">
-        <Loader className="w-10 h-10 text-purple-600 animate-spin mx-auto" />
-        <p className="text-sm text-purple-700" data-testid="loader-message">{message}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" aria-live="polite" role="alert">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center space-y-6 focus:outline-none border border-gray-100">
+        {/* 1. Spinner animado */}
+        <div className="relative">
+          <div className="w-16 h-16 mx-auto relative">
+            <div className="absolute inset-0 rounded-full border-4 border-purple-100"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-600 animate-spin"></div>
+            <Loader className="w-8 h-8 text-purple-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+          </div>
+        </div>
+
+        {/* 2. Mensaje del loader personalizado */}
+        <div className="space-y-1">
+          <p className="text-lg font-medium text-purple-700 leading-tight" data-testid="loader-message">
+            {message}
+          </p>
+        </div>
+
+        {/* 3. Título dinámico según variante */}
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-gray-800">
+            {variant === 'rate_limit' ? 'Servicio muy ocupado...' :
+             variant === 'fallback' ? 'Preparando tu cuento...' :
+             'Estamos preparando tu cuento...'}
+          </h3>
+        </div>
+
+        {/* 4. Descripción dinámica según variante */}
+        <div className="space-y-2">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            {variant === 'rate_limit' ? 'Hay mucha demanda en este momento. Estamos reintentando automáticamente...' :
+             variant === 'fallback' ? 'Usando método alternativo para asegurar que recibas tu cuento.' :
+             'Algunas páginas aún están en proceso. Podrás continuar cuando todas estén listas.'}
+          </p>
+        </div>
+
+        {/* 5. Barra de progreso mejorada */}
         {progress && (
-          <p className="text-xs text-gray-600">{progress.current} / {progress.total}</p>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-500">Progreso</span>
+              <span className="font-semibold text-purple-600">
+                {progress.current} / {progress.total}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500 ease-out relative"
+                style={{
+                  width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`
+                }}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              {progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0}% completado
+            </p>
+          </div>
         )}
+
         {onCancel && (
           <button
             onClick={onCancel}
-            className="mt-2 text-xs text-purple-600 underline focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="mt-4 text-sm text-purple-600 hover:text-purple-700 underline focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 rounded transition-colors"
           >
             Cancelar
           </button>

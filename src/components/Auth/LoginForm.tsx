@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import { LogIn, KeyRound, Mail, AlertCircle, Loader, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 import BackgroundCarousel, { ThemeType } from '../Landing/BackgroundCarousel';
-import SentryTestButton from '../UI/SentryTestButton';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'La contraseña debe tener al menos 6 caracteres');
@@ -40,7 +39,7 @@ const loginThemes: ThemeType[] = [
 
 const LoginForm: React.FC = () => {
   // Mantenemos el estado del tema actual para posibles usos futuros
-  const [_, setCurrentTheme] = useState<ThemeType>(loginThemes[0]);
+  const [currentTheme, setCurrentTheme] = useState<ThemeType>(loginThemes[0]);
   
   const handleThemeChange = useCallback((theme: ThemeType) => {
     setCurrentTheme(theme);
@@ -436,12 +435,6 @@ const LoginForm: React.FC = () => {
               </div>
             </div>
             
-            {/* Botón de prueba de Sentry - Solo en desarrollo */}
-            {import.meta.env.DEV && (
-              <div className="mt-4 flex justify-center">
-                <SentryTestButton />
-              </div>
-            )}
             
             {/* Pie de página decorativo */}
             <div className="mt-8 pt-4 border-t border-amber-200 text-center text-amber-600 text-sm">

@@ -28,6 +28,8 @@ const STORAGE_BUCKETS = [
   'fabricacuentos'
 ];
 
+import { configureForEdgeFunction, captureException, setUser, setTags } from '../_shared/sentry.ts';
+
 // Función principal
 export const handler = async (req: Request): Promise<Response> => {
   // Manejar CORS

@@ -1,6 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { Resend } from 'npm:resend@3.2.0';
 
+import { configureForEdgeFunction, captureException, setUser, setTags } from '../_shared/sentry.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

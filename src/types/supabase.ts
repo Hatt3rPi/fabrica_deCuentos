@@ -307,6 +307,9 @@ export type Database = {
           currency: string | null
           discount_amount: number | null
           expires_at: string | null
+          fulfilled_at: string | null
+          fulfillment_notes: string | null
+          fulfillment_status: string | null
           id: string
           order_type: string | null
           paid_at: string | null
@@ -324,6 +327,9 @@ export type Database = {
           currency?: string | null
           discount_amount?: number | null
           expires_at?: string | null
+          fulfilled_at?: string | null
+          fulfillment_notes?: string | null
+          fulfillment_status?: string | null
           id?: string
           order_type?: string | null
           paid_at?: string | null
@@ -341,6 +347,9 @@ export type Database = {
           currency?: string | null
           discount_amount?: number | null
           expires_at?: string | null
+          fulfilled_at?: string | null
+          fulfillment_notes?: string | null
+          fulfillment_status?: string | null
           id?: string
           order_type?: string | null
           paid_at?: string | null
@@ -751,6 +760,8 @@ export type Database = {
           literary_style: string | null
           loader: Json | null
           loaders: Json | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
           status: string
           target_age: string | null
           theme: string | null
@@ -776,6 +787,8 @@ export type Database = {
           literary_style?: string | null
           loader?: Json | null
           loaders?: Json | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
           status?: string
           target_age?: string | null
           theme?: string | null
@@ -801,6 +814,8 @@ export type Database = {
           literary_style?: string | null
           loader?: Json | null
           loaders?: Json | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
           status?: string
           target_age?: string | null
           theme?: string | null
@@ -1455,6 +1470,17 @@ export type Database = {
           avg_processing_time_ms: number
           top_files: Json
           hourly_distribution: Json
+        }[]
+      }
+      get_pending_fulfillment_orders: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          order_id: string
+          user_id: string
+          user_email: string
+          total_amount: number
+          paid_at: string
+          story_ids: string[]
         }[]
       }
       get_user_emails: {

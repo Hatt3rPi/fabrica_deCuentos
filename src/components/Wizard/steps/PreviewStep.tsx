@@ -9,6 +9,8 @@ import { useImageDimensions } from '../../../hooks/useImageDimensions';
 import InlineTextEditor from './components/InlineTextEditor';
 import AdvancedEditModal from './components/AdvancedEditModal';
 import { useWizardLockStatus } from '../../../hooks/useWizardLockStatus';
+import StoryRenderer from '../../StoryRenderer';
+import { PageType } from '../../../utils/storyStyleUtils';
 
 const PreviewStep: React.FC = () => {
   const { 
@@ -25,7 +27,9 @@ const PreviewStep: React.FC = () => {
     pageStates,
     retryFailedPages,
     // Story completion functionality
-    isPdfOutdated
+    isPdfOutdated,
+    // Loader messages from story
+    loaderMessages
   } = useWizard();
   const { createNotification } = useNotifications();
   const [currentPage, setCurrentPage] = useState(0);
@@ -43,7 +47,7 @@ const PreviewStep: React.FC = () => {
   const isLocked = isStepLocked('preview');
   const lockReason = getLockReason('preview');
 
-  // Style hooks for dynamic preview
+  // Style hooks for dynamic preview (mantener para compatibilidad con modal avanzado)
   const { getTextStyles, getContainerStyles, getPosition, getBackgroundImage, styleConfig } = useStoryStyles();
 
   // Función para guardar texto inline
@@ -212,9 +216,6 @@ const PreviewStep: React.FC = () => {
 
 
 
-  const allPagesCompleted = generatedPages.every(page => 
-    page.imageUrl && pageStates[page.id] !== 'error' && pageStates[page.id] !== 'generating'
-  );
 
   if (!generatedPages || generatedPages.length === 0) {
     return (
@@ -231,7 +232,7 @@ const PreviewStep: React.FC = () => {
 
   const currentPageData = generatedPages[currentPage];
 
-  // Get styles for current page
+  // Get styles for current page (mantener para compatibilidad con modal avanzado)
   const textStyles = getTextStyles(currentPage);
   const containerStyles = getContainerStyles(currentPage);
   const position = getPosition(currentPage);
@@ -240,6 +241,17 @@ const PreviewStep: React.FC = () => {
 
   // Use exact fontSize from configuration to ensure consistency
   const exactFontSize = textStyles.fontSize || '16px';
+
+  // Determinar tipo de página para StoryRenderer
+  const getPageType = (pageIndex: number): PageType => {
+    if (pageIndex === 0) return 'cover';
+    // Asumimos que todas las otras páginas son de tipo 'page'
+    // Si hay dedicatoria específica, se podría detectar aquí
+    return 'page';
+  };
+
+  const currentPageType = getPageType(currentPage);
+  const currentPageText = currentPage === 0 ? generatedPages[0]?.text || '' : currentPageData?.text || '';
 
   return (
     <div className="space-y-6">
@@ -303,7 +315,7 @@ const PreviewStep: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
               <div 
                 className={`
-                  relative bg-gray-100 dark:bg-gray-700 bg-cover bg-center
+                  relative bg-gray-100 dark:bg-gray-700
                   ${imageDimensions.loaded 
                     ? imageDimensions.aspectRatio > 1.2 
                       ? 'aspect-[4/3] sm:aspect-[3/2]' // Landscape
@@ -313,117 +325,114 @@ const PreviewStep: React.FC = () => {
                     : 'aspect-[3/4] sm:aspect-[4/5] md:aspect-[3/4]' // Default fallback
                   }
                 `}
-                style={{
-                  backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat'
-                }}
               >
-          {currentPageData && (
-            <>
-              {/* Show page state indicator */}
-              {pageStates[currentPageData.id] === 'generating' && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
-                  <div className="bg-white rounded-lg p-4 text-center">
-                    <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-purple-600" />
-                    <p className="text-sm text-gray-600">Generando página {currentPage + 1}...</p>
-                  </div>
-                </div>
-              )}
-              
-              {pageStates[currentPageData.id] === 'error' && (
-                <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs z-10">
-                  Error en generación
-                </div>
-              )}
-              
-              {pageStates[currentPageData.id] === 'completed' && currentPageData.imageUrl && (
-                <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs z-10">
-                  ✓ Completada
-                </div>
-              )}
+                {currentPageData && (
+                  <>
+                    {/* Show page state indicator */}
+                    {pageStates[currentPageData.id] === 'generating' && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-30">
+                        <div className="bg-white rounded-lg p-4 text-center">
+                          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-purple-600" />
+                          <p className="text-sm text-gray-600">Generando página {currentPage + 1}...</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {pageStates[currentPageData.id] === 'error' && (
+                      <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded text-xs z-30">
+                        Error en generación
+                      </div>
+                    )}
+                    
+                    {pageStates[currentPageData.id] === 'completed' && currentPageData.imageUrl && (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs z-30">
+                        ✓ Completada
+                      </div>
+                    )}
 
-              {/* Edit button overlay - top left */}
-              {currentPageData && !isGenerating && pageStates[currentPageData.id] !== 'generating' && (
-                <button
-                  onClick={handleAdvancedEdit}
-                  disabled={isLocked || isLoading || error}
-                  className={`absolute top-2 left-2 w-8 h-8 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center transition-all duration-200 z-20 group ${
-                    isLocked || isLoading || error
-                      ? 'bg-gray-200/90 text-gray-400 cursor-not-allowed'
-                      : 'bg-white/90 hover:bg-white hover:shadow-xl text-gray-700 hover:text-purple-600 hover:scale-110'
-                  }`}
-                  title={isLocked || isLoading || error ? 'Edición bloqueada' : 'Editar contenido y prompt'}
-                >
-                  {isLocked || isLoading || error ? (
-                    <Lock className="w-4 h-4" />
-                  ) : (
-                    <Pencil className="w-4 h-4 transition-transform group-hover:scale-110" />
-                  )}
-                </button>
-              )}
-              
-                    {/* Text overlay with dynamic positioning */}
-                    <div 
-                      className={`
-                        absolute inset-0 flex justify-center
-                        px-3 sm:px-6 md:px-8
-                        ${position === 'top' 
-                          ? 'items-start pt-4 sm:pt-6 md:pt-8' 
-                          : position === 'center' 
-                            ? 'items-center' 
-                            : 'items-end pb-4 sm:pb-6 md:pb-8'
-                        }
-                      `}
-                    >
-                      <div 
-                        style={{
-                          ...containerStyles,
-                          maxWidth: containerStyles.maxWidth || '100%',
-                          width: '100%',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: styleConfig?.pageConfig.text.verticalAlign || 'flex-end'
-                        }}
-                        className="relative"
+                    {/* Edit button overlay - top left */}
+                    {!isGenerating && pageStates[currentPageData.id] !== 'generating' && (
+                      <button
+                        onClick={handleAdvancedEdit}
+                        disabled={isLocked || isLoading || error}
+                        className={`absolute top-2 left-2 w-8 h-8 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center transition-all duration-200 z-30 group ${
+                          isLocked || isLoading || error
+                            ? 'bg-gray-200/90 text-gray-400 cursor-not-allowed'
+                            : 'bg-white/90 hover:bg-white hover:shadow-xl text-gray-700 hover:text-purple-600 hover:scale-110'
+                        }`}
+                        title={isLocked || isLoading || error ? 'Edición bloqueada' : 'Editar contenido y prompt'}
                       >
                         {isLocked || isLoading || error ? (
-                          // Texto de solo lectura cuando está completado o hay error
-                          <div
-                            style={{
-                              ...textStyles,
-                              width: '100%',
-                              fontSize: exactFontSize,
-                              lineHeight: textStyles.lineHeight || '1.4',
-                              opacity: 0.8,
-                              cursor: 'default'
-                            }}
-                            className="text-center sm:text-left"
-                            title={error ? "Error de conexión" : "Solo lectura - PDF generado"}
-                          >
-                            {currentPage === 0 ? generatedPages[0]?.text || '' : currentPageData.text}
-                          </div>
+                          <Lock className="w-4 h-4" />
                         ) : (
-                          <InlineTextEditor
-                            initialText={currentPage === 0 ? generatedPages[0]?.text || '' : currentPageData.text}
-                            onSave={(newText) => handleSaveText(currentPageData.id, newText)}
-                            textStyles={{
-                              ...textStyles,
-                              width: '100%',
-                              fontSize: exactFontSize,
-                              lineHeight: textStyles.lineHeight || '1.4'
-                            }}
-                            className="text-center sm:text-left"
-                            config={{
-                              autoSaveDelay: 2000,
-                              showIndicators: true,
-                              multiline: true,
-                              placeholder: 'Doble-click para editar el texto...'
-                            }}
-                          />
+                          <Pencil className="w-4 h-4 transition-transform group-hover:scale-110" />
                         )}
-                      </div>
+                      </button>
+                    )}
+                    
+                    {/* MIGRADO A STORYRENDERER: Renderizado unificado de página con overlay de edición */}
+                    <div className="absolute inset-0">
+                      <StoryRenderer
+                        config={styleConfig}
+                        pageType={currentPageType}
+                        content={currentPageText}
+                        imageUrl={currentPageData?.imageUrl}
+                        context="wizard"
+                        dimensions={{ 
+                          width: 1536, 
+                          height: 1024 
+                        }}
+                        instanceId={`wizard-page-${currentPage}`}
+                        debug={false}
+                      />
+                      
+                      {/* Overlay de edición inline usando el sistema anterior temporalmente */}
+                      {!isLocked && !isLoading && !error && (
+                        <div 
+                          className={`
+                            absolute inset-0 flex justify-center
+                            px-3 sm:px-6 md:px-8
+                            ${position === 'top' 
+                              ? 'items-start pt-4 sm:pt-6 md:pt-8' 
+                              : position === 'center' 
+                                ? 'items-center' 
+                                : 'items-end pb-4 sm:pb-6 md:pb-8'
+                            }
+                          `}
+                          style={{ zIndex: 25 }}
+                        >
+                          <div 
+                            style={{
+                              ...containerStyles,
+                              maxWidth: containerStyles.maxWidth || '100%',
+                              width: '100%',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: styleConfig?.pageConfig.text.verticalAlign || 'flex-end'
+                            }}
+                            className="relative"
+                          >
+                            <InlineTextEditor
+                              initialText={currentPageText}
+                              onSave={(newText) => handleSaveText(currentPageData.id, newText)}
+                              textStyles={{
+                                ...textStyles,
+                                width: '100%',
+                                fontSize: exactFontSize,
+                                lineHeight: textStyles.lineHeight || '1.4',
+                                backgroundColor: 'transparent' // Hacer el editor transparente
+                              }}
+                              className="text-center sm:text-left"
+                              config={{
+                                autoSaveDelay: 2000,
+                                showIndicators: true,
+                                multiline: true,
+                                placeholder: 'Doble-click para editar el texto...'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -458,6 +467,7 @@ const PreviewStep: React.FC = () => {
             total: bulkGenerationProgress.total.toString(),
             estilo: 'artístico'
           }}
+          messages={loaderMessages.length > 0 ? loaderMessages : undefined}
           onFallback={handleFallback} 
         />
       )}
@@ -475,56 +485,16 @@ const PreviewStep: React.FC = () => {
         </div>
       )}
 
-      {/* Story Completion Section */}
-      <div className="mt-12 max-w-2xl mx-auto">
-        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
-          <div className="text-center mb-6">
-            <h3 className="text-xl font-bold text-purple-800 mb-2">
-              {allPagesCompleted ? '🎉 ¡Tu cuento está listo!' : '⏳ Preparando tu cuento...'}
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {allPagesCompleted 
-                ? 'Todas las páginas se han generado correctamente. Puedes finalizar tu cuento.'
-                : 'Algunas páginas aún están en proceso. Puedes finalizar cuando estén listas.'
-              }
+      {/* PDF outdated state - only show if user can edit and not generating */}
+      {!isLocked && !error && isPdfOutdated && !isGenerating && (
+        <div className="mt-8 max-w-2xl mx-auto">
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-amber-800 text-center">
+              <span className="font-semibold">⚠️ PDF desactualizado:</span> Has regenerado algunas imágenes. Finaliza el cuento nuevamente para actualizar el PDF.
             </p>
-            
-            {/* Progress indicator when pages are still generating */}
-            {!allPagesCompleted && (
-              <div className="mb-4">
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-2">
-                  <span>Progreso:</span>
-                  <span className="font-semibold">
-                    {generatedPages.filter(p => p.imageUrl && pageStates[p.id] === 'completed').length} / {generatedPages.length} páginas
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${(generatedPages.filter(p => p.imageUrl && pageStates[p.id] === 'completed').length / generatedPages.length) * 100}%`
-                    }}
-                  ></div>
-                </div>
-              </div>
-            )}
           </div>
-
-          {/* Área para botones futuras funcionalidades */}
-          <div className="flex justify-center gap-4">
-            {/* El botón "Finalizar Cuento" se movió a la etapa Export */}
-          </div>
-
-          {/* PDF outdated state - only show if user can edit */}
-          {!isLocked && !error && isPdfOutdated && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-amber-800">
-                <span className="font-semibold">⚠️ PDF desactualizado:</span> Has regenerado algunas imágenes. Finaliza el cuento nuevamente para actualizar el PDF.
-              </p>
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
       {/* Advanced Edit Modal */}
       {showAdvancedModal && currentPageData && (

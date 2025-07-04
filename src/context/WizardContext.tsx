@@ -45,6 +45,8 @@ interface WizardContextType {
   isCompleting: boolean;
   completionResult: import('../types').CompletionResult | null;
   isPdfOutdated: boolean;
+  // Loader messages from story
+  loaderMessages: string[];
 }
 
 export interface GeneratedPage {
@@ -145,6 +147,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     inProgress: []
   });
   const [pageStates, setPageStates] = useState<Record<string, PageGenerationState>>({});
+  const [loaderMessages, setLoaderMessages] = useState<string[]>([]);
   
   // Story completion states
   const [isCompleting, setIsCompleting] = useState<boolean>(false);
@@ -513,6 +516,15 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       } else {
         console.log('[WizardContext] No hay título en BD para restaurar');
       }
+      
+      // Cargar mensajes personalizados del loader
+      if (Array.isArray(s.loader)) {
+        console.log('[WizardContext] Cargando mensajes personalizados del loader:', s.loader);
+        setLoaderMessages(s.loader as string[]);
+      } else {
+        console.log('[WizardContext] No hay mensajes personalizados del loader');
+        setLoaderMessages([]);
+      }
       if (draft.design) {
         setDesignSettings({
           visualStyle: draft.design.visual_style || '',
@@ -721,6 +733,8 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         isCompleting,
         completionResult,
         isPdfOutdated,
+        // Loader messages from story
+        loaderMessages,
       }}
     >
       {children}

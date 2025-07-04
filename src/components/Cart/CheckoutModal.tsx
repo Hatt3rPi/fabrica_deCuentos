@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, ArrowLeft, Check, Package, FileDown, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, ArrowLeft, Check, BookOpen, FileDown, Loader2 } from 'lucide-react';
 import { useCartOperations } from '../../contexts/CartContext';
 import { useOrderFulfillment } from '../../hooks/useOrderFulfillment';
 import PaymentMethods from './PaymentMethods';
@@ -18,6 +19,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onClose,
   onSuccess
 }) => {
+  const navigate = useNavigate();
   const {
     items,
     totalPrice,
@@ -64,6 +66,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     if (onSuccess && orderId) {
       onSuccess(orderId);
     }
+
+    // Redirigir a página de confirmación después de un breve delay
+    setTimeout(() => {
+      handleClose();
+      navigate(`/purchase-confirmation/${orderId}`);
+    }, 2000);
   };
 
   // Handler para cerrar modal
@@ -135,19 +143,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <div className="space-y-3">
                     {items.map(item => (
                       <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center overflow-hidden">
+                        <div className="flex-shrink-0">
                           {item.storyThumbnail ? (
-                            <img 
-                              src={item.storyThumbnail} 
-                              alt={item.storyTitle}
-                              className="w-full h-full object-cover rounded-lg"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement!.innerHTML = '<div class="w-6 h-6 text-purple-600"><svg class="lucide lucide-package" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>';
-                              }}
+                            <img
+                              src={item.storyThumbnail}
+                              alt={`Portada de ${item.storyTitle}`}
+                              className="w-16 h-16 object-cover rounded-lg border border-gray-200"
                             />
                           ) : (
-                            <Package className="w-6 h-6 text-purple-600" />
+                            <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
+                              <BookOpen className="w-8 h-8 text-purple-600" />
+                            </div>
                           )}
                         </div>
                         <div className="flex-1">
@@ -212,6 +218,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </h3>
                   <p className="text-gray-600">
                     Tu pedido ha sido procesado correctamente.
+                  </p>
+                  <p className="text-sm text-purple-600 mt-2 font-medium">
+                    Redirigiendo a los detalles de tu compra...
                   </p>
                   {orderId && (
                     <p className="text-sm text-gray-500 mt-2">

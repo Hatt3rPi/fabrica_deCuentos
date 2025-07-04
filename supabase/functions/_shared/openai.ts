@@ -15,7 +15,14 @@ export async function generateWithOpenAI(opts: OpenAIOptions): Promise<OpenAIRes
   const openaiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiKey) throw new Error('Falta la clave de API de OpenAI');
 
-  console.log('[openai] [REQUEST]', JSON.stringify(opts.payload));
+  // Log sanitizado sin exponer payloads sensibles
+  console.log('[openai] [REQUEST]', {
+    endpoint: opts.endpoint,
+    model: (opts.payload as any).model || 'unknown',
+    hasFiles: !!(opts.files && Object.keys(opts.files).length > 0),
+    messageCount: (opts.payload as any).messages?.length || 0,
+    fileCount: Object.keys(opts.files || {}).length
+  });
 
   const headers: Record<string, string> = { 'Authorization': `Bearer ${openaiKey}` };
   let response;

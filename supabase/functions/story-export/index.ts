@@ -3,6 +3,8 @@ import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
 import puppeteer from 'npm:puppeteer';
+import { configureForEdgeFunction, withErrorCapture, captureException, setUser, setTags, addBreadcrumb } from '../_shared/sentry.ts';
+import { createEdgeFunctionLogger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,6 +71,10 @@ interface DesignSettings {
 }
 
 Deno.serve(async (req) => {
+  // Configurar logging y monitoreo
+  const logger = createEdgeFunctionLogger('story-export');
+  configureForEdgeFunction('story-export', req);
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -80,8 +86,12 @@ Deno.serve(async (req) => {
     const requestData: StoryExportRequest = await req.json();
     const { story_id, save_to_library = true, format = 'pdf', include_metadata = true } = requestData;
 
-    console.log(`[story-export] 🚀 Iniciando export para story: ${story_id}`);
-    console.log(`[story-export] 📋 Parámetros:`, { story_id, save_to_library, format, include_metadata });
+    logger.info('Iniciando export de historia', { 
+      storyId: story_id, 
+      saveToLibrary: save_to_library, 
+      format, 
+      includeMetadata: include_metadata 
+    });
 
     if (!story_id) {
       throw new Error('story_id es requerido');
@@ -92,7 +102,20 @@ Deno.serve(async (req) => {
       throw new Error('Usuario no autenticado');
     }
     
-    console.log(`[story-export] 👤 User ID: ${userId}`);
+    logger.info('Usuario autenticado', { userId });
+    
+    // Configurar contexto de usuario en Sentry
+    setUser({ id: userId });
+    
+    // Configurar tags específicos para esta función
+    setTags({
+      'story.id': story_id,
+      'export.format': format,
+      'export.save_to_library': save_to_library.toString(),
+      'export.include_metadata': include_metadata.toString()
+    });
+    
+    addBreadcrumb('PDF export started', 'export', 'info', { story_id, format });
 
     const enabled = await isActivityEnabled(STAGE, ACTIVITY);
     if (!enabled) {
@@ -113,20 +136,62 @@ Deno.serve(async (req) => {
     start = Date.now();
 
     // 1. Obtener datos completos del cuento
-    const storyData = await getCompleteStoryData(story_id, userId);
+    const storyData = await withErrorCapture(
+      () => getCompleteStoryData(story_id, userId),
+      'fetch-story-data',
+      { story_id, userId }
+    );
+    
+    addBreadcrumb('Story data fetched', 'export', 'info');
     
     // 2. Generar PDF
-    const pdfBuffer = await generateStoryPDF(storyData, format, include_metadata);
+    const pdfBuffer = await withErrorCapture(
+      () => generateStoryPDF(storyData, format, include_metadata),
+      'generate-pdf',
+      { 
+        story_id, 
+        format, 
+        include_metadata,
+        pageCount: storyData.pages?.length || 0
+      }
+    );
+    
+    addBreadcrumb('PDF generated', 'export', 'info', { 
+      bufferSize: pdfBuffer.length,
+      format 
+    });
     
     // 3. Subir a Supabase Storage
-    const downloadUrl = await uploadPDFToStorage(story_id, pdfBuffer, userId, storyData.story.title);
+    const downloadUrl = await withErrorCapture(
+      () => uploadPDFToStorage(story_id, pdfBuffer, userId, storyData.story.title),
+      'upload-pdf-storage',
+      { 
+        story_id, 
+        userId,
+        bufferSize: pdfBuffer.length,
+        title: storyData.story.title
+      }
+    );
+    
+    addBreadcrumb('PDF uploaded to storage', 'export', 'info', { downloadUrl });
     
     // 4. Actualizar estado del cuento
     try {
-      await markStoryAsCompleted(story_id, downloadUrl, save_to_library);
+      await withErrorCapture(
+        () => markStoryAsCompleted(story_id, downloadUrl, save_to_library),
+        'mark-story-completed',
+        { story_id, downloadUrl, save_to_library }
+      );
       console.log('[story-export] ✅ Estado del cuento actualizado exitosamente');
     } catch (markError) {
       console.error('[story-export] ❌ Error marcando cuento como completado:', markError);
+      await captureException(markError as Error, {
+        function: 'story-export',
+        operation: 'mark-story-completed',
+        story_id,
+        downloadUrl,
+        save_to_library
+      });
       // No lanzar el error para que el PDF se pueda descargar igual
       console.log('[story-export] ⚠️ Continuando con descarga a pesar del error de estado');
     }
@@ -174,6 +239,17 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error('[story-export] Error:', err);
+    
+    // Capturar error en Sentry con contexto completo
+    await captureException(err as Error, {
+      function: 'story-export',
+      userId,
+      stage: STAGE,
+      activity: ACTIVITY,
+      elapsed: Date.now() - start,
+      format,
+      story_id: req.url.includes('story_id') ? req.url : undefined
+    });
     
     const elapsed = Date.now() - start;
     await logPromptMetric({
@@ -347,7 +423,7 @@ async function generateStoryPDF(
   const htmlContent = generateHTMLContent(story, pages, characters, design, includeMetadata, aspectRatio, styleConfig);
   
   // Generar PDF usando Browserless.io con aspect ratio específico
-  const pdfContent = await generatePDFFromHTML(htmlContent, aspectRatio);
+  const pdfContent = await generatePDFFromHTML(htmlContent, aspectRatio, storyData.story.id);
   
   return pdfContent;
 }
@@ -579,7 +655,14 @@ function generateHTMLContent(
   // Definir configuraciones fuera del scope para uso global
   const coverConfig = styleConfig?.coverConfig?.title || {};
   const pageConfig = styleConfig?.pageConfig?.text || {};
-  const dedicatoriaConfig = styleConfig?.dedicatoriaConfig?.text || pageConfig;
+  const dedicatoriaConfig = styleConfig?.dedicatoriaConfig?.text || pageConfig || {};
+  
+  // Validación defensiva para evitar errores de fontFamily
+  console.log('[story-export] 🔍 Validando configuraciones de estilo:');
+  console.log(`[story-export] - coverConfig:`, coverConfig);
+  console.log(`[story-export] - pageConfig:`, pageConfig);
+  console.log(`[story-export] - dedicatoriaConfig:`, dedicatoriaConfig);
+  console.log(`[story-export] - dedicatoriaConfig.fontFamily:`, dedicatoriaConfig?.fontFamily);
   
   if (styleConfig) {
     console.log('[story-export] 🎨 Configuración de estilos detectada:');
@@ -659,102 +742,151 @@ function generateHTMLContent(
   
   console.log(`[story-export] 📚 Fuentes a importar (${fonts.size}):`, Array.from(fonts));
 
-  // Generar estilos dinámicos desde la configuración (misma estructura que /read)
+  // MIGRADO: Generar estilos usando sistema unificado 
+  // Primero necesito importar las funciones del sistema unificado
+  // NOTA: En Edge Functions necesitamos implementar las funciones localmente 
+  // hasta que se pueda configurar el import correctamente
+  
+  const generateUnifiedStyles = (config: any, pageType: 'cover' | 'page' | 'dedicatoria') => {
+    if (!config) return { textCSS: '', containerCSS: '', positionCSS: '' };
+    
+    // Obtener configuración por tipo de página (mismo patrón que storyStyleUtils)
+    let currentConfig;
+    switch (pageType) {
+      case 'cover':
+        currentConfig = config.coverConfig?.title || {};
+        break;
+      case 'dedicatoria':
+        currentConfig = config.dedicatoriaConfig?.text || config.pageConfig?.text || {};
+        break;
+      case 'page':
+      default:
+        currentConfig = config.pageConfig?.text || {};
+        break;
+    }
+    
+    // Convertir a CSS (mismo patrón que convertToHTMLStyle)
+    const textStyle = {
+      fontSize: currentConfig.fontSize,
+      fontFamily: currentConfig.fontFamily,
+      fontWeight: currentConfig.fontWeight,
+      color: currentConfig.color,
+      textAlign: currentConfig.textAlign,
+      textShadow: currentConfig.textShadow,
+      letterSpacing: currentConfig.letterSpacing,
+      lineHeight: currentConfig.lineHeight,
+      textTransform: currentConfig.textTransform,
+    };
+    
+    const containerStyle = {
+      background: currentConfig.containerStyle?.background,
+      padding: currentConfig.containerStyle?.padding,
+      margin: currentConfig.containerStyle?.margin,
+      borderRadius: currentConfig.containerStyle?.borderRadius,
+      maxWidth: currentConfig.containerStyle?.maxWidth,
+      minHeight: currentConfig.containerStyle?.minHeight,
+      border: currentConfig.containerStyle?.border,
+      boxShadow: currentConfig.containerStyle?.boxShadow,
+      backdropFilter: currentConfig.containerStyle?.backdropFilter,
+    };
+    
+    // Posicionamiento (mismo patrón que getContainerPosition)
+    const position = currentConfig.position || 'center';
+    const horizontalPosition = currentConfig.horizontalPosition || 'center';
+    
+    let alignItems = 'center';
+    let justifyContent = 'center';
+    
+    switch (position) {
+      case 'top': alignItems = 'flex-start'; break;
+      case 'center': alignItems = 'center'; break;
+      case 'bottom': alignItems = 'flex-end'; break;
+    }
+    
+    switch (horizontalPosition) {
+      case 'left': justifyContent = 'flex-start'; break;
+      case 'center': justifyContent = 'center'; break;
+      case 'right': justifyContent = 'flex-end'; break;
+    }
+    
+    // Convertir a CSS string
+    const convertToCSS = (obj: any) => 
+      Object.entries(obj)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => {
+          const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+          return `${cssKey}: ${value}`;
+        })
+        .join('; ');
+    
+    return {
+      textCSS: convertToCSS(textStyle),
+      containerCSS: convertToCSS(containerStyle),
+      positionCSS: `display: flex; align-items: ${alignItems}; justify-content: ${justifyContent}`
+    };
+  };
+
   const generateDynamicStyles = () => {
     if (!styleConfig) {
       console.log('[story-export] ⚠️ No styleConfig encontrado, usando estilos por defecto');
       return '';
     }
     
-    // Usar función unificada para procesar fuentes
+    // Usar la función unificada para generar estilos
+    const coverStyles = generateUnifiedStyles(styleConfig, 'cover');
+    const pageStyles = generateUnifiedStyles(styleConfig, 'page');
+    const dedicatoriaStyles = generateUnifiedStyles(styleConfig, 'dedicatoria');
+    
+    // Función para extraer y validar fuentes (mantener para imports)
     const coverFontFamily = extractAndValidateFontName(coverConfig.fontFamily) || CSS_CONSTANTS.DEFAULT_FONTS.FALLBACK;
     const pageFontFamily = extractAndValidateFontName(pageConfig.fontFamily) || CSS_CONSTANTS.DEFAULT_FONTS.FALLBACK;
     
-    // Logs de debug condicionales (solo si hay configuración de debug)
-    if (console.debug) {
-      console.debug(`[story-export] 🔤 Cover font procesada: "${coverFontFamily}" (original: "${coverConfig.fontFamily}")`);
-      console.debug(`[story-export] 🔤 Page font procesada: "${pageFontFamily}" (original: "${pageConfig.fontFamily}")`);
-    }
+    console.log('[story-export] 🎨 Generando estilos unificados:', {
+      cover: { textCSS: coverStyles.textCSS.substring(0, 100) + '...' },
+      page: { textCSS: pageStyles.textCSS.substring(0, 100) + '...' },
+      dedicatoria: { textCSS: dedicatoriaStyles.textCSS.substring(0, 100) + '...' }
+    });
     
     return `
-      /* Estilos dinámicos de portada - Con !important para override */
+      /* MIGRADO: Estilos dinámicos usando sistema unificado */
       .cover-title {
+        ${coverStyles.textCSS} !important;
         font-family: ${coverFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
-        font-size: ${coverConfig.fontSize || '4rem'} !important;
-        font-weight: ${coverConfig.fontWeight || 'bold'} !important;
-        color: ${coverConfig.color || 'white'} !important;
-        text-shadow: ${coverConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.8)'} !important;
-        text-align: ${coverConfig.textAlign || 'center'} !important;
-        ${coverConfig.letterSpacing ? `letter-spacing: ${coverConfig.letterSpacing} !important;` : ''}
-        ${coverConfig.textTransform ? `text-transform: ${coverConfig.textTransform} !important;` : ''}
       }
       
       .cover-overlay {
-        background: ${coverConfig.containerStyle?.background || 'transparent'} !important;
-        padding: ${coverConfig.containerStyle?.padding || '2rem 3rem'} !important;
-        border-radius: ${coverConfig.containerStyle?.borderRadius || '0'} !important;
-        max-width: ${coverConfig.containerStyle?.maxWidth || '85%'} !important;
-        ${coverConfig.containerStyle?.border ? `border: ${coverConfig.containerStyle.border} !important;` : ''}
-        ${coverConfig.containerStyle?.boxShadow ? `box-shadow: ${coverConfig.containerStyle.boxShadow} !important;` : ''}
-        ${coverConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${coverConfig.containerStyle.backdropFilter} !important;` : ''}
+        ${coverStyles.containerCSS} !important;
       }
       
-      /* Posicionamiento dinámico de portada */
+      /* Posicionamiento dinámico de portada usando sistema unificado */
       .cover-page {
-        ${coverConfig.position === 'top' ? 'align-items: flex-start !important; padding-top: 3rem !important;' : ''}
-        ${coverConfig.position === 'center' ? 'align-items: center !important; padding-top: 0 !important;' : ''}
-        ${coverConfig.position === 'bottom' ? 'align-items: flex-end !important; padding-bottom: 3rem !important; padding-top: 0 !important;' : ''}
+        ${coverStyles.positionCSS} !important;
+        ${coverConfig.position === 'top' ? 'padding-top: 3rem !important;' : ''}
+        ${coverConfig.position === 'bottom' ? 'padding-bottom: 3rem !important;' : ''}
       }
       
-      /* Estilos dinámicos de páginas */
+      /* Estilos dinámicos de páginas usando sistema unificado */
       .story-text {
+        ${pageStyles.textCSS} !important;
         font-family: ${pageFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
-        font-size: ${pageConfig.fontSize || '2.2rem'} !important;
-        font-weight: ${pageConfig.fontWeight || '600'} !important;
-        line-height: ${pageConfig.lineHeight || '1.4'} !important;
-        color: ${pageConfig.color || 'white'} !important;
-        text-shadow: ${pageConfig.textShadow || '3px 3px 6px rgba(0,0,0,0.9)'} !important;
-        text-align: ${pageConfig.textAlign || 'center'} !important;
       }
       
       .page-overlay {
+        ${pageStyles.containerCSS} !important;
         position: relative;
-        background: ${pageConfig.containerStyle?.background || 'transparent'} !important;
-        padding: ${pageConfig.containerStyle?.padding || '1rem 2rem 6rem 2rem'} !important;
-        min-height: ${pageConfig.containerStyle?.minHeight || '25%'} !important;
-        width: ${pageConfig.containerStyle?.maxWidth || '100%'} !important;
-        ${pageConfig.containerStyle?.border ? `border: ${pageConfig.containerStyle.border} !important;` : ''}
-        ${pageConfig.containerStyle?.borderRadius ? `border-radius: ${pageConfig.containerStyle.borderRadius} !important;` : ''}
-        ${pageConfig.containerStyle?.boxShadow ? `box-shadow: ${pageConfig.containerStyle.boxShadow} !important;` : ''}
-        ${pageConfig.containerStyle?.backdropFilter ? `backdrop-filter: ${pageConfig.containerStyle.backdropFilter} !important;` : ''}
-        
-        /* Alineación vertical del contenedor basada en template */
         display: flex !important;
         flex-direction: column !important;
-        ${pageConfig.verticalAlign ? `justify-content: ${pageConfig.verticalAlign} !important;` : 'justify-content: flex-end !important;'}
       }
       
-      /* Gradiente overlay si existe */
-      ${pageConfig.containerStyle?.gradientOverlay ? `
-      .page-overlay::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: ${pageConfig.containerStyle.gradientOverlay};
-        border-radius: inherit;
-        z-index: -1;
-      }
-      ` : ''}
-      
-      /* Posicionamiento dinámico basado en template */
+      /* Posicionamiento dinámico de páginas usando sistema unificado */
       .story-page {
-        justify-content: center !important; /* Centrar horizontalmente */
-        ${pageConfig.position === 'top' ? 'align-items: flex-start !important;' : ''}
-        ${pageConfig.position === 'center' ? 'align-items: center !important;' : ''}
-        ${pageConfig.position === 'bottom' ? 'align-items: flex-end !important;' : 'align-items: flex-end !important;'}
+        ${pageStyles.positionCSS} !important;
+      }
+      
+      /* Estilos de dedicatoria usando sistema unificado */
+      .dedicatoria-text {
+        ${dedicatoriaStyles.textCSS} !important;
+        font-family: ${pageFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
       }
     `;
   };
@@ -810,13 +942,13 @@ function generateHTMLContent(
             text-align: center;
           ">
             <div class="dedicatoria-placeholder" style="
-              font-family: ${dedicatoriaConfig.text.fontFamily || "'Indie Flower', cursive"}; 
-              font-size: ${dedicatoriaConfig.text.fontSize || '28px'}; 
-              line-height: ${dedicatoriaConfig.text.lineHeight || '1.8'}; 
+              font-family: ${dedicatoriaConfig.fontFamily || "'Indie Flower', cursive"}; 
+              font-size: ${dedicatoriaConfig.fontSize || '28px'}; 
+              line-height: ${dedicatoriaConfig.lineHeight || '1.8'}; 
               color: #9ca3af; 
               font-style: italic;
               max-width: 400px;
-              text-shadow: ${dedicatoriaConfig.text.textShadow || '0 2px 4px rgba(0,0,0,0.1)'};
+              text-shadow: ${dedicatoriaConfig.textShadow || '0 2px 4px rgba(0,0,0,0.1)'};
             ">
               <!-- Página de dedicatoria reservada -->
             </div>
@@ -879,15 +1011,15 @@ function generateHTMLContent(
           ` : ''}
           ${story.dedicatoria_text ? `
             <div class="dedicatoria-text" style="
-              font-family: ${dedicatoriaConfig.text.fontFamily || "'Indie Flower', cursive"}; 
-              font-size: ${dedicatoriaConfig.text.fontSize || '24px'}; 
-              line-height: ${dedicatoriaConfig.text.lineHeight || '1.8'}; 
-              color: ${story.dedicatoria_background_url ? '#ffffff' : dedicatoriaConfig.text.color || '#4a5568'}; 
+              font-family: ${dedicatoriaConfig.fontFamily || "'Indie Flower', cursive"}; 
+              font-size: ${dedicatoriaConfig.fontSize || '24px'}; 
+              line-height: ${dedicatoriaConfig.lineHeight || '1.8'}; 
+              color: ${story.dedicatoria_background_url ? '#ffffff' : dedicatoriaConfig.color || '#4a5568'}; 
               font-style: italic;
               max-width: 600px;
-              text-shadow: ${story.dedicatoria_background_url ? '2px 2px 4px rgba(0,0,0,0.8)' : dedicatoriaConfig.text.textShadow || '0 2px 4px rgba(0,0,0,0.1)'};
-              font-weight: ${dedicatoriaConfig.text.fontWeight || 'normal'};
-              text-align: ${dedicatoriaConfig.text.textAlign || layout.alignment};
+              text-shadow: ${story.dedicatoria_background_url ? '2px 2px 4px rgba(0,0,0,0.8)' : dedicatoriaConfig.textShadow || '0 2px 4px rgba(0,0,0,0.1)'};
+              font-weight: ${dedicatoriaConfig.fontWeight || 'normal'};
+              text-align: ${dedicatoriaConfig.textAlign || layout.alignment};
             ">
               ${textToHTML(story.dedicatoria_text)}
             </div>
@@ -1025,7 +1157,7 @@ function generateHTMLContent(
   `;
 }
 
-async function generatePDFFromHTML(htmlContent: string, aspectRatio: string = 'portrait'): Promise<Uint8Array> {
+async function generatePDFFromHTML(htmlContent: string, aspectRatio: string = 'portrait', storyId?: string): Promise<Uint8Array> {
   console.log('[story-export] Iniciando generación de PDF con Browserless.io API...');
   console.log(`[story-export] 📐 Formato de PDF solicitado: ${aspectRatio}`);
   
@@ -1064,22 +1196,112 @@ async function generatePDFFromHTML(htmlContent: string, aspectRatio: string = 'p
     console.log('[story-export] Enviando HTML a Browserless.io API...');
     console.log('[story-export] 🔧 Opciones PDF:', JSON.stringify(pdfOptions));
     
-    // Usar API REST de Browserless.io (endpoint moderno)
-    const response = await fetch(`https://production-sfo.browserless.io/pdf?token=${browserlessToken}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        html: htmlContent,
-        options: pdfOptions
-      })
-    });
+    // Función auxiliar para retry con exponential backoff
+    const retryWithBackoff = async (attemptNumber: number = 1): Promise<Response> => {
+      const maxAttempts = 3;
+      const baseDelay = 2000; // 2 segundos base
+      
+      try {
+        console.log(`[story-export] 🔄 Intento ${attemptNumber}/${maxAttempts} - Browserless.io API`);
+        
+        const response = await fetch(`https://production-sfo.browserless.io/pdf?token=${browserlessToken}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            html: htmlContent,
+            options: pdfOptions
+          })
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Browserless.io API error: ${response.status} - ${errorText}`);
-    }
+        // Si la respuesta es exitosa, retornar inmediatamente
+        if (response.ok) {
+          console.log(`[story-export] ✅ PDF generado exitosamente en intento ${attemptNumber}`);
+          return response;
+        }
+
+        // Detectar rate limiting específicamente
+        if (response.status === 429) {
+          console.log(`[story-export] ⚠️ Rate limit detectado (429) en intento ${attemptNumber}`);
+          
+          // Log específico para Sentry
+          addBreadcrumb({
+            message: `Browserless.io rate limit - Attempt ${attemptNumber}/${maxAttempts}`,
+            category: 'rate_limiting',
+            level: 'warning',
+            data: {
+              attempt_number: attemptNumber,
+              max_attempts: maxAttempts,
+              response_status: response.status,
+              story_id: storyId
+            }
+          });
+          
+          // Si no hemos llegado al máximo de intentos, hacer retry
+          if (attemptNumber < maxAttempts) {
+            const baseDelayMs = baseDelay * Math.pow(2, attemptNumber - 1); // exponential backoff: 2s, 4s, 8s
+            const jitter = Math.random() * 1000; // 0-1s aleatorio para evitar thundering herd
+            const delay = baseDelayMs + jitter;
+            
+            console.log(`[story-export] ⏳ Esperando ${Math.round(delay)}ms (base: ${baseDelayMs}ms + jitter: ${Math.round(jitter)}ms) antes del siguiente intento...`);
+            
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return retryWithBackoff(attemptNumber + 1);
+          } else {
+            // Log cuando se agotan todos los intentos
+            addBreadcrumb({
+              message: 'All retry attempts exhausted for rate limiting',
+              category: 'rate_limiting',
+              level: 'error',
+              data: {
+                total_attempts: maxAttempts,
+                final_status: response.status,
+                story_id: storyId
+              }
+            });
+          }
+        }
+
+        // Para otros errores o cuando se agotaron los intentos
+        const errorText = await response.text();
+        
+        if (response.status === 429) {
+          // Tag específico para rate limiting en Sentry
+          setTags({
+            'browserless.rate_limited': 'true',
+            'browserless.attempts': maxAttempts.toString(),
+            'error.type': 'rate_limiting'
+          });
+          throw new Error(`Browserless.io rate limit exceeded after ${maxAttempts} attempts. Status: ${response.status} - ${errorText}`);
+        } else {
+          setTags({
+            'browserless.error_type': response.status.toString(),
+            'error.type': 'api_error'
+          });
+          throw new Error(`Browserless.io API error: ${response.status} - ${errorText}`);
+        }
+        
+      } catch (error) {
+        // Si es un error de red y aún tenemos intentos disponibles
+        if (attemptNumber < maxAttempts && (error instanceof TypeError || error.message.includes('fetch'))) {
+          const baseDelayMs = baseDelay * Math.pow(2, attemptNumber - 1);
+          const jitter = Math.random() * 1000; // 0-1s aleatorio para evitar thundering herd
+          const delay = baseDelayMs + jitter;
+          
+          console.log(`[story-export] 🔌 Error de conexión en intento ${attemptNumber}, reintentando en ${Math.round(delay)}ms (base: ${baseDelayMs}ms + jitter: ${Math.round(jitter)}ms)...`);
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return retryWithBackoff(attemptNumber + 1);
+        }
+        
+        // Re-lanzar el error si no podemos hacer más intentos
+        throw error;
+      }
+    };
+
+    // Ejecutar la llamada con retry logic
+    const response = await retryWithBackoff();
 
     console.log('[story-export] PDF generado por Browserless.io, descargando...');
     

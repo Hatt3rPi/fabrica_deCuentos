@@ -5,6 +5,8 @@ import { isActivityEnabled } from '../_shared/stages.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
 import { generateWithOpenAI } from '../_shared/openai.ts';
 
+import { configureForEdgeFunction, captureException, setUser, setTags } from '../_shared/sentry.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
@@ -51,7 +53,17 @@ Deno.serve(async (req) => {
     }
 
     userId = await getUserId(req);
-    const enabled = await isActivityEnabled(STAGE, ACTIVITY);
+    
+    // Configurar contexto de usuario en Sentry
+    if (userId) {
+      setUser({ id: userId });
+    }
+    
+    // Configurar tags básicos
+    setTags({
+      'function.name': 'generate-thumbnail-variant'
+    });
+const enabled = await isActivityEnabled(STAGE, ACTIVITY);
     if (!enabled) {
       return new Response(
         JSON.stringify({ error: 'Actividad deshabilitada' }),

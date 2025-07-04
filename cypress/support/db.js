@@ -357,6 +357,204 @@ checkSupabaseConnection()
     console.error('❌ Error al verificar la conexión con Supabase:', error);
   });
 
+/**
+ * Crea una configuración de estilo de prueba
+ * @param {Object} styleConfig - Configuración de estilo
+ * @returns {Promise<string|null>} ID de la configuración creada
+ */
+const createTestStyleConfig = async (styleConfig) => {
+  try {
+    console.log(`🎨 Creando configuración de estilo: ${styleConfig.name}`);
+    
+    const { data, error } = await supabase
+      .from('story_style_templates')
+      .insert({
+        name: styleConfig.name,
+        config_data: styleConfig.config_data,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) {
+      handleSupabaseError('createTestStyleConfig', error);
+      return null;
+    }
+
+    console.log(`✅ Configuración de estilo creada: ${data.id}`);
+    return data.id;
+  } catch (error) {
+    console.error('❌ Error en createTestStyleConfig:', error);
+    return null;
+  }
+};
+
+/**
+ * Elimina una configuración de estilo
+ * @param {string} configId - ID de la configuración
+ * @returns {Promise<Object>} Resultado de la operación
+ */
+const deleteStyleConfig = async (configId) => {
+  try {
+    console.log(`🗑️ Eliminando configuración de estilo: ${configId}`);
+    
+    const { error } = await supabase
+      .from('story_style_templates')
+      .delete()
+      .eq('id', configId);
+
+    if (error) {
+      handleSupabaseError('deleteStyleConfig', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`✅ Configuración de estilo eliminada: ${configId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error en deleteStyleConfig:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Activa una configuración de estilo
+ * @param {string} configId - ID de la configuración
+ * @returns {Promise<Object>} Resultado de la operación
+ */
+const activateStyleConfig = async (configId) => {
+  try {
+    console.log(`🔄 Activando configuración de estilo: ${configId}`);
+    
+    // Primero desactivar todas las configuraciones
+    const { error: deactivateError } = await supabase
+      .from('story_style_templates')
+      .update({ is_active: false })
+      .neq('id', 'none'); // Actualizar todos los registros
+
+    if (deactivateError) {
+      handleSupabaseError('activateStyleConfig - deactivate', deactivateError);
+      return { success: false, error: deactivateError.message };
+    }
+
+    // Luego activar la configuración específica
+    const { error: activateError } = await supabase
+      .from('story_style_templates')
+      .update({ is_active: true })
+      .eq('id', configId);
+
+    if (activateError) {
+      handleSupabaseError('activateStyleConfig - activate', activateError);
+      return { success: false, error: activateError.message };
+    }
+
+    console.log(`✅ Configuración de estilo activada: ${configId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error en activateStyleConfig:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Crea una historia de prueba
+ * @param {Object} storyData - Datos de la historia
+ * @returns {Promise<string|null>} ID de la historia creada
+ */
+const createTestStory = async (storyData) => {
+  try {
+    console.log(`📚 Creando historia de prueba: ${storyData.title}`);
+    
+    // Crear la historia principal
+    const { data: story, error: storyError } = await supabase
+      .from('stories')
+      .insert({
+        title: storyData.title,
+        user_id: 'f0f2ff5b-826a-4d43-aa21-8094e1cf584e', // Usuario de prueba
+        status: storyData.status || 'draft',
+        target_age: '6-8',
+        literary_style: 'aventura',
+        central_message: 'amistad',
+        additional_details: 'Historia de prueba para tests de consistencia visual'
+      })
+      .select()
+      .single();
+
+    if (storyError) {
+      handleSupabaseError('createTestStory - story', storyError);
+      return null;
+    }
+
+    const storyId = story.id;
+    console.log(`✅ Historia creada: ${storyId}`);
+
+    // Crear páginas si se proporcionan
+    if (storyData.pages && storyData.pages.length > 0) {
+      const pages = storyData.pages.map(page => ({
+        story_id: storyId,
+        page_number: page.page_number,
+        text: page.text,
+        image_url: page.image_url,
+        prompt: `Prompt para página ${page.page_number}`
+      }));
+
+      const { error: pagesError } = await supabase
+        .from('story_pages')
+        .insert(pages);
+
+      if (pagesError) {
+        handleSupabaseError('createTestStory - pages', pagesError);
+        // No devolver null, solo logear el error
+        console.warn('⚠️ Error creando páginas, pero historia creada exitosamente');
+      } else {
+        console.log(`✅ ${pages.length} páginas creadas para la historia`);
+      }
+    }
+
+    return storyId;
+  } catch (error) {
+    console.error('❌ Error en createTestStory:', error);
+    return null;
+  }
+};
+
+/**
+ * Elimina una historia y sus datos relacionados
+ * @param {string} storyId - ID de la historia
+ * @returns {Promise<Object>} Resultado de la operación
+ */
+const deleteStory = async (storyId) => {
+  try {
+    console.log(`🗑️ Eliminando historia: ${storyId}`);
+    
+    // Eliminar páginas primero
+    const { error: pagesError } = await supabase
+      .from('story_pages')
+      .delete()
+      .eq('story_id', storyId);
+
+    if (pagesError) {
+      console.warn('⚠️ Error eliminando páginas:', pagesError.message);
+    }
+
+    // Eliminar la historia
+    const { error: storyError } = await supabase
+      .from('stories')
+      .delete()
+      .eq('id', storyId);
+
+    if (storyError) {
+      handleSupabaseError('deleteStory', storyError);
+      return { success: false, error: storyError.message };
+    }
+
+    console.log(`✅ Historia eliminada: ${storyId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error en deleteStory:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Exportar las funciones principales
 export {
   deleteTestStories,
@@ -364,6 +562,11 @@ export {
   getUserIdByEmail,
   deleteUser,
   checkSupabaseConnection,
+  createTestStyleConfig,
+  deleteStyleConfig,
+  activateStyleConfig,
+  createTestStory,
+  deleteStory,
   supabase
 };
 
