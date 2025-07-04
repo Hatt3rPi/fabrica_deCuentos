@@ -27,3 +27,6 @@ dist-ssr
 .env.remote
 .mp4
 .issue
+
+# Réplica local de Supabase - No incluir en git
+supabase/local-replica-migrations/

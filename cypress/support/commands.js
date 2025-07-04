@@ -73,15 +73,23 @@ Cypress.Commands.add('openNewStoryModal', () => {
   // Esperar a que cualquier notificación desaparezca (tiempo adicional)
   cy.wait(3000); // Esperar 3 segundos para asegurar que la notificación desaparezca
 
-  // Abrir el asistente de nuevo cuento
-  cy.contains('button', 'Nuevo cuento', { timeout: 15000 })
-    .should('be.visible')
-    .and('not.be.disabled')
-    .click({ force: true });
+  // Abrir el asistente - intentar botón de usuario nuevo primero, luego existente
+  cy.get('button').then(($buttons) => {
+    const newUserBtn = $buttons.filter(':contains("Crear mi primer cuento")');
+    const existingUserBtn = $buttons.filter(':contains("Nuevo cuento")');
+    
+    if (newUserBtn.length > 0) {
+      cy.wrap(newUserBtn).first().click({ force: true });
+    } else if (existingUserBtn.length > 0) {
+      cy.wrap(existingUserBtn).first().click({ force: true });
+    } else {
+      throw new Error('No se encontró ningún botón para crear cuento');
+    }
+  });
 
   // Verificar que se redirige al wizard y que el modal de selección está visible
   cy.url({ timeout: 10000 }).should('match', /\/wizard\/[^/]+/);
-  return cy.contains('h2', 'Selecciona un personaje', { timeout: 10000 })
+  cy.contains('h2', 'Selecciona un personaje', { timeout: 10000 })
     .should('be.visible');
 });
 
@@ -320,4 +328,81 @@ Cypress.Commands.add('cleanupTestStories', (email = 'tester@lacuenteria.cl', opt
     
     return cy.wrap(response.body);
   });
+});
+
+/**
+ * Configura interceptores para bypassear todas las llamadas a Edge Functions de IA
+ * Esto permite ejecutar pruebas sin consumir tokens de IA
+ */
+Cypress.Commands.add('setupAIBypass', () => {
+  cy.log('🚫 Configurando bypass de IA - No se consumirán tokens');
+
+  // Interceptar generación de miniatura de personaje
+  cy.intercept('POST', '**/functions/v1/generate-character-thumbnail', {
+    statusCode: 200,
+    body: {
+      success: true,
+      thumbnailUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+      message: 'Miniatura generada exitosamente (MOCK)'
+    }
+  }).as('generateThumbnail');
+
+  // Interceptar generación de historia
+  cy.intercept('POST', '**/functions/v1/generate-story', {
+    statusCode: 200,
+    body: {
+      success: true,
+      story: `Había una vez un valiente personaje llamado TestPersonaje que vivía en un mundo mágico lleno de aventuras.
+
+Un día, mientras caminaba por el bosque encantado, se encontró con una criatura mágica que le dijo: "Tu destino es ayudar a todos los seres del bosque."
+
+TestPersonaje aceptó la misión y comenzó una increíble aventura donde descubrió que tenía poderes especiales para comunicarse con los animales.
+
+Al final, después de muchas aventuras y desafíos, TestPersonaje se convirtió en el protector del bosque y vivió feliz para siempre.
+
+FIN.`,
+      title: 'La Aventura Mágica de TestPersonaje',
+      message: 'Historia generada exitosamente (MOCK)'
+    }
+  }).as('generateStory');
+
+  // Interceptar generación de imágenes
+  cy.intercept('POST', '**/functions/v1/generate-images', {
+    statusCode: 200,
+    body: {
+      success: true,
+      images: [
+        {
+          pageNumber: 0,
+          imageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+          prompt: 'Portada del cuento (MOCK)'
+        },
+        {
+          pageNumber: 1,
+          imageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+          prompt: 'Primera página (MOCK)'
+        },
+        {
+          pageNumber: 2,
+          imageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANTUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+          prompt: 'Segunda página (MOCK)'
+        }
+      ],
+      message: 'Imágenes generadas exitosamente (MOCK)'
+    }
+  }).as('generateImages');
+
+  // Interceptar cualquier otra llamada a Edge Functions
+  cy.intercept('POST', '**/functions/v1/**', (req) => {
+    cy.log(`🚫 Interceptada llamada a Edge Function: ${req.url}`);
+    req.reply({
+      statusCode: 200,
+      body: {
+        success: true,
+        message: `Función ${req.url.split('/').pop()} bypaseada (MOCK)`
+      }
+    });
+  }).as('aiBypass');
+
+  cy.log('✅ Bypass de IA configurado correctamente');
 });
