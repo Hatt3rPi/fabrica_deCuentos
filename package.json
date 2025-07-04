@@ -16,6 +16,7 @@
     "cypress:run": "cypress run",
     "test:e2e": "cypress run",
     "test:complete-flow": "npx cypress run --spec \"cypress/e2e/complete_story_flow.cy.js\"",
+    "test:complete-flow-sinIA": "npx cypress run --spec \"cypress/e2e/complete_story_flow_sinIA.cy.js\"",
     "supabase:pull": "supabase functions pull && supabase db pull",
     "supabase:start": "supabase start"
   },
@@ -54,7 +55,7 @@
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.18",
-    "cypress": "^13.6.6",
+    "cypress": "^14.5.1",
     "dotenv": "^16.5.0",
     "eslint": "^9.9.1",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
