@@ -1,7 +1,7 @@
 /* ==== Test Created with Cypress Studio ==== */
 it('lacuenteria.cl', function() {
   /* ==== Generated with Cypress Studio ==== */
-  cy.visit('http://localhost:5174/');
+  cy.visit('http://localhost:5173/');
   /* ==== End Cypress Studio ==== */
   /* ==== Generated with Cypress Studio ==== */
   cy.get('.whitespace-nowrap').click();
@@ -33,8 +33,4 @@ it('lacuenteria.cl', function() {
   cy.get('[data-testid="story-theme-input"]').type('un paseo por la savana');
   cy.get('[data-testid="generate-story-button"]').click();
 
-  /* ==== End Cypress Studio ==== */
-  /* ==== Generated with Cypress Studio ==== */
-  cy.get('[data-testid="generate-story-button"]').click();
-  /* ==== End Cypress Studio ==== */
 });

@@ -110,8 +110,16 @@ const StoryStep: React.FC = () => {
           }
         );
 
+        console.log('[DEBUG StoryStep] coverUrl returned:', coverUrl);
+        console.log('[DEBUG StoryStep] typeof coverUrl:', typeof coverUrl);
+        console.log('[DEBUG StoryStep] coverUrl truthy?:', !!coverUrl);
+
         if (coverUrl) {
-          generateCoverVariants(storyId!, coverUrl);
+          console.log('[DEBUG StoryStep] About to call generateCoverVariants with:', { storyId: storyId!, coverUrl });
+          await generateCoverVariants(storyId!, coverUrl);
+          console.log('[DEBUG StoryStep] generateCoverVariants completed');
+        } else {
+          console.log('[DEBUG StoryStep] coverUrl is falsy, skipping generateCoverVariants');
         }
 
       } else {
@@ -194,6 +202,7 @@ const StoryStep: React.FC = () => {
               )}
             </div>
             <textarea
+              data-testid="story-theme"
               value={storySettings.theme}
               onChange={(e) => !isLocked && handleChange('theme', e.target.value)}
               placeholder={isLocked ? "Temática bloqueada" : "Describe la temática de tu cuento..."}
@@ -271,6 +280,7 @@ const StoryStep: React.FC = () => {
       <div className="text-center space-y-4">
         <button
           type="button"
+          data-testid="generate-story"
           onClick={handleGenerate}
           disabled={isLoadingStory || isGeneratingExtras || !storySettings.theme || isLocked || isLockLoading || lockError}
           className={`px-5 py-2 rounded-lg flex items-center justify-center gap-2 ${

@@ -427,6 +427,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
           </label>
           <input
             type="text"
+            data-testid="character-name"
             value={formData.name}
             onChange={(e) => {
               setFormData({ ...formData, name: e.target.value });
@@ -451,6 +452,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
           </label>
           <input
             type="text"
+            data-testid="character-age"
             value={formData.age}
             onChange={(e) => {
               setFormData({ ...formData, age: e.target.value });
@@ -474,6 +476,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
             Descripción
           </label>
           <textarea
+            data-testid="character-description"
             value={formData.description?.es}
             onChange={(e) => {
               setFormData({
@@ -502,7 +505,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
               Imagen de referencia
             </label>
             <div {...getRootProps()}>
-              <input {...getInputProps()} />
+              <input {...getInputProps()} data-testid="character-image-upload" />
               <div className={`w-full aspect-square border-2 border-dashed rounded-lg flex items-center justify-center ${
                 fieldsReadOnly ? 'cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:border-purple-500'
               } ${fieldErrors.image ? 'border-red-500' : 'border-gray-300'}`}>
@@ -576,6 +579,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
           {!thumbnailGenerated ? (
             <button
               type="button"
+              data-testid="generate-thumbnail"
               onClick={generateThumbnail}
               disabled={isAnalyzing || isGeneratingThumbnail || fieldsReadOnly}
               className={`flex-1 py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 ${
@@ -599,6 +603,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
           ) : (
             <button
               type="submit"
+              data-testid="save-character"
               disabled={isLoading || isRedirecting}
               className={`flex-1 py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 ${
                 isLoading || isRedirecting
@@ -624,6 +629,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, onCancel, id: pro
 
           <button
             type="button"
+            data-testid="cancel-character"
             onClick={() => (onCancel ? onCancel() : navigate('/nuevo-cuento/personajes'))}
             className="flex-1 py-3 px-4 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50"
           >

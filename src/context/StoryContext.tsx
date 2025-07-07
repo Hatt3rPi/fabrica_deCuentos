@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { promptService } from '../services/promptService';
+import { normalizeStorageUrl } from '../utils/urlHelpers';
 
 interface CoverInfo {
   status: 'idle' | 'generating' | 'ready' | 'error';
@@ -67,8 +68,9 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Cover generation failed');
 
-      // Add cache busting to cover URL
-      const coverUrlWithTimestamp = data.coverUrl ? `${data.coverUrl}?t=${Date.now()}` : data.coverUrl;
+      // Normalize the URL for local development and add cache busting
+      const normalizedUrl = normalizeStorageUrl(data.coverUrl);
+      const coverUrlWithTimestamp = normalizedUrl ? `${normalizedUrl}?t=${Date.now()}` : normalizedUrl;
       setCovers(prev => ({ ...prev, [storyId]: { status: 'ready', url: coverUrlWithTimestamp, variants: {} } }));
       return coverUrlWithTimestamp as string;
     } catch (err) {
@@ -79,51 +81,57 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const generateCoverVariants = async (storyId: string, imageUrl: string) => {
+    console.log('[DEBUG StoryContext] generateCoverVariants called with:', { storyId, imageUrl });
     try {
+      // Normalize imageUrl to ensure it's accessible from Edge Functions
+      const normalizedImageUrl = normalizeStorageUrl(imageUrl) || imageUrl;
+      console.log('[DEBUG StoryContext] normalizedImageUrl:', normalizedImageUrl);
+      
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const types = STYLE_MAP.map(s => s.type);
-      const prompts = await promptService.getPromptsByTypes(types);
 
-      // Initialize all variant statuses as generating
+      // NO NEED TO GET PROMPTS FROM FRONTEND - Edge Functions handle this directly
+      // Initialize all variant statuses as generating for all styles
       const initialVariantStatus: Record<string, 'generating'> = {};
       STYLE_MAP.forEach(style => {
-        if (prompts[style.type]) {
-          initialVariantStatus[style.key] = 'generating';
-        }
+        initialVariantStatus[style.key] = 'generating';
       });
 
       setCovers(prev => ({
         ...prev,
         [storyId]: { 
-          ...(prev[storyId] || { status: 'ready', url: imageUrl }), 
+          ...(prev[storyId] || { status: 'ready', url: normalizedImageUrl }), 
           variantStatus: { ...(prev[storyId]?.variantStatus || {}), ...initialVariantStatus }
         }
       }));
 
       const variants: Record<string, string> = {};
 
+      console.log('[DEBUG StoryContext] About to start Promise.all for', STYLE_MAP.length, 'styles');
       await Promise.all(
         STYLE_MAP.map(async (style) => {
-          const prompt = prompts[style.type];
-          if (!prompt) return;
+          console.log('[DEBUG StoryContext] Processing style:', style.key);
           
           try {
+            console.log('[DEBUG StoryContext] Making fetch request for style:', style.key);
             const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-cover-variant`, {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify({ imageUrl, promptType: style.type, storyId, styleKey: style.key })
+              body: JSON.stringify({ imageUrl: normalizedImageUrl, promptType: style.type, storyId, styleKey: style.key })
             });
+            console.log('[DEBUG StoryContext] Fetch response for style:', style.key, 'status:', res.status);
             const data = await res.json();
+            console.log('[DEBUG StoryContext] Response data for style:', style.key, 'data:', data);
             if (!res.ok) throw new Error(data.error || 'failed');
             const url = data.coverUrl || data.url;
             
             if (url) {
-              // Add cache busting to variant URL
-              const urlWithTimestamp = `${url}?t=${Date.now()}`;
+              // Normalize and add cache busting to variant URL
+              const normalizedUrl = normalizeStorageUrl(url) || url;
+              const urlWithTimestamp = `${normalizedUrl}?t=${Date.now()}`;
               variants[style.key] = urlWithTimestamp;
               // Update individual variant status to ready AND url immediately for progressive preview
               setCovers(prev => ({
@@ -159,7 +167,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCovers(prev => ({
         ...prev,
         [storyId]: { 
-          ...(prev[storyId] || { status: 'ready', url: imageUrl }), 
+          ...(prev[storyId] || { status: 'ready', url: normalizedImageUrl }), 
           variants: { ...(prev[storyId]?.variants || {}), ...variants }
         }
       }));
@@ -193,7 +201,8 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         throw new Error(`Error loading covers: ${coverError.message}`);
       }
 
-      const baseUrl = coverPage?.image_url;
+      const rawBaseUrl = coverPage?.image_url;
+      const baseUrl = normalizeStorageUrl(rawBaseUrl);
       if (!baseUrl) {
         console.log('[StoryContext] No base cover found for story:', storyId);
         return;
@@ -227,8 +236,9 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             .from('storage')
             .getPublicUrl(variantPath);
           
-          // Cache busting for storage URLs
-          variants[style.key] = `${publicUrl}?t=${timestamp}`;
+          // Normalize URL and add cache busting for storage URLs
+          const normalizedVariantUrl = normalizeStorageUrl(publicUrl);
+          variants[style.key] = `${normalizedVariantUrl}?t=${timestamp}`;
           variantStatus[style.key] = 'ready';
           console.log('[StoryContext] Found variant:', style.key, variants[style.key]);
         } else {
