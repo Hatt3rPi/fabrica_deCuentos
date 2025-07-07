@@ -43,6 +43,7 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       onClick={onClick}
+      data-testid={`character-card-${character.id}`}
       className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className="aspect-square relative">

@@ -3,8 +3,26 @@ import { logPromptMetric, getUserId } from '../_shared/metrics.ts';
 import { startInflightCall, endInflightCall } from '../_shared/inflight.ts';
 import { isActivityEnabled } from '../_shared/stages.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
-import { configureForEdgeFunction, withErrorCapture, captureException, setUser, setTags } from '../_shared/sentry.ts';
+// import { configureForEdgeFunction, withErrorCapture, captureException, setUser, setTags } from '../_shared/sentry.ts';
 import { createEdgeFunctionLogger, withPerformanceLogging } from '../_shared/logger.ts';
+
+// Stubs temporales para funciones de Sentry
+const configureForEdgeFunction = (_fn: string, _req: Request) => {};
+const withErrorCapture = async <T>(fn: () => Promise<T>, operation: string, context: any): Promise<T> => {
+  try {
+    console.log(`[DEBUG withErrorCapture] Ejecutando operación: ${operation}`);
+    const result = await fn();
+    console.log(`[DEBUG withErrorCapture] Operación ${operation} exitosa:`, result);
+    return result;
+  } catch (error) {
+    console.error(`[DEBUG withErrorCapture] Error en operación ${operation}:`, error);
+    console.error(`[DEBUG withErrorCapture] Context:`, context);
+    throw error;
+  }
+};
+const captureException = async (_error: Error, _context?: any) => {};
+const setUser = (_user: any) => {};
+const setTags = (_tags: any) => {};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,9 +53,12 @@ Deno.serve(async (req) => {
   let userId: string | null = null;
   let start = 0;
   let model: string = 'gpt-4-turbo'; // Definir model con valor por defecto
+  let story_id: string | undefined;
 
   try {
-    const { story_id, characters, theme } = await req.json();
+    const reqData = await req.json();
+    story_id = reqData.story_id;
+    const { characters, theme } = reqData;
 
     if (!story_id || !Array.isArray(characters) || characters.length === 0 || !theme) {
       throw new Error('Faltan campos requeridos: story_id, characters o theme');
@@ -66,23 +87,21 @@ Deno.serve(async (req) => {
     }
 
     // Obtener configuración del prompt
-    const { data: promptRow } = await withErrorCapture(
-      async () => {
-        const { data, error } = await supabaseAdmin
-          .from('prompts')
-          .select('id, content, endpoint, model, size, quality, width, height')
-          .eq('type', 'PROMPT_GENERADOR_CUENTOS')
-          .single();
-        if (error) throw new Error(`Error obteniendo prompt: ${error.message}`);
-        return data;
-      },
-      'fetch-story-prompt',
-      { promptType: 'PROMPT_GENERADOR_CUENTOS' }
-    );
+    const { data: promptRow, error } = await supabaseAdmin
+      .from('prompts')
+      .select('id, content, endpoint, model, size, quality, width, height')
+      .eq('type', 'PROMPT_GENERADOR_CUENTOS')
+      .single();
+    
+    if (error) {
+      throw new Error(`Error obteniendo prompt: ${error.message}`);
+    }
     
     const storyPrompt = promptRow?.content || '';
     promptId = promptRow?.id;
-    if (!storyPrompt) throw new Error('Prompt not configured');
+    if (!storyPrompt) {
+      throw new Error('Prompt not configured');
+    }
     const apiEndpoint = promptRow?.endpoint || 'https://api.openai.com/v1/chat/completions';
     model = promptRow?.model || 'gpt-4-turbo'; // Asignar el modelo aquí
 

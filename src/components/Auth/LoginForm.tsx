@@ -186,6 +186,7 @@ const LoginForm: React.FC = () => {
         <div className="relative">
           <input
             id="email"
+            data-testid="recovery-email"
             type="email"
             value={email}
             onChange={(e) => {
@@ -214,6 +215,7 @@ const LoginForm: React.FC = () => {
             </label>
             <input
               id="token"
+              data-testid="recovery-token"
               type="text"
               value={recoveryToken}
               onChange={(e) => setRecoveryToken(e.target.value.toUpperCase())}
@@ -231,6 +233,7 @@ const LoginForm: React.FC = () => {
             <div className="relative">
               <input
                 id="newPassword"
+                data-testid="new-password"
                 type="password"
                 value={newPassword}
                 onChange={(e) => {
@@ -261,6 +264,7 @@ const LoginForm: React.FC = () => {
 
       <button
         type="submit"
+        data-testid="recovery-submit"
         disabled={isLoading}
         className="w-full py-3 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
@@ -278,6 +282,7 @@ const LoginForm: React.FC = () => {
 
       <button
         type="button"
+        data-testid="back-to-login"
         onClick={() => {
           setIsRecovering(false);
           setTokenSent(false);
@@ -300,6 +305,7 @@ const LoginForm: React.FC = () => {
         <div className="relative">
           <input
             id="email"
+            data-testid="login-email"
             type="email"
             value={email}
             onChange={(e) => {
@@ -326,6 +332,7 @@ const LoginForm: React.FC = () => {
         <div className="relative">
           <input
             id="password"
+            data-testid="login-password"
             type="password"
             value={password}
             onChange={(e) => {
@@ -348,6 +355,7 @@ const LoginForm: React.FC = () => {
       <div className="flex justify-end">
         <button
           type="button"
+          data-testid="forgot-password"
           onClick={() => setIsRecovering(true)}
           className="text-sm text-amber-700 hover:text-amber-800 font-medium"
         >
@@ -364,6 +372,7 @@ const LoginForm: React.FC = () => {
 
       <button
         type="submit"
+        data-testid="login-submit"
         disabled={isLoading}
         className="w-full py-3 px-4 bg-amber-700 text-white rounded-lg hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
       >

@@ -1,13 +1,26 @@
+import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { logPromptMetric } from '../_shared/metrics.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
 import { generateWithOpenAI } from '../_shared/openai.ts';
 
-import { configureForEdgeFunction, captureException, setUser, setTags } from '../_shared/sentry.ts';
+// import { configureForEdgeFunction, captureException, setUser, setTags } from '../_shared/sentry.ts';
+
+// Stubs temporales para funciones de Sentry
+const configureForEdgeFunction = (_fn: string, _req: Request) => {};
+const captureException = async (_error: Error, _context?: any) => {};
+const setUser = (_user: any) => {};
+const setTags = (_tags: any) => {};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  { auth: { persistSession: false, autoRefreshToken: false } }
+);
 
 interface Character {
   name: string;
@@ -39,13 +52,20 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // Set up configurable defaults at function scope
-  const defaultSize = Deno.env.get('DEFAULT_IMAGE_SIZE') || '1024x1024';
-  const defaultQuality = Deno.env.get('DEFAULT_IMAGE_QUALITY') || 'standard';
-  const defaultModel = Deno.env.get('DEFAULT_IMAGE_MODEL') || 'gpt-image-1';
-
   try {
     const { characters, scene }: SceneRequest = await req.json();
+
+    // Obtener configuración desde la base de datos
+    const { data: promptConfig } = await supabaseAdmin
+      .from('prompts')
+      .select('model, size, quality, endpoint')
+      .eq('type', 'PROMPT_GENERADOR_IMAGENES')
+      .single();
+
+    const defaultSize = promptConfig?.size || '1024x1024';
+    const defaultQuality = promptConfig?.quality || 'high';
+    const defaultModel = promptConfig?.model || 'gpt-image-1';
+    const endpoint = promptConfig?.endpoint || 'https://api.openai.com/v1/images/generations';
 
 
     // Build identity blocks
@@ -66,20 +86,17 @@ Ilustración para libro infantil. Formato panorámico si es spread.`;
     const payload = {
       model: defaultModel,
       prompt: `${identityBlocks}\n${sceneBlock}`,
-      referenced_image_ids: characters.flatMap((char) =>
-        char.referenceUrls.slice(0, 2)
-      ),
       size: defaultSize,
       quality: defaultQuality,
       n: 1,
     };
     console.log('[generate-scene] [REQUEST]', JSON.stringify(payload));
     let imageUrl = '';
-    if (Deno.env.get('FLUX_ENDPOINT')) {
+    if (endpoint.includes('bfl.ai') || Deno.env.get('FLUX_ENDPOINT')) {
       imageUrl = await generateWithFlux(`${identityBlocks}\n${sceneBlock}`);
     } else {
       const { url } = await generateWithOpenAI({
-        endpoint: 'https://api.openai.com/v1/images/generations',
+        endpoint,
         payload,
       });
       imageUrl = url;

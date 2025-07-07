@@ -117,6 +117,7 @@ const WizardNav: React.FC = () => {
         <button
           onClick={handleNextClick}
           disabled={!canProceed() || isGenerating}
+          data-testid="wizard-next-button"
           className={`px-5 py-2 rounded-lg flex items-center gap-2 ${
             !canProceed() || isGenerating
               ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
