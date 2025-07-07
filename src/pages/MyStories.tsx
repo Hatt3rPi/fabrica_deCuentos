@@ -343,7 +343,7 @@ const MyStories: React.FC = () => {
 
       {/* Botón flotante solo se muestra cuando hay cuentos existentes */}
       {stories.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-10">
+        <div className="fixed bottom-6 right-6 z-5">
           <button
             onClick={handleNewStory}
             data-testid="create-new-story"
