@@ -2,6 +2,31 @@
 
 Este archivo proporciona orientación a Claude Code (claude.ai/code) cuando trabaja con código en este repositorio.
 
+## 🚨 REGLAS CRÍTICAS - NUNCA HACER
+
+### ⛔ PROHIBIDO ABSOLUTAMENTE:
+- **NUNCA reiniciar Supabase local** (`npx supabase stop`, `npx supabase start`) sin autorización explícita del usuario
+- **NUNCA ejecutar comandos destructivos** en bases de datos (DROP, DELETE, TRUNCATE, etc.)
+- **NUNCA eliminar volúmenes de Docker** o datos persistentes (`docker volume prune`, `docker volume rm`)
+- **NUNCA modificar servicios** que puedan afectar datos persistentes sin consultar primero
+
+### ✅ PROCEDIMIENTO OBLIGATORIO:
+- **SIEMPRE preguntar e informar riesgos antes** de cualquier acción que pueda afectar datos o persistencia
+- **SIEMPRE usar métodos de solo lectura** para debugging (logs, SELECT queries, inspección de archivos)
+- **SIEMPRE considerar alternativas** menos destructivas antes de proponer acciones que afecten servicios
+
+### 🔍 COMANDOS PROHIBIDOS SIN AUTORIZACIÓN EXPLÍCITA:
+```bash
+# ESTOS COMANDOS REQUIEREN AUTORIZACIÓN PREVIA:
+npx supabase stop
+npx supabase start  
+docker volume prune
+docker volume rm
+docker system prune
+# Cualquier SQL con: DROP, DELETE, TRUNCATE
+# Cualquier comando que afecte persistencia de datos
+```
+
 ## Comandos de Desarrollo Comunes
 
 ### Desarrollo
@@ -13,9 +38,8 @@ Este archivo proporciona orientación a Claude Code (claude.ai/code) cuando trab
 ### Testing
 - `npm run cypress:open` - Abrir interfaz gráfica de Cypress para testing interactivo
 - `npm run cypress:run` - Ejecutar todas las pruebas de Cypress en modo headless (26 pruebas)
-- `npm run test:e2e` - Ejecutar pruebas end-to-end (alias para cypress:run)
-- `npm run test:complete-flow` - Ejecutar SOLO la prueba de flujo completo (recomendado)
-- `npx cypress run --spec "cypress/e2e/flows/3_creacion_personaje.cy.js"` - Ejecutar prueba específica
+- `npm run fas_creacion_personaje.cy.js` - Ejecutar pruebas end-to-end (alias para cypress:run)m
+
 
 ### Supabase
 - `npm run supabase:start` - Iniciar entorno de desarrollo local de Supabase
