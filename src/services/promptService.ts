@@ -37,16 +37,20 @@ export const promptService = {
   },
 
   async getPromptsByTypes(types: string[]): Promise<Record<string, string>> {
+    console.log('[DEBUG promptService] getPromptsByTypes called with:', types);
     if (types.length === 0) return {};
     const { data, error } = await supabase
       .from('prompts')
       .select('type, content')
       .in('type', types);
+    console.log('[DEBUG promptService] Supabase query result:', { data, error });
     if (error) throw error;
     const map: Record<string, string> = {};
     for (const row of data as { type: string; content: string }[]) {
+      console.log('[DEBUG promptService] Processing row:', row);
       map[row.type] = row.content;
     }
+    console.log('[DEBUG promptService] Final map:', map);
     return map;
   },
 

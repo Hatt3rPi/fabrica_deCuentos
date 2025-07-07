@@ -331,6 +331,7 @@ const MyStories: React.FC = () => {
             </p>
             <button
               onClick={handleNewStory}
+              data-testid="create-first-story"
               className="group relative inline-flex items-center justify-center px-8 py-4 overflow-hidden font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 ease-out shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             >
               <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-purple-700 to-indigo-700 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out"></span>
@@ -345,6 +346,7 @@ const MyStories: React.FC = () => {
         <div className="fixed bottom-6 right-6 z-10">
           <button
             onClick={handleNewStory}
+            data-testid="create-new-story"
             className="group relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 ease-out hover:from-purple-700 hover:to-indigo-700 transform hover:-translate-y-1"
             aria-label="Crear nuevo cuento"
           >

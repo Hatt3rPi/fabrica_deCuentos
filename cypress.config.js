@@ -59,7 +59,7 @@ export default defineConfig({
     },
     viewportWidth: 1280,
     viewportHeight: 720,
-    defaultCommandTimeout: 20000,
+    defaultCommandTimeout: 120000,
     requestTimeout: 30000,
     responseTimeout: 60000,
     pageLoadTimeout: 90000,

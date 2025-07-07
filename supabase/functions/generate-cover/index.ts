@@ -5,7 +5,6 @@ import { isActivityEnabled } from '../_shared/stages.ts';
 import { generateWithFlux } from '../_shared/flux.ts';
 import { generateWithOpenAI } from '../_shared/openai.ts';
 import { encode as base64Encode } from 'https://deno.land/std@0.203.0/encoding/base64.ts';
-import { configureForEdgeFunction, withErrorCapture, captureException, setUser, setTags, addBreadcrumb } from '../_shared/sentry.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -116,7 +115,8 @@ async function generateImageWithRetry(
           inputUrl = `data:image/png;base64,${b64}`;
         }
         return { url: await generateWithFlux(prompt, inputUrl) };
-      } else if (referenceImages.length === 0 && model !== 'gpt-image-1') {
+      } else if (referenceImages.length === 0 || model === 'dall-e-3') {
+        // dall-e-3 no soporta imágenes de referencia, usar solo el prompt
         const payload = { model, prompt, size, quality, n: 1 };
         console.log('[generate-cover] [REQUEST]', JSON.stringify(payload));
         const { url } = await generateWithOpenAI({
@@ -147,9 +147,6 @@ async function generateImageWithRetry(
 }
 
 Deno.serve(async (req) => {
-  // Configurar Sentry para esta Edge Function
-  configureForEdgeFunction('generate-cover', req);
-
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -203,26 +200,6 @@ Deno.serve(async (req) => {
     }
 
     userId = await getUserId(req);
-    
-    // Configurar contexto de usuario en Sentry
-    if (userId) {
-      setUser({ id: userId });
-    }
-    
-    // Configurar tags específicos para esta función
-    setTags({
-      'story.id': story_id,
-      'cover.visual_style': visual_style || 'default',
-      'cover.color_palette': color_palette || 'default',
-      'cover.has_reference_images': reference_image_ids ? reference_image_ids.length.toString() : '0'
-    });
-    
-    addBreadcrumb('Cover generation started', 'generation', 'info', { 
-      story_id, 
-      visual_style, 
-      color_palette 
-    });
-    
     const enabled = await isActivityEnabled(STAGE, ACTIVITY);
     if (!enabled) {
       return new Response(
@@ -269,25 +246,13 @@ Deno.serve(async (req) => {
     console.log('=====================');
 
     // Obtener personajes con sus nombres y miniaturas para la portada
-    const { data: characterRows } = await withErrorCapture(
-      async () => {
-        const { data, error } = await supabaseAdmin
-          .from('story_characters')
-          .select('characters(name, thumbnail_url)')
-          .eq('story_id', story_id);
-        if (error) throw new Error(`Error obteniendo personajes: ${error.message}`);
-        return data;
-      },
-      'fetch-story-characters',
-      { story_id }
-    );
+    const { data: characterRows } = await supabaseAdmin
+      .from('story_characters')
+      .select('characters(name, thumbnail_url)')
+      .eq('story_id', story_id);
 
     let referenceImages: Blob[] = [];
     let charactersWithImages: CharacterWithImage[] = [];
-    
-    addBreadcrumb('Characters fetched', 'generation', 'info', { 
-      characterCount: characterRows?.length || 0 
-    });
     
     if (characterRows && characterRows.length > 0) {
       console.log(`Encontrados ${characterRows.length} personajes para la portada`);
@@ -305,68 +270,45 @@ Deno.serve(async (req) => {
       
       if (validCharacters.length > 0) {
         try {
-          const { charactersWithImages: processedCharacters, referenceImages: processedImages } = await withErrorCapture(
-            async () => {
-              const downloadPromises = validCharacters.map(async (char) => {
-                try {
-                  console.log(`Procesando personaje: ${char.name} desde ${char.url}`);
-                  
-                  const urlObj = new URL(char.url);
-                  const pathParts = urlObj.pathname.split('/').filter(Boolean);
-                  const storageIndex = pathParts.indexOf('storage');
-                  if (
-                    storageIndex === -1 ||
-                    pathParts[storageIndex + 1] !== 'v1' ||
-                    pathParts[storageIndex + 2] !== 'object' ||
-                    pathParts[storageIndex + 3] !== 'public'
-                  ) {
-                    throw new Error('Formato de URL no válido');
-                  }
-                  const bucket = pathParts[storageIndex + 4];
-                  const filePath = pathParts.slice(storageIndex + 5).join('/');
-                  const { data } = await supabaseAdmin.storage
-                    .from(bucket)
-                    .download(filePath);
-                  return { blob: data, name: char.name };
-                } catch (err) {
-                  console.error(`Error al descargar imagen del personaje ${char.name}:`, err);
-                  return null;
-                }
-              });
+          const downloadPromises = validCharacters.map(async (char) => {
+            try {
+              console.log(`Procesando personaje: ${char.name} desde ${char.url}`);
               
-              const results = await Promise.all(downloadPromises);
-              const validResults = results.filter((r): r is { blob: Blob, name: string } => r !== null && r.blob !== null);
-              
-              const referenceImages = validResults.map(r => r.blob);
-              const charactersWithImages = validResults.map(r => ({
-                name: r.name,
-                blob: r.blob
-              }));
-              
-              console.log(`Se procesaron ${charactersWithImages.length} personajes correctamente:`, charactersWithImages.map(c => c.name));
-              return { charactersWithImages, referenceImages };
-            },
-            'download-character-images',
-            { 
-              characterCount: validCharacters.length,
-              characterNames: validCharacters.map(c => c.name)
+              const urlObj = new URL(char.url);
+              const pathParts = urlObj.pathname.split('/').filter(Boolean);
+              const storageIndex = pathParts.indexOf('storage');
+              if (
+                storageIndex === -1 ||
+                pathParts[storageIndex + 1] !== 'v1' ||
+                pathParts[storageIndex + 2] !== 'object' ||
+                pathParts[storageIndex + 3] !== 'public'
+              ) {
+                throw new Error('Formato de URL no válido');
+              }
+              const bucket = pathParts[storageIndex + 4];
+              const filePath = pathParts.slice(storageIndex + 5).join('/');
+              const { data } = await supabaseAdmin.storage
+                .from(bucket)
+                .download(filePath);
+              return { blob: data, name: char.name };
+            } catch (err) {
+              console.error(`Error al descargar imagen del personaje ${char.name}:`, err);
+              return null;
             }
-          );
-          
-          charactersWithImages = processedCharacters;
-          referenceImages = processedImages;
-          
-          addBreadcrumb('Character images downloaded', 'generation', 'info', { 
-            processedCount: charactersWithImages.length 
           });
+          
+          const results = await Promise.all(downloadPromises);
+          const validResults = results.filter((r): r is { blob: Blob, name: string } => r !== null && r.blob !== null);
+          
+          referenceImages = validResults.map(r => r.blob);
+          charactersWithImages = validResults.map(r => ({
+            name: r.name,
+            blob: r.blob
+          }));
+          
+          console.log(`Se procesaron ${charactersWithImages.length} personajes correctamente:`, charactersWithImages.map(c => c.name));
         } catch (error) {
           console.error('Error al procesar personajes para la portada:', error);
-          await captureException(error as Error, {
-            function: 'generate-cover',
-            operation: 'download-character-images',
-            story_id,
-            characterCount: validCharacters.length
-          });
           charactersWithImages = [];
           referenceImages = [];
         }
@@ -381,28 +323,14 @@ Deno.serve(async (req) => {
     console.log('[generate-cover] personajes detectados:', charactersWithImages.map(c => c.name));
     
     // Usar la nueva función que maneja mejor múltiples personajes
-    const { url: imageUrl } = await withErrorCapture(
-      () => generateCoverWithCharacters(
-        prompt,
-        charactersWithImages,
-        apiEndpoint,
-        apiModel,
-        configuredSize,
-        configuredQuality
-      ),
-      'generate-cover-image',
-      {
-        prompt: prompt.substring(0, 100) + '...',
-        characterCount: charactersWithImages.length,
-        apiModel,
-        size: configuredSize,
-        quality: configuredQuality
-      }
+    const { url: imageUrl } = await generateCoverWithCharacters(
+      prompt,
+      charactersWithImages,
+      apiEndpoint,
+      apiModel,
+      configuredSize,
+      configuredQuality
     );
-    
-    addBreadcrumb('Cover image generated', 'generation', 'info', { 
-      imageType: imageUrl.startsWith('data:') ? 'base64' : 'url' 
-    });
     
     // Convertir base64 a Blob
     const base64Data = imageUrl.split(',')[1];
@@ -496,18 +424,6 @@ Deno.serve(async (req) => {
     
   } catch (error) {
     console.error('Error en generate-cover:', error);
-    
-    // Capturar error en Sentry con contexto completo
-    await captureException(error as Error, {
-      function: 'generate-cover',
-      userId,
-      stage: STAGE,
-      activity: ACTIVITY,
-      elapsed: Date.now() - startTime,
-      apiModel,
-      promptId,
-      story_id: req.url.includes('story_id') ? req.url : undefined
-    });
     
     if (promptId) {
       await logPromptMetric({

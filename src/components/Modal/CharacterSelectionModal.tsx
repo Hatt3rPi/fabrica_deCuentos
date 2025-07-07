@@ -166,7 +166,7 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-[560px] overflow-hidden">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Selecciona un personaje</h2>
-            <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+            <button onClick={onClose} data-testid="close-character-modal" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -183,6 +183,7 @@ const CharacterSelectionModal: React.FC<CharacterSelectionModalProps> = ({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   onClick={() => setShowForm(true)}
+                  data-testid="create-new-character"
                   className="aspect-square rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
                   aria-label="Crear nuevo personaje"
                 >
