@@ -181,7 +181,7 @@ const Sidebar: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-gray-800 overflow-y-auto">
+    <div className="h-full flex flex-col">
       {/* Logo section */}
       <div className="p-6 border-b border-r border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-800">
         <div className="flex items-center gap-3">
