@@ -24,6 +24,8 @@ const MyStories: React.FC = () => {
   const [storyToDelete, setStoryToDelete] = useState<Story | null>(null);
   const [deleteCharacters, setDeleteCharacters] = useState<boolean>(true);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 6;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -228,11 +230,11 @@ const MyStories: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-10 text-center sm:text-left">
+        <div className="mb-10 text-center sm:text-left border-b border-gray-200 dark:border-gray-700 pb-8">
           <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 mb-3">
             Mis Cuentos
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl pb-2">
             Aquí encontrarás todos tus cuentos creados, tanto los completados como los que están en progreso.
           </p>
         </div>
@@ -298,7 +300,7 @@ const MyStories: React.FC = () => {
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {draftStories.map((story) => (
+              {draftStories.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((story) => (
                 <StoryCard
                   key={story.id}
                   story={story}
@@ -308,6 +310,144 @@ const MyStories: React.FC = () => {
                 />
               ))}
             </div>
+            
+            {/* Paginación Mejorada */}
+            {draftStories.length > itemsPerPage && (
+              <div className="mt-10 px-4 py-3 flex items-center justify-between sm:px-6">
+                {/* Versión Móvil */}
+                <div className="w-full sm:hidden">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Página {currentPage} de {Math.ceil(draftStories.length / itemsPerPage)}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, draftStories.length)} de {draftStories.length}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow p-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className={`flex items-center justify-center p-2 rounded-md ${
+                        currentPage === 1
+                          ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                          : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                      }`}
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      <span className="ml-1 text-sm font-medium">Anterior</span>
+                    </button>
+                    
+                    <div className="flex items-center space-x-1">
+                      <span className="px-3 py-1 text-sm font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 rounded-md">
+                        {currentPage}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400">/</span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {Math.ceil(draftStories.length / itemsPerPage)}
+                      </span>
+                    </div>
+                    
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(draftStories.length / itemsPerPage)))}
+                      disabled={currentPage === Math.ceil(draftStories.length / itemsPerPage)}
+                      className={`flex items-center justify-center p-2 rounded-md ${
+                        currentPage === Math.ceil(draftStories.length / itemsPerPage)
+                          ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                          : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                      }`}
+                    >
+                      <span className="mr-1 text-sm font-medium">Siguiente</span>
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a{' '}
+                      <span className="font-medium">
+                        {Math.min(currentPage * itemsPerPage, draftStories.length)}
+                      </span>{' '}
+                      de <span className="font-medium">{draftStories.length}</span> resultados
+                    </p>
+                  </div>
+                  <div>
+                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className={`relative inline-flex items-center px-3 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+                          currentPage === 1
+                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="sr-only">Anterior</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      
+                      {/* Números de página */}
+                      {Array.from({ length: Math.min(5, Math.ceil(draftStories.length / itemsPerPage)) }, (_, i) => {
+                        // Mostrar siempre las primeras 3 páginas, la actual y las 2 siguientes
+                        let pageNum;
+                        const totalPages = Math.ceil(draftStories.length / itemsPerPage);
+                        
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          // Mostrar páginas 1-5 si estamos en las primeras 3 páginas
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          // Mostrar las últimas 5 páginas si estamos cerca del final
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          // Mostrar 2 páginas antes y 2 después de la actual
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        if (pageNum > totalPages) return null;
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                              currentPage === pageNum
+                                ? 'z-10 bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 dark:border-indigo-600 text-indigo-600 dark:text-indigo-200'
+                                : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(draftStories.length / itemsPerPage)))}
+                        disabled={currentPage === Math.ceil(draftStories.length / itemsPerPage)}
+                        className={`relative inline-flex items-center px-3 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+                          currentPage === Math.ceil(draftStories.length / itemsPerPage)
+                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="sr-only">Siguiente</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
