@@ -33,35 +33,37 @@ const StoryCardDesktop: React.FC<StoryCardDesktopProps> = ({
   pdfUrl
 }) => {
   return (
-    <div className="hidden md:block">
+    <div className="hidden md:flex flex-col h-full">
       {/* Cover image */}
-      <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 relative overflow-hidden">
+      <div className="relative h-48 bg-gray-100 dark:bg-gray-800 flex-shrink-0">
         <StoryImage
           imageUrl={imageUrl}
           title={story.title}
           isLoading={isLoading}
           variant="desktop"
-          className="w-full h-full"
+          className="w-full h-full object-cover"
+          showTitleOverlay={false}
         />
-        
-        {/* Status badges in top right */}
-        <div className="absolute top-3 right-3">
+      </div>
+      
+      {/* Card content */}
+      <div className="flex flex-col flex-1 p-4">
+        {/* Status badge top right */}
+        <div className="flex justify-end mb-2">
           <StatusBadge
             status={story.status}
             isPurchased={isPurchased}
             variant="desktop"
           />
         </div>
-      </div>
-      
-      {/* Card content */}
-      <div className="p-5 flex flex-col min-h-[200px]">
+        
+        {/* Title and date */}
         <div className="mb-4">
-          <h3 className="text-lg font-bold text-gray-800 dark:text-white line-clamp-2 mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors min-h-[3rem] flex items-center">
+          <h3 className="text-lg font-medium text-gray-800 dark:text-white line-clamp-2 mb-1">
             {story.title || <span className="text-gray-400 italic">Sin título</span>}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-auto">
-            Creado el {new Date(story.created_at).toLocaleDateString('es-ES', { 
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {new Date(story.created_at).toLocaleDateString('es-ES', { 
               day: 'numeric', 
               month: 'long', 
               year: 'numeric' 
@@ -70,7 +72,7 @@ const StoryCardDesktop: React.FC<StoryCardDesktopProps> = ({
         </div>
         
         {/* Actions */}
-        <div className="mt-auto pt-3">
+        <div className="mt-auto pt-2">
           <ActionButtons
             story={story}
             imageUrl={imageUrl}

@@ -51,9 +51,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
         onRead={handleRead}
         onContinue={handleContinue}
         onDelete={handleDelete}
-        onDownloadPdf={handleDownloadPdf}
         isPurchased={purchaseStatus.isPurchased}
-        pdfUrl={purchaseStatus.pdfUrl}
       />
       
       <StoryCardDesktop
