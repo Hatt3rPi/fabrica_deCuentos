@@ -262,7 +262,7 @@ const MyStories: React.FC = () => {
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {completedStories.map((story) => (
                 <StoryCard
                   key={story.id}
@@ -299,7 +299,7 @@ const MyStories: React.FC = () => {
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {draftStories.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((story) => (
                 <StoryCard
                   key={story.id}
