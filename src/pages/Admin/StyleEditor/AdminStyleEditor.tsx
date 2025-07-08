@@ -490,8 +490,42 @@ const AdminStyleEditor: React.FC = () => {
   const handleComponentChange = useCallback((componentId: string, updates: Partial<ComponentConfig>) => {
     console.log('📝 Updating component:', componentId, updates);
     
-    // Validar y sanitizar actualizaciones de componente
-    const validation = validateAndSanitize({ id: componentId, ...updates }, 'component');
+    // Para actualizaciones simples como coordenadas (x, y), no validar como componente completo
+    const isSimplePositionUpdate = Object.keys(updates).every(key => ['x', 'y'].includes(key));
+    
+    if (isSimplePositionUpdate) {
+      // Validar solo que sean números válidos
+      if (typeof updates.x === 'number' && updates.x < 0) updates.x = 0;
+      if (typeof updates.y === 'number' && updates.y < 0) updates.y = 0;
+      
+      // Aplicar directamente sin validación compleja
+      setAllComponents(prev => {
+        const updatedComponents = prev.map(comp => 
+          comp.id === componentId ? { ...comp, ...updates } : comp
+        );
+        console.log('📦 Updated components (position):', updatedComponents);
+        return updatedComponents;
+      });
+      setIsDirty(true);
+      return;
+    }
+    
+    // Para actualizaciones complejas, obtener el componente completo y validar
+    const existingComponent = allComponents.find(comp => comp.id === componentId);
+    if (!existingComponent) {
+      console.error('❌ Component not found:', componentId);
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error',
+        'Componente no encontrado',
+        NotificationPriority.HIGH
+      );
+      return;
+    }
+    
+    // Crear el componente actualizado completo para validación
+    const updatedComponent = { ...existingComponent, ...updates };
+    const validation = validateAndSanitize(updatedComponent, 'component');
     
     if (!validation.isValid) {
       console.error('❌ Component validation failed:', validation.errors);
@@ -509,17 +543,17 @@ const AdminStyleEditor: React.FC = () => {
     }
 
     // Usar datos sanitizados
-    const sanitizedUpdates = validation.sanitizedData || updates;
+    const sanitizedComponent = validation.sanitizedData || updatedComponent;
     
     setAllComponents(prev => {
       const updatedComponents = prev.map(comp => 
-        comp.id === componentId ? { ...comp, ...sanitizedUpdates } : comp
+        comp.id === componentId ? sanitizedComponent : comp
       );
-      console.log('📦 Updated components:', updatedComponents);
+      console.log('📦 Updated components (validated):', updatedComponents);
       return updatedComponents;
     });
     setIsDirty(true);
-  }, [createNotification]);
+  }, [allComponents, createNotification]);
 
   // Función para manejar selección de componentes
   const handleComponentSelection = useCallback((componentId: string | null) => {
