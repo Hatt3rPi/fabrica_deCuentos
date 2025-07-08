@@ -36,6 +36,7 @@ import CreateTemplateModal from './components/CreateTemplateModal';
 import DedicatoriaImagePanel from './components/DedicatoriaImagePanel';
 import ComponentsPanel from './components/ComponentsPanel';
 import ContentEditorPanel from './components/ContentEditorPanel';
+import BackgroundImagesPanel from './components/BackgroundImagesPanel';
 import { useStyleAdapter, SelectionTarget } from '../../../hooks/useStyleAdapter';
 
 // Texto de muestra para preview
@@ -872,9 +873,6 @@ const AdminStyleEditor: React.FC = () => {
                 <Settings className="w-4 h-4 inline mr-1" />
                 Contenedor
               </button>
-            </div>
-
-            <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
               <button
                 onClick={() => setActivePanel('images')}
                 className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -884,33 +882,10 @@ const AdminStyleEditor: React.FC = () => {
                 }`}
               >
                 <Image className="w-4 h-4 inline mr-1" />
-                Fondo
-              </button>
-              {currentPageType === 'dedicatoria' && (
-                <button
-                  onClick={() => setActivePanel('userImage')}
-                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activePanel === 'userImage'
-                      ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
-                >
-                  <Image className="w-4 h-4 inline mr-1" />
-                  Usuario
-                </button>
-              )}
-              <button
-                onClick={() => setActivePanel('text')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'text'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Type className="w-4 h-4 inline mr-1" />
-                Texto
+                Imágenes
               </button>
             </div>
+
 
             {/* Active Panel Content */}
             {activePanel === 'components' && (
@@ -925,11 +900,70 @@ const AdminStyleEditor: React.FC = () => {
               />
             )}
 
-            {activePanel === 'content' && selectedTarget.type === 'component' && selectedTarget.componentId && (
-              <ContentEditorPanel
-                component={allComponents.find(c => c.id === selectedTarget.componentId)!}
-                onUpdate={(updates) => handleComponentChange(selectedTarget.componentId!, updates)}
-              />
+            {activePanel === 'content' && (
+              <>
+                {selectedTarget.type === 'component' && selectedTarget.componentId ? (
+                  <ContentEditorPanel
+                    component={allComponents.find(c => c.id === selectedTarget.componentId)!}
+                    onUpdate={(updates) => handleComponentChange(selectedTarget.componentId!, updates)}
+                  />
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        <strong>Textos de Muestra:</strong> Estos textos se muestran en el preview para visualizar los estilos. 
+                        Para editar contenido real, crea componentes de texto usando el panel "Componentes".
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Texto de muestra para {currentPageType === 'cover' ? 'Portada' : currentPageType === 'page' ? 'Interior' : 'Dedicatoria'}
+                      </label>
+                      <textarea
+                        value={
+                          currentPageType === 'cover' ? customCoverText :
+                          currentPageType === 'page' ? customPageText :
+                          customDedicatoriaText
+                        }
+                        onChange={(e) => {
+                          if (currentPageType === 'cover') {
+                            setCustomCoverText(e.target.value);
+                          } else if (currentPageType === 'page') {
+                            setCustomPageText(e.target.value);
+                          } else {
+                            setCustomDedicatoriaText(e.target.value);
+                          }
+                        }}
+                        placeholder="Texto de muestra para visualizar estilos..."
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical"
+                      />
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        const defaultText = 
+                          currentPageType === 'cover' ? SAMPLE_TEXTS.cover :
+                          currentPageType === 'page' ? SAMPLE_TEXTS.page :
+                          SAMPLE_TEXTS.dedicatoria;
+                        
+                        if (currentPageType === 'cover') {
+                          setCustomCoverText(defaultText);
+                        } else if (currentPageType === 'page') {
+                          setCustomPageText(defaultText);
+                        } else {
+                          setCustomDedicatoriaText(defaultText);
+                        }
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
+                    >
+                      <Type className="w-4 h-4" />
+                      Restaurar texto por defecto
+                    </button>
+                  </div>
+                )}
+              </>
             )}
 
             {activePanel === 'typography' && activeConfig && styleAdapter.selectionInfo.canEdit.typography && (
@@ -1014,46 +1048,19 @@ const AdminStyleEditor: React.FC = () => {
             )}
             
             {activePanel === 'images' && (
-              <div className="space-y-6">
-                <ImageUploader
-                  currentImage={customCoverImage}
-                  onImageChange={setCustomCoverImage}
-                  label="Imagen de fondo para Portada"
-                  pageType="cover"
-                />
-                <ImageUploader
-                  currentImage={customPageImage}
-                  onImageChange={setCustomPageImage}
-                  label="Imagen de fondo para Páginas Interiores"
-                  pageType="page"
-                />
-                <ImageUploader
-                  currentImage={customDedicatoriaImage}
-                  onImageChange={setCustomDedicatoriaImage}
-                  label="Imagen de fondo para Dedicatoria"
-                  pageType="dedicatoria"
-                />
-              </div>
-            )}
-            
-            {activePanel === 'userImage' && currentPageType === 'dedicatoria' && activeConfig?.dedicatoriaConfig && (
-              <DedicatoriaImagePanel
-                config={activeConfig.dedicatoriaConfig}
-                onChange={updateDedicatoriaConfig}
-              />
-            )}
-            
-            {activePanel === 'text' && (
-              <TextEditor
-                coverText={customCoverText}
-                pageText={customPageText}
-                dedicatoriaText={customDedicatoriaText}
-                onCoverTextChange={setCustomCoverText}
-                onPageTextChange={setCustomPageText}
-                onDedicatoriaTextChange={setCustomDedicatoriaText}
+              <BackgroundImagesPanel
+                customCoverImage={customCoverImage}
+                customPageImage={customPageImage}
+                customDedicatoriaImage={customDedicatoriaImage}
+                onCoverImageChange={setCustomCoverImage}
+                onPageImageChange={setCustomPageImage}
+                onDedicatoriaImageChange={setCustomDedicatoriaImage}
                 currentPageType={currentPageType}
+                onAddComponent={handleAddComponent}
               />
             )}
+            
+            
           </div>
         </div>
 

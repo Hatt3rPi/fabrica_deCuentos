@@ -60,6 +60,15 @@
   - Feedback inmediato al redimensionar imágenes dinámicas
   - Integración completa con useStyleAdapter para persistencia de cambios
 
+- **Migración de paneles a sistema de componentes**
+  - **Panel "Usuario" deprecado**: Eliminado completamente para dedicatorias
+  - **Panel "Texto" migrado**: Funcionalidad integrada en panel "Contenido"
+  - **Panel "Fondo" rediseñado**: Convertido en panel "Imágenes" con creación de componentes
+  - **Navegación simplificada**: Reorganizada de 3 filas a 2 filas de tabs
+  - **BackgroundImagesPanel**: Nuevo componente para crear imágenes de fondo como componentes
+  - **ContentEditorPanel expandido**: Ahora incluye edición de textos de muestra
+  - **Nuevos campos en tipos**: `isBackground` y `zIndex` para componentes de imagen
+
 ## [2025-07-02] - Fix: Acceso Público para Descarga de PDFs
 
 ### 🔧 Corrección

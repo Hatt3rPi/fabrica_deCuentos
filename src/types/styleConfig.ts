@@ -260,12 +260,14 @@ export interface ImageComponentConfig extends ComponentConfig {
   objectFit?: 'cover' | 'contain' | 'fill' | 'scale-down' | 'none';
   size?: 'small' | 'medium' | 'large' | 'custom';
   imageType: 'fixed' | 'dynamic';
+  isBackground?: boolean; // Marcar si es imagen de fondo
   style?: {
     borderRadius?: string;
     opacity?: number;
     border?: string;
     boxShadow?: string;
     backdropFilter?: string;
+    zIndex?: number; // Para controlar orden de capas
   };
 }
 
