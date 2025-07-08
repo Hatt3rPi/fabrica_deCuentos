@@ -460,10 +460,10 @@ class StyleConfigService {
       }
 
       // Imagen de fallback si no hay imágenes
-      return 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&h=800&fit=crop';
+      return 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/pagina_interior.png';
     } catch (error) {
       console.error('Error fetching sample image:', error);
-      return 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&h=800&fit=crop';
+      return 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/pagina_interior.png';
     }
   }
 
@@ -487,10 +487,10 @@ class StyleConfigService {
       }
 
       // Imagen de fallback específica para portadas
-      return 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&h=800&fit=crop';
+      return 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/portada.png';
     } catch (error) {
       console.error('Error fetching cover sample image:', error);
-      return 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&h=800&fit=crop';
+      return 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/portada.png';
     }
   }
 
@@ -504,7 +504,6 @@ class StyleConfigService {
         .select('image_url')
         .not('image_url', 'is', null)
         .gt('page_number', 0) // Solo páginas interiores
-        .neq('page_type', 'dedicatoria') // Excluir dedicatorias si existe esta columna
         .limit(20);
 
       if (error) throw error;
@@ -515,10 +514,10 @@ class StyleConfigService {
       }
 
       // Imagen de fallback específica para páginas interiores
-      return 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&h=800&fit=crop';
+      return 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/pagina_interior.png';
     } catch (error) {
       console.error('Error fetching page sample image:', error);
-      return 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&h=800&fit=crop';
+      return 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/pagina_interior.png';
     }
   }
 
@@ -531,7 +530,7 @@ class StyleConfigService {
         .from('story_pages')
         .select('image_url')
         .not('image_url', 'is', null)
-        .eq('page_type', 'dedicatoria') // Solo dedicatorias si existe esta columna
+        .gt('page_number', 0) // Usar las mismas páginas interiores para dedicatorias
         .limit(10);
 
       if (error) throw error;
@@ -541,11 +540,11 @@ class StyleConfigService {
         return data[randomIndex].image_url;
       }
 
-      // Imagen de fallback específica para dedicatoria (más suave/emotiva)
-      return 'https://images.unsplash.com/photo-1444927714506-8492d94b5ba0?w=1200&h=800&fit=crop';
+      // Imagen de fallback específica para dedicatoria
+      return 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/dedicatoria.png';
     } catch (error) {
       console.error('Error fetching dedicatoria sample image:', error);
-      return 'https://images.unsplash.com/photo-1444927714506-8492d94b5ba0?w=1200&h=800&fit=crop';
+      return 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/dedicatoria.png';
     }
   }
 

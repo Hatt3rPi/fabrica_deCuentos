@@ -202,16 +202,19 @@ export const useNotifications = () => {
     );
     
     // Add notification listener for in-app notifications
-    notificationService.addNotificationListener((notification) => {
+    const notificationListener = (notification) => {
       // Handle in-app notification display
       console.log('New notification received:', notification);
       // You could trigger a toast or other UI element here
-    });
+    };
+    
+    notificationService.addNotificationListener(notificationListener);
     
     return () => {
       unsubscribe();
+      notificationService.removeNotificationListener(notificationListener);
     };
-  }, [user, fetchNotifications]);
+  }, [user]); // Removida dependencia de fetchNotifications para evitar loops
 
   return {
     notifications,

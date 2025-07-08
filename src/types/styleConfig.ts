@@ -100,6 +100,7 @@ export interface StyleTemplate {
     cover_config: CoverConfig;
     page_config: PageConfig;
     dedicatoria_config?: DedicatoriaConfig;
+    components?: ComponentConfig[];
   };
   customImages?: {
     cover_url?: string;
@@ -210,4 +211,393 @@ export function convertContainerToReactStyle(containerStyle: ContainerStyle): Re
     boxShadow: containerStyle.boxShadow,
     backdropFilter: containerStyle.backdropFilter,
   };
+}
+
+// Tipos para componentes dinámicos
+export interface ComponentConfig {
+  id: string;
+  name: string;
+  type: 'text' | 'image';
+  pageType: 'cover' | 'page' | 'dedicatoria';
+  position: 'top' | 'center' | 'bottom';
+  horizontalPosition: 'left' | 'center' | 'right';
+  // Posicionamiento preciso en píxeles (opcional, tiene prioridad sobre position/horizontalPosition)
+  x?: number;
+  y?: number;
+  zIndex?: number;
+  visible?: boolean;
+  isDefault?: boolean; // Marca componentes por defecto (título, texto principal, etc.)
+}
+
+export interface TextComponentConfig extends ComponentConfig {
+  type: 'text';
+  content: string;
+  isDefault?: boolean;
+  style?: {
+    fontSize?: string;
+    fontFamily?: string;
+    fontWeight?: string;
+    color?: string;
+    textAlign?: string;
+    textShadow?: string;
+    lineHeight?: string;
+    letterSpacing?: string;
+    textTransform?: string;
+    backgroundColor?: string;
+    borderRadius?: string;
+    padding?: string;
+    opacity?: number;
+    border?: string;
+    boxShadow?: string;
+    backdropFilter?: string;
+  };
+}
+
+export interface ImageComponentConfig extends ComponentConfig {
+  type: 'image';
+  url?: string;
+  width?: string;
+  height?: string;
+  objectFit?: 'cover' | 'contain' | 'fill' | 'scale-down' | 'none';
+  size?: 'small' | 'medium' | 'large' | 'custom';
+  imageType: 'fixed' | 'dynamic';
+  isBackground?: boolean; // Marcar si es imagen de fondo
+  style?: {
+    borderRadius?: string;
+    opacity?: number;
+    border?: string;
+    boxShadow?: string;
+    backdropFilter?: string;
+    zIndex?: number; // Para controlar orden de capas
+  };
+}
+
+// Componentes por defecto para elementos principales
+export const DEFAULT_COMPONENTS = {
+  cover: [
+    {
+      id: 'cover-background',
+      name: 'Fondo de Portada',
+      type: 'image' as const,
+      pageType: 'cover' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      x: 0,
+      y: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      size: 'custom',
+      imageType: 'fixed' as const,
+      isBackground: true,
+      zIndex: -1,
+      visible: true,
+      url: 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/portada.png',
+      style: {
+        opacity: 1,
+        borderRadius: '0px'
+      }
+    },
+    {
+      id: 'cover-title',
+      name: 'Título del Cuento',
+      type: 'text' as const,
+      pageType: 'cover' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      zIndex: 10,
+      visible: true,
+      content: '',
+      isDefault: true, // Marca este como componente por defecto
+      style: {
+        fontSize: '4rem',
+        fontFamily: 'Indie Flower',
+        fontWeight: 'bold',
+        color: '#ffffff',
+        textAlign: 'center',
+        textShadow: '3px 3px 6px rgba(0,0,0,0.8)',
+        backgroundColor: 'transparent',
+        padding: '2rem 3rem',
+        borderRadius: '0'
+      }
+    }
+  ],
+  page: [
+    {
+      id: 'page-background',
+      name: 'Fondo de Página Interior',
+      type: 'image' as const,
+      pageType: 'page' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      x: 0,
+      y: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      size: 'custom',
+      imageType: 'fixed' as const,
+      isBackground: true,
+      zIndex: -1,
+      visible: true,
+      url: 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/pagina_interior.png',
+      style: {
+        opacity: 1,
+        borderRadius: '0px'
+      }
+    },
+    {
+      id: 'page-text',
+      name: 'Texto del Cuento',
+      type: 'text' as const,
+      pageType: 'page' as const,
+      position: 'bottom' as const,
+      horizontalPosition: 'center' as const,
+      zIndex: 10,
+      visible: true,
+      content: '',
+      isDefault: true,
+      style: {
+        fontSize: '2.2rem',
+        fontFamily: 'Indie Flower',
+        fontWeight: '600',
+        color: '#ffffff',
+        textAlign: 'center',
+        textShadow: '3px 3px 6px rgba(0,0,0,0.9)',
+        lineHeight: '1.4',
+        backgroundColor: 'transparent',
+        padding: '1rem 2rem 6rem 2rem'
+      }
+    }
+  ],
+  dedicatoria: [
+    {
+      id: 'dedicatoria-background',
+      name: 'Fondo de Dedicatoria',
+      type: 'image' as const,
+      pageType: 'dedicatoria' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      x: 0,
+      y: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      size: 'custom',
+      imageType: 'fixed' as const,
+      isBackground: true,
+      zIndex: -1,
+      visible: true,
+      url: 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/dedicatoria.png',
+      style: {
+        opacity: 1,
+        borderRadius: '0px'
+      }
+    },
+    {
+      id: 'dedicatoria-text',
+      name: 'Texto de Dedicatoria',
+      type: 'text' as const,
+      pageType: 'dedicatoria' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      zIndex: 10,
+      visible: true,
+      content: '',
+      isDefault: true,
+      style: {
+        fontSize: '2rem',
+        fontFamily: 'Indie Flower',
+        fontWeight: '500',
+        color: '#4a5568',
+        textAlign: 'center',
+        textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        lineHeight: '1.6',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        padding: '2rem 3rem',
+        borderRadius: '1rem',
+        border: '1px solid rgba(0,0,0,0.1)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+      }
+    }
+  ]
+};
+
+// Presets para casos de uso comunes
+export const COMPONENT_PRESETS = {
+  text: {
+    author: {
+      name: 'Autor del libro',
+      content: 'Por [Nombre del Autor]',
+      style: {
+        fontSize: '1.5rem',
+        fontFamily: 'Inter, sans-serif',
+        fontWeight: '400',
+        color: '#ffffff',
+        textAlign: 'center',
+        textShadow: '2px 2px 4px rgba(0,0,0,0.6)'
+      },
+      position: 'bottom' as const,
+      horizontalPosition: 'center' as const
+    },
+    subtitle: {
+      name: 'Subtítulo',
+      content: 'Una historia mágica',
+      style: {
+        fontSize: '1.8rem',
+        fontFamily: 'Inter, sans-serif',
+        fontWeight: '300',
+        color: '#ffffff',
+        textAlign: 'center',
+        textShadow: '2px 2px 4px rgba(0,0,0,0.6)'
+      },
+      position: 'center' as const,
+      horizontalPosition: 'center' as const
+    }
+  },
+  image: {
+    logo: {
+      name: 'Logo/Marca',
+      imageType: 'fixed' as const,
+      size: 'small' as const,
+      objectFit: 'contain' as const,
+      position: 'top' as const,
+      horizontalPosition: 'right' as const,
+      style: {
+        opacity: 0.8
+      }
+    },
+    userImageReference: {
+      name: 'Imagen de usuario (referencia)',
+      imageType: 'dynamic' as const,
+      size: 'medium' as const,
+      objectFit: 'cover' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      style: {
+        borderRadius: '1rem',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+      }
+    }
+  }
+};
+
+// Tipo para especificar página
+export type PageType = 'cover' | 'page' | 'dedicatoria';
+
+// Helper para crear componentes por defecto
+export function createDefaultComponents(pageType: PageType): ComponentConfig[] {
+  const defaults = DEFAULT_COMPONENTS[pageType] || [];
+  return defaults.map(component => ({
+    ...component,
+    id: `${component.id}-${Date.now()}` // Asegurar IDs únicos
+  }));
+}
+
+// Helper para asegurar que componentes de fondo existen
+export function ensureBackgroundComponents(
+  existingComponents: ComponentConfig[], 
+  pageType: PageType
+): ComponentConfig[] {
+  const backgroundId = `${pageType}-background`;
+  
+  // Filtrar componentes de fondo existentes para evitar duplicados
+  const nonBackgroundComponents = existingComponents.filter(c => !c.isBackground);
+  const hasBackground = existingComponents.some(c => c.isBackground);
+  
+  if (!hasBackground) {
+    const backgroundComponent = DEFAULT_COMPONENTS[pageType]?.find(c => c.isBackground);
+    if (backgroundComponent) {
+      return [
+        {
+          ...backgroundComponent,
+          id: backgroundId
+        },
+        ...nonBackgroundComponents
+      ];
+    }
+  }
+  
+  return existingComponents;
+}
+
+// Helper para migrar configuración antigua a componentes
+export function migrateConfigToComponents(
+  config: StoryStyleConfig, 
+  pageType: PageType, 
+  sampleText: string
+): TextComponentConfig {
+  const defaultComponent = DEFAULT_COMPONENTS[pageType]?.[0];
+  
+  if (!defaultComponent) {
+    throw new Error(`No default component found for page type: ${pageType}`);
+  }
+
+  let migratedStyle = { ...defaultComponent.style };
+  
+  // Migrar estilos de la configuración antigua
+  if (pageType === 'cover' && config.coverConfig?.title) {
+    const titleConfig = config.coverConfig.title;
+    migratedStyle = {
+      ...migratedStyle,
+      fontSize: titleConfig.fontSize,
+      fontFamily: titleConfig.fontFamily,
+      fontWeight: titleConfig.fontWeight,
+      color: titleConfig.color,
+      textAlign: titleConfig.textAlign,
+      textShadow: titleConfig.textShadow,
+      letterSpacing: titleConfig.letterSpacing,
+      textTransform: titleConfig.textTransform,
+      backgroundColor: titleConfig.containerStyle.background,
+      padding: titleConfig.containerStyle.padding,
+      borderRadius: titleConfig.containerStyle.borderRadius,
+      border: titleConfig.containerStyle.border,
+      boxShadow: titleConfig.containerStyle.boxShadow
+    };
+  } else if (pageType === 'page' && config.pageConfig?.text) {
+    const textConfig = config.pageConfig.text;
+    migratedStyle = {
+      ...migratedStyle,
+      fontSize: textConfig.fontSize,
+      fontFamily: textConfig.fontFamily,
+      fontWeight: textConfig.fontWeight,
+      color: textConfig.color,
+      textAlign: textConfig.textAlign,
+      textShadow: textConfig.textShadow,
+      lineHeight: textConfig.lineHeight,
+      letterSpacing: textConfig.letterSpacing,
+      textTransform: textConfig.textTransform,
+      backgroundColor: textConfig.containerStyle.background,
+      padding: textConfig.containerStyle.padding,
+      borderRadius: textConfig.containerStyle.borderRadius,
+      border: textConfig.containerStyle.border,
+      boxShadow: textConfig.containerStyle.boxShadow
+    };
+  } else if (pageType === 'dedicatoria' && config.dedicatoriaConfig?.text) {
+    const textConfig = config.dedicatoriaConfig.text;
+    migratedStyle = {
+      ...migratedStyle,
+      fontSize: textConfig.fontSize,
+      fontFamily: textConfig.fontFamily,
+      fontWeight: textConfig.fontWeight,
+      color: textConfig.color,
+      textAlign: textConfig.textAlign,
+      textShadow: textConfig.textShadow,
+      lineHeight: textConfig.lineHeight,
+      letterSpacing: textConfig.letterSpacing,
+      textTransform: textConfig.textTransform,
+      backgroundColor: textConfig.containerStyle.background,
+      padding: textConfig.containerStyle.padding,
+      borderRadius: textConfig.containerStyle.borderRadius,
+      border: textConfig.containerStyle.border,
+      boxShadow: textConfig.containerStyle.boxShadow
+    };
+  }
+
+  return {
+    ...defaultComponent,
+    id: `${defaultComponent.id}-migrated-${Date.now()}`,
+    content: sampleText,
+    style: migratedStyle
+  } as TextComponentConfig;
 }
