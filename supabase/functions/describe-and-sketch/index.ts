@@ -177,19 +177,17 @@ const enabled = await isActivityEnabled(STAGE, ACTIVITY);
         arr[i] = binaryString.charCodeAt(i);
       }
       refBuf = arr.buffer;
-
-      const imgRes = await fetch(thumbnailUrl);
-      if (!imgRes.ok) {
-        throw new Error(`No se pudo descargar la imagen generada: ${imgRes.status}`);
-      }
-      const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
-      const imgMime = imgRes.headers.get('content-type') || 'image/jpeg';
-      thumbnailUrl = `data:${imgMime};base64,${base64Encode(imgBuf)}`;
-      console.log('[describe-and-sketch] [Generación de imagen] [OUT] ', thumbnailUrl);
     }
     // Si no es data URI ni base64, asumimos que es una URL HTTP/S
     else {
-      const refRes = await fetch(imageBase64!);
+      // Convertir URL localhost a URL interna de Docker para desarrollo local
+      let processedImageUrl = imageBase64!;
+      if (imageBase64!.includes('127.0.0.1:54321') || imageBase64!.includes('localhost:54321')) {
+        processedImageUrl = imageBase64!.replace('http://127.0.0.1:54321', 'http://supabase_kong_supabase:8000')
+                                       .replace('http://localhost:54321', 'http://supabase_kong_supabase:8000');
+      }
+      
+      const refRes = await fetch(processedImageUrl);
       if (!refRes.ok) {
         throw new Error(`No se pudo descargar la imagen de referencia: ${refRes.status}`);
       }

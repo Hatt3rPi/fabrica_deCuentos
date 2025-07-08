@@ -99,7 +99,14 @@ const enabled = await isActivityEnabled(STAGE, ACTIVITY);
       input: { imageUrl, promptType, storyId, styleKey }
     });
 
-    const imgRes = await fetch(imageUrl);
+    // Convertir URL localhost a URL interna de Docker para desarrollo local
+    let processedImageUrl = imageUrl;
+    if (imageUrl.includes('127.0.0.1:54321') || imageUrl.includes('localhost:54321')) {
+      processedImageUrl = imageUrl.replace('http://127.0.0.1:54321', 'http://supabase_kong_supabase:8000')
+                                 .replace('http://localhost:54321', 'http://supabase_kong_supabase:8000');
+    }
+
+    const imgRes = await fetch(processedImageUrl);
     if (!imgRes.ok) {
       throw new Error(`Failed to download image: ${imgRes.status}`);
     }

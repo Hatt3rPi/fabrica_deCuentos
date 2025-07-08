@@ -41,9 +41,17 @@ const handleOpenAIError = (error)=>{
 async function fetchImageAsBase64(imageUrl) {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    
+    // Convertir URL localhost a URL interna de Docker para desarrollo local
+    let processedImageUrl = imageUrl;
+    if (imageUrl.includes('127.0.0.1:54321') || imageUrl.includes('localhost:54321')) {
+      processedImageUrl = imageUrl.replace('http://127.0.0.1:54321', 'http://supabase_kong_supabase:8000')
+                                   .replace('http://localhost:54321', 'http://supabase_kong_supabase:8000');
+    }
+    
     // 1) URL externa → fetch directo
-    if (!imageUrl.includes(supabaseUrl)) {
-      const response = await fetch(imageUrl);
+    if (!processedImageUrl.includes(supabaseUrl)) {
+      const response = await fetch(processedImageUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
       }
@@ -54,7 +62,7 @@ async function fetchImageAsBase64(imageUrl) {
       return `data:${contentType};base64,${base64}`;
     }
     // 2) URL de Supabase Storage → descarga vía SDK
-    const url = new URL(imageUrl);
+    const url = new URL(processedImageUrl);
     const parts = url.pathname.split('/');
     const publicIndex = parts.indexOf('public');
     if (publicIndex === -1 || publicIndex + 2 >= parts.length) {

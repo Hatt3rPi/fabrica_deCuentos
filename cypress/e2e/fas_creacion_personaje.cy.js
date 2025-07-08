@@ -17,8 +17,9 @@ it('lacuenteria.cl', function() {
   ==== End Cypress Studio ==== */
  /* ==== Generated with Cypress Studio ==== */
  cy.get('[data-testid="create-new-story"] > .text-sm').click();
- cy.get('[data-testid="character-card-b3f4f1f1-1cad-4927-ad75-7c9130aa734f"]').click();
- cy.get('.aspect-square > .w-full').click();
+ cy.get('[data-testid="character-card-df1eb4e2-6b1a-4936-bb2e-048221cc0693"]').click();
+ //cy.get('.aspect-square > .w-full').click();
+ cy.get('[data-testid="close-character-modal"]').click();
  cy.get('[data-testid="wizard-next-button"]').click();
  cy.get('[data-testid="story-theme"]').click();
  cy.get('[data-testid="story-theme"]').clear();

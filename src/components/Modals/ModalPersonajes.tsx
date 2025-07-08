@@ -154,6 +154,7 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
           </h2>
           <button
             onClick={onClose}
+            data-testid="close-character-modal"
             className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
           >
             <X className="w-5 h-5" />
