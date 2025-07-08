@@ -230,37 +230,87 @@ const MyStories: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-10 text-center sm:text-left border-b border-gray-200 dark:border-gray-700 pb-8">
-          <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 mb-3">
-            Mis Cuentos
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl pb-2">
-            Aquí encontrarás todos tus cuentos creados, tanto los completados como los que están en progreso.
-          </p>
+        <div className="mb-10 p-8 rounded-lg relative overflow-hidden bg-amber-50 dark:bg-amber-900/20 shadow-md hover:shadow-lg transition-shadow duration-300 border border-amber-100 dark:border-amber-800/30">
+          {/* Textura de papel sutil */}
+          <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{
+            backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M54 24c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2h44c1.1 0 2 .9 2 2v16z\' fill=\'%239C92AC\' fill-opacity=\'0.08\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
+            backgroundSize: '60px 60px'
+          }} />
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-center sm:justify-start mb-4">
+              <BookOpen className="text-amber-600 dark:text-amber-400 mr-3 w-8 h-8 md:w-10 md:h-10" />
+              <h1 className="text-4xl md:text-5xl font-serif font-bold text-amber-900 dark:text-amber-50 tracking-tight">
+                Mis Cuentos
+              </h1>
+            </div>
+            <div className="w-24 h-1 bg-gradient-to-r from-amber-400 to-amber-600 mb-6 mx-auto sm:mx-0" />
+            <p className="text-lg text-amber-800/90 dark:text-amber-100/90 max-w-2xl pb-2 font-medium italic text-center sm:text-left">
+              Aquí encontrarás todos tus cuentos creados, tanto los completados como los que están en progreso.
+            </p>
+          </div>
+          
+          {/* Esquina doblada */}
+          <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-amber-200 dark:bg-amber-800/40 transform rotate-45 origin-top-right -translate-y-1/2 translate-x-1/2" />
+          </div>
         </div>
 
         {/* Sección de Cuentos Completados */}
         {completedStories.length > 0 && (
           <div className="mb-16">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
-                  <BookOpen className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-                    Cuentos Completados
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Disfruta de tus historias finalizadas
-                  </p>
+            <div className="relative bg-amber-50/80 dark:bg-amber-900/10 rounded-xl p-4 sm:p-5 mb-8 shadow-[0_4px_12px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.1),0_2px_4px_rgba(0,0,0,0.12)] transition-all duration-300 group/section max-w-3xl mx-auto">
+              {/* Textura de papel sutil */}
+              <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{
+                backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M54 24c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2h44c1.1 0 2 .9 2 2v16z\' fill=\'%239C92AC\' fill-opacity=\'0.08\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
+                backgroundSize: '60px 60px',
+                borderRadius: '0.5rem'
+              }} />
+              
+              <div className="relative z-10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-start sm:items-center gap-4">
+                    <div className="relative p-2.5 bg-green-50 dark:bg-green-900/20 rounded-lg shadow-[inset_0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.05)] group-hover/section:rotate-1 transition-all duration-300 flex-shrink-0">
+                      <BookOpen className="w-7 h-7 text-green-600 dark:text-green-400" />
+                      {/* Checkmark */}
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 dark:bg-green-600 rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check">
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-3 mb-1">
+                        <h2 className="text-xl sm:text-2xl font-bold text-amber-900 dark:text-amber-50 font-serif tracking-tight relative">
+                          Cuentos Completados
+                          <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-green-400 to-green-200 dark:from-green-500 dark:to-green-300 rounded-full" />
+                        </h2>
+                        <span className="hidden sm:flex items-center gap-1 text-green-600 dark:text-green-400">
+                          <span className="w-2 h-2 rounded-full bg-green-400 dark:bg-green-500 animate-pulse" />
+                          <span className="text-xs font-medium">Completado</span>
+                        </span>
+                      </div>
+                      <p className="text-sm text-amber-700/90 dark:text-amber-200/80 italic font-medium">
+                        Disfruta de tus historias finalizadas
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1.5 bg-gradient-to-r from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-800/20 text-amber-800 dark:text-amber-200 rounded-lg text-sm font-medium border border-amber-200/80 dark:border-amber-700/50 shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all duration-200 flex items-center gap-1.5 group-hover/section:translate-x-1">
+                      <span className="font-bold text-amber-700 dark:text-amber-300">{completedStories.length}</span>
+                      <span className="hidden sm:inline">{completedStories.length === 1 ? 'cuento' : 'cuentos'}</span>
+                      <span className="sm:hidden">{completedStories.length === 1 ? 'historia' : 'historias'}</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-4 h-4 opacity-70 group-hover/section:translate-x-1 transition-transform">
+                        <path d="m9 18 6-6-6-6"/>
+                      </svg>
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-sm font-medium border border-green-200 dark:border-green-800">
-                  {completedStories.length} {completedStories.length === 1 ? 'cuento' : 'cuentos'}
-                </span>
-              </div>
+              
+              {/* Barra indicadora de estado */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/3 h-1 bg-gradient-to-r from-green-400 to-green-300 dark:from-green-500 dark:to-green-400 rounded-full" />
             </div>
             <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {completedStories.map((story) => (
@@ -279,25 +329,59 @@ const MyStories: React.FC = () => {
         {/* Sección de Borradores */}
         {draftStories.length > 0 && (
           <div className="mt-16">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                  <PenTool className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-                    En Progreso
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Continúa creando tus historias
-                  </p>
+            <div className="relative bg-amber-50/80 dark:bg-amber-900/10 rounded-xl p-4 sm:p-5 mb-8 shadow-[0_4px_12px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.1),0_2px_4px_rgba(0,0,0,0.12)] transition-all duration-300 group/section-draft max-w-3xl mx-auto">
+              {/* Textura de papel sutil */}
+              <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{
+                backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M54 24c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2h44c1.1 0 2 .9 2 2v16z\' fill=\'%239C92AC\' fill-opacity=\'0.08\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
+                backgroundSize: '60px 60px',
+                borderRadius: '0.5rem'
+              }} />
+              
+              <div className="relative z-10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-start sm:items-center gap-4">
+                    <div className="relative p-2.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg shadow-[inset_0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.05)] group-hover/section-draft:rotate-1 transition-all duration-300 flex-shrink-0">
+                      <PenTool className="w-7 h-7 text-amber-600 dark:text-amber-400" />
+                      {/* Indicador de borrador */}
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 dark:bg-amber-600 rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pen-tool">
+                          <path d="m12 19 7-7 3 3-7 7-3-3z" />
+                          <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-3 mb-1">
+                        <h2 className="text-xl sm:text-2xl font-bold text-amber-900 dark:text-amber-50 font-serif tracking-tight relative">
+                          En Progreso
+                          <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-amber-400 to-amber-200 dark:from-amber-500 dark:to-amber-300 rounded-full" />
+                        </h2>
+                        <span className="hidden sm:flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                          <span className="w-2 h-2 rounded-full bg-amber-400 dark:bg-amber-500 animate-pulse" />
+                          <span className="text-xs font-medium">Borrador</span>
+                        </span>
+                      </div>
+                      <p className="text-sm text-amber-700/90 dark:text-amber-200/80 italic font-medium">
+                        Continúa creando tus historias
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1.5 bg-gradient-to-r from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-800/20 text-amber-800 dark:text-amber-200 rounded-lg text-sm font-medium border border-amber-200/80 dark:border-amber-700/50 shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all duration-200 flex items-center gap-1.5 group-hover/section-draft:translate-x-1">
+                      <span className="font-bold text-amber-700 dark:text-amber-300">{draftStories.length}</span>
+                      <span className="hidden sm:inline">{draftStories.length === 1 ? 'borrador' : 'borradores'}</span>
+                      <span className="sm:hidden">{draftStories.length === 1 ? 'historia' : 'historias'}</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-4 h-4 opacity-70 group-hover/section-draft:translate-x-1 transition-transform">
+                        <path d="m9 18 6-6-6-6"/>
+                      </svg>
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-full text-sm font-medium border border-amber-200 dark:border-amber-800">
-                  {draftStories.length} {draftStories.length === 1 ? 'borrador' : 'borradores'}
-                </span>
-              </div>
+              
+              {/* Barra indicadora de estado */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/3 h-1 bg-gradient-to-r from-amber-400 to-amber-300 dark:from-amber-500 dark:to-amber-400 rounded-full" />
             </div>
             <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {draftStories.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((story) => (
@@ -316,36 +400,37 @@ const MyStories: React.FC = () => {
               <div className="mt-10 px-4 py-3 flex items-center justify-between sm:px-6">
                 {/* Versión Móvil */}
                 <div className="w-full sm:hidden">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Página {currentPage} de {Math.ceil(draftStories.length / itemsPerPage)}
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <p className="text-xs font-medium text-brown-700/90 dark:text-brown-200/80">
+                      Página <span className="font-bold">{currentPage}</span> de <span className="font-bold">{Math.ceil(draftStories.length / itemsPerPage)}</span>
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, draftStories.length)} de {draftStories.length}
+                    <p className="text-xs font-medium text-brown-700/90 dark:text-brown-200/80">
+                      <span className="font-bold">{(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, draftStories.length)}</span> de <span className="font-bold">{draftStories.length}</span>
                     </p>
                   </div>
-                  <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow p-2">
+                  
+                  <div className="flex items-center justify-between bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-sm border border-brown-200 dark:border-brown-900/50 p-1.5">
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className={`flex items-center justify-center p-2 rounded-md ${
+                      className={`flex items-center justify-center p-2 rounded-lg transition-colors duration-200 ${
                         currentPage === 1
-                          ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                          : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                          ? 'text-brown-300 dark:text-brown-800 cursor-not-allowed'
+                          : 'text-brown-700 dark:text-brown-300 active:bg-brown-100 dark:active:bg-brown-900/20 active:scale-95'
                       }`}
                     >
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                       </svg>
                       <span className="ml-1 text-sm font-medium">Anterior</span>
                     </button>
                     
-                    <div className="flex items-center space-x-1">
-                      <span className="px-3 py-1 text-sm font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 rounded-md">
+                    <div className="flex items-center space-x-2 bg-brown-50/50 dark:bg-brown-900/10 rounded-lg px-3 py-1.5 border border-brown-100 dark:border-brown-800/30">
+                      <span className="text-sm font-bold text-brown-800 dark:text-brown-200">
                         {currentPage}
                       </span>
-                      <span className="text-gray-500 dark:text-gray-400">/</span>
-                      <span className="text-gray-500 dark:text-gray-400">
+                      <span className="text-brown-500 dark:text-brown-500">/</span>
+                      <span className="text-sm font-medium text-brown-600 dark:text-brown-400">
                         {Math.ceil(draftStories.length / itemsPerPage)}
                       </span>
                     </div>
@@ -353,93 +438,135 @@ const MyStories: React.FC = () => {
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(draftStories.length / itemsPerPage)))}
                       disabled={currentPage === Math.ceil(draftStories.length / itemsPerPage)}
-                      className={`flex items-center justify-center p-2 rounded-md ${
+                      className={`flex items-center justify-center p-2 rounded-lg transition-colors duration-200 ${
                         currentPage === Math.ceil(draftStories.length / itemsPerPage)
-                          ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                          : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                          ? 'text-brown-300 dark:text-brown-800 cursor-not-allowed'
+                          : 'text-brown-700 dark:text-brown-300 active:bg-brown-100 dark:active:bg-brown-900/20 active:scale-95'
                       }`}
                     >
                       <span className="mr-1 text-sm font-medium">Siguiente</span>
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
                   </div>
                 </div>
-                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                      Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a{' '}
-                      <span className="font-medium">
+                <div className="hidden sm:flex-1 sm:flex sm:flex-col sm:items-center sm:justify-between space-y-4">
+                  <div className="w-full text-center">
+                    <p className="text-sm text-amber-700/90 dark:text-amber-200/80 font-medium">
+                      Mostrando <span className="font-bold text-amber-800 dark:text-amber-100">{(currentPage - 1) * itemsPerPage + 1}</span> a{' '}
+                      <span className="font-bold text-amber-800 dark:text-amber-100">
                         {Math.min(currentPage * itemsPerPage, draftStories.length)}
                       </span>{' '}
-                      de <span className="font-medium">{draftStories.length}</span> resultados
+                      de <span className="font-bold text-amber-800 dark:text-amber-100">{draftStories.length}</span> historias
                     </p>
                   </div>
-                  <div>
-                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <div className="w-full flex justify-center">
+                    <nav className="relative z-0 inline-flex rounded-full shadow-sm bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-amber-100 dark:border-amber-900/50 p-1" aria-label="Pagination">
                       <button
                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1}
-                        className={`relative inline-flex items-center px-3 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+                        className={`relative inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
                           currentPage === 1
-                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            ? 'text-amber-300 dark:text-amber-700 cursor-not-allowed'
+                            : 'text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'
                         }`}
                       >
                         <span className="sr-only">Anterior</span>
-                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       </button>
                       
                       {/* Números de página */}
-                      {Array.from({ length: Math.min(5, Math.ceil(draftStories.length / itemsPerPage)) }, (_, i) => {
-                        // Mostrar siempre las primeras 3 páginas, la actual y las 2 siguientes
-                        let pageNum;
-                        const totalPages = Math.ceil(draftStories.length / itemsPerPage);
-                        
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (currentPage <= 3) {
-                          // Mostrar páginas 1-5 si estamos en las primeras 3 páginas
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          // Mostrar las últimas 5 páginas si estamos cerca del final
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          // Mostrar 2 páginas antes y 2 después de la actual
-                          pageNum = currentPage - 2 + i;
-                        }
-                        
-                        if (pageNum > totalPages) return null;
-                        
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
-                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                              currentPage === pageNum
-                                ? 'z-10 bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 dark:border-indigo-600 text-indigo-600 dark:text-indigo-200'
-                                : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
+                      <div className="flex items-center space-x-1 mx-2">
+                        {(() => {
+                          const totalPages = Math.ceil(draftStories.length / itemsPerPage);
+                          const buttons = [];
+                          const maxButtons = 5;
+                          
+                          // Calcular el rango de páginas a mostrar
+                          let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                          let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+                          
+                          if (endPage - startPage + 1 < maxButtons) {
+                            startPage = Math.max(1, endPage - maxButtons + 1);
+                          }
+                          
+                          // Botón para la primera página si es necesario
+                          if (startPage > 1) {
+                            buttons.push(
+                              <button
+                                key={1}
+                                onClick={() => setCurrentPage(1)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                              >
+                                1
+                              </button>
+                            );
+                            
+                            if (startPage > 2) {
+                              buttons.push(
+                                <span key="ellipsis-start" className="px-1 text-amber-500 dark:text-amber-600">
+                                  ...
+                                </span>
+                              );
+                            }
+                          }
+                          
+                          // Botones de páginas
+                          for (let i = startPage; i <= endPage; i++) {
+                            buttons.push(
+                              <button
+                                key={i}
+                                onClick={() => setCurrentPage(i)}
+                                className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                                  currentPage === i
+                                    ? 'bg-amber-500 text-white shadow-md'
+                                    : 'text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30'
+                                }`}
+                              >
+                                {i}
+                              </button>
+                            );
+                          }
+                          
+                          // Botón para la última página si es necesario
+                          if (endPage < totalPages) {
+                            if (endPage < totalPages - 1) {
+                              buttons.push(
+                                <span key="ellipsis-end" className="px-1 text-amber-500 dark:text-amber-600">
+                                  ...
+                                </span>
+                              );
+                            }
+                            
+                            buttons.push(
+                              <button
+                                key={totalPages}
+                                onClick={() => setCurrentPage(totalPages)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                              >
+                                {totalPages}
+                              </button>
+                            );
+                          }
+                          
+                          return buttons;
+                        })()}
+                      </div>
                       
                       <button
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(draftStories.length / itemsPerPage)))}
                         disabled={currentPage === Math.ceil(draftStories.length / itemsPerPage)}
-                        className={`relative inline-flex items-center px-3 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+                        className={`relative inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
                           currentPage === Math.ceil(draftStories.length / itemsPerPage)
-                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            ? 'text-amber-300 dark:text-amber-700 cursor-not-allowed'
+                            : 'text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'
                         }`}
                       >
                         <span className="sr-only">Siguiente</span>
-                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                         </svg>
                       </button>

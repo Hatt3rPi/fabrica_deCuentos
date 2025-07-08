@@ -21,6 +21,7 @@
     "supabase:start": "supabase start"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.4",
     "@heroicons/react": "^2.2.0",
     "@sentry/react": "^9.33.0",
     "@sentry/vite-plugin": "^3.5.0",

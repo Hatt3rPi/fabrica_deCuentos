@@ -7,6 +7,7 @@ interface StoryImageProps {
   isLoading: boolean;
   variant?: 'mobile' | 'desktop';
   className?: string;
+  showTitleOverlay?: boolean;
 }
 
 const StoryImage: React.FC<StoryImageProps> = ({
@@ -14,7 +15,8 @@ const StoryImage: React.FC<StoryImageProps> = ({
   title,
   isLoading,
   variant = 'desktop',
-  className = ''
+  className = '',
+  showTitleOverlay = false
 }) => {
   const isMobile = variant === 'mobile';
   
@@ -30,12 +32,49 @@ const StoryImage: React.FC<StoryImageProps> = ({
   return (
     <div className={containerClasses}>
       {imageUrl ? (
-        <img 
-          src={imageUrl} 
-          alt={title} 
-          loading="lazy" 
-          className={imageClasses}
-        />
+        <div className="relative w-full h-full">
+          <img 
+            src={imageUrl} 
+            alt={title} 
+            loading="lazy" 
+            className={imageClasses}
+          />
+          {showTitleOverlay && (
+            <div className="absolute inset-0 flex justify-center items-start pt-4 sm:pt-6 md:pt-8 px-3 sm:px-6 md:px-8 z-10">
+              <div 
+                className="relative" 
+                style={{ 
+                  background: 'rgba(0, 0, 0, 0.1)', 
+                  padding: '2rem 3rem', 
+                  borderRadius: '2rem', 
+                  maxWidth: '85%', 
+                  boxShadow: 'rgba(0, 0, 0, 0.1) 0px 0px 40px 0px', 
+                  backdropFilter: 'blur(2px)', 
+                  width: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'flex-end' 
+                }}
+              >
+                <div 
+                  className="text-center" 
+                  style={{ 
+                    fontSize: '2rem', 
+                    fontFamily: 'Ribeye, cursive', 
+                    fontWeight: 'bold', 
+                    color: 'rgb(255, 255, 255)', 
+                    textShadow: 'rgba(0, 0, 0, 0.8) 3px 3px 6px', 
+                    lineHeight: '1.4', 
+                    textTransform: 'uppercase', 
+                    width: '100%' 
+                  }}
+                >
+                  {title}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         <div className={fallbackClasses}>
           <BookOpen className={`text-gray-400 dark:text-gray-600 ${
@@ -45,7 +84,7 @@ const StoryImage: React.FC<StoryImageProps> = ({
       )}
       
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+        <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-20">
           <Loader className="w-8 h-8 animate-spin text-indigo-600 dark:text-indigo-400" />
         </div>
       )}
