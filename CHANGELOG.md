@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Agregado
+- **Sistema de selección tipo PowerPoint para editor de estilos**
+  - Click en componentes para selección individual con feedback visual
+  - Paneles adaptativos según elemento seleccionado (texto/imagen)
+  - Hook useStyleAdapter para unificar estructuras de datos
+  - Indicador visual del elemento seleccionado
+  - Outline púrpura con animaciones suaves
+
 ## [2025-07-02] - Fix: Acceso Público para Descarga de PDFs
 
 ### 🔧 Corrección

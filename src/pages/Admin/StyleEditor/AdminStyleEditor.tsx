@@ -21,7 +21,7 @@ import {
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 import { styleConfigService } from '../../../services/styleConfigService';
-import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG } from '../../../types/styleConfig';
+import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG, ComponentConfig, PageType } from '../../../types/styleConfig';
 import StylePreview from './components/StylePreview';
 import TypographyPanel from './components/TypographyPanel';
 import PositionPanel from './components/PositionPanel';
@@ -33,6 +33,8 @@ import ImageUploader from './components/ImageUploader';
 import TextEditor from './components/TextEditor';
 import CreateTemplateModal from './components/CreateTemplateModal';
 import DedicatoriaImagePanel from './components/DedicatoriaImagePanel';
+import ComponentsPanel from './components/ComponentsPanel';
+import { useStyleAdapter, SelectionTarget } from '../../../hooks/useStyleAdapter';
 
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
@@ -63,6 +65,10 @@ const AdminStyleEditor: React.FC = () => {
   const [currentPageType, setCurrentPageType] = useState<'cover' | 'page' | 'dedicatoria'>('cover');
   const [activePanel, setActivePanel] = useState<string>('typography');
   
+  // Sistema de selección PowerPoint-like
+  const [selectedTarget, setSelectedTarget] = useState<SelectionTarget>({ type: 'page' });
+  const [components, setComponents] = useState<ComponentConfig[]>([]);
+  
   // Estados de UI
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -80,6 +86,11 @@ const AdminStyleEditor: React.FC = () => {
     loadActiveTemplate();
     loadSampleImages();
   }, []);
+
+  // Resetear selección cuando cambie el tipo de página
+  useEffect(() => {
+    setSelectedTarget({ type: 'page' });
+  }, [currentPageType]);
 
   // Detectar cambios
   useEffect(() => {
@@ -392,6 +403,45 @@ const AdminStyleEditor: React.FC = () => {
     }
   }, [currentPageType]);
 
+  // Función para actualizar configuración general
+  const handleConfigChange = useCallback((updates: Partial<StoryStyleConfig>) => {
+    setActiveConfig(prev => prev ? { ...prev, ...updates } : prev);
+  }, []);
+
+  // Función para manejar cambios en componentes
+  const handleComponentChange = useCallback((componentId: string, updates: Partial<ComponentConfig>) => {
+    setComponents(prev => prev.map(comp => 
+      comp.id === componentId ? { ...comp, ...updates } : comp
+    ));
+  }, []);
+
+  // Función para manejar selección de componentes
+  const handleComponentSelection = useCallback((componentId: string | null) => {
+    if (componentId) {
+      const component = components.find(c => c.id === componentId);
+      if (component) {
+        setSelectedTarget({
+          type: 'component',
+          componentId: component.id,
+          componentName: component.name,
+          componentType: component.type
+        });
+      }
+    } else {
+      setSelectedTarget({ type: 'page' });
+    }
+  }, [components]);
+
+  // Hook del adaptador de estilos
+  const styleAdapter = useStyleAdapter(
+    selectedTarget,
+    activeConfig,
+    currentPageType as PageType,
+    components,
+    handleConfigChange,
+    handleComponentChange
+  );
+
   const getCurrentConfig = () => {
     if (!activeConfig) {
       if (currentPageType === 'cover') return DEFAULT_COVER_CONFIG.title;
@@ -632,6 +682,30 @@ const AdminStyleEditor: React.FC = () => {
             >
               <X className="w-6 h-6" />
             </button>
+
+            {/* Indicador de selección */}
+            <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
+                    {selectedTarget.type === 'page' ? 'Editando página' : 'Editando componente'}
+                  </p>
+                  {selectedTarget.type === 'component' && (
+                    <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+                      {selectedTarget.componentName} ({selectedTarget.componentType})
+                    </p>
+                  )}
+                </div>
+                {selectedTarget.type === 'component' && (
+                  <button
+                    onClick={() => setSelectedTarget({ type: 'page' })}
+                    className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-800 rounded hover:bg-purple-200 dark:hover:bg-purple-700 transition-colors"
+                  >
+                    Volver a página
+                  </button>
+                )}
+              </div>
+            </div>
 
             {/* Panel Tabs */}
             <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
@@ -886,6 +960,9 @@ const AdminStyleEditor: React.FC = () => {
                 showGrid={showGrid}
                 showRulers={showRulers}
                 zoomLevel={zoomLevel}
+                selectedComponentId={selectedTarget.componentId}
+                onComponentSelect={handleComponentSelection}
+                components={components}
               />
             ) : (
               <div className="flex items-center justify-center h-96 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
