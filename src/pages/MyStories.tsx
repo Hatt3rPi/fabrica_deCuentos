@@ -228,16 +228,16 @@ const MyStories: React.FC = () => {
   }, [stories]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 sm:p-6 relative z-0">
+      <div className="max-w-7xl mx-auto relative z-0">
         <div className="mb-10 p-8 rounded-lg relative overflow-hidden bg-amber-50 dark:bg-amber-900/20 shadow-md hover:shadow-lg transition-shadow duration-300 border border-amber-100 dark:border-amber-800/30">
           {/* Textura de papel sutil */}
-          <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{
+          <div className="absolute inset-0 opacity-20 dark:opacity-10 -z-10" style={{
             backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M54 24c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2h44c1.1 0 2 .9 2 2v16z\' fill=\'%239C92AC\' fill-opacity=\'0.08\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
             backgroundSize: '60px 60px'
           }} />
           
-          <div className="relative z-10">
+          <div className="relative z-0">
             <div className="flex items-center justify-center sm:justify-start mb-4">
               <BookOpen className="text-amber-600 dark:text-amber-400 mr-3 w-8 h-8 md:w-10 md:h-10" />
               <h1 className="text-4xl md:text-5xl font-serif font-bold text-amber-900 dark:text-amber-50 tracking-tight">
@@ -261,13 +261,13 @@ const MyStories: React.FC = () => {
           <div className="mb-16">
             <div className="relative bg-amber-50/80 dark:bg-amber-900/10 rounded-xl p-4 sm:p-5 mb-8 shadow-[0_4px_12px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.1),0_2px_4px_rgba(0,0,0,0.12)] transition-all duration-300 group/section max-w-3xl mx-auto">
               {/* Textura de papel sutil */}
-              <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{
+              <div className="absolute inset-0 opacity-20 dark:opacity-10 -z-10" style={{
                 backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M54 24c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2h44c1.1 0 2 .9 2 2v16z\' fill=\'%239C92AC\' fill-opacity=\'0.08\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
                 backgroundSize: '60px 60px',
                 borderRadius: '0.5rem'
               }} />
               
-              <div className="relative z-10">
+              <div className="relative z-0">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-start sm:items-center gap-4">
                     <div className="relative p-2.5 bg-green-50 dark:bg-green-900/20 rounded-lg shadow-[inset_0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.05)] group-hover/section:rotate-1 transition-all duration-300 flex-shrink-0">
@@ -331,13 +331,13 @@ const MyStories: React.FC = () => {
           <div className="mt-16">
             <div className="relative bg-amber-50/80 dark:bg-amber-900/10 rounded-xl p-4 sm:p-5 mb-8 shadow-[0_4px_12px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.1),0_2px_4px_rgba(0,0,0,0.12)] transition-all duration-300 group/section-draft max-w-3xl mx-auto">
               {/* Textura de papel sutil */}
-              <div className="absolute inset-0 opacity-20 dark:opacity-10" style={{
+              <div className="absolute inset-0 opacity-20 dark:opacity-10 -z-10" style={{
                 backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M54 24c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2h44c1.1 0 2 .9 2 2v16z\' fill=\'%239C92AC\' fill-opacity=\'0.08\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
                 backgroundSize: '60px 60px',
                 borderRadius: '0.5rem'
               }} />
               
-              <div className="relative z-10">
+              <div className="relative z-0">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-start sm:items-center gap-4">
                     <div className="relative p-2.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg shadow-[inset_0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.05)] group-hover/section-draft:rotate-1 transition-all duration-300 flex-shrink-0">
@@ -584,7 +584,7 @@ const MyStories: React.FC = () => {
             <div className="relative">
               <div className="absolute -top-2 -left-2 w-24 h-24 bg-purple-200 dark:bg-purple-900/40 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
               <div className="absolute -bottom-2 -right-2 w-24 h-24 bg-blue-200 dark:bg-blue-900/40 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-              <div className="relative z-10">
+              <div className="relative z-0">
                 <div className="w-28 h-28 bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-600 dark:to-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
                   <BookOpen className="w-12 h-12 text-white" />
                 </div>
