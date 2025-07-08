@@ -89,19 +89,36 @@ const StoryCardDesktop: React.FC<StoryCardDesktopProps> = ({
           </p>
         </div>
         
-        {/* Actions */}
+        {/* Actions - Solo visible en hover en desktop */}
         <div className="mt-auto pt-2">
-          <ActionButtons
-            story={story}
-            imageUrl={imageUrl}
-            variant="desktop"
-            onRead={onRead}
-            onContinue={onContinue}
-            onDelete={onDelete}
-            onDownloadPdf={onDownloadPdf}
-            isPurchased={isPurchased}
-            pdfUrl={pdfUrl}
-          />
+          <div className="relative group/buttons">
+            {/* Overlay que se muestra al hacer hover */}
+            <div className="absolute inset-0 bg-gradient-to-t from-amber-50 to-transparent dark:from-amber-900/50 dark:to-transparent opacity-0 group-hover/book:opacity-100 transition-opacity duration-300 rounded-b-lg -mx-6 -mb-6 px-6 pt-10 pb-6 -translate-y-2 group-hover/book:translate-y-0" />
+            
+            {/* Contenedor de botones con animación */}
+            <div className="relative opacity-0 group-hover/book:opacity-100 translate-y-4 group-hover/book:translate-y-0 transition-all duration-300 delay-100">
+              <ActionButtons
+                story={story}
+                imageUrl={imageUrl}
+                variant="desktop"
+                onRead={onRead}
+                onContinue={onContinue}
+                onDelete={onDelete}
+                onDownloadPdf={onDownloadPdf}
+                isPurchased={isPurchased}
+                pdfUrl={pdfUrl}
+              />
+            </div>
+            
+            {/* Indicador de acciones (solo visible cuando los botones están ocultos) */}
+            <div className="absolute bottom-2 right-2 opacity-100 group-hover/book:opacity-0 transition-opacity duration-200">
+              <div className="flex space-x-1">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="w-1 h-1 rounded-full bg-amber-400 dark:bg-amber-500 opacity-70" />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
