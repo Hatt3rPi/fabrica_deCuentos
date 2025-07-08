@@ -98,6 +98,26 @@
   - Dedicatoria: `http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/dedicatoria.png`
   - Actualizados DEFAULT_COMPONENTS y todos los fallbacks en serviceConfig
 - **Fix: Imágenes de fondo no visibles en vista previa** - Problema de zIndex resuelto
+- **Fix: Sistema de escalado proporcional mejorado** - Implementado sistema de escalado opcional con parámetro enableScaling
+  - ComponentRenderer mantiene su propio sistema de escalado basado en containerDimensions
+  - StoryRenderer NO aplica escalado por defecto para evitar problemas de posicionamiento
+  - Función getScaledFontSize centralizada en storyStyleUtils.ts para consistencia
+
+### Correcciones Críticas Aplicadas (Zen Review)
+- **Security: Input validation y sanitización implementada**
+  - Nuevo sistema de validación en `/src/utils/validation.ts`
+  - Validación de componentes, templates y configuraciones
+  - Sanitización CSS para prevenir inyección de código
+  - Escape XSS en inputs de usuario
+  - Validación de URLs y propiedades CSS permitidas
+- **Performance: Optimización con useMemo reemplazando JSON.stringify**
+  - Función isEqual implementada para comparación eficiente de objetos
+  - hasConfigChanges y hasTextChanges ahora usan memoización
+  - Eliminación de comparaciones O(n) costosas en useEffect
+- **Code Quality: Eliminación de duplicación de código**
+  - getScaledFontSize() removido de ComponentRenderer.tsx
+  - Uso centralizado desde storyStyleUtils.ts
+  - Import agregado para mantener funcionalidad
 - **Fix: Escalabilidad proporcional de texto** - Implementado sistema de escalado opcional con `enableScaling` para mantener proporciones en diferentes tamaños de contenedor
 - **Fix: Loop infinito de notificaciones** - Corregidas múltiples notificaciones duplicadas (46 instancias)
   - Removida dependencia `fetchNotifications` del useEffect en useNotifications.ts

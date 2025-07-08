@@ -37,6 +37,7 @@ import DedicatoriaImagePanel from './components/DedicatoriaImagePanel';
 import ComponentsPanel from './components/ComponentsPanel';
 import ContentEditorPanel from './components/ContentEditorPanel';
 import { useStyleAdapter, SelectionTarget } from '../../../hooks/useStyleAdapter';
+import { validateAndSanitize, ValidationResult, isEqual } from '../../../utils/validation';
 
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
@@ -144,18 +145,26 @@ const AdminStyleEditor: React.FC = () => {
     }
   }, [activeConfig]); // Solo dependencia de activeConfig para evitar re-creación innecesaria
 
-  // Detectar cambios
+  // Optimización de performance: usar useMemo para detectar cambios en lugar de JSON.stringify
+  const hasConfigChanges = useMemo(() => {
+    if (!originalConfig) return false;
+    return !isEqual(activeConfig, originalConfig);
+  }, [activeConfig, originalConfig]);
+
+  const hasTextChanges = useMemo(() => {
+    if (!originalConfig) return false;
+    return (
+      (originalConfig.coverSampleText || SAMPLE_TEXTS.cover) !== customCoverText ||
+      (originalConfig.pageSampleText || SAMPLE_TEXTS.page) !== customPageText ||
+      (originalConfig.dedicatoriaSampleText || SAMPLE_TEXTS.dedicatoria) !== customDedicatoriaText
+    );
+  }, [originalConfig, customCoverText, customPageText, customDedicatoriaText]);
+
+  // Detectar cambios usando memoización optimizada
   useEffect(() => {
-    if (originalConfig) {
-      const hasConfigChanges = JSON.stringify(activeConfig) !== JSON.stringify(originalConfig);
-      const hasImageChanges = false; // Custom images now handled by background components
-      const hasTextChanges = 
-        (originalConfig.coverSampleText || SAMPLE_TEXTS.cover) !== customCoverText ||
-        (originalConfig.pageSampleText || SAMPLE_TEXTS.page) !== customPageText ||
-        (originalConfig.dedicatoriaSampleText || SAMPLE_TEXTS.dedicatoria) !== customDedicatoriaText;
-      setIsDirty(hasConfigChanges || hasImageChanges || hasTextChanges);
-    }
-  }, [activeConfig, originalConfig, customCoverText, customPageText, customDedicatoriaText]);
+    const hasImageChanges = false; // Custom images now handled by background components
+    setIsDirty(hasConfigChanges || hasImageChanges || hasTextChanges);
+  }, [hasConfigChanges, hasTextChanges]);
 
   const loadActiveTemplate = async () => {
     try {
@@ -252,7 +261,7 @@ const AdminStyleEditor: React.FC = () => {
       // La configuración de dedicatoria ya se maneja através de componentes
       const updatedDedicatoriaConfig = activeConfig.dedicatoriaConfig;
       
-      // Actualizar template activo con las configuraciones editadas
+      // Crear template preliminar para validación
       const templateUpdate: Partial<StyleTemplate> = {
         name: activeConfig.name,
         configData: {
@@ -273,14 +282,41 @@ const AdminStyleEditor: React.FC = () => {
           dedicatoria_text: customDedicatoriaText !== SAMPLE_TEXTS.dedicatoria ? customDedicatoriaText : undefined
         }
       };
+
+      // Validar template antes de guardar
+      const validation = validateAndSanitize(templateUpdate, 'template');
+      
+      if (!validation.isValid) {
+        console.error('❌ Template validation failed:', validation.errors);
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Error de Validación',
+          `No se puede guardar el template: ${validation.errors.join(', ')}`,
+          NotificationPriority.HIGH
+        );
+        return;
+      }
+
+      if (validation.warnings.length > 0) {
+        console.warn('⚠️ Template validation warnings:', validation.warnings);
+        createNotification(
+          NotificationType.SYSTEM_UPDATE,
+          'Advertencias de Validación',
+          `Template guardado con advertencias: ${validation.warnings.join(', ')}`,
+          NotificationPriority.MEDIUM
+        );
+      }
+
+      // Usar template sanitizado
+      const sanitizedTemplate = validation.sanitizedData || templateUpdate;
       
       console.log('🔧 Saving template with components:', {
         componentsCount: allComponents.length,
         components: allComponents,
-        templateUpdate
+        templateUpdate: sanitizedTemplate
       });
       
-      const result = await styleConfigService.updateActiveTemplate(templateUpdate);
+      const result = await styleConfigService.updateActiveTemplate(sanitizedTemplate);
       
       console.log('✅ Save result:', result);
 
@@ -450,18 +486,40 @@ const AdminStyleEditor: React.FC = () => {
     setActiveConfig(prev => prev ? { ...prev, ...updates } : prev);
   }, []);
 
-  // Función para manejar cambios en componentes
+  // Función para manejar cambios en componentes con validación
   const handleComponentChange = useCallback((componentId: string, updates: Partial<ComponentConfig>) => {
     console.log('📝 Updating component:', componentId, updates);
+    
+    // Validar y sanitizar actualizaciones de componente
+    const validation = validateAndSanitize({ id: componentId, ...updates }, 'component');
+    
+    if (!validation.isValid) {
+      console.error('❌ Component validation failed:', validation.errors);
+      createNotification(
+        NotificationType.SYSTEM_UPDATE,
+        'Error de Validación',
+        `Error al actualizar componente: ${validation.errors.join(', ')}`,
+        NotificationPriority.HIGH
+      );
+      return;
+    }
+
+    if (validation.warnings.length > 0) {
+      console.warn('⚠️ Component validation warnings:', validation.warnings);
+    }
+
+    // Usar datos sanitizados
+    const sanitizedUpdates = validation.sanitizedData || updates;
+    
     setAllComponents(prev => {
       const updatedComponents = prev.map(comp => 
-        comp.id === componentId ? { ...comp, ...updates } : comp
+        comp.id === componentId ? { ...comp, ...sanitizedUpdates } : comp
       );
       console.log('📦 Updated components:', updatedComponents);
       return updatedComponents;
     });
     setIsDirty(true);
-  }, []);
+  }, [createNotification]);
 
   // Función para manejar selección de componentes
   const handleComponentSelection = useCallback((componentId: string | null) => {

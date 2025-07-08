@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { ComponentConfig, TextComponentConfig, ImageComponentConfig } from '../../../../types/styleConfig';
+import { getScaledFontSize } from '../../../../utils/storyStyleUtils';
 
 interface ComponentRendererProps {
   components: ComponentConfig[];
@@ -23,31 +24,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0, isSnapping: false });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Función para escalar tamaños de fuente proporcionalmente
-  const getScaledFontSize = (originalSize: string): string => {
-    if (!containerDimensions) return originalSize;
-    
-    // Dimensiones base para el diseño (tamaño "normal")
-    const BASE_WIDTH = 1536;
-    const BASE_HEIGHT = 1024;
-    
-    // Calcular factor de escala basado en el ancho (principal)
-    const scaleFactorWidth = containerDimensions.width / BASE_WIDTH;
-    const scaleFactorHeight = containerDimensions.height / BASE_HEIGHT;
-    
-    // Usar el menor factor para mantener proporciones
-    const scaleFactor = Math.min(scaleFactorWidth, scaleFactorHeight);
-    
-    // Extraer valor numérico y unidad
-    const sizeMatch = originalSize.match(/^([\d.]+)(.+)$/);
-    if (!sizeMatch) return originalSize;
-    
-    const [, value, unit] = sizeMatch;
-    const numericValue = parseFloat(value);
-    const scaledValue = numericValue * scaleFactor;
-    
-    return `${scaledValue.toFixed(2)}${unit}`;
-  };
   
   // Función para manejar el drag and drop
   const handleMouseDown = useCallback((e: React.MouseEvent, component: ComponentConfig) => {
@@ -179,7 +155,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       // Crear estilos escalados para el texto
       const scaledStyles = textComponent.style ? {
         ...textComponent.style,
-        fontSize: textComponent.style.fontSize ? getScaledFontSize(textComponent.style.fontSize) : textComponent.style.fontSize
+        fontSize: textComponent.style.fontSize ? getScaledFontSize(textComponent.style.fontSize, containerDimensions) : textComponent.style.fontSize
       } : {};
       
       // Debug: log del escalado de texto
