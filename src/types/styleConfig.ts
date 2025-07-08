@@ -211,3 +211,109 @@ export function convertContainerToReactStyle(containerStyle: ContainerStyle): Re
     backdropFilter: containerStyle.backdropFilter,
   };
 }
+
+// Tipos para componentes dinámicos
+export interface ComponentConfig {
+  id: string;
+  name: string;
+  type: 'text' | 'image';
+  position: 'top' | 'center' | 'bottom';
+  horizontalPosition: 'left' | 'center' | 'right';
+  zIndex?: number;
+  visible?: boolean;
+}
+
+export interface TextComponentConfig extends ComponentConfig {
+  type: 'text';
+  content: string;
+  style?: {
+    fontSize?: string;
+    fontFamily?: string;
+    fontWeight?: string;
+    color?: string;
+    textAlign?: string;
+    textShadow?: string;
+    lineHeight?: string;
+    letterSpacing?: string;
+    textTransform?: string;
+    backgroundColor?: string;
+    borderRadius?: string;
+    padding?: string;
+    opacity?: number;
+  };
+}
+
+export interface ImageComponentConfig extends ComponentConfig {
+  type: 'image';
+  url?: string;
+  width?: string;
+  height?: string;
+  objectFit?: 'cover' | 'contain' | 'fill' | 'scale-down' | 'none';
+  size?: 'small' | 'medium' | 'large' | 'custom';
+  imageType: 'fixed' | 'dynamic';
+  style?: {
+    borderRadius?: string;
+    opacity?: number;
+    border?: string;
+    boxShadow?: string;
+  };
+}
+
+// Presets para casos de uso comunes
+export const COMPONENT_PRESETS = {
+  text: {
+    author: {
+      name: 'Autor del libro',
+      content: 'Por [Nombre del Autor]',
+      style: {
+        fontSize: '1.5rem',
+        fontFamily: 'Inter, sans-serif',
+        fontWeight: '400',
+        color: '#ffffff',
+        textAlign: 'center',
+        textShadow: '2px 2px 4px rgba(0,0,0,0.6)'
+      },
+      position: 'bottom' as const,
+      horizontalPosition: 'center' as const
+    },
+    subtitle: {
+      name: 'Subtítulo',
+      content: 'Una historia mágica',
+      style: {
+        fontSize: '1.8rem',
+        fontFamily: 'Inter, sans-serif',
+        fontWeight: '300',
+        color: '#ffffff',
+        textAlign: 'center',
+        textShadow: '2px 2px 4px rgba(0,0,0,0.6)'
+      },
+      position: 'center' as const,
+      horizontalPosition: 'center' as const
+    }
+  },
+  image: {
+    logo: {
+      name: 'Logo/Marca',
+      imageType: 'fixed' as const,
+      size: 'small' as const,
+      objectFit: 'contain' as const,
+      position: 'top' as const,
+      horizontalPosition: 'right' as const,
+      style: {
+        opacity: 0.8
+      }
+    },
+    userImageReference: {
+      name: 'Imagen de usuario (referencia)',
+      imageType: 'dynamic' as const,
+      size: 'medium' as const,
+      objectFit: 'cover' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      style: {
+        borderRadius: '1rem',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+      }
+    }
+  }
+};

@@ -63,7 +63,7 @@ const AdminStyleEditor: React.FC = () => {
   const [customPageText, setCustomPageText] = useState<string>(SAMPLE_TEXTS.page);
   const [customDedicatoriaText, setCustomDedicatoriaText] = useState<string>(SAMPLE_TEXTS.dedicatoria);
   const [currentPageType, setCurrentPageType] = useState<'cover' | 'page' | 'dedicatoria'>('cover');
-  const [activePanel, setActivePanel] = useState<string>('typography');
+  const [activePanel, setActivePanel] = useState<string>('components');
   
   // Sistema de selección PowerPoint-like
   const [selectedTarget, setSelectedTarget] = useState<SelectionTarget>({ type: 'page' });
@@ -432,6 +432,27 @@ const AdminStyleEditor: React.FC = () => {
     }
   }, [components]);
 
+  // Función para agregar componente
+  const handleAddComponent = useCallback((component: ComponentConfig) => {
+    setComponents(prev => [...prev, component]);
+    // Seleccionar automáticamente el componente recién agregado
+    setSelectedTarget({
+      type: 'component',
+      componentId: component.id,
+      componentName: component.name,
+      componentType: component.type
+    });
+  }, []);
+
+  // Función para eliminar componente
+  const handleDeleteComponent = useCallback((componentId: string) => {
+    setComponents(prev => prev.filter(c => c.id !== componentId));
+    // Si se elimina el componente seleccionado, volver a página
+    if (selectedTarget.componentId === componentId) {
+      setSelectedTarget({ type: 'page' });
+    }
+  }, [selectedTarget.componentId]);
+
   // Hook del adaptador de estilos
   const styleAdapter = useStyleAdapter(
     selectedTarget,
@@ -710,6 +731,17 @@ const AdminStyleEditor: React.FC = () => {
             {/* Panel Tabs */}
             <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
               <button
+                onClick={() => setActivePanel('components')}
+                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'components'
+                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                }`}
+              >
+                <Layers className="w-4 h-4 inline mr-1" />
+                Elementos
+              </button>
+              <button
                 onClick={() => setActivePanel('typography')}
                 className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   activePanel === 'typography'
@@ -808,6 +840,18 @@ const AdminStyleEditor: React.FC = () => {
             </div>
 
             {/* Active Panel Content */}
+            {activePanel === 'components' && (
+              <ComponentsPanel
+                components={components}
+                selectedComponentId={selectedTarget.componentId}
+                onAddComponent={handleAddComponent}
+                onUpdateComponent={handleComponentChange}
+                onDeleteComponent={handleDeleteComponent}
+                onSelectComponent={handleComponentSelection}
+                pageType={currentPageType}
+              />
+            )}
+
             {activePanel === 'typography' && activeConfig && (
               <TypographyPanel
                 config={getCurrentConfig()}

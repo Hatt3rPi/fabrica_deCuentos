@@ -10,6 +10,14 @@
   - Indicador visual del elemento seleccionado
   - Outline púrpura con animaciones suaves
 
+- **Panel de Elementos con gestión completa de componentes**
+  - Agregar nuevos elementos: textos e imágenes personalizadas
+  - Presets inteligentes: autor, subtítulo, logo, imagen de referencia
+  - Imágenes fijas (admin) vs dinámicas (usuario)
+  - Modal intuitivo para selección de tipo y plantillas
+  - Gestión visual: mostrar/ocultar, eliminar elementos
+  - Casos de uso: autor en portada, logo posicionable, imagen de referencia en dedicatoria
+
 ## [2025-07-02] - Fix: Acceso Público para Descarga de PDFs
 
 ### 🔧 Corrección

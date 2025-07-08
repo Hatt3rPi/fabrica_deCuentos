@@ -84,6 +84,58 @@ Los paneles se adaptan automáticamente según el elemento seleccionado:
 3. Los paneles se adaptarán automáticamente
 4. Click en área vacía para volver a editar la página
 
+## Nuevas Funcionalidades Agregadas
+
+### 🎯 Panel de Elementos (Componentes)
+- **Agregar nuevos elementos**: Textos e imágenes personalizadas
+- **Presets inteligentes**: Plantillas para casos comunes
+- **Gestión visual**: Ver, ocultar, eliminar elementos
+
+### 📝 Tipos de Elementos
+
+#### Elementos de Texto
+- **Autor del libro**: "Por [Nombre del Autor]"
+- **Subtítulo**: Texto secundario personalizable
+- **Texto libre**: Completamente personalizable
+
+#### Elementos de Imagen
+- **Logo/Marca**: Imagen fija (subida por admin)
+- **Imagen de referencia**: Imagen dinámica (reemplazada por usuario)
+- **Imagen libre**: Personalizable completamente
+
+### 🎨 Propiedades de Imagen
+- **Fija**: La imagen se mantiene siempre igual
+- **Dinámica**: Se reemplaza con la imagen del usuario
+- **Posición**: Top, center, bottom / left, center, right
+- **Tamaño**: Small, medium, large, custom
+- **Ajuste**: Cover, contain, fill, scale-down, none
+
+## Casos de Uso Implementados
+
+### ✅ Portada
+- Agregar autor del libro en la parte inferior
+- Posicionar logo/marca en esquina superior derecha
+- Subtítulo personalizable
+
+### ✅ Dedicatoria
+- Imagen de referencia dinámica (usuario verá su imagen aquí)
+- Textos adicionales personalizables
+
+### ✅ Página Interior
+- Elementos decorativos
+- Textos complementarios
+
+## Flujo de Usuario Completo
+
+1. **Ir a Admin → Styles**
+2. **Click en tab "Elementos"** (primera pestaña)
+3. **Click "Agregar"** para abrir modal
+4. **Seleccionar tipo**: Texto o Imagen
+5. **Elegir preset** o crear personalizado
+6. **Confirmar** → Se agrega y selecciona automáticamente
+7. **Editar estilos** usando otros tabs (Tipografía, Colores, etc.)
+8. **Posicionar** usando controles de posición
+
 ## Estado
 
-✅ Implementado y funcional
+✅ Implementado y funcional con gestión completa de elementos
