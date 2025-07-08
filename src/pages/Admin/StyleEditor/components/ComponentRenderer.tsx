@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { ComponentConfig, TextComponentConfig, ImageComponentConfig } from '../../../../types/styleConfig';
 
 interface ComponentRendererProps {
@@ -6,15 +6,84 @@ interface ComponentRendererProps {
   pageType: 'cover' | 'page' | 'dedicatoria';
   selectedComponentId?: string;
   onComponentSelect?: (componentId: string | null) => void;
+  onComponentUpdate?: (componentId: string, updates: Partial<ComponentConfig>) => void;
 }
 
 const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   components,
   pageType,
   selectedComponentId,
-  onComponentSelect
+  onComponentSelect,
+  onComponentUpdate
 }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0, isSnapping: false });
+  const containerRef = useRef<HTMLDivElement>(null);
   
+  // Función para manejar el drag and drop
+  const handleMouseDown = useCallback((e: React.MouseEvent, component: ComponentConfig) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setIsDragging(true);
+    onComponentSelect?.(component.id);
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const container = containerRef.current?.getBoundingClientRect();
+    
+    if (container) {
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+    }
+  }, [onComponentSelect]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !selectedComponentId || !containerRef.current) return;
+    
+    const container = containerRef.current.getBoundingClientRect();
+    const newX = e.clientX - container.left - dragOffset.x;
+    const newY = e.clientY - container.top - dragOffset.y;
+    
+    // Limitar a los bounds del contenedor
+    let boundedX = Math.max(0, Math.min(newX, container.width - 50));
+    let boundedY = Math.max(0, Math.min(newY, container.height - 50));
+    
+    // Snap to grid si se mantiene presionado Ctrl
+    const isSnapping = e.ctrlKey;
+    if (isSnapping) {
+      const gridSize = 10;
+      boundedX = Math.round(boundedX / gridSize) * gridSize;
+      boundedY = Math.round(boundedY / gridSize) * gridSize;
+    }
+    
+    // Actualizar posición visual durante el drag
+    setDragPosition({ x: boundedX, y: boundedY, isSnapping });
+    
+    onComponentUpdate?.(selectedComponentId, {
+      x: boundedX,
+      y: boundedY
+    });
+  }, [isDragging, selectedComponentId, dragOffset, onComponentUpdate]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Event listeners para drag and drop
+  React.useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   const renderComponent = (component: ComponentConfig) => {
     if (!component.visible) return null;
 
@@ -25,9 +94,17 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       const styles: React.CSSProperties = {
         position: 'absolute',
         zIndex: comp.zIndex || 1,
+        cursor: isSelected ? 'move' : 'pointer',
       };
 
-      // Posición vertical
+      // Si tiene coordenadas precisas, usarlas
+      if (typeof comp.x === 'number' && typeof comp.y === 'number') {
+        styles.left = `${comp.x}px`;
+        styles.top = `${comp.y}px`;
+        return styles;
+      }
+
+      // Fallback a posicionamiento por zones
       switch (comp.position) {
         case 'top':
           styles.top = '5%';
@@ -41,7 +118,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           break;
       }
 
-      // Posición horizontal
       switch (comp.horizontalPosition) {
         case 'left':
           styles.left = '5%';
@@ -72,18 +148,26 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             e.stopPropagation();
             onComponentSelect?.(component.id);
           }}
+          onMouseDown={(e) => handleMouseDown(e, component)}
           style={{
             ...positionStyles,
             maxWidth: '85%',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            transition: isDragging ? 'none' : 'all 0.2s ease',
             ...textComponent.style,
-            // Convertir algunos estilos para compatibilidad
+            // Aplicar estilos específicos para garantizar compatibilidad
             background: textComponent.style?.backgroundColor || 'transparent',
+            borderRadius: textComponent.style?.borderRadius || '0',
+            padding: textComponent.style?.padding || '0',
+            border: textComponent.style?.border || 'none',
+            boxShadow: textComponent.style?.boxShadow || 'none',
+            backdropFilter: textComponent.style?.backdropFilter || 'none',
+            opacity: textComponent.style?.opacity !== undefined ? textComponent.style.opacity : 1,
+            userSelect: 'none', // Evitar selección de texto durante drag
           }}
           className={`
             ${isSelected ? 'ring-2 ring-purple-500 ring-offset-2' : ''}
             hover:outline hover:outline-2 hover:outline-purple-300
+            ${isDragging ? 'cursor-grabbing' : ''}
           `}
         >
           {textComponent.content || component.name}
@@ -125,16 +209,25 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             e.stopPropagation();
             onComponentSelect?.(component.id);
           }}
+          onMouseDown={(e) => handleMouseDown(e, component)}
           style={{
             ...positionStyles,
             ...sizeStyles,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            cursor: isSelected ? 'move' : 'pointer',
+            transition: isDragging ? 'none' : 'all 0.2s ease',
             ...imageComponent.style,
+            // Aplicar estilos específicos para garantizar compatibilidad
+            borderRadius: imageComponent.style?.borderRadius || '0',
+            border: imageComponent.style?.border || 'none',
+            boxShadow: imageComponent.style?.boxShadow || 'none',
+            backdropFilter: imageComponent.style?.backdropFilter || 'none',
+            opacity: imageComponent.style?.opacity !== undefined ? imageComponent.style.opacity : 1,
+            userSelect: 'none', // Evitar selección durante drag
           }}
           className={`
             ${isSelected ? 'ring-2 ring-purple-500 ring-offset-2' : ''}
             hover:outline hover:outline-2 hover:outline-purple-300
+            ${isDragging ? 'cursor-grabbing' : ''}
           `}
         >
           {imageComponent.url ? (
@@ -145,13 +238,13 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 width: '100%',
                 height: '100%',
                 objectFit: imageComponent.objectFit || 'cover',
-                borderRadius: imageComponent.style?.borderRadius || '0',
+                borderRadius: 'inherit', // Heredar el borderRadius del contenedor
               }}
             />
           ) : (
             <div 
               className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm"
-              style={{ borderRadius: imageComponent.style?.borderRadius || '0' }}
+              style={{ borderRadius: 'inherit' }}
             >
               {imageComponent.imageType === 'dynamic' ? (
                 <div className="text-center">
@@ -186,9 +279,34 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   const pageComponents = components.filter(comp => comp.pageType === pageType);
 
   return (
-    <>
+    <div ref={containerRef} className="absolute inset-0 w-full h-full">
       {pageComponents.map(component => renderComponent(component))}
-    </>
+      
+      {/* Indicador de coordenadas durante drag */}
+      {isDragging && selectedComponentId && (
+        <div
+          className={`absolute top-2 left-2 text-white text-xs px-2 py-1 rounded shadow-lg z-50 pointer-events-none ${
+            dragPosition.isSnapping ? 'bg-green-600' : 'bg-purple-600'
+          }`}
+          style={{
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+        >
+          x: {Math.round(dragPosition.x)}px, y: {Math.round(dragPosition.y)}px
+          {dragPosition.isSnapping && <span className="ml-1">📏</span>}
+        </div>
+      )}
+      
+      {/* Estilos CSS para animación */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `
+      }} />
+    </div>
   );
 };
 

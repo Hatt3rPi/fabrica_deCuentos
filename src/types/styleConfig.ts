@@ -220,6 +220,9 @@ export interface ComponentConfig {
   pageType: 'cover' | 'page' | 'dedicatoria';
   position: 'top' | 'center' | 'bottom';
   horizontalPosition: 'left' | 'center' | 'right';
+  // Posicionamiento preciso en píxeles (opcional, tiene prioridad sobre position/horizontalPosition)
+  x?: number;
+  y?: number;
   zIndex?: number;
   visible?: boolean;
   isDefault?: boolean; // Marca componentes por defecto (título, texto principal, etc.)
@@ -245,6 +248,7 @@ export interface TextComponentConfig extends ComponentConfig {
     opacity?: number;
     border?: string;
     boxShadow?: string;
+    backdropFilter?: string;
   };
 }
 
@@ -261,6 +265,7 @@ export interface ImageComponentConfig extends ComponentConfig {
     opacity?: number;
     border?: string;
     boxShadow?: string;
+    backdropFilter?: string;
   };
 }
 

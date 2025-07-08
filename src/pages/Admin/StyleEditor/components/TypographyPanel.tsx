@@ -54,7 +54,9 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
   // Extraer valor numérico del fontSize
   const getFontSizeValue = () => {
     const match = config.fontSize.match(/(\d+(?:\.\d+)?)/);
-    return match ? parseFloat(match[1]) : 16;
+    const value = match ? parseFloat(match[1]) : 1;
+    // Limitar el valor al rango 0.1-10
+    return Math.min(Math.max(value, 0.1), 10);
   };
 
   const getFontSizeUnit = () => {
@@ -64,7 +66,9 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
 
   const handleFontSizeChange = (value: number) => {
     const unit = getFontSizeUnit();
-    onChange({ fontSize: `${value}${unit}` });
+    // Limitar el valor al rango permitido
+    const clampedValue = Math.min(Math.max(value, 0.1), 10);
+    onChange({ fontSize: `${clampedValue}${unit}` });
   };
 
   const handleFontSizeUnitChange = (unit: string) => {
@@ -136,9 +140,9 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
         <div className="flex gap-2">
           <input
             type="range"
-            min="4"
-            max="120"
-            step="1"
+            min="0.1"
+            max="10"
+            step="0.1"
             value={getFontSizeValue()}
             onChange={(e) => handleFontSizeChange(parseFloat(e.target.value))}
             className="flex-1"
@@ -146,11 +150,11 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
           <div className="flex items-center gap-1">
             <input
               type="number"
-              min="4"
-              max="120"
+              min="0.1"
+              max="10"
               step="0.1"
               value={getFontSizeValue()}
-              onChange={(e) => handleFontSizeChange(parseFloat(e.target.value) || 16)}
+              onChange={(e) => handleFontSizeChange(parseFloat(e.target.value) || 1)}
               className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm"
             />
             <select

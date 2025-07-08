@@ -34,6 +34,32 @@
   - Renderizado unificado basado 100% en componentes
   - Compatibilidad completa con configuraciones existentes
 
+- **Sistema de Arrastrar y Soltar para Componentes**
+  - Drag and drop completo para mover componentes libremente
+  - Indicador visual de coordenadas durante el arrastre
+  - Snap-to-grid opcional con tecla Ctrl (grid de 10px)
+  - Límites del contenedor para evitar posicionamiento fuera de bounds
+  - Feedback visual con cursor y transiciones suaves
+
+- **Panel de Efectos en Tiempo Real**
+  - Soporte completo para boxShadow, backdropFilter y border
+  - Cambios se reflejan inmediatamente en el preview
+  - Integración correcta con useStyleAdapter
+  - Aplicación de estilos garantizada en todos los componentes
+
+### Cambiado
+- **Tamaño de fuente con rango controlado**
+  - Cambio de rango de 4-120px a 0.1-10rem
+  - Mejor control y precisión para tamaños tipográficos
+  - Valor por defecto más apropiado (1rem)
+
+- **Controles de tamaño para componentes de imagen**
+  - Agregados sliders específicos para ancho y alto de imágenes (50-800px ancho, 50-600px alto)
+  - Panel de posición adaptativo que muestra controles específicos según tipo de componente
+  - Separación de controles: dimensiones de imagen vs ancho máximo de contenedor
+  - Feedback inmediato al redimensionar imágenes dinámicas
+  - Integración completa con useStyleAdapter para persistencia de cambios
+
 ## [2025-07-02] - Fix: Acceso Público para Descarga de PDFs
 
 ### 🔧 Corrección

@@ -954,6 +954,7 @@ const AdminStyleEditor: React.FC = () => {
                    updatePageConfig)
                 }
                 pageType={currentPageType}
+                isImageComponent={selectedTarget.type === 'component' && selectedTarget.componentType === 'image'}
               />
             )}
             
@@ -972,11 +973,23 @@ const AdminStyleEditor: React.FC = () => {
             {activePanel === 'effects' && activeConfig && styleAdapter.selectionInfo.canEdit.effects && (
               <EffectsPanel
                 containerStyle={selectedTarget.type === 'component' ? 
-                  { background: styleAdapter.currentStyles.backgroundColor } :
+                  {
+                    background: styleAdapter.currentStyles.backgroundColor,
+                    boxShadow: styleAdapter.currentStyles.boxShadow,
+                    backdropFilter: styleAdapter.currentStyles.backdropFilter,
+                    border: styleAdapter.currentStyles.border
+                  } :
                   getCurrentConfig().containerStyle
                 }
                 onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => styleAdapter.updateStyles({ backgroundColor: updates.background }) :
+                  (updates: any) => {
+                    const styleUpdates: any = {};
+                    if (updates.background !== undefined) styleUpdates.backgroundColor = updates.background;
+                    if (updates.boxShadow !== undefined) styleUpdates.boxShadow = updates.boxShadow;
+                    if (updates.backdropFilter !== undefined) styleUpdates.backdropFilter = updates.backdropFilter;
+                    if (updates.border !== undefined) styleUpdates.border = updates.border;
+                    styleAdapter.updateStyles(styleUpdates);
+                  } :
                   updateContainerStyle
                 }
               />
@@ -1105,6 +1118,7 @@ const AdminStyleEditor: React.FC = () => {
                 zoomLevel={zoomLevel}
                 selectedComponentId={selectedTarget.componentId}
                 onComponentSelect={handleComponentSelection}
+                onComponentUpdate={handleComponentChange}
                 components={components}
               />
             ) : (

@@ -13,6 +13,7 @@ interface StylePreviewProps {
   zoomLevel: number;
   selectedComponentId?: string;
   onComponentSelect?: (componentId: string | null) => void;
+  onComponentUpdate?: (componentId: string, updates: Partial<ComponentConfig>) => void;
   components?: ComponentConfig[];
 }
 
@@ -26,6 +27,7 @@ const StylePreview: React.FC<StylePreviewProps> = ({
   zoomLevel,
   selectedComponentId,
   onComponentSelect,
+  onComponentUpdate,
   components = []
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -248,6 +250,7 @@ const StylePreview: React.FC<StylePreviewProps> = ({
             pageType={pageType}
             selectedComponentId={selectedComponentId}
             onComponentSelect={onComponentSelect}
+            onComponentUpdate={onComponentUpdate}
           />
         </div>
       </div>

@@ -33,6 +33,9 @@ export interface UnifiedStyleConfig {
   borderRadius?: string;
   padding?: string;
   opacity?: number;
+  boxShadow?: string;
+  backdropFilter?: string;
+  border?: string;
   
   // Image specific
   objectFit?: string;
@@ -132,6 +135,9 @@ export const useStyleAdapter = (
       backgroundColor: pageConfig.containerStyle?.background,
       borderRadius: pageConfig.containerStyle?.borderRadius,
       padding: pageConfig.containerStyle?.padding,
+      boxShadow: pageConfig.containerStyle?.boxShadow,
+      backdropFilter: pageConfig.containerStyle?.backdropFilter,
+      border: pageConfig.containerStyle?.border,
       opacity: 1
     };
   }, []);
@@ -157,6 +163,9 @@ export const useStyleAdapter = (
         backgroundColor: textComp.style?.backgroundColor,
         borderRadius: textComp.style?.borderRadius,
         padding: textComp.style?.padding,
+        boxShadow: textComp.style?.boxShadow,
+        border: textComp.style?.border,
+        backdropFilter: textComp.style?.backdropFilter,
         opacity: textComp.style?.opacity || 1,
         content: textComp.content
       };
@@ -172,6 +181,9 @@ export const useStyleAdapter = (
         objectFit: imgComp.objectFit,
         size: imgComp.size,
         borderRadius: imgComp.style?.borderRadius,
+        boxShadow: imgComp.style?.boxShadow,
+        border: imgComp.style?.border,
+        backdropFilter: imgComp.style?.backdropFilter,
         opacity: imgComp.style?.opacity || 1,
         imageUrl: imgComp.url
       };
@@ -211,6 +223,9 @@ export const useStyleAdapter = (
       if (updates.backgroundColor !== undefined) containerUpdates.background = updates.backgroundColor;
       if (updates.borderRadius !== undefined) containerUpdates.borderRadius = updates.borderRadius;
       if (updates.padding !== undefined) containerUpdates.padding = updates.padding;
+      if (updates.boxShadow !== undefined) containerUpdates.boxShadow = updates.boxShadow;
+      if (updates.backdropFilter !== undefined) containerUpdates.backdropFilter = updates.backdropFilter;
+      if (updates.border !== undefined) containerUpdates.border = updates.border;
       
       if (Object.keys(containerUpdates).length > 0) {
         pageUpdates.containerStyle = { ...config?.[`${pageType}Config`]?.text?.containerStyle, ...containerUpdates };
@@ -256,6 +271,9 @@ export const useStyleAdapter = (
         if (updates.backgroundColor !== undefined) styleUpdates.backgroundColor = updates.backgroundColor;
         if (updates.borderRadius !== undefined) styleUpdates.borderRadius = updates.borderRadius;
         if (updates.padding !== undefined) styleUpdates.padding = updates.padding;
+        if (updates.boxShadow !== undefined) styleUpdates.boxShadow = updates.boxShadow;
+        if (updates.border !== undefined) styleUpdates.border = updates.border;
+        if (updates.backdropFilter !== undefined) styleUpdates.backdropFilter = updates.backdropFilter;
         if (updates.opacity !== undefined) styleUpdates.opacity = updates.opacity;
         
         if (Object.keys(styleUpdates).length > 0) {
@@ -269,6 +287,9 @@ export const useStyleAdapter = (
         const styleUpdates: any = {};
         
         if (updates.borderRadius !== undefined) styleUpdates.borderRadius = updates.borderRadius;
+        if (updates.boxShadow !== undefined) styleUpdates.boxShadow = updates.boxShadow;
+        if (updates.border !== undefined) styleUpdates.border = updates.border;
+        if (updates.backdropFilter !== undefined) styleUpdates.backdropFilter = updates.backdropFilter;
         if (updates.opacity !== undefined) styleUpdates.opacity = updates.opacity;
         
         if (Object.keys(styleUpdates).length > 0) {
@@ -301,8 +322,8 @@ export const useStyleAdapter = (
         typography: isPage || isTextComponent,
         colors: isPage || isTextComponent,
         position: true,
-        effects: isPage || isTextComponent,
-        container: isPage || isTextComponent
+        effects: isPage || isTextComponent || isImageComponent,
+        container: isPage || isTextComponent || isImageComponent
       }
     };
   }, [selectedTarget, selectedComponent, pageType]);

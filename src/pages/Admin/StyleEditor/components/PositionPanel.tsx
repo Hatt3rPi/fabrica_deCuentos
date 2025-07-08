@@ -1,13 +1,14 @@
 import React from 'react';
-import { Move, ArrowUp, ArrowDown, Maximize2 } from 'lucide-react';
+import { Move, ArrowUp, ArrowDown, Maximize2, Crop } from 'lucide-react';
 
 interface PositionPanelProps {
   config: any;
   onChange: (updates: any) => void;
   pageType: 'cover' | 'page';
+  isImageComponent?: boolean;
 }
 
-const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageType }) => {
+const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageType, isImageComponent = false }) => {
   const verticalPositions = [
     { value: 'top', label: 'Superior', icon: '↑' },
     { value: 'center', label: 'Centro', icon: '•' },
@@ -72,6 +73,27 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
     const minHeight = config.containerStyle.minHeight || '0%';
     const match = minHeight.match(/(\d+)/);
     return match ? parseInt(match[1]) : 0;
+  };
+
+  // Funciones para dimensiones de imagen
+  const getImageWidth = () => {
+    if (!isImageComponent) return 300;
+    const width = config.width || '300px';
+    const match = width.match(/(\d+)/);
+    return match ? parseInt(match[1]) : 300;
+  };
+
+  const getImageHeight = () => {
+    if (!isImageComponent) return 200;
+    const height = config.height || '200px';
+    const match = height.match(/(\d+)/);
+    return match ? parseInt(match[1]) : 200;
+  };
+
+  const updateImageDimension = (dimension: 'width' | 'height', value: number) => {
+    onChange({
+      [dimension]: `${value}px`
+    });
   };
 
   return (
@@ -224,42 +246,105 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
         </div>
       </div>
 
-      {/* Max Width */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          <Maximize2 className="w-4 h-4 inline mr-1" />
-          Ancho Máximo
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="range"
-            min={getMaxWidthUnit() === '%' ? 10 : 100}
-            max={getMaxWidthUnit() === '%' ? 100 : 1200}
-            step={getMaxWidthUnit() === '%' ? 5 : 50}
-            value={getMaxWidthValue()}
-            onChange={(e) => updateMaxWidth(parseInt(e.target.value), getMaxWidthUnit())}
-            className="flex-1"
-          />
-          <div className="flex items-center gap-1">
+      {/* Image Dimensions - Solo para componentes de imagen */}
+      {isImageComponent && (
+        <>
+          {/* Image Width */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <Crop className="w-4 h-4 inline mr-1" />
+              Ancho de Imagen (px)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="range"
+                min="50"
+                max="800"
+                step="10"
+                value={getImageWidth()}
+                onChange={(e) => updateImageDimension('width', parseInt(e.target.value))}
+                className="flex-1"
+              />
+              <input
+                type="number"
+                min="50"
+                max="800"
+                value={getImageWidth()}
+                onChange={(e) => updateImageDimension('width', parseInt(e.target.value) || 300)}
+                className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm"
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-400 self-center">px</span>
+            </div>
+          </div>
+
+          {/* Image Height */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <Crop className="w-4 h-4 inline mr-1" />
+              Alto de Imagen (px)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="range"
+                min="50"
+                max="600"
+                step="10"
+                value={getImageHeight()}
+                onChange={(e) => updateImageDimension('height', parseInt(e.target.value))}
+                className="flex-1"
+              />
+              <input
+                type="number"
+                min="50"
+                max="600"
+                value={getImageHeight()}
+                onChange={(e) => updateImageDimension('height', parseInt(e.target.value) || 200)}
+                className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm"
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-400 self-center">px</span>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Max Width - Solo para páginas o componentes no imagen */}
+      {!isImageComponent && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <Maximize2 className="w-4 h-4 inline mr-1" />
+            Ancho Máximo
+          </label>
+          <div className="flex gap-2">
             <input
-              type="number"
+              type="range"
               min={getMaxWidthUnit() === '%' ? 10 : 100}
               max={getMaxWidthUnit() === '%' ? 100 : 1200}
+              step={getMaxWidthUnit() === '%' ? 5 : 50}
               value={getMaxWidthValue()}
-              onChange={(e) => updateMaxWidth(parseInt(e.target.value) || 100, getMaxWidthUnit())}
-              className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm"
+              onChange={(e) => updateMaxWidth(parseInt(e.target.value), getMaxWidthUnit())}
+              className="flex-1"
             />
-            <select
-              value={getMaxWidthUnit()}
-              onChange={(e) => updateMaxWidth(getMaxWidthValue(), e.target.value)}
-              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm"
-            >
-              <option value="%">%</option>
-              <option value="px">px</option>
-            </select>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={getMaxWidthUnit() === '%' ? 10 : 100}
+                max={getMaxWidthUnit() === '%' ? 100 : 1200}
+                value={getMaxWidthValue()}
+                onChange={(e) => updateMaxWidth(parseInt(e.target.value) || 100, getMaxWidthUnit())}
+                className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm"
+              />
+              <select
+                value={getMaxWidthUnit()}
+                onChange={(e) => updateMaxWidth(getMaxWidthValue(), e.target.value)}
+                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm"
+              >
+                <option value="%">%</option>
+                <option value="px">px</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Min Height (solo para páginas) */}
       {pageType === 'page' && (
