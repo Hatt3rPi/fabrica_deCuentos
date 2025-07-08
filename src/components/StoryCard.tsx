@@ -43,7 +43,7 @@ const StoryCard: React.FC<StoryCardProps> = ({ story, onContinue, onRead, onDele
   });
 
   return (
-    <div className="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-transparent hover:-translate-y-1">
+    <div className="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-transparent hover:-translate-y-1.5">
       <StoryCardMobile
         story={story}
         imageUrl={imageUrl}
