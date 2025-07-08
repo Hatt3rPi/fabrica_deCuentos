@@ -136,6 +136,52 @@ Los paneles se adaptan automáticamente según el elemento seleccionado:
 7. **Editar estilos** usando otros tabs (Tipografía, Colores, etc.)
 8. **Posicionar** usando controles de posición
 
+## Nuevas Funcionalidades - Panel de Edición de Contenido
+
+### 🎯 ContentEditorPanel
+- **Edición de texto**: Editor completo con textarea y variables
+- **Carga de imágenes fijas**: Para elementos controlados por admin
+- **Gestión de imágenes dinámicas**: Referencias para imágenes de usuario
+- **Interfaz adaptativa**: UI diferente según tipo de imagen (fija/dinámica)
+
+### 📝 Edición de Texto
+- **Variables automáticas**: Soporte para `[Nombre del Autor]` y otras variables
+- **Auto-guardado**: Persistencia automática de cambios
+- **Tips contextuales**: Ayuda sobre uso de variables
+- **Validación**: Control de contenido requerido
+
+### 🖼️ Gestión de Imágenes
+
+#### Imágenes Fijas
+- **Vista previa**: Imagen actual mostrada en tiempo real
+- **Carga de archivos**: Botón de selección con validación de formatos
+- **URL externa**: Campo para pegar URLs de imágenes
+- **Formatos soportados**: JPG, PNG, GIF hasta 5MB
+
+#### Imágenes Dinámicas
+- **Imagen de referencia**: Preview con overlay "REFERENCIA"
+- **Contexto visual**: Muestra dónde aparecerá la imagen del usuario
+- **Información clara**: Explicación del comportamiento dinámico
+- **Estado diferenciado**: UI verde para distinguir de imágenes fijas
+
+### 🔗 Integración Completa
+- **Tab dedicado**: "Contenido" aparece solo cuando se selecciona un componente
+- **Hook unificado**: Usa `useStyleAdapter` para consistencia
+- **Todos los paneles**: Tipografía, Posición, Colores, Efectos, Contenedor funcionan
+- **Persistencia**: Cambios se guardan automáticamente en el estado
+
+### 💡 Flujo de Usuario Completo
+1. **Seleccionar componente** → Aparece tab "Contenido"
+2. **Click en "Contenido"** → Se abre ContentEditorPanel
+3. **Editar texto/imagen** → Cambios automáticos con feedback visual
+4. **Cambiar a otros tabs** → Editar tipografía, posición, colores, etc.
+5. **Ver resultado** → Preview se actualiza en tiempo real
+
 ## Estado
 
-✅ Implementado y funcional con gestión completa de elementos
+✅ **Implementado y completamente funcional**
+- Sistema de selección PowerPoint ✅
+- Gestión completa de elementos ✅
+- Panel de edición de contenido ✅
+- Integración con todos los paneles de estilo ✅
+- Casos de uso específicos implementados ✅

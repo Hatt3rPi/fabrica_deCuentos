@@ -217,6 +217,7 @@ export interface ComponentConfig {
   id: string;
   name: string;
   type: 'text' | 'image';
+  pageType: 'cover' | 'page' | 'dedicatoria';
   position: 'top' | 'center' | 'bottom';
   horizontalPosition: 'left' | 'center' | 'right';
   zIndex?: number;

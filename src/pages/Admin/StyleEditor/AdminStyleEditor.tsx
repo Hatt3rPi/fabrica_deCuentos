@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Save, 
   Layout, 
@@ -16,7 +16,8 @@ import {
   RotateCcw,
   Image,
   X,
-  Zap
+  Zap,
+  Edit
 } from 'lucide-react';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
@@ -34,6 +35,7 @@ import TextEditor from './components/TextEditor';
 import CreateTemplateModal from './components/CreateTemplateModal';
 import DedicatoriaImagePanel from './components/DedicatoriaImagePanel';
 import ComponentsPanel from './components/ComponentsPanel';
+import ContentEditorPanel from './components/ContentEditorPanel';
 import { useStyleAdapter, SelectionTarget } from '../../../hooks/useStyleAdapter';
 
 // Texto de muestra para preview
@@ -67,7 +69,13 @@ const AdminStyleEditor: React.FC = () => {
   
   // Sistema de selección PowerPoint-like
   const [selectedTarget, setSelectedTarget] = useState<SelectionTarget>({ type: 'page' });
-  const [components, setComponents] = useState<ComponentConfig[]>([]);
+  const [allComponents, setAllComponents] = useState<ComponentConfig[]>([]);
+  
+  // Obtener componentes de la página actual
+  const components = useMemo(() => 
+    allComponents.filter(c => c.pageType === currentPageType),
+    [allComponents, currentPageType]
+  );
   
   // Estados de UI
   const [isDirty, setIsDirty] = useState(false);
@@ -410,7 +418,7 @@ const AdminStyleEditor: React.FC = () => {
 
   // Función para manejar cambios en componentes
   const handleComponentChange = useCallback((componentId: string, updates: Partial<ComponentConfig>) => {
-    setComponents(prev => prev.map(comp => 
+    setAllComponents(prev => prev.map(comp => 
       comp.id === componentId ? { ...comp, ...updates } : comp
     ));
   }, []);
@@ -418,7 +426,7 @@ const AdminStyleEditor: React.FC = () => {
   // Función para manejar selección de componentes
   const handleComponentSelection = useCallback((componentId: string | null) => {
     if (componentId) {
-      const component = components.find(c => c.id === componentId);
+      const component = allComponents.find(c => c.id === componentId);
       if (component) {
         setSelectedTarget({
           type: 'component',
@@ -430,11 +438,13 @@ const AdminStyleEditor: React.FC = () => {
     } else {
       setSelectedTarget({ type: 'page' });
     }
-  }, [components]);
+  }, [allComponents]);
 
   // Función para agregar componente
   const handleAddComponent = useCallback((component: ComponentConfig) => {
-    setComponents(prev => [...prev, component]);
+    // Asegurar que el componente tenga la página actual
+    const componentWithPage = { ...component, pageType: currentPageType as PageType };
+    setAllComponents(prev => [...prev, componentWithPage]);
     // Seleccionar automáticamente el componente recién agregado
     setSelectedTarget({
       type: 'component',
@@ -442,11 +452,11 @@ const AdminStyleEditor: React.FC = () => {
       componentName: component.name,
       componentType: component.type
     });
-  }, []);
+  }, [currentPageType]);
 
   // Función para eliminar componente
   const handleDeleteComponent = useCallback((componentId: string) => {
-    setComponents(prev => prev.filter(c => c.id !== componentId));
+    setAllComponents(prev => prev.filter(c => c.id !== componentId));
     // Si se elimina el componente seleccionado, volver a página
     if (selectedTarget.componentId === componentId) {
       setSelectedTarget({ type: 'page' });
@@ -741,6 +751,19 @@ const AdminStyleEditor: React.FC = () => {
                 <Layers className="w-4 h-4 inline mr-1" />
                 Elementos
               </button>
+              {selectedTarget.type === 'component' && (
+                <button
+                  onClick={() => setActivePanel('content')}
+                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activePanel === 'content'
+                      ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <Edit className="w-4 h-4 inline mr-1" />
+                  Contenido
+                </button>
+              )}
               <button
                 onClick={() => setActivePanel('typography')}
                 className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -852,51 +875,77 @@ const AdminStyleEditor: React.FC = () => {
               />
             )}
 
-            {activePanel === 'typography' && activeConfig && (
+            {activePanel === 'content' && selectedTarget.type === 'component' && selectedTarget.componentId && (
+              <ContentEditorPanel
+                component={allComponents.find(c => c.id === selectedTarget.componentId)!}
+                onUpdate={(updates) => handleComponentChange(selectedTarget.componentId!, updates)}
+              />
+            )}
+
+            {activePanel === 'typography' && activeConfig && styleAdapter.selectionInfo.canEdit.typography && (
               <TypographyPanel
-                config={getCurrentConfig()}
-                onChange={
-                  currentPageType === 'cover' ? updateCoverConfig :
-                  currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                  updatePageConfig
+                config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
+                onChange={selectedTarget.type === 'component' ? 
+                  (updates: any) => styleAdapter.updateStyles(updates) :
+                  (currentPageType === 'cover' ? updateCoverConfig :
+                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                   updatePageConfig)
                 }
               />
             )}
             
-            {activePanel === 'position' && activeConfig && (
+            {activePanel === 'position' && activeConfig && styleAdapter.selectionInfo.canEdit.position && (
               <PositionPanel
-                config={getCurrentConfig()}
-                onChange={
-                  currentPageType === 'cover' ? updateCoverConfig :
-                  currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                  updatePageConfig
+                config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
+                onChange={selectedTarget.type === 'component' ? 
+                  (updates: any) => styleAdapter.updateStyles(updates) :
+                  (currentPageType === 'cover' ? updateCoverConfig :
+                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                   updatePageConfig)
                 }
                 pageType={currentPageType}
               />
             )}
             
-            {activePanel === 'colors' && activeConfig && (
+            {activePanel === 'colors' && activeConfig && styleAdapter.selectionInfo.canEdit.colors && (
               <ColorPanel
-                config={getCurrentConfig()}
-                onChange={
-                  currentPageType === 'cover' ? updateCoverConfig :
-                  currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                  updatePageConfig
+                config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
+                onChange={selectedTarget.type === 'component' ? 
+                  (updates: any) => styleAdapter.updateStyles(updates) :
+                  (currentPageType === 'cover' ? updateCoverConfig :
+                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                   updatePageConfig)
                 }
               />
             )}
             
-            {activePanel === 'effects' && activeConfig && (
+            {activePanel === 'effects' && activeConfig && styleAdapter.selectionInfo.canEdit.effects && (
               <EffectsPanel
-                containerStyle={getCurrentConfig().containerStyle}
-                onChange={updateContainerStyle}
+                containerStyle={selectedTarget.type === 'component' ? 
+                  { background: styleAdapter.currentStyles.backgroundColor } :
+                  getCurrentConfig().containerStyle
+                }
+                onChange={selectedTarget.type === 'component' ? 
+                  (updates: any) => styleAdapter.updateStyles({ backgroundColor: updates.background }) :
+                  updateContainerStyle
+                }
               />
             )}
             
-            {activePanel === 'container' && activeConfig && (
+            {activePanel === 'container' && activeConfig && styleAdapter.selectionInfo.canEdit.container && (
               <ContainerPanel
-                containerStyle={getCurrentConfig().containerStyle}
-                onChange={updateContainerStyle}
+                containerStyle={selectedTarget.type === 'component' ? 
+                  { 
+                    background: styleAdapter.currentStyles.backgroundColor,
+                    borderRadius: styleAdapter.currentStyles.borderRadius,
+                    padding: styleAdapter.currentStyles.padding
+                  } :
+                  getCurrentConfig().containerStyle
+                }
+                onChange={selectedTarget.type === 'component' ? 
+                  (updates: any) => styleAdapter.updateStyles(updates) :
+                  updateContainerStyle
+                }
                 pageType={currentPageType}
               />
             )}

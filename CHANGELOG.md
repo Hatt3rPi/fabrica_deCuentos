@@ -18,6 +18,13 @@
   - Gestión visual: mostrar/ocultar, eliminar elementos
   - Casos de uso: autor en portada, logo posicionable, imagen de referencia en dedicatoria
 
+- **Panel de Edición de Contenido**
+  - Edición completa de texto con variables [Nombre del Autor]
+  - Carga de imágenes fijas para elementos admin
+  - Gestión de imágenes dinámicas (referencias para usuarios)
+  - Interfaz diferenciada según tipo de imagen
+  - Integración con todos los paneles de estilo existentes
+
 ## [2025-07-02] - Fix: Acceso Público para Descarga de PDFs
 
 ### 🔧 Corrección
