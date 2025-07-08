@@ -7,6 +7,7 @@ interface ComponentRendererProps {
   selectedComponentId?: string;
   onComponentSelect?: (componentId: string | null) => void;
   onComponentUpdate?: (componentId: string, updates: Partial<ComponentConfig>) => void;
+  containerDimensions?: { width: number; height: number };
 }
 
 const ComponentRenderer: React.FC<ComponentRendererProps> = ({
@@ -14,12 +15,39 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   pageType,
   selectedComponentId,
   onComponentSelect,
-  onComponentUpdate
+  onComponentUpdate,
+  containerDimensions
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0, isSnapping: false });
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Función para escalar tamaños de fuente proporcionalmente
+  const getScaledFontSize = (originalSize: string): string => {
+    if (!containerDimensions) return originalSize;
+    
+    // Dimensiones base para el diseño (tamaño "normal")
+    const BASE_WIDTH = 1536;
+    const BASE_HEIGHT = 1024;
+    
+    // Calcular factor de escala basado en el ancho (principal)
+    const scaleFactorWidth = containerDimensions.width / BASE_WIDTH;
+    const scaleFactorHeight = containerDimensions.height / BASE_HEIGHT;
+    
+    // Usar el menor factor para mantener proporciones
+    const scaleFactor = Math.min(scaleFactorWidth, scaleFactorHeight);
+    
+    // Extraer valor numérico y unidad
+    const sizeMatch = originalSize.match(/^([\d.]+)(.+)$/);
+    if (!sizeMatch) return originalSize;
+    
+    const [, value, unit] = sizeMatch;
+    const numericValue = parseFloat(value);
+    const scaledValue = numericValue * scaleFactor;
+    
+    return `${scaledValue.toFixed(2)}${unit}`;
+  };
   
   // Función para manejar el drag and drop
   const handleMouseDown = useCallback((e: React.MouseEvent, component: ComponentConfig) => {
@@ -99,8 +127,16 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
       // Si tiene coordenadas precisas, usarlas
       if (typeof comp.x === 'number' && typeof comp.y === 'number') {
-        styles.left = `${comp.x}px`;
-        styles.top = `${comp.y}px`;
+        // Para componentes de fondo, usar posicionamiento especial
+        if (comp.isBackground) {
+          styles.left = '0';
+          styles.top = '0';
+          styles.width = '100%';
+          styles.height = '100%';
+        } else {
+          styles.left = `${comp.x}px`;
+          styles.top = `${comp.y}px`;
+        }
         return styles;
       }
 
@@ -140,6 +176,23 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       const textComponent = component as TextComponentConfig;
       const positionStyles = getPositionStyles(component);
       
+      // Crear estilos escalados para el texto
+      const scaledStyles = textComponent.style ? {
+        ...textComponent.style,
+        fontSize: textComponent.style.fontSize ? getScaledFontSize(textComponent.style.fontSize) : textComponent.style.fontSize
+      } : {};
+      
+      // Debug: log del escalado de texto
+      if (textComponent.style?.fontSize) {
+        console.log('📏 Font scaling:', {
+          component: textComponent.name,
+          original: textComponent.style.fontSize,
+          scaled: scaledStyles.fontSize,
+          containerDimensions,
+          scaleFactor: containerDimensions ? Math.min(containerDimensions.width / 1536, containerDimensions.height / 1024) : 'N/A'
+        });
+      }
+      
       return (
         <div
           key={component.id}
@@ -153,15 +206,16 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             ...positionStyles,
             maxWidth: '85%',
             transition: isDragging ? 'none' : 'all 0.2s ease',
-            ...textComponent.style,
+            ...scaledStyles,
             // Aplicar estilos específicos para garantizar compatibilidad
-            background: textComponent.style?.backgroundColor || 'transparent',
-            borderRadius: textComponent.style?.borderRadius || '0',
-            padding: textComponent.style?.padding || '0',
-            border: textComponent.style?.border || 'none',
-            boxShadow: textComponent.style?.boxShadow || 'none',
-            backdropFilter: textComponent.style?.backdropFilter || 'none',
-            opacity: textComponent.style?.opacity !== undefined ? textComponent.style.opacity : 1,
+            background: scaledStyles?.backgroundColor || 'transparent',
+            borderRadius: scaledStyles?.borderRadius || '0',
+            padding: scaledStyles?.padding || '0',
+            border: scaledStyles?.border || 'none',
+            boxShadow: scaledStyles?.boxShadow || 'none',
+            backdropFilter: scaledStyles?.backdropFilter || 'none',
+            opacity: scaledStyles?.opacity !== undefined ? scaledStyles.opacity : 1,
+            zIndex: component.zIndex || 0,
             userSelect: 'none', // Evitar selección de texto durante drag
           }}
           className={`
@@ -181,24 +235,33 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       
       // Determinar tamaño
       let sizeStyles: React.CSSProperties = {};
-      switch (imageComponent.size) {
-        case 'small':
-          sizeStyles = { width: '100px', height: '100px' };
-          break;
-        case 'medium':
-          sizeStyles = { width: '200px', height: '200px' };
-          break;
-        case 'large':
-          sizeStyles = { width: '300px', height: '300px' };
-          break;
-        case 'custom':
-          sizeStyles = { 
-            width: imageComponent.width || '200px', 
-            height: imageComponent.height || '200px' 
-          };
-          break;
-        default:
-          sizeStyles = { width: '200px', height: '200px' };
+      
+      // Para componentes de fondo, usar tamaño completo
+      if (imageComponent.isBackground) {
+        sizeStyles = { width: '100%', height: '100%' };
+        console.log('🎨 Rendering background image:', imageComponent.name, 'URL:', imageComponent.url, 'Component ID:', imageComponent.id);
+        console.log('🎨 Background position styles:', positionStyles);
+        console.log('🎨 Background size styles:', sizeStyles);
+      } else {
+        switch (imageComponent.size) {
+          case 'small':
+            sizeStyles = { width: '100px', height: '100px' };
+            break;
+          case 'medium':
+            sizeStyles = { width: '200px', height: '200px' };
+            break;
+          case 'large':
+            sizeStyles = { width: '300px', height: '300px' };
+            break;
+          case 'custom':
+            sizeStyles = { 
+              width: imageComponent.width || '200px', 
+              height: imageComponent.height || '200px' 
+            };
+            break;
+          default:
+            sizeStyles = { width: '200px', height: '200px' };
+        }
       }
 
       return (
@@ -222,6 +285,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             boxShadow: imageComponent.style?.boxShadow || 'none',
             backdropFilter: imageComponent.style?.backdropFilter || 'none',
             opacity: imageComponent.style?.opacity !== undefined ? imageComponent.style.opacity : 1,
+            zIndex: component.zIndex || 0,
             userSelect: 'none', // Evitar selección durante drag
           }}
           className={`
@@ -234,6 +298,8 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             <img
               src={imageComponent.url}
               alt={component.name}
+              onLoad={() => console.log('🖼️ Image loaded successfully:', imageComponent.url)}
+              onError={(e) => console.error('❌ Image failed to load:', imageComponent.url, e)}
               style={{
                 width: '100%',
                 height: '100%',
@@ -275,8 +341,16 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     return null;
   };
 
-  // Filtrar componentes por tipo de página
-  const pageComponents = components.filter(comp => comp.pageType === pageType);
+  // Filtrar componentes por tipo de página y ordenar por zIndex
+  const pageComponents = components
+    .filter(comp => comp.pageType === pageType)
+    .sort((a, b) => {
+      const zIndexA = a.zIndex || 0;
+      const zIndexB = b.zIndex || 0;
+      return zIndexA - zIndexB; // Orden ascendente: -1, 0, 1, 10, etc.
+    });
+  
+  console.log('🔄 Rendering components for', pageType, ':', pageComponents.map(c => ({ id: c.id, name: c.name, type: c.type, isBackground: c.isBackground, url: c.type === 'image' ? (c as ImageComponentConfig).url : 'N/A' })));
 
   return (
     <div ref={containerRef} className="absolute inset-0 w-full h-full">

@@ -22,7 +22,7 @@ import {
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 import { styleConfigService } from '../../../services/styleConfigService';
-import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG, ComponentConfig, PageType, migrateConfigToComponents, TextComponentConfig } from '../../../types/styleConfig';
+import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG, ComponentConfig, PageType, migrateConfigToComponents, TextComponentConfig, ensureBackgroundComponents, DEFAULT_COMPONENTS } from '../../../types/styleConfig';
 import StylePreview from './components/StylePreview';
 import TypographyPanel from './components/TypographyPanel';
 import PositionPanel from './components/PositionPanel';
@@ -36,7 +36,6 @@ import CreateTemplateModal from './components/CreateTemplateModal';
 import DedicatoriaImagePanel from './components/DedicatoriaImagePanel';
 import ComponentsPanel from './components/ComponentsPanel';
 import ContentEditorPanel from './components/ContentEditorPanel';
-import BackgroundImagesPanel from './components/BackgroundImagesPanel';
 import { useStyleAdapter, SelectionTarget } from '../../../hooks/useStyleAdapter';
 
 // Texto de muestra para preview
@@ -54,14 +53,10 @@ const AdminStyleEditor: React.FC = () => {
   const [activeTemplate, setActiveTemplate] = useState<StyleTemplate | null>(null);
   
   const [originalConfig, setOriginalConfig] = useState<StoryStyleConfig | null>(null);
-  // Imágenes por defecto para cada sección
+  // Imágenes por defecto para cada sección (mantener para compatibilidad)
   const [defaultCoverImage, setDefaultCoverImage] = useState<string>('');
   const [defaultPageImage, setDefaultPageImage] = useState<string>('');
   const [defaultDedicatoriaImage, setDefaultDedicatoriaImage] = useState<string>('');
-  // Imágenes custom/subidas por admin
-  const [customCoverImage, setCustomCoverImage] = useState<string>('');
-  const [customPageImage, setCustomPageImage] = useState<string>('');
-  const [customDedicatoriaImage, setCustomDedicatoriaImage] = useState<string>('');
   const [customCoverText, setCustomCoverText] = useState<string>(SAMPLE_TEXTS.cover);
   const [customPageText, setCustomPageText] = useState<string>(SAMPLE_TEXTS.page);
   const [customDedicatoriaText, setCustomDedicatoriaText] = useState<string>(SAMPLE_TEXTS.dedicatoria);
@@ -101,7 +96,7 @@ const AdminStyleEditor: React.FC = () => {
     setSelectedTarget({ type: 'page' });
   }, [currentPageType]);
 
-  // Migrar elementos principales a componentes automáticamente
+  // Migrar elementos principales a componentes automáticamente (solo cuando cambie el activeConfig)
   useEffect(() => {
     if (!activeConfig) return;
 
@@ -109,55 +104,58 @@ const AdminStyleEditor: React.FC = () => {
     const existingDefaultComponents = allComponents.filter(c => c.isDefault);
     
     if (existingDefaultComponents.length === 0) {
-      // Migrar elementos principales a componentes
-      const migratedComponents: ComponentConfig[] = [];
+      // Crear componentes por defecto desde DEFAULT_COMPONENTS
+      const newComponents: ComponentConfig[] = [];
       
-      // Migrar título de portada
-      try {
-        const coverComponent = migrateConfigToComponents(activeConfig, 'cover', customCoverText);
-        migratedComponents.push(coverComponent);
-      } catch (error) {
-        console.warn('Error migrando componente de portada:', error);
+      // Crear componentes para cada tipo de página
+      const pageTypes: ('cover' | 'page' | 'dedicatoria')[] = ['cover', 'page', 'dedicatoria'];
+      for (const pageType of pageTypes) {
+        const defaultComponentsForPage = DEFAULT_COMPONENTS[pageType] || [];
+        
+        // Crear componentes con IDs únicos y contenido apropiado
+        const pageComponents = defaultComponentsForPage.map(defaultComp => {
+          const component = {
+            ...defaultComp,
+            id: `${defaultComp.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          };
+          
+          // Asignar contenido de texto apropiado
+          if (component.type === 'text') {
+            const textComponent = component as TextComponentConfig;
+            if (pageType === 'cover') {
+              textComponent.content = customCoverText;
+            } else if (pageType === 'page') {
+              textComponent.content = customPageText;
+            } else if (pageType === 'dedicatoria') {
+              textComponent.content = customDedicatoriaText;
+            }
+          }
+          
+          return component;
+        });
+        
+        newComponents.push(...pageComponents);
       }
       
-      // Migrar texto de páginas
-      try {
-        const pageComponent = migrateConfigToComponents(activeConfig, 'page', customPageText);
-        migratedComponents.push(pageComponent);
-      } catch (error) {
-        console.warn('Error migrando componente de página:', error);
-      }
-      
-      // Migrar texto de dedicatoria
-      try {
-        const dedicatoriaComponent = migrateConfigToComponents(activeConfig, 'dedicatoria', customDedicatoriaText);
-        migratedComponents.push(dedicatoriaComponent);
-      } catch (error) {
-        console.warn('Error migrando componente de dedicatoria:', error);
-      }
-      
-      if (migratedComponents.length > 0) {
-        setAllComponents(prev => [...prev, ...migratedComponents]);
-        console.log('Migrated default components:', migratedComponents);
+      if (newComponents.length > 0) {
+        setAllComponents(prev => [...prev, ...newComponents]);
+        console.log('Created default components:', newComponents);
       }
     }
-  }, [activeConfig, customCoverText, customPageText, customDedicatoriaText]);
+  }, [activeConfig]); // Solo dependencia de activeConfig para evitar re-creación innecesaria
 
   // Detectar cambios
   useEffect(() => {
     if (originalConfig) {
       const hasConfigChanges = JSON.stringify(activeConfig) !== JSON.stringify(originalConfig);
-      const hasImageChanges = 
-        (originalConfig.coverBackgroundUrl || '') !== customCoverImage ||
-        (originalConfig.pageBackgroundUrl || '') !== customPageImage ||
-        (originalConfig.dedicatoriaBackgroundUrl || '') !== customDedicatoriaImage;
+      const hasImageChanges = false; // Custom images now handled by background components
       const hasTextChanges = 
         (originalConfig.coverSampleText || SAMPLE_TEXTS.cover) !== customCoverText ||
         (originalConfig.pageSampleText || SAMPLE_TEXTS.page) !== customPageText ||
         (originalConfig.dedicatoriaSampleText || SAMPLE_TEXTS.dedicatoria) !== customDedicatoriaText;
       setIsDirty(hasConfigChanges || hasImageChanges || hasTextChanges);
     }
-  }, [activeConfig, originalConfig, customCoverImage, customPageImage, customDedicatoriaImage, customCoverText, customPageText, customDedicatoriaText]);
+  }, [activeConfig, originalConfig, customCoverText, customPageText, customDedicatoriaText]);
 
   const loadActiveTemplate = async () => {
     try {
@@ -185,22 +183,17 @@ const AdminStyleEditor: React.FC = () => {
         setActiveConfig(config);
         setOriginalConfig(config);
         
-        // Cargar imágenes y textos custom si existen
-        if (template.customImages) {
-          setCustomCoverImage(template.customImages.cover_url || '');
-          setCustomPageImage(template.customImages.page_url || '');
-          setCustomDedicatoriaImage(template.customImages.dedicatoria_url || '');
-          console.log('🖼️ Imágenes custom cargadas desde BD:', template.customImages);
+        // CRÍTICO: Cargar componentes guardados en el template
+        if (template.configData.components && template.configData.components.length > 0) {
+          setAllComponents(template.configData.components);
+          console.log('🧩 Componentes cargados desde BD:', {
+            count: template.configData.components.length,
+            components: template.configData.components
+          });
         } else {
-          setCustomCoverImage('');
-          setCustomPageImage('');
-          setCustomDedicatoriaImage('');
-        }
-        
-        // También cargar imagen de fondo de dedicatoria desde la configuración
-        if (template.configData.dedicatoria_config?.backgroundImageUrl) {
-          setCustomDedicatoriaImage(template.configData.dedicatoria_config.backgroundImageUrl);
-          console.log('🖼️ Imagen de fondo de dedicatoria cargada desde config:', template.configData.dedicatoria_config.backgroundImageUrl);
+          // Si no hay componentes guardados, se crearán automáticamente por el useEffect de migración
+          setAllComponents([]);
+          console.log('🧩 No hay componentes guardados, se crearán por defecto');
         }
         
         if (template.customTexts) {
@@ -236,9 +229,9 @@ const AdminStyleEditor: React.FC = () => {
     } catch (error) {
       console.error('Error cargando imágenes por defecto:', error);
       // Usar fallbacks si hay error
-      setDefaultCoverImage('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&h=800&fit=crop');
-      setDefaultPageImage('https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&h=800&fit=crop');
-      setDefaultDedicatoriaImage('https://images.unsplash.com/photo-1444927714506-8492d94b5ba0?w=1200&h=800&fit=crop');
+      setDefaultCoverImage('http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/portada.png');
+      setDefaultPageImage('http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/pagina_interior.png');
+      setDefaultDedicatoriaImage('http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/dedicatoria.png');
     }
   };
 
@@ -256,14 +249,8 @@ const AdminStyleEditor: React.FC = () => {
     try {
       setIsSaving(true);
       
-      // Actualizar configuración de dedicatoria con imagen de fondo si existe
-      const updatedDedicatoriaConfig = {
-        ...activeConfig.dedicatoriaConfig,
-        ...(customDedicatoriaImage && {
-          backgroundImageUrl: customDedicatoriaImage,
-          backgroundImagePosition: 'cover' as const
-        })
-      };
+      // La configuración de dedicatoria ya se maneja através de componentes
+      const updatedDedicatoriaConfig = activeConfig.dedicatoriaConfig;
       
       // Actualizar template activo con las configuraciones editadas
       const templateUpdate: Partial<StyleTemplate> = {
@@ -271,13 +258,13 @@ const AdminStyleEditor: React.FC = () => {
         configData: {
           cover_config: activeConfig.coverConfig,
           page_config: activeConfig.pageConfig,
-          dedicatoria_config: updatedDedicatoriaConfig
+          dedicatoria_config: updatedDedicatoriaConfig,
+          // CRÍTICO: Incluir componentes en el guardado
+          components: allComponents
         },
-        // Agregar imágenes custom si existen
+        // Imágenes custom ahora se manejan através de componentes de fondo
         customImages: {
-          cover_url: customCoverImage || undefined,
-          page_url: customPageImage || undefined,
-          dedicatoria_url: customDedicatoriaImage || undefined
+          // Se mantiene la estructura para compatibilidad
         },
         // Agregar textos custom
         customTexts: {
@@ -287,9 +274,15 @@ const AdminStyleEditor: React.FC = () => {
         }
       };
       
-      console.log('Updating active template:', templateUpdate);
+      console.log('🔧 Saving template with components:', {
+        componentsCount: allComponents.length,
+        components: allComponents,
+        templateUpdate
+      });
       
       const result = await styleConfigService.updateActiveTemplate(templateUpdate);
+      
+      console.log('✅ Save result:', result);
 
       if (result) {
         setActiveTemplate(result);
@@ -329,8 +322,6 @@ const AdminStyleEditor: React.FC = () => {
   const handleReset = () => {
     if (originalConfig) {
       setActiveConfig(originalConfig);
-      setCustomCoverImage(originalConfig.coverBackgroundUrl || '');
-      setCustomPageImage(originalConfig.pageBackgroundUrl || '');
       setCustomCoverText(originalConfig.coverSampleText || SAMPLE_TEXTS.cover);
       setCustomPageText(originalConfig.pageSampleText || SAMPLE_TEXTS.page);
       setIsDirty(false);
@@ -461,9 +452,15 @@ const AdminStyleEditor: React.FC = () => {
 
   // Función para manejar cambios en componentes
   const handleComponentChange = useCallback((componentId: string, updates: Partial<ComponentConfig>) => {
-    setAllComponents(prev => prev.map(comp => 
-      comp.id === componentId ? { ...comp, ...updates } : comp
-    ));
+    console.log('📝 Updating component:', componentId, updates);
+    setAllComponents(prev => {
+      const updatedComponents = prev.map(comp => 
+        comp.id === componentId ? { ...comp, ...updates } : comp
+      );
+      console.log('📦 Updated components:', updatedComponents);
+      return updatedComponents;
+    });
+    setIsDirty(true);
   }, []);
 
   // Función para manejar selección de componentes
@@ -873,17 +870,6 @@ const AdminStyleEditor: React.FC = () => {
                 <Settings className="w-4 h-4 inline mr-1" />
                 Contenedor
               </button>
-              <button
-                onClick={() => setActivePanel('images')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'images'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Image className="w-4 h-4 inline mr-1" />
-                Imágenes
-              </button>
             </div>
 
 
@@ -1047,18 +1033,6 @@ const AdminStyleEditor: React.FC = () => {
               />
             )}
             
-            {activePanel === 'images' && (
-              <BackgroundImagesPanel
-                customCoverImage={customCoverImage}
-                customPageImage={customPageImage}
-                customDedicatoriaImage={customDedicatoriaImage}
-                onCoverImageChange={setCustomCoverImage}
-                onPageImageChange={setCustomPageImage}
-                onDedicatoriaImageChange={setCustomDedicatoriaImage}
-                currentPageType={currentPageType}
-                onAddComponent={handleAddComponent}
-              />
-            )}
             
             
           </div>
@@ -1111,9 +1085,9 @@ const AdminStyleEditor: React.FC = () => {
                 config={activeConfig}
                 pageType={currentPageType}
                 sampleImage={
-                  currentPageType === 'cover' ? (customCoverImage || defaultCoverImage) :
-                  currentPageType === 'dedicatoria' ? (customDedicatoriaImage || defaultDedicatoriaImage) :
-                  (customPageImage || defaultPageImage)
+                  currentPageType === 'cover' ? defaultCoverImage :
+                  currentPageType === 'dedicatoria' ? defaultDedicatoriaImage :
+                  defaultPageImage
                 }
                 sampleText={
                   currentPageType === 'cover' ? customCoverText :

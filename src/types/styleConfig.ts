@@ -100,6 +100,7 @@ export interface StyleTemplate {
     cover_config: CoverConfig;
     page_config: PageConfig;
     dedicatoria_config?: DedicatoriaConfig;
+    components?: ComponentConfig[];
   };
   customImages?: {
     cover_url?: string;
@@ -275,6 +276,29 @@ export interface ImageComponentConfig extends ComponentConfig {
 export const DEFAULT_COMPONENTS = {
   cover: [
     {
+      id: 'cover-background',
+      name: 'Fondo de Portada',
+      type: 'image' as const,
+      pageType: 'cover' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      x: 0,
+      y: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      size: 'custom',
+      imageType: 'fixed' as const,
+      isBackground: true,
+      zIndex: -1,
+      visible: true,
+      url: 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/portada.png',
+      style: {
+        opacity: 1,
+        borderRadius: '0px'
+      }
+    },
+    {
       id: 'cover-title',
       name: 'Título del Cuento',
       type: 'text' as const,
@@ -300,6 +324,29 @@ export const DEFAULT_COMPONENTS = {
   ],
   page: [
     {
+      id: 'page-background',
+      name: 'Fondo de Página Interior',
+      type: 'image' as const,
+      pageType: 'page' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      x: 0,
+      y: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      size: 'custom',
+      imageType: 'fixed' as const,
+      isBackground: true,
+      zIndex: -1,
+      visible: true,
+      url: 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/pagina_interior.png',
+      style: {
+        opacity: 1,
+        borderRadius: '0px'
+      }
+    },
+    {
       id: 'page-text',
       name: 'Texto del Cuento',
       type: 'text' as const,
@@ -324,6 +371,29 @@ export const DEFAULT_COMPONENTS = {
     }
   ],
   dedicatoria: [
+    {
+      id: 'dedicatoria-background',
+      name: 'Fondo de Dedicatoria',
+      type: 'image' as const,
+      pageType: 'dedicatoria' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      x: 0,
+      y: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      size: 'custom',
+      imageType: 'fixed' as const,
+      isBackground: true,
+      zIndex: -1,
+      visible: true,
+      url: 'http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/dedicatoria.png',
+      style: {
+        opacity: 1,
+        borderRadius: '0px'
+      }
+    },
     {
       id: 'dedicatoria-text',
       name: 'Texto de Dedicatoria',
@@ -422,6 +492,33 @@ export function createDefaultComponents(pageType: PageType): ComponentConfig[] {
     ...component,
     id: `${component.id}-${Date.now()}` // Asegurar IDs únicos
   }));
+}
+
+// Helper para asegurar que componentes de fondo existen
+export function ensureBackgroundComponents(
+  existingComponents: ComponentConfig[], 
+  pageType: PageType
+): ComponentConfig[] {
+  const backgroundId = `${pageType}-background`;
+  
+  // Filtrar componentes de fondo existentes para evitar duplicados
+  const nonBackgroundComponents = existingComponents.filter(c => !c.isBackground);
+  const hasBackground = existingComponents.some(c => c.isBackground);
+  
+  if (!hasBackground) {
+    const backgroundComponent = DEFAULT_COMPONENTS[pageType]?.find(c => c.isBackground);
+    if (backgroundComponent) {
+      return [
+        {
+          ...backgroundComponent,
+          id: backgroundId
+        },
+        ...nonBackgroundComponents
+      ];
+    }
+  }
+  
+  return existingComponents;
 }
 
 // Helper para migrar configuración antigua a componentes

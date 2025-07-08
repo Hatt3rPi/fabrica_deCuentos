@@ -69,6 +69,60 @@
   - **ContentEditorPanel expandido**: Ahora incluye edición de textos de muestra
   - **Nuevos campos en tipos**: `isBackground` y `zIndex` para componentes de imagen
 
+- **Sistema de Imágenes de Fondo como Componentes**
+  - Panel "Imágenes" eliminado de la navegación
+  - Cada página (portada/interior/dedicatoria) ahora tiene un componente de imagen de fondo por defecto
+  - Componentes de fondo creados automáticamente con `zIndex: -1` para aparecer detrás del contenido
+  - Imágenes de fondo editables desde el panel "Contenido" con indicadores especiales
+  - StylePreview actualizado para renderizar componentes ordenados por zIndex
+  - ComponentRenderer mejorado con ordenamiento automático por zIndex para capas correctas
+  - Eliminada lógica obsoleta de imágenes de fondo personalizada (customCoverImage, customPageImage, customDedicatoriaImage)
+  - BackgroundImagesPanel.tsx eliminado por obsolescencia
+
+### Correcciones Post-Implementación
+- **Fix: Componentes principales restaurados** - Corregida lógica de migración para usar DEFAULT_COMPONENTS correctamente
+- **Fix: Duplicación de componentes de fondo** - Mejorada función ensureBackgroundComponents para evitar duplicados
+- **Fix: Posicionamiento de imágenes de fondo** - ComponentRenderer ahora posiciona correctamente componentes isBackground
+- **Fix: Tamaño de componentes de fondo** - Componentes de fondo ahora cubren 100% del área (width: 100%, height: 100%)
+- **Fix: Creación automática de componentes** - Ahora se crean todos los componentes por defecto (título, texto, fondo) para cada página
+- **Fix: Import faltante de DEFAULT_COMPONENTS** - Agregado import necesario en AdminStyleEditor
+- **Fix: Opacidad de imágenes de fondo** - Cambiada de 0.3 a 1 para mejor visibilidad
+- **Debug: Logs agregados** - Para diagnosticar problemas de renderizado de imágenes
+- **Debug: Logs mejorados** - Trazabilidad completa del flujo de actualización de imágenes (ContentEditorPanel → handleComponentChange → ComponentRenderer)
+- **Fix: Errores 400/406 en consultas Supabase** - Corregidas consultas que fallaban por columna page_type inexistente y uso incorrecto de .single()
+  - styleConfigService: Eliminada referencia a columna `page_type` que no existe en tabla `story_pages`
+  - useStoryPurchaseStatus: Cambiado `.single()` por `.maybeSingle()` para manejar casos sin resultados
+- **Feature: Imágenes por defecto específicas** - Configuradas URLs por defecto para cada tipo de página en admin/style
+  - Portada: `http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/portada.png`
+  - Página interior: `http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/pagina_interior.png`
+  - Dedicatoria: `http://127.0.0.1:54321/storage/v1/object/public/storage/style_design/dedicatoria.png`
+  - Actualizados DEFAULT_COMPONENTS y todos los fallbacks en serviceConfig
+- **Fix: Imágenes de fondo no visibles en vista previa** - Problema de zIndex resuelto
+- **Fix: Escalabilidad proporcional de texto** - Implementado sistema de escalado opcional con `enableScaling` para mantener proporciones en diferentes tamaños de contenedor
+- **Fix: Loop infinito de notificaciones** - Corregidas múltiples notificaciones duplicadas (46 instancias)
+  - Removida dependencia `fetchNotifications` del useEffect en useNotifications.ts
+  - Agregado cleanup de notification listeners para evitar acumulación
+  - Optimizado useEffect de migración de componentes para evitar re-ejecuciones innecesarias
+- **Fix: Persistencia de componentes en BD** - Mejorado sistema de guardado para garantizar que los componentes se guarden correctamente
+  - Agregado logging detallado para debug de proceso de guardado/carga
+  - Corregida lógica de inclusión de componentes en templateUpdate
+  - Mejorada función loadActiveTemplate para cargar componentes desde configData
+  - Cambiado backgroundColor de '#f3f4f6' a 'transparent' en StylePreview para mostrar imágenes con zIndex negativo
+  - ComponentRenderer: Agregados logs de debugging para carga de imágenes (onLoad/onError)
+  - Flujo de datos confirmado funcionando: ContentEditor → handleComponentChange → ComponentRenderer → StylePreview
+- **Feature: Sistema de escalado proporcional controlado** - Escalado opcional y contextual
+  - Migrada función `getScaledFontSize` desde ComponentRenderer a storyStyleUtils para reutilización
+  - `applyStandardStyles` soporta escalado opcional con parámetros `containerDimensions` y `enableScaling`
+  - `generatePDFStyles` actualizada para soportar escalado proporcional opcional en PDF
+  - ComponentRenderer mantiene su propio sistema de escalado para admin/style (funciona correctamente)
+  - StoryRenderer NO aplica escalado por defecto (evita problemas de posicionamiento)
+  - Base dimensions: 1536x1024px para factor de escala consistente (usando el menor factor para mantener aspect ratio)
+  - Escalado habilitado solo donde es necesario y probado
+- **Fix: Error al guardar template** - Corregida referencia a variable no definida
+  - Eliminada referencia obsoleta a `customDedicatoriaImage` en función `handleSave`
+  - Sistema de imágenes custom ahora se maneja completamente através de componentes de fondo
+  - Función de guardado simplificada y libre de errores
+
 ## [2025-07-02] - Fix: Acceso Público para Descarga de PDFs
 
 ### 🔧 Corrección

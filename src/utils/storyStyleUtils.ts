@@ -183,6 +183,42 @@ export function getContainerPosition(config: TitleConfig | PageTextConfig) {
 }
 
 // ============================================================================
+// ESCALADO PROPORCIONAL
+// ============================================================================
+
+/**
+ * Escala tamaños de fuente proporcionalmente basado en dimensiones de contenedor
+ * ESTÁNDAR: Lógica migrada desde ComponentRenderer para consistencia
+ */
+export function getScaledFontSize(
+  originalSize: string, 
+  containerDimensions?: { width: number; height: number }
+): string {
+  if (!containerDimensions) return originalSize;
+  
+  // Dimensiones base para el diseño (tamaño "normal")
+  const BASE_WIDTH = 1536;
+  const BASE_HEIGHT = 1024;
+  
+  // Calcular factor de escala basado en ambas dimensiones
+  const scaleFactorWidth = containerDimensions.width / BASE_WIDTH;
+  const scaleFactorHeight = containerDimensions.height / BASE_HEIGHT;
+  
+  // Usar el menor factor para mantener proporciones
+  const scaleFactor = Math.min(scaleFactorWidth, scaleFactorHeight);
+  
+  // Extraer valor numérico y unidad
+  const sizeMatch = originalSize.match(/^([\d.]+)(.+)$/);
+  if (!sizeMatch) return originalSize;
+  
+  const [, value, unit] = sizeMatch;
+  const numericValue = parseFloat(value);
+  const scaledValue = numericValue * scaleFactor;
+  
+  return `${scaledValue.toFixed(2)}${unit}`;
+}
+
+// ============================================================================
 // APLICACIÓN UNIFICADA DE ESTILOS
 // ============================================================================
 
@@ -193,16 +229,27 @@ export function getContainerPosition(config: TitleConfig | PageTextConfig) {
 export function applyStandardStyles(
   config: StoryStyleConfig | null | undefined,
   pageType: PageType,
-  context: RenderContext = 'admin'
+  context: RenderContext = 'admin',
+  containerDimensions?: { width: number; height: number },
+  enableScaling: boolean = false
 ): StyleApplication {
   const currentConfig = getCurrentConfigWithDefaults(config, pageType);
+  
+  // Aplicar escalado proporcional solo si está habilitado y se proporcionan dimensiones
+  const baseTextStyle = convertToReactStyle(currentConfig);
+  const textStyle = enableScaling && containerDimensions && baseTextStyle.fontSize
+    ? {
+        ...baseTextStyle,
+        fontSize: getScaledFontSize(baseTextStyle.fontSize as string, containerDimensions)
+      }
+    : baseTextStyle;
   
   // El contexto se usa para optimizaciones futuras específicas
   // Por ahora, mantenemos la lógica unificada
   void context; // Evita el warning de variable no usada
   
   return {
-    textStyle: convertToReactStyle(currentConfig),
+    textStyle,
     containerStyle: convertContainerToReactStyle(currentConfig.containerStyle),
     positioning: getContainerPosition(currentConfig)
   };
@@ -292,13 +339,15 @@ export function convertToHTMLStyle(reactStyle: React.CSSProperties): string {
  */
 export function generatePDFStyles(
   config: StoryStyleConfig | null | undefined,
-  pageType: PageType
+  pageType: PageType,
+  containerDimensions?: { width: number; height: number },
+  enableScaling: boolean = false
 ): {
   textCSS: string;
   containerCSS: string;
   positionCSS: string;
 } {
-  const { textStyle, containerStyle, positioning } = applyStandardStyles(config, pageType, 'pdf');
+  const { textStyle, containerStyle, positioning } = applyStandardStyles(config, pageType, 'pdf', containerDimensions, enableScaling);
   
   return {
     textCSS: convertToHTMLStyle(textStyle),
@@ -353,6 +402,9 @@ export default {
   convertToReactStyle,
   convertContainerToReactStyle,
   convertToHTMLStyle,
+  
+  // Escalado proporcional
+  getScaledFontSize,
   
   // Posicionamiento
   getContainerPosition,

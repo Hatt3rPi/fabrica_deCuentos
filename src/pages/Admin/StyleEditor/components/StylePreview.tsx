@@ -34,6 +34,16 @@ const StylePreview: React.FC<StylePreviewProps> = ({
   const scale = zoomLevel / 100;
   const [dimensions, setDimensions] = useState({ width: 1536, height: 1024 });
 
+  // Debug: Log de componentes recibidos
+  console.log('👁️ StylePreview received components:', components.map(c => ({ 
+    id: c.id, 
+    name: c.name, 
+    pageType: c.pageType, 
+    type: c.type, 
+    isBackground: c.type === 'image' ? c.isBackground : undefined,
+    url: c.type === 'image' ? c.url : undefined
+  })));
+
   // Calcular dimensiones responsivas
   useEffect(() => {
     const updateDimensions = () => {
@@ -157,14 +167,13 @@ const StylePreview: React.FC<StylePreviewProps> = ({
           marginTop: showRulers ? '1.5rem' : 0,
         }}
       >
-        {/* Contenedor de página con imagen de fondo */}
+        {/* Contenedor de página */}
         <div 
-          className="story-page relative w-full h-full bg-cover bg-center bg-no-repeat overflow-hidden"
+          className="story-page relative w-full h-full overflow-hidden"
           style={{
             width: `${dimensions.width}px`,
             height: `${dimensions.height}px`,
-            backgroundImage: sampleImage ? `url(${sampleImage})` : undefined,
-            backgroundColor: sampleImage ? 'transparent' : '#f3f4f6'
+            backgroundColor: 'transparent'
           }}
         >
           {/* Overlay para grid si está habilitado */}
@@ -251,6 +260,7 @@ const StylePreview: React.FC<StylePreviewProps> = ({
             selectedComponentId={selectedComponentId}
             onComponentSelect={onComponentSelect}
             onComponentUpdate={onComponentUpdate}
+            containerDimensions={dimensions}
           />
         </div>
       </div>

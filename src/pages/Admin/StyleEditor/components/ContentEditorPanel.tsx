@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Type, Image, Upload, Save } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Type, Image, Upload, Save, X } from 'lucide-react';
 import { ComponentConfig, TextComponentConfig, ImageComponentConfig } from '../../../../types/styleConfig';
+import { useAuth } from '../../../../context/AuthContext';
 
 interface ContentEditorPanelProps {
   component: ComponentConfig;
@@ -8,12 +9,16 @@ interface ContentEditorPanelProps {
 }
 
 const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ component, onUpdate }) => {
+  const { supabase } = useAuth();
   const [tempContent, setTempContent] = useState(
     component.type === 'text' ? (component as TextComponentConfig).content : ''
   );
   const [tempImageUrl, setTempImageUrl] = useState(
     component.type === 'image' ? (component as ImageComponentConfig).url || '' : ''
   );
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSaveText = () => {
     if (component.type === 'text') {
@@ -23,19 +28,66 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ component, onUp
 
   const handleSaveImage = () => {
     if (component.type === 'image') {
+      console.log('🖼️ Saving image URL:', tempImageUrl, 'for component:', component.id);
       onUpdate({ url: tempImageUrl } as Partial<ImageComponentConfig>);
     }
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // En una implementación real, aquí subirías la imagen a tu storage
-      // Por ahora simulamos con URL.createObjectURL
-      const imageUrl = URL.createObjectURL(file);
-      setTempImageUrl(imageUrl);
-      onUpdate({ url: imageUrl } as Partial<ImageComponentConfig>);
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Por favor selecciona un archivo de imagen');
+      return;
     }
+
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('La imagen no debe superar los 5MB');
+      return;
+    }
+
+    setUploadError(null);
+    setIsUploading(true);
+
+    try {
+      // Generar nombre único para el archivo
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `background_images/${component.pageType}_${timestamp}.${fileExt}`;
+
+      // Subir archivo a Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('storage')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('storage')
+        .getPublicUrl(fileName);
+
+      setTempImageUrl(publicUrl);
+      console.log('🚀 Auto-updating component URL after upload:', publicUrl, 'for component:', component.id);
+      onUpdate({ url: publicUrl } as Partial<ImageComponentConfig>);
+
+    } catch (error) {
+      console.error('Error al subir imagen:', error);
+      setUploadError('Error al subir la imagen. Por favor intenta nuevamente.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setTempImageUrl('');
+    onUpdate({ url: '' } as Partial<ImageComponentConfig>);
   };
 
   if (component.type === 'text') {
@@ -102,11 +154,18 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ component, onUp
             }`}>
               {imageComponent.imageType === 'fixed' ? 'Imagen Fija' : 'Imagen Dinámica'}
             </span>
+            {imageComponent.isBackground && (
+              <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                Fondo de Página
+              </span>
+            )}
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {imageComponent.imageType === 'fixed' 
-              ? 'Esta imagen se mantiene fija y es visible para todos los usuarios.'
-              : 'Esta imagen será reemplazada por la imagen que suba cada usuario.'}
+            {imageComponent.isBackground 
+              ? 'Esta imagen sirve como fondo de página para referencias visuales durante el diseño.'
+              : imageComponent.imageType === 'fixed' 
+                ? 'Esta imagen se mantiene fija y es visible para todos los usuarios.'
+                : 'Esta imagen será reemplazada por la imagen que suba cada usuario.'}
           </p>
         </div>
 
@@ -123,6 +182,12 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ component, onUp
                     alt="Vista previa"
                     className="w-full max-w-xs h-32 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
                   />
+                  <button
+                    onClick={handleRemoveImage}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
               ) : (
                 <div className="w-full max-w-xs h-32 bg-gray-100 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
@@ -134,19 +199,31 @@ const ContentEditorPanel: React.FC<ContentEditorPanelProps> = ({ component, onUp
               )}
             </div>
 
+            {uploadError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-800 dark:text-red-200">{uploadError}</p>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Subir nueva imagen
               </label>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors cursor-pointer">
+                <label className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors cursor-pointer ${
+                  isUploading 
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                    : 'bg-gray-600 text-white hover:bg-gray-700'
+                }`}>
                   <Upload className="w-4 h-4" />
-                  Seleccionar archivo
+                  {isUploading ? 'Subiendo...' : 'Seleccionar archivo'}
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
+                    disabled={isUploading}
                     className="hidden"
+                    ref={fileInputRef}
                   />
                 </label>
                 <span className="text-sm text-gray-500 dark:text-gray-400">

@@ -96,7 +96,7 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
     
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [appliedStyles, setAppliedStyles] = React.useState(() => 
-      applyStandardStyles(config, pageType, context)
+      applyStandardStyles(config, pageType, context, dimensions, false)
     );
     
     // ========================================================================
@@ -106,13 +106,17 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
     // Recalcular estilos cuando cambien las props
     React.useEffect(() => {
       try {
-        const newStyles = applyStandardStyles(config, pageType, context);
+        // Por defecto, StoryRenderer no aplica escalado automático
+        // El escalado se maneja en ComponentRenderer para admin/style
+        const newStyles = applyStandardStyles(config, pageType, context, dimensions, false);
         setAppliedStyles(newStyles);
         
         if (debug) {
           console.log(`[StoryRenderer:${instanceId}] Estilos aplicados:`, {
             pageType,
             context,
+            dimensions,
+            scaling: false,
             config: debugStyleConfig(config, pageType)
           });
         }
@@ -121,7 +125,7 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
         console.error(`[StoryRenderer:${instanceId}] Error aplicando estilos:`, err);
         onError?.(err);
       }
-    }, [config, pageType, context, debug, instanceId, onError]);
+    }, [config, pageType, context, dimensions, debug, instanceId, onError]);
     
     // ========================================================================
     // IMPERATIVO API (useImperativeHandle)
@@ -131,7 +135,7 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
       getAppliedStyles: () => appliedStyles,
       validateConfig: () => {
         try {
-          applyStandardStyles(config, pageType, context);
+          applyStandardStyles(config, pageType, context, dimensions, false);
           return true;
         } catch {
           return false;
