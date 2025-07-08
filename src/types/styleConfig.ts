@@ -222,11 +222,13 @@ export interface ComponentConfig {
   horizontalPosition: 'left' | 'center' | 'right';
   zIndex?: number;
   visible?: boolean;
+  isDefault?: boolean; // Marca componentes por defecto (título, texto principal, etc.)
 }
 
 export interface TextComponentConfig extends ComponentConfig {
   type: 'text';
   content: string;
+  isDefault?: boolean;
   style?: {
     fontSize?: string;
     fontFamily?: string;
@@ -241,6 +243,8 @@ export interface TextComponentConfig extends ComponentConfig {
     borderRadius?: string;
     padding?: string;
     opacity?: number;
+    border?: string;
+    boxShadow?: string;
   };
 }
 
@@ -259,6 +263,88 @@ export interface ImageComponentConfig extends ComponentConfig {
     boxShadow?: string;
   };
 }
+
+// Componentes por defecto para elementos principales
+export const DEFAULT_COMPONENTS = {
+  cover: [
+    {
+      id: 'cover-title',
+      name: 'Título del Cuento',
+      type: 'text' as const,
+      pageType: 'cover' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      zIndex: 10,
+      visible: true,
+      content: '',
+      isDefault: true, // Marca este como componente por defecto
+      style: {
+        fontSize: '4rem',
+        fontFamily: 'Indie Flower',
+        fontWeight: 'bold',
+        color: '#ffffff',
+        textAlign: 'center',
+        textShadow: '3px 3px 6px rgba(0,0,0,0.8)',
+        backgroundColor: 'transparent',
+        padding: '2rem 3rem',
+        borderRadius: '0'
+      }
+    }
+  ],
+  page: [
+    {
+      id: 'page-text',
+      name: 'Texto del Cuento',
+      type: 'text' as const,
+      pageType: 'page' as const,
+      position: 'bottom' as const,
+      horizontalPosition: 'center' as const,
+      zIndex: 10,
+      visible: true,
+      content: '',
+      isDefault: true,
+      style: {
+        fontSize: '2.2rem',
+        fontFamily: 'Indie Flower',
+        fontWeight: '600',
+        color: '#ffffff',
+        textAlign: 'center',
+        textShadow: '3px 3px 6px rgba(0,0,0,0.9)',
+        lineHeight: '1.4',
+        backgroundColor: 'transparent',
+        padding: '1rem 2rem 6rem 2rem'
+      }
+    }
+  ],
+  dedicatoria: [
+    {
+      id: 'dedicatoria-text',
+      name: 'Texto de Dedicatoria',
+      type: 'text' as const,
+      pageType: 'dedicatoria' as const,
+      position: 'center' as const,
+      horizontalPosition: 'center' as const,
+      zIndex: 10,
+      visible: true,
+      content: '',
+      isDefault: true,
+      style: {
+        fontSize: '2rem',
+        fontFamily: 'Indie Flower',
+        fontWeight: '500',
+        color: '#4a5568',
+        textAlign: 'center',
+        textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        lineHeight: '1.6',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        padding: '2rem 3rem',
+        borderRadius: '1rem',
+        border: '1px solid rgba(0,0,0,0.1)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+      }
+    }
+  ]
+};
 
 // Presets para casos de uso comunes
 export const COMPONENT_PRESETS = {
@@ -318,3 +404,96 @@ export const COMPONENT_PRESETS = {
     }
   }
 };
+
+// Tipo para especificar página
+export type PageType = 'cover' | 'page' | 'dedicatoria';
+
+// Helper para crear componentes por defecto
+export function createDefaultComponents(pageType: PageType): ComponentConfig[] {
+  const defaults = DEFAULT_COMPONENTS[pageType] || [];
+  return defaults.map(component => ({
+    ...component,
+    id: `${component.id}-${Date.now()}` // Asegurar IDs únicos
+  }));
+}
+
+// Helper para migrar configuración antigua a componentes
+export function migrateConfigToComponents(
+  config: StoryStyleConfig, 
+  pageType: PageType, 
+  sampleText: string
+): TextComponentConfig {
+  const defaultComponent = DEFAULT_COMPONENTS[pageType]?.[0];
+  
+  if (!defaultComponent) {
+    throw new Error(`No default component found for page type: ${pageType}`);
+  }
+
+  let migratedStyle = { ...defaultComponent.style };
+  
+  // Migrar estilos de la configuración antigua
+  if (pageType === 'cover' && config.coverConfig?.title) {
+    const titleConfig = config.coverConfig.title;
+    migratedStyle = {
+      ...migratedStyle,
+      fontSize: titleConfig.fontSize,
+      fontFamily: titleConfig.fontFamily,
+      fontWeight: titleConfig.fontWeight,
+      color: titleConfig.color,
+      textAlign: titleConfig.textAlign,
+      textShadow: titleConfig.textShadow,
+      letterSpacing: titleConfig.letterSpacing,
+      textTransform: titleConfig.textTransform,
+      backgroundColor: titleConfig.containerStyle.background,
+      padding: titleConfig.containerStyle.padding,
+      borderRadius: titleConfig.containerStyle.borderRadius,
+      border: titleConfig.containerStyle.border,
+      boxShadow: titleConfig.containerStyle.boxShadow
+    };
+  } else if (pageType === 'page' && config.pageConfig?.text) {
+    const textConfig = config.pageConfig.text;
+    migratedStyle = {
+      ...migratedStyle,
+      fontSize: textConfig.fontSize,
+      fontFamily: textConfig.fontFamily,
+      fontWeight: textConfig.fontWeight,
+      color: textConfig.color,
+      textAlign: textConfig.textAlign,
+      textShadow: textConfig.textShadow,
+      lineHeight: textConfig.lineHeight,
+      letterSpacing: textConfig.letterSpacing,
+      textTransform: textConfig.textTransform,
+      backgroundColor: textConfig.containerStyle.background,
+      padding: textConfig.containerStyle.padding,
+      borderRadius: textConfig.containerStyle.borderRadius,
+      border: textConfig.containerStyle.border,
+      boxShadow: textConfig.containerStyle.boxShadow
+    };
+  } else if (pageType === 'dedicatoria' && config.dedicatoriaConfig?.text) {
+    const textConfig = config.dedicatoriaConfig.text;
+    migratedStyle = {
+      ...migratedStyle,
+      fontSize: textConfig.fontSize,
+      fontFamily: textConfig.fontFamily,
+      fontWeight: textConfig.fontWeight,
+      color: textConfig.color,
+      textAlign: textConfig.textAlign,
+      textShadow: textConfig.textShadow,
+      lineHeight: textConfig.lineHeight,
+      letterSpacing: textConfig.letterSpacing,
+      textTransform: textConfig.textTransform,
+      backgroundColor: textConfig.containerStyle.background,
+      padding: textConfig.containerStyle.padding,
+      borderRadius: textConfig.containerStyle.borderRadius,
+      border: textConfig.containerStyle.border,
+      boxShadow: textConfig.containerStyle.boxShadow
+    };
+  }
+
+  return {
+    ...defaultComponent,
+    id: `${defaultComponent.id}-migrated-${Date.now()}`,
+    content: sampleText,
+    style: migratedStyle
+  } as TextComponentConfig;
+}

@@ -22,7 +22,7 @@ import {
 import { useNotifications } from '../../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../../types/notification';
 import { styleConfigService } from '../../../services/styleConfigService';
-import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG, ComponentConfig, PageType } from '../../../types/styleConfig';
+import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG, ComponentConfig, PageType, migrateConfigToComponents, TextComponentConfig } from '../../../types/styleConfig';
 import StylePreview from './components/StylePreview';
 import TypographyPanel from './components/TypographyPanel';
 import PositionPanel from './components/PositionPanel';
@@ -99,6 +99,48 @@ const AdminStyleEditor: React.FC = () => {
   useEffect(() => {
     setSelectedTarget({ type: 'page' });
   }, [currentPageType]);
+
+  // Migrar elementos principales a componentes automáticamente
+  useEffect(() => {
+    if (!activeConfig) return;
+
+    // Verificar si ya existen componentes por defecto para evitar duplicación
+    const existingDefaultComponents = allComponents.filter(c => c.isDefault);
+    
+    if (existingDefaultComponents.length === 0) {
+      // Migrar elementos principales a componentes
+      const migratedComponents: ComponentConfig[] = [];
+      
+      // Migrar título de portada
+      try {
+        const coverComponent = migrateConfigToComponents(activeConfig, 'cover', customCoverText);
+        migratedComponents.push(coverComponent);
+      } catch (error) {
+        console.warn('Error migrando componente de portada:', error);
+      }
+      
+      // Migrar texto de páginas
+      try {
+        const pageComponent = migrateConfigToComponents(activeConfig, 'page', customPageText);
+        migratedComponents.push(pageComponent);
+      } catch (error) {
+        console.warn('Error migrando componente de página:', error);
+      }
+      
+      // Migrar texto de dedicatoria
+      try {
+        const dedicatoriaComponent = migrateConfigToComponents(activeConfig, 'dedicatoria', customDedicatoriaText);
+        migratedComponents.push(dedicatoriaComponent);
+      } catch (error) {
+        console.warn('Error migrando componente de dedicatoria:', error);
+      }
+      
+      if (migratedComponents.length > 0) {
+        setAllComponents(prev => [...prev, ...migratedComponents]);
+        console.log('Migrated default components:', migratedComponents);
+      }
+    }
+  }, [activeConfig, customCoverText, customPageText, customDedicatoriaText]);
 
   // Detectar cambios
   useEffect(() => {
@@ -434,11 +476,19 @@ const AdminStyleEditor: React.FC = () => {
           componentName: component.name,
           componentType: component.type
         });
+        // Cambiar automáticamente al tab de contenido para componentes por defecto
+        if (component.isDefault && activePanel === 'components') {
+          setActivePanel('content');
+        }
       }
     } else {
       setSelectedTarget({ type: 'page' });
+      // Volver al tab de elementos cuando se deselecciona
+      if (activePanel === 'content') {
+        setActivePanel('components');
+      }
     }
-  }, [allComponents]);
+  }, [allComponents, activePanel]);
 
   // Función para agregar componente
   const handleAddComponent = useCallback((component: ComponentConfig) => {

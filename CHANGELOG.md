@@ -25,6 +25,15 @@
   - Interfaz diferenciada según tipo de imagen
   - Integración con todos los paneles de estilo existentes
 
+- **Migración Arquitectural Completa**
+  - Título de portada → Componente seleccionable y editable
+  - Texto de páginas interiores → Componente seleccionable y editable
+  - Texto de dedicatoria → Componente seleccionable y editable
+  - Migración automática desde configuraciones antiguas
+  - Componentes por defecto creados automáticamente
+  - Renderizado unificado basado 100% en componentes
+  - Compatibilidad completa con configuraciones existentes
+
 ## [2025-07-02] - Fix: Acceso Público para Descarga de PDFs
 
 ### 🔧 Corrección

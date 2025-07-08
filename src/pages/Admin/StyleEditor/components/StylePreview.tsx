@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { StoryStyleConfig } from '../../../../types/styleConfig';
+import { StoryStyleConfig, ComponentConfig } from '../../../../types/styleConfig';
 import { StoryRenderer } from '../../../../components/StoryRenderer';
+import ComponentRenderer from './ComponentRenderer';
 
 interface StylePreviewProps {
   config: StoryStyleConfig;
@@ -12,7 +13,7 @@ interface StylePreviewProps {
   zoomLevel: number;
   selectedComponentId?: string;
   onComponentSelect?: (componentId: string | null) => void;
-  components?: any[];
+  components?: ComponentConfig[];
 }
 
 const StylePreview: React.FC<StylePreviewProps> = ({
@@ -154,23 +155,101 @@ const StylePreview: React.FC<StylePreviewProps> = ({
           marginTop: showRulers ? '1.5rem' : 0,
         }}
       >
-        {/* StoryRenderer unificado con toda la lógica */}
-        <StoryRenderer
-          config={config}
-          pageType={pageType}
-          content={sampleText}
-          imageUrl={sampleImage}
-          context="admin"
-          dimensions={dimensions}
-          contextConfig={{
-            admin: {
-              showGrid,
-              showRulers,
-              zoomLevel
-            }
+        {/* Contenedor de página con imagen de fondo */}
+        <div 
+          className="story-page relative w-full h-full bg-cover bg-center bg-no-repeat overflow-hidden"
+          style={{
+            width: `${dimensions.width}px`,
+            height: `${dimensions.height}px`,
+            backgroundImage: sampleImage ? `url(${sampleImage})` : undefined,
+            backgroundColor: sampleImage ? 'transparent' : '#f3f4f6'
           }}
-          instanceId={`admin-preview-${pageType}`}
-        />
+        >
+          {/* Overlay para grid si está habilitado */}
+          {showGrid && (
+            <div className="absolute inset-0 pointer-events-none z-20">
+              <svg className="w-full h-full">
+                <defs>
+                  <pattern id={`grid-${pageType}`} width="20" height="20" patternUnits="userSpaceOnUse">
+                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(147, 51, 234, 0.2)" strokeWidth="1"/>
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill={`url(#grid-${pageType})`} />
+              </svg>
+            </div>
+          )}
+          
+          {/* Rulers si están habilitados */}
+          {showRulers && (
+            <>
+              {/* Horizontal Ruler */}
+              <div className="absolute top-0 left-0 right-0 h-6 bg-gray-100 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600 z-30">
+                <div className="relative h-full">
+                  {Array.from({ length: Math.floor(dimensions.width / 50) }, (_, i) => (
+                    <div
+                      key={`h-${i}`}
+                      className="absolute top-0 w-px bg-gray-400 dark:bg-gray-500"
+                      style={{ 
+                        left: `${i * 50}px`,
+                        height: i % 5 === 0 ? '100%' : '50%'
+                      }}
+                    >
+                      {i % 5 === 0 && i > 0 && (
+                        <span className="absolute -top-1 -left-3 text-xs text-gray-600 dark:text-gray-400">
+                          {i * 50}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Vertical Ruler */}
+              <div className="absolute top-0 left-0 bottom-0 w-6 bg-gray-100 dark:bg-gray-700 border-r border-gray-300 dark:border-gray-600 z-30">
+                <div className="relative w-full h-full">
+                  {Array.from({ length: Math.floor(dimensions.height / 50) }, (_, i) => (
+                    <div
+                      key={`v-${i}`}
+                      className="absolute left-0 h-px bg-gray-400 dark:bg-gray-500"
+                      style={{ 
+                        top: `${i * 50}px`,
+                        width: i % 5 === 0 ? '100%' : '50%'
+                      }}
+                    >
+                      {i % 5 === 0 && i > 0 && (
+                        <span className="absolute -left-1 -top-2 text-xs text-gray-600 dark:text-gray-400 -rotate-90 origin-left">
+                          {i * 50}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+          
+          {/* Page Type Indicator */}
+          <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded z-40">
+            {pageType === 'cover' ? 'Portada' : 
+             pageType === 'dedicatoria' ? 'Dedicatoria' : 
+             'Página Interior'}
+          </div>
+          
+          {/* Zoom Indicator */}
+          {zoomLevel !== 100 && (
+            <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded z-40">
+              {zoomLevel}%
+            </div>
+          )}
+
+          {/* Componentes renderizados */}
+          <ComponentRenderer
+            components={components}
+            pageType={pageType}
+            selectedComponentId={selectedComponentId}
+            onComponentSelect={onComponentSelect}
+          />
+        </div>
       </div>
     </div>
   );
