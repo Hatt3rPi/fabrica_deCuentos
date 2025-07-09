@@ -51,6 +51,20 @@ const FONT_WEIGHTS = [
 ];
 
 const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) => {
+  // Extraer el valor de la fuente actual del config
+  const getCurrentFontValue = () => {
+    if (!config.fontFamily) return 'Indie Flower';
+    
+    // Extraer el nombre de la fuente del fontFamily string
+    // Puede venir como: "Roboto", sans-serif o Roboto, sans-serif
+    const fontMatch = config.fontFamily.match(/^["']?([^"',]+)["']?/);
+    const currentFont = fontMatch ? fontMatch[1].trim() : 'Indie Flower';
+    
+    // Verificar si la fuente existe en nuestras opciones
+    const fontExists = FONT_OPTIONS.some(f => f.value === currentFont);
+    return fontExists ? currentFont : 'Indie Flower';
+  };
+
   // Extraer valor numérico del fontSize
   const getFontSizeValue = () => {
     const match = config.fontSize.match(/(\d+(?:\.\d+)?)/);
@@ -94,10 +108,7 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
           Fuente
         </label>
         <select
-          value={(() => {
-            const currentFont = config.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-            return FONT_OPTIONS.find(f => f.value === currentFont)?.value || currentFont;
-          })()}
+          value={getCurrentFontValue()}
           onChange={(e) => {
             const font = FONT_OPTIONS.find(f => f.value === e.target.value);
             const fontFamily = font?.category === 'serif' 
