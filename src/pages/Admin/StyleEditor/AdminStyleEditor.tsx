@@ -85,6 +85,7 @@ const AdminStyleEditor: React.FC = () => {
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
+  const [containerDimensions, setContainerDimensions] = useState<{ width: number; height: number }>({ width: 1536, height: 1024 });
 
   // Cargar template activo y imágenes de muestra
   useEffect(() => {
@@ -195,14 +196,11 @@ const AdminStyleEditor: React.FC = () => {
         // CRÍTICO: Cargar componentes guardados en el template
         if (template.configData.components && template.configData.components.length > 0) {
           setAllComponents(template.configData.components);
-          console.log('🧩 Componentes cargados desde BD:', {
-            count: template.configData.components.length,
-            components: template.configData.components
-          });
+          setComponentsLoaded(true); // Marcar como cargados desde BD
         } else {
           // Si no hay componentes guardados, se crearán automáticamente por el useEffect de migración
           setAllComponents([]);
-          console.log('🧩 No hay componentes guardados, se crearán por defecto');
+          setComponentsLoaded(false); // Marcar como NO cargados
         }
         
         if (template.customTexts) {
@@ -488,7 +486,6 @@ const AdminStyleEditor: React.FC = () => {
 
   // Función para manejar cambios en componentes con validación
   const handleComponentChange = useCallback((componentId: string, updates: Partial<ComponentConfig>) => {
-    console.log('📝 Updating component:', componentId, updates);
     
     // Para actualizaciones simples como coordenadas (x, y), no validar como componente completo
     const isSimplePositionUpdate = Object.keys(updates).every(key => ['x', 'y'].includes(key));
@@ -503,7 +500,6 @@ const AdminStyleEditor: React.FC = () => {
         const updatedComponents = prev.map(comp => 
           comp.id === componentId ? { ...comp, ...updates } : comp
         );
-        console.log('📦 Updated components (position):', updatedComponents);
         return updatedComponents;
       });
       setIsDirty(true);
@@ -549,7 +545,6 @@ const AdminStyleEditor: React.FC = () => {
       const updatedComponents = prev.map(comp => 
         comp.id === componentId ? sanitizedComponent : comp
       );
-      console.log('📦 Updated components (validated):', updatedComponents);
       return updatedComponents;
     });
     setIsDirty(true);
@@ -568,6 +563,10 @@ const AdminStyleEditor: React.FC = () => {
         });
         // Cambiar automáticamente al tab de contenido para componentes por defecto
         if (component.isDefault && activePanel === 'components') {
+          setActivePanel('content');
+        }
+        // Si se selecciona un componente de fondo y el panel actual es posición, cambiar a otro panel
+        if ((component as any).isBackground && activePanel === 'position') {
           setActivePanel('content');
         }
       }
@@ -878,91 +877,6 @@ const AdminStyleEditor: React.FC = () => {
               </div>
             </div>
 
-            {/* Panel Tabs */}
-            <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
-              <button
-                onClick={() => setActivePanel('components')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'components'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Layers className="w-4 h-4 inline mr-1" />
-                Elementos
-              </button>
-              {selectedTarget.type === 'component' && (
-                <button
-                  onClick={() => setActivePanel('content')}
-                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activePanel === 'content'
-                      ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
-                >
-                  <Edit className="w-4 h-4 inline mr-1" />
-                  Contenido
-                </button>
-              )}
-              <button
-                onClick={() => setActivePanel('typography')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'typography'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Type className="w-4 h-4 inline mr-1" />
-                Tipografía
-              </button>
-              <button
-                onClick={() => setActivePanel('position')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'position'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Move className="w-4 h-4 inline mr-1" />
-                Posición
-              </button>
-            </div>
-
-            <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
-              <button
-                onClick={() => setActivePanel('colors')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'colors'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Palette className="w-4 h-4 inline mr-1" />
-                Colores
-              </button>
-              <button
-                onClick={() => setActivePanel('effects')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'effects'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Layers className="w-4 h-4 inline mr-1" />
-                Efectos
-              </button>
-              <button
-                onClick={() => setActivePanel('container')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'container'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Settings className="w-4 h-4 inline mr-1" />
-                Contenedor
-              </button>
-            </div>
 
 
             {/* Active Panel Content */}
@@ -1056,7 +970,11 @@ const AdminStyleEditor: React.FC = () => {
               />
             )}
             
-            {activePanel === 'position' && activeConfig && styleAdapter.selectionInfo.canEdit.position && (
+            {activePanel === 'position' && activeConfig && styleAdapter.selectionInfo.canEdit.position && 
+             // Mostrar panel de posición solo para componentes que NO sean de fondo
+             (selectedTarget.type === 'component' && 
+              styleAdapter.selectedComponent && 
+              !(styleAdapter.selectedComponent as any).isBackground) && (
               <PositionPanel
                 config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
                 onChange={selectedTarget.type === 'component' ? 
@@ -1067,6 +985,7 @@ const AdminStyleEditor: React.FC = () => {
                 }
                 pageType={currentPageType}
                 isImageComponent={selectedTarget.type === 'component' && selectedTarget.componentType === 'image'}
+                containerDimensions={containerDimensions}
               />
             )}
             
@@ -1113,7 +1032,16 @@ const AdminStyleEditor: React.FC = () => {
                   { 
                     background: styleAdapter.currentStyles.backgroundColor,
                     borderRadius: styleAdapter.currentStyles.borderRadius,
-                    padding: styleAdapter.currentStyles.padding
+                    padding: styleAdapter.currentStyles.padding,
+                    border: styleAdapter.currentStyles.border,
+                    // Incluir propiedades de alineación y escalado
+                    horizontalAlignment: styleAdapter.currentStyles.horizontalAlignment,
+                    verticalAlignment: styleAdapter.currentStyles.verticalAlignment,
+                    scaleWidth: styleAdapter.currentStyles.scaleWidth,
+                    scaleHeight: styleAdapter.currentStyles.scaleHeight,
+                    scaleWidthUnit: styleAdapter.currentStyles.scaleWidthUnit,
+                    scaleHeightUnit: styleAdapter.currentStyles.scaleHeightUnit,
+                    maintainAspectRatio: styleAdapter.currentStyles.maintainAspectRatio
                   } :
                   getCurrentConfig().containerStyle
                 }
@@ -1126,13 +1054,100 @@ const AdminStyleEditor: React.FC = () => {
             )}
             
             
-            
           </div>
         </div>
 
         {/* Preview Area */}
         <div className="flex-1 bg-gray-100 dark:bg-gray-900 p-4 md:p-8 overflow-auto">
           <div className="w-full mx-auto">
+            {/* Panel Tabs - Una sola fila horizontal */}
+            <div className="flex gap-1 mb-4 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm overflow-x-auto">
+              <button
+                onClick={() => setActivePanel('components')}
+                className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'components'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Layers className="w-4 h-4 inline mr-1" />
+                Elementos
+              </button>
+              {selectedTarget.type === 'component' && (
+                <button
+                  onClick={() => setActivePanel('content')}
+                  className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activePanel === 'content'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Edit className="w-4 h-4 inline mr-1" />
+                  Contenido
+                </button>
+              )}
+              <button
+                onClick={() => setActivePanel('typography')}
+                className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'typography'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Type className="w-4 h-4 inline mr-1" />
+                Tipografía
+              </button>
+              {/* Botón Posición para componentes no-fondo */}
+              {(selectedTarget.type === 'component' && 
+                styleAdapter.selectedComponent && 
+                !(styleAdapter.selectedComponent as any).isBackground) && (
+                <button
+                  onClick={() => setActivePanel('position')}
+                  className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activePanel === 'position'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Move className="w-4 h-4 inline mr-1" />
+                  Posición
+                </button>
+              )}
+              <button
+                onClick={() => setActivePanel('colors')}
+                className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'colors'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Palette className="w-4 h-4 inline mr-1" />
+                Colores
+              </button>
+              <button
+                onClick={() => setActivePanel('effects')}
+                className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'effects'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Layers className="w-4 h-4 inline mr-1" />
+                Efectos
+              </button>
+              <button
+                onClick={() => setActivePanel('container')}
+                className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'container'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Settings className="w-4 h-4 inline mr-1" />
+                Contenedor
+              </button>
+            </div>
+            
             {/* Page Type Switcher */}
             <div className="flex justify-center mb-4 md:mb-6">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex w-full max-w-lg md:w-auto">
@@ -1193,6 +1208,7 @@ const AdminStyleEditor: React.FC = () => {
                 onComponentSelect={handleComponentSelection}
                 onComponentUpdate={handleComponentChange}
                 components={components}
+                onDimensionsChange={setContainerDimensions}
               />
             ) : (
               <div className="flex items-center justify-center h-96 bg-white dark:bg-gray-800 rounded-lg shadow-sm">

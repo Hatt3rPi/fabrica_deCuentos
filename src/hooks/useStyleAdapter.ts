@@ -37,6 +37,15 @@ export interface UnifiedStyleConfig {
   backdropFilter?: string;
   border?: string;
   
+  // Container alignment and scaling
+  horizontalAlignment?: 'left' | 'center' | 'right';
+  verticalAlignment?: 'top' | 'center' | 'bottom';
+  scaleWidth?: string;
+  scaleHeight?: string;
+  scaleWidthUnit?: 'px' | '%' | 'auto';
+  scaleHeightUnit?: 'px' | '%' | 'auto';
+  maintainAspectRatio?: boolean;
+  
   // Image specific
   objectFit?: string;
   width?: string;
@@ -67,6 +76,9 @@ export interface StyleAdapterReturn {
       container: boolean;
     };
   };
+  
+  /** Componente seleccionado actual (si hay uno) */
+  selectedComponent: ComponentConfig | null;
 }
 
 /**
@@ -167,7 +179,15 @@ export const useStyleAdapter = (
         border: textComp.style?.border,
         backdropFilter: textComp.style?.backdropFilter,
         opacity: textComp.style?.opacity || 1,
-        content: textComp.content
+        content: textComp.content,
+        // Nuevas propiedades de contenedor
+        horizontalAlignment: textComp.containerStyle?.horizontalAlignment,
+        verticalAlignment: textComp.containerStyle?.verticalAlignment,
+        scaleWidth: textComp.containerStyle?.scaleWidth,
+        scaleHeight: textComp.containerStyle?.scaleHeight,
+        scaleWidthUnit: textComp.containerStyle?.scaleWidthUnit,
+        scaleHeightUnit: textComp.containerStyle?.scaleHeightUnit,
+        maintainAspectRatio: textComp.containerStyle?.maintainAspectRatio
       };
     }
     
@@ -185,7 +205,15 @@ export const useStyleAdapter = (
         border: imgComp.style?.border,
         backdropFilter: imgComp.style?.backdropFilter,
         opacity: imgComp.style?.opacity || 1,
-        imageUrl: imgComp.url
+        imageUrl: imgComp.url,
+        // Nuevas propiedades de contenedor para imágenes
+        horizontalAlignment: imgComp.containerStyle?.horizontalAlignment,
+        verticalAlignment: imgComp.containerStyle?.verticalAlignment,
+        scaleWidth: imgComp.containerStyle?.scaleWidth,
+        scaleHeight: imgComp.containerStyle?.scaleHeight,
+        scaleWidthUnit: imgComp.containerStyle?.scaleWidthUnit,
+        scaleHeightUnit: imgComp.containerStyle?.scaleHeightUnit,
+        maintainAspectRatio: imgComp.containerStyle?.maintainAspectRatio
       };
     }
     
@@ -226,6 +254,15 @@ export const useStyleAdapter = (
       if (updates.boxShadow !== undefined) containerUpdates.boxShadow = updates.boxShadow;
       if (updates.backdropFilter !== undefined) containerUpdates.backdropFilter = updates.backdropFilter;
       if (updates.border !== undefined) containerUpdates.border = updates.border;
+      
+      // Nuevas propiedades de contenedor
+      if (updates.horizontalAlignment !== undefined) containerUpdates.horizontalAlignment = updates.horizontalAlignment;
+      if (updates.verticalAlignment !== undefined) containerUpdates.verticalAlignment = updates.verticalAlignment;
+      if (updates.scaleWidth !== undefined) containerUpdates.scaleWidth = updates.scaleWidth;
+      if (updates.scaleHeight !== undefined) containerUpdates.scaleHeight = updates.scaleHeight;
+      if (updates.scaleWidthUnit !== undefined) containerUpdates.scaleWidthUnit = updates.scaleWidthUnit;
+      if (updates.scaleHeightUnit !== undefined) containerUpdates.scaleHeightUnit = updates.scaleHeightUnit;
+      if (updates.maintainAspectRatio !== undefined) containerUpdates.maintainAspectRatio = updates.maintainAspectRatio;
       
       if (Object.keys(containerUpdates).length > 0) {
         pageUpdates.containerStyle = { ...config?.[`${pageType}Config`]?.text?.containerStyle, ...containerUpdates };
@@ -280,8 +317,24 @@ export const useStyleAdapter = (
           componentUpdates.style = { ...(selectedComponent as TextComponentConfig).style, ...styleUpdates };
         }
         
+        // Manejar updates de containerStyle para componentes
+        const containerStyleUpdates: any = {};
+        if (updates.horizontalAlignment !== undefined) containerStyleUpdates.horizontalAlignment = updates.horizontalAlignment;
+        if (updates.verticalAlignment !== undefined) containerStyleUpdates.verticalAlignment = updates.verticalAlignment;
+        if (updates.scaleWidth !== undefined) containerStyleUpdates.scaleWidth = updates.scaleWidth;
+        if (updates.scaleHeight !== undefined) containerStyleUpdates.scaleHeight = updates.scaleHeight;
+        if (updates.scaleWidthUnit !== undefined) containerStyleUpdates.scaleWidthUnit = updates.scaleWidthUnit;
+        if (updates.scaleHeightUnit !== undefined) containerStyleUpdates.scaleHeightUnit = updates.scaleHeightUnit;
+        if (updates.maintainAspectRatio !== undefined) containerStyleUpdates.maintainAspectRatio = updates.maintainAspectRatio;
+        
+        if (Object.keys(containerStyleUpdates).length > 0) {
+          componentUpdates.containerStyle = { ...(selectedComponent as TextComponentConfig).containerStyle, ...containerStyleUpdates };
+        }
+        
         if (updates.position !== undefined) componentUpdates.position = updates.position;
         if (updates.horizontalPosition !== undefined) componentUpdates.horizontalPosition = updates.horizontalPosition;
+        if (updates.x !== undefined) componentUpdates.x = updates.x;
+        if (updates.y !== undefined) componentUpdates.y = updates.y;
         if (updates.content !== undefined) (componentUpdates as Partial<TextComponentConfig>).content = updates.content;
       } else if (selectedComponent?.type === 'image') {
         const styleUpdates: any = {};
@@ -296,14 +349,31 @@ export const useStyleAdapter = (
           componentUpdates.style = { ...(selectedComponent as ImageComponentConfig).style, ...styleUpdates };
         }
         
+        // Manejar updates de containerStyle para imágenes
+        const containerStyleUpdates: any = {};
+        if (updates.horizontalAlignment !== undefined) containerStyleUpdates.horizontalAlignment = updates.horizontalAlignment;
+        if (updates.verticalAlignment !== undefined) containerStyleUpdates.verticalAlignment = updates.verticalAlignment;
+        if (updates.scaleWidth !== undefined) containerStyleUpdates.scaleWidth = updates.scaleWidth;
+        if (updates.scaleHeight !== undefined) containerStyleUpdates.scaleHeight = updates.scaleHeight;
+        if (updates.scaleWidthUnit !== undefined) containerStyleUpdates.scaleWidthUnit = updates.scaleWidthUnit;
+        if (updates.scaleHeightUnit !== undefined) containerStyleUpdates.scaleHeightUnit = updates.scaleHeightUnit;
+        if (updates.maintainAspectRatio !== undefined) containerStyleUpdates.maintainAspectRatio = updates.maintainAspectRatio;
+        
+        if (Object.keys(containerStyleUpdates).length > 0) {
+          componentUpdates.containerStyle = { ...(selectedComponent as ImageComponentConfig).containerStyle, ...containerStyleUpdates };
+        }
+        
         if (updates.position !== undefined) componentUpdates.position = updates.position;
         if (updates.horizontalPosition !== undefined) componentUpdates.horizontalPosition = updates.horizontalPosition;
+        if (updates.x !== undefined) componentUpdates.x = updates.x;
+        if (updates.y !== undefined) componentUpdates.y = updates.y;
         if (updates.width !== undefined) (componentUpdates as Partial<ImageComponentConfig>).width = updates.width;
         if (updates.height !== undefined) (componentUpdates as Partial<ImageComponentConfig>).height = updates.height;
         if (updates.objectFit !== undefined) (componentUpdates as Partial<ImageComponentConfig>).objectFit = updates.objectFit;
         if (updates.size !== undefined) (componentUpdates as Partial<ImageComponentConfig>).size = updates.size;
         if (updates.imageUrl !== undefined) (componentUpdates as Partial<ImageComponentConfig>).url = updates.imageUrl;
       }
+      
       
       onComponentChange(selectedTarget.componentId, componentUpdates);
     }
@@ -331,6 +401,7 @@ export const useStyleAdapter = (
   return {
     currentStyles,
     updateStyles,
-    selectionInfo
+    selectionInfo,
+    selectedComponent
   };
 };

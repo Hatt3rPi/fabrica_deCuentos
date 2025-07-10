@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Square, Circle, Box } from 'lucide-react';
+import { Settings, Square, Circle, Box, AlignLeft, AlignCenter, AlignRight, AlignJustify, ArrowUp, ArrowDown, Maximize2, Move3D } from 'lucide-react';
 
 interface ContainerPanelProps {
   containerStyle: any;
@@ -24,6 +24,30 @@ const BORDER_RADIUS_PRESETS = [
   { value: '2rem', label: 'Muy grande' },
   { value: '50%', label: 'Circular', icon: <Circle className="w-4 h-4" /> }
 ];
+
+const HORIZONTAL_ALIGNMENT_OPTIONS = [
+  { value: 'left', label: 'Izquierda', icon: <AlignLeft className="w-4 h-4" /> },
+  { value: 'center', label: 'Centro', icon: <AlignCenter className="w-4 h-4" /> },
+  { value: 'right', label: 'Derecha', icon: <AlignRight className="w-4 h-4" /> }
+];
+
+const VERTICAL_ALIGNMENT_OPTIONS = [
+  { value: 'top', label: 'Superior', icon: <ArrowUp className="w-4 h-4" /> },
+  { value: 'center', label: 'Centro', icon: <AlignCenter className="w-4 h-4" /> },
+  { value: 'bottom', label: 'Inferior', icon: <ArrowDown className="w-4 h-4" /> }
+];
+
+const SCALE_UNIT_OPTIONS = [
+  { value: 'px', label: 'Píxeles' },
+  { value: '%', label: 'Porcentaje' },
+  { value: 'auto', label: 'Automático' }
+];
+
+// Dimensiones base del sistema (1536x1024)
+const BASE_DIMENSIONS = {
+  width: 1536,
+  height: 1024
+};
 
 const ContainerPanel: React.FC<ContainerPanelProps> = ({ containerStyle, onChange, pageType }) => {
   // Parsear valores de borde
@@ -90,8 +114,202 @@ const ContainerPanel: React.FC<ContainerPanelProps> = ({ containerStyle, onChang
     onChange({ margin });
   };
 
+  // Obtener valores de alineación actuales
+  const getHorizontalAlignment = () => {
+    return containerStyle.horizontalAlignment || 'center';
+  };
+
+  const getVerticalAlignment = () => {
+    return containerStyle.verticalAlignment || 'center';
+  };
+
+  // Obtener valores de escalado actuales
+  const getScaleValues = () => {
+    return {
+      width: containerStyle.scaleWidth || '100',
+      height: containerStyle.scaleHeight || '100',
+      widthUnit: containerStyle.scaleWidthUnit || '%',
+      heightUnit: containerStyle.scaleHeightUnit || '%',
+      maintainAspectRatio: containerStyle.maintainAspectRatio || false
+    };
+  };
+
+  const scaleValues = getScaleValues();
+
+  // Actualizar alineación
+  const updateAlignment = (type: 'horizontal' | 'vertical', value: string) => {
+    console.log('[container] 📦 UPDATEALIGNMENT LLAMADO:', { type, value });
+    if (type === 'horizontal') {
+      onChange({ horizontalAlignment: value });
+    } else {
+      onChange({ verticalAlignment: value });
+    }
+  };
+
+  // Actualizar escalado
+  const updateScale = (updates: Partial<typeof scaleValues>) => {
+    console.log('[container] 📦 UPDATESCALE LLAMADO:', updates);
+    const newScale = { ...scaleValues, ...updates };
+    
+    // Si mantener aspecto está habilitado y se cambió width, ajustar height
+    if (newScale.maintainAspectRatio && updates.width && !updates.height) {
+      newScale.height = updates.width; // Mantener la misma proporción
+    }
+    // Si mantener aspecto está habilitado y se cambió height, ajustar width
+    else if (newScale.maintainAspectRatio && updates.height && !updates.width) {
+      newScale.width = updates.height; // Mantener la misma proporción
+    }
+
+    const scaleUpdate = {
+      scaleWidth: newScale.width,
+      scaleHeight: newScale.height,
+      scaleWidthUnit: newScale.widthUnit,
+      scaleHeightUnit: newScale.heightUnit,
+      maintainAspectRatio: newScale.maintainAspectRatio
+    };
+    
+    console.log('[container] 📦 ENVIANDO SCALE UPDATE:', scaleUpdate);
+    onChange(scaleUpdate);
+  };
+
   return (
     <div className="space-y-6">
+      {/* NUEVA SECCIÓN: Alineación Horizontal */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <Move3D className="w-4 h-4 inline mr-1" />
+          Alineación Horizontal
+        </label>
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+          {HORIZONTAL_ALIGNMENT_OPTIONS.map(option => (
+            <button
+              key={option.value}
+              onClick={() => updateAlignment('horizontal', option.value)}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded transition-colors ${
+                getHorizontalAlignment() === option.value
+                  ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+              title={option.label}
+            >
+              {option.icon}
+              <span className="text-xs">{option.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* NUEVA SECCIÓN: Alineación Vertical */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <AlignJustify className="w-4 h-4 inline mr-1" />
+          Alineación Vertical
+        </label>
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+          {VERTICAL_ALIGNMENT_OPTIONS.map(option => (
+            <button
+              key={option.value}
+              onClick={() => updateAlignment('vertical', option.value)}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded transition-colors ${
+                getVerticalAlignment() === option.value
+                  ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+              title={option.label}
+            >
+              {option.icon}
+              <span className="text-xs">{option.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* NUEVA SECCIÓN: Escalado de Contenido */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <Maximize2 className="w-4 h-4 inline mr-1" />
+          Escalado de Contenido
+        </label>
+        
+        {/* Mantener proporción */}
+        <div className="mb-3">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={scaleValues.maintainAspectRatio}
+              onChange={(e) => updateScale({ maintainAspectRatio: e.target.checked })}
+              className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              Mantener proporción
+            </span>
+          </label>
+        </div>
+
+        {/* Ancho */}
+        <div className="mb-3">
+          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+            Ancho
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="1"
+              max={scaleValues.widthUnit === '%' ? 500 : BASE_DIMENSIONS.width}
+              value={scaleValues.width}
+              onChange={(e) => {
+                console.log('[container] 📌 Cambio WIDTH:', e.target.value);
+                updateScale({ width: e.target.value });
+              }}
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+            <select
+              value={scaleValues.widthUnit}
+              onChange={(e) => updateScale({ widthUnit: e.target.value })}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              {SCALE_UNIT_OPTIONS.map(unit => (
+                <option key={unit.value} value={unit.value}>{unit.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Alto */}
+        <div className="mb-3">
+          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+            Alto
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="1"
+              max={scaleValues.heightUnit === '%' ? 500 : BASE_DIMENSIONS.height}
+              value={scaleValues.height}
+              onChange={(e) => updateScale({ height: e.target.value })}
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              disabled={scaleValues.maintainAspectRatio}
+            />
+            <select
+              value={scaleValues.heightUnit}
+              onChange={(e) => updateScale({ heightUnit: e.target.value })}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              disabled={scaleValues.maintainAspectRatio}
+            >
+              {SCALE_UNIT_OPTIONS.map(unit => (
+                <option key={unit.value} value={unit.value}>{unit.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Información de dimensiones base */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
+          <p className="text-xs text-blue-700 dark:text-blue-300">
+            <strong>Dimensiones base:</strong> {BASE_DIMENSIONS.width}x{BASE_DIMENSIONS.height} píxeles
+          </p>
+        </div>
+      </div>
       {/* Border Radius */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -368,8 +586,9 @@ const ContainerPanel: React.FC<ContainerPanelProps> = ({ containerStyle, onChang
       {/* Información */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
         <p className="text-sm text-blue-700 dark:text-blue-300">
-          <strong>Tip:</strong> Los estilos del contenedor afectan el área donde se muestra el texto. 
-          Úsalos para crear fondos semitransparentes, bordes decorativos o efectos visuales.
+          <strong>Tip:</strong> Usa la alineación para posicionar el contenido dentro del contenedor, 
+          y el escalado para ajustar el tamaño manteniendo la calidad. 
+          Las dimensiones base son {BASE_DIMENSIONS.width}x{BASE_DIMENSIONS.height} píxeles.
         </p>
       </div>
     </div>

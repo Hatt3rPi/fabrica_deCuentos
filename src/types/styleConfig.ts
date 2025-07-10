@@ -22,6 +22,15 @@ export interface ContainerStyle {
   border?: string;
   boxShadow?: string;
   backdropFilter?: string;
+  // Nuevas propiedades para alineación
+  horizontalAlignment?: 'left' | 'center' | 'right';
+  verticalAlignment?: 'top' | 'center' | 'bottom';
+  // Nuevas propiedades para escalado
+  scaleWidth?: string;
+  scaleHeight?: string;
+  scaleWidthUnit?: 'px' | '%' | 'auto';
+  scaleHeightUnit?: 'px' | '%' | 'auto';
+  maintainAspectRatio?: boolean;
 }
 
 export interface TitleConfig {
@@ -251,6 +260,7 @@ export interface TextComponentConfig extends ComponentConfig {
     boxShadow?: string;
     backdropFilter?: string;
   };
+  containerStyle?: ContainerStyle;
 }
 
 export interface ImageComponentConfig extends ComponentConfig {
@@ -270,6 +280,7 @@ export interface ImageComponentConfig extends ComponentConfig {
     backdropFilter?: string;
     zIndex?: number; // Para controlar orden de capas
   };
+  containerStyle?: ContainerStyle;
 }
 
 // Componentes por defecto para elementos principales
@@ -317,7 +328,7 @@ export const DEFAULT_COMPONENTS = {
         textAlign: 'center',
         textShadow: '3px 3px 6px rgba(0,0,0,0.8)',
         backgroundColor: 'transparent',
-        padding: '2rem 3rem',
+        padding: '0.5rem 3rem',
         borderRadius: '0'
       }
     }

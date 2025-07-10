@@ -15,6 +15,7 @@ interface StylePreviewProps {
   onComponentSelect?: (componentId: string | null) => void;
   onComponentUpdate?: (componentId: string, updates: Partial<ComponentConfig>) => void;
   components?: ComponentConfig[];
+  onDimensionsChange?: (dimensions: { width: number; height: number }) => void;
 }
 
 const StylePreview: React.FC<StylePreviewProps> = ({
@@ -28,21 +29,13 @@ const StylePreview: React.FC<StylePreviewProps> = ({
   selectedComponentId,
   onComponentSelect,
   onComponentUpdate,
-  components = []
+  components = [],
+  onDimensionsChange
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scale = zoomLevel / 100;
   const [dimensions, setDimensions] = useState({ width: 1536, height: 1024 });
 
-  // Debug: Log de componentes recibidos
-  console.log('👁️ StylePreview received components:', components.map(c => ({ 
-    id: c.id, 
-    name: c.name, 
-    pageType: c.pageType, 
-    type: c.type, 
-    isBackground: c.type === 'image' ? c.isBackground : undefined,
-    url: c.type === 'image' ? c.url : undefined
-  })));
 
   // Calcular dimensiones responsivas
   useEffect(() => {
@@ -75,10 +68,13 @@ const StylePreview: React.FC<StylePreviewProps> = ({
         height = width / aspectRatio;
       }
       
-      setDimensions({ 
+      const newDimensions = { 
         width: Math.floor(width), 
         height: Math.floor(height) 
-      });
+      };
+      
+      setDimensions(newDimensions);
+      onDimensionsChange?.(newDimensions);
     };
     
     updateDimensions();
