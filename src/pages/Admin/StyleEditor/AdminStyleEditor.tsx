@@ -565,7 +565,7 @@ const AdminStyleEditor: React.FC = () => {
       
       // EXPERIMENTAL: Forzar sincronización A→B inmediatamente para cambios de posición
       if (forceAtoB && activeConfig) {
-        console.log('[EXPERIMENTAL] Forzando sincronización A→B para cambios de posición');
+        console.log('[🔍SYNC_DEBUG] Forzando sincronización A→B para cambios de posición');
         forceAtoB();
       }
       return;

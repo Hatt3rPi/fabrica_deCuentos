@@ -356,7 +356,7 @@ export function useDualSystemSync(
         onComponentsUpdate(updatedComponents);
         
         if (syncOptions.enableLogging) {
-          console.log('[EXPERIMENTAL] Forced A→B sync completed:', {
+          console.log('[🔍SYNC_DEBUG] Forced A→B sync completed:', {
             changes: syncResult.changes,
             activeConfig: {
               cover: {
@@ -369,7 +369,8 @@ export function useDualSystemSync(
               name: c.name,
               x: c.x,
               y: c.y
-            }))
+            })),
+            titleComponent: updatedComponents.find(c => c.id === 'cover-title-1752006194111-9mray3z8n')
           });
         }
       }

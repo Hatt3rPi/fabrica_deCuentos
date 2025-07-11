@@ -422,7 +422,7 @@ export const useStyleAdapter = (
               horizontalPosition: componentUpdates.horizontalPosition
             }
           };
-          console.log('[StyleAdapter] Actualizando activeConfig para cover title:', configUpdates);
+          console.log('[🔍SYNC_DEBUG] Actualizando activeConfig para cover title:', configUpdates);
           onConfigChange(configUpdates);
         }
       }
