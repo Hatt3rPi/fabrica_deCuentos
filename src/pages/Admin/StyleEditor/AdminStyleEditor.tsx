@@ -38,6 +38,7 @@ import ComponentsPanel from './components/ComponentsPanel';
 import ContentEditorPanel from './components/ContentEditorPanel';
 import { useStyleAdapter, SelectionTarget } from '../../../hooks/useStyleAdapter';
 import { validateAndSanitize, ValidationResult, isEqual } from '../../../utils/validation';
+import { useDualSystemSync } from '../../../hooks/useDualSystemSync';
 
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
@@ -67,6 +68,7 @@ const AdminStyleEditor: React.FC = () => {
   // Sistema de selección PowerPoint-like
   const [selectedTarget, setSelectedTarget] = useState<SelectionTarget>({ type: 'page' });
   const [allComponents, setAllComponents] = useState<ComponentConfig[]>([]);
+  const [componentsLoaded, setComponentsLoaded] = useState<boolean>(false);
   
   // Obtener componentes de la página actual
   const components = useMemo(() => 
@@ -171,6 +173,18 @@ const AdminStyleEditor: React.FC = () => {
     try {
       setIsLoading(true);
       const template = await styleConfigService.getActiveTemplate();
+      
+      console.log('[fixing_style] Template cargado desde BD:', {
+        hasTemplate: !!template,
+        templateId: template?.id,
+        templateName: template?.name,
+        hasConfigData: !!template?.config_data,
+        configDataType: typeof template?.config_data,
+        configDataKeys: template?.config_data ? Object.keys(template.config_data) : [],
+        hasComponents: !!(template?.config_data?.components),
+        componentsCount: template?.config_data?.components?.length || 0
+      });
+      
       if (template) {
         setActiveTemplate(template);
         
@@ -187,8 +201,22 @@ const AdminStyleEditor: React.FC = () => {
           dedicatoriaBackgroundUrl: undefined,
           coverSampleText: undefined,
           pageSampleText: undefined,
-          dedicatoriaSampleText: undefined
+          dedicatoriaSampleText: undefined,
+          // CRÍTICO: Incluir componentes en el config para el TemplateRenderer
+          ...(template.configData.components ? { components: template.configData.components } : {})
         };
+        
+        console.log('[fixing_style] Config final creado:', {
+          configId: config.id,
+          hasComponents: !!(config as any).components,
+          componentsCount: (config as any).components?.length || 0,
+          componentPreview: (config as any).components?.slice(0, 2).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            pageType: c.pageType,
+            type: c.type
+          }))
+        });
         
         setActiveConfig(config);
         setOriginalConfig(config);
@@ -481,16 +509,40 @@ const AdminStyleEditor: React.FC = () => {
 
   // Función para actualizar configuración general
   const handleConfigChange = useCallback((updates: Partial<StoryStyleConfig>) => {
+    console.log('[DualSystemSync] handleConfigChange llamado:', {
+      updatesKeys: Object.keys(updates),
+      currentConfigId: activeConfig?.id,
+      timestamp: new Date().toISOString()
+    });
     setActiveConfig(prev => prev ? { ...prev, ...updates } : prev);
-  }, []);
+  }, [activeConfig?.id]);
 
   // Función para manejar cambios en componentes con validación
   const handleComponentChange = useCallback((componentId: string, updates: Partial<ComponentConfig>) => {
+    console.log('[DualSystemSync] handleComponentChange llamado:', {
+      componentId,
+      updatesKeys: Object.keys(updates),
+      isSimpleUpdate: Object.keys(updates).every(key => ['x', 'y'].includes(key)),
+      timestamp: new Date().toISOString()
+    });
     
-    // Para actualizaciones simples como coordenadas (x, y), no validar como componente completo
-    const isSimplePositionUpdate = Object.keys(updates).every(key => ['x', 'y'].includes(key));
+    // Para actualizaciones simples como coordenadas (x, y) y posición, no validar como componente completo
+    const isSimplePositionUpdate = Object.keys(updates).every(key => ['x', 'y', 'position', 'horizontalPosition'].includes(key));
     
     if (isSimplePositionUpdate) {
+      console.log('[DualSystemSync] Actualizando posición simple:', {
+        componentId,
+        updates,
+        updateKeys: Object.keys(updates),
+        values: {
+          x: updates.x,
+          y: updates.y,
+          position: (updates as any).position,
+          horizontalPosition: (updates as any).horizontalPosition
+        },
+        isSimplePositionUpdate
+      });
+      
       // Validar solo que sean números válidos
       if (typeof updates.x === 'number' && updates.x < 0) updates.x = 0;
       if (typeof updates.y === 'number' && updates.y < 0) updates.y = 0;
@@ -500,13 +552,33 @@ const AdminStyleEditor: React.FC = () => {
         const updatedComponents = prev.map(comp => 
           comp.id === componentId ? { ...comp, ...updates } : comp
         );
+        
+        console.log('[DualSystemSync] Componentes después de actualizar:', {
+          componentId,
+          updatedComponent: updatedComponents.find(c => c.id === componentId),
+          totalComponents: updatedComponents.length
+        });
+        
         return updatedComponents;
       });
       setIsDirty(true);
+      
+      // EXPERIMENTAL: Forzar sincronización A→B inmediatamente para cambios de posición
+      if (forceAtoB && activeConfig) {
+        console.log('[EXPERIMENTAL] Forzando sincronización A→B para cambios de posición');
+        forceAtoB();
+      }
       return;
     }
     
     // Para actualizaciones complejas, obtener el componente completo y validar
+    console.log('[DualSystemSync] Actualizando componente completo:', {
+      componentId,
+      updatesKeys: Object.keys(updates),
+      hasPositionUpdates: !!(updates.position || updates.x || updates.y),
+      updates
+    });
+    
     const existingComponent = allComponents.find(comp => comp.id === componentId);
     if (!existingComponent) {
       console.error('❌ Component not found:', componentId);
@@ -610,6 +682,31 @@ const AdminStyleEditor: React.FC = () => {
     components,
     handleConfigChange,
     handleComponentChange
+  );
+
+  // Función wrapper para setAllComponents con logging
+  const handleSetAllComponents = useCallback((newComponents: ComponentConfig[] | ((prev: ComponentConfig[]) => ComponentConfig[])) => {
+    console.log('[DualSystemSync] setAllComponents llamado:', {
+      isFunction: typeof newComponents === 'function',
+      newComponentsCount: typeof newComponents === 'function' ? 'función' : newComponents.length,
+      currentCount: allComponents.length,
+      timestamp: new Date().toISOString()
+    });
+    setAllComponents(newComponents);
+  }, [allComponents.length]);
+
+  // Hook para sincronización bidireccional entre sistemas A (legacy) y B (componentes)
+  const { forceAtoB } = useDualSystemSync(
+    activeConfig,
+    allComponents,
+    handleConfigChange,
+    handleSetAllComponents,
+    {
+      enableSync: true,
+      enableLogging: true,
+      debounceMs: 150,
+      experimentalPositionSync: true // Flag experimental para fix de posición
+    }
   );
 
   const getCurrentConfig = () => {

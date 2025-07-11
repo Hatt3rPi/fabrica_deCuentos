@@ -27,6 +27,8 @@ export interface UnifiedStyleConfig {
   // Position & Layout
   position?: string;
   horizontalPosition?: string;
+  x?: number;
+  y?: number;
   
   // Effects & Container
   backgroundColor?: string;
@@ -172,6 +174,9 @@ export const useStyleAdapter = (
         textShadow: textComp.style?.textShadow || 'none',
         position: textComp.position,
         horizontalPosition: textComp.horizontalPosition,
+        // Agregar coordenadas x e y al mapeo
+        x: textComp.x,
+        y: textComp.y,
         backgroundColor: textComp.style?.backgroundColor,
         borderRadius: textComp.style?.borderRadius,
         padding: textComp.style?.padding,
@@ -196,6 +201,9 @@ export const useStyleAdapter = (
       return {
         position: imgComp.position,
         horizontalPosition: imgComp.horizontalPosition,
+        // Agregar coordenadas x e y al mapeo
+        x: imgComp.x,
+        y: imgComp.y,
         width: imgComp.width,
         height: imgComp.height,
         objectFit: imgComp.objectFit,
@@ -230,6 +238,12 @@ export const useStyleAdapter = (
   
   // Función para actualizar estilos
   const updateStyles = useCallback((updates: Partial<UnifiedStyleConfig>) => {
+    console.log('[StyleAdapter] updateStyles llamado:', {
+      selectedTarget,
+      updates,
+      updatesKeys: Object.keys(updates)
+    });
+
     if (selectedTarget.type === 'page') {
       // Actualizar configuración de página
       const pageUpdates: any = {};
@@ -290,6 +304,13 @@ export const useStyleAdapter = (
       onConfigChange(configUpdates);
     } else if (selectedTarget.type === 'component' && selectedTarget.componentId) {
       // Actualizar componente
+      console.log('[StyleAdapter] Actualizando componente:', {
+        componentId: selectedTarget.componentId,
+        componentType: selectedComponent?.type,
+        componentName: selectedComponent?.name,
+        updates
+      });
+      
       const componentUpdates: Partial<ComponentConfig> = {};
       
       if (selectedComponent?.type === 'text') {
@@ -374,6 +395,12 @@ export const useStyleAdapter = (
         if (updates.imageUrl !== undefined) (componentUpdates as Partial<ImageComponentConfig>).url = updates.imageUrl;
       }
       
+      
+      console.log('[StyleAdapter] Llamando onComponentChange:', {
+        componentId: selectedTarget.componentId,
+        componentUpdates,
+        hasPositionUpdates: !!(componentUpdates.position || componentUpdates.x || componentUpdates.y)
+      });
       
       onComponentChange(selectedTarget.componentId, componentUpdates);
     }

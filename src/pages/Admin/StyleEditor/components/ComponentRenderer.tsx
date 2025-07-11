@@ -277,7 +277,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         background: scaledStyles?.backgroundColor || 'transparent',
         borderRadius: scaledStyles?.borderRadius || '0',
         padding: scaledStyles?.padding || '0',
-        border: scaledStyles?.border || 'none',
         boxShadow: scaledStyles?.boxShadow || 'none',
         backdropFilter: scaledStyles?.backdropFilter || 'none',
         opacity: scaledStyles?.opacity !== undefined ? scaledStyles.opacity : 1,
@@ -286,7 +285,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         fontFamily: decodedFontFamily,  // ✅ Usar la versión decodificada
         // Asegurar que la altura sea automática para texto
         height: component.type === 'text' ? 'auto' : finalStyle.height,
-        // Estilos adicionales para debug
+        // Estilos de borde con debug opcional
         border: alignmentStyles.display ? '2px dashed rgba(128, 90, 213, 0.3)' : (scaledStyles?.border || 'none'),
       };
       

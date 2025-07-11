@@ -2,6 +2,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import { StoryStyleConfig, ComponentConfig } from '../../../../types/styleConfig';
 import { StoryRenderer } from '../../../../components/StoryRenderer';
 import ComponentRenderer from './ComponentRenderer';
+import TemplateRenderer from '../../../../components/unified/TemplateRenderer';
+import { UnifiedRenderOptions } from '../../../../types/unifiedTemplate';
 
 interface StylePreviewProps {
   config: StoryStyleConfig;
@@ -16,6 +18,7 @@ interface StylePreviewProps {
   onComponentUpdate?: (componentId: string, updates: Partial<ComponentConfig>) => void;
   components?: ComponentConfig[];
   onDimensionsChange?: (dimensions: { width: number; height: number }) => void;
+  useUnifiedRenderer?: boolean; // Flag para usar el nuevo sistema unificado
 }
 
 const StylePreview: React.FC<StylePreviewProps> = ({
@@ -30,7 +33,8 @@ const StylePreview: React.FC<StylePreviewProps> = ({
   onComponentSelect,
   onComponentUpdate,
   components = [],
-  onDimensionsChange
+  onDimensionsChange,
+  useUnifiedRenderer = true // Por defecto usar el sistema unificado
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scale = zoomLevel / 100;
@@ -249,15 +253,63 @@ const StylePreview: React.FC<StylePreviewProps> = ({
             </div>
           )}
 
-          {/* Componentes renderizados */}
-          <ComponentRenderer
-            components={components}
-            pageType={pageType}
-            selectedComponentId={selectedComponentId}
-            onComponentSelect={onComponentSelect}
-            onComponentUpdate={onComponentUpdate}
-            containerDimensions={dimensions}
-          />
+          {/* Renderizado usando sistema unificado o legacy */}
+          {useUnifiedRenderer ? (
+            <div className="absolute inset-0">
+              {(() => {
+                console.log('[fixing_style] StylePreview recibiendo config:', {
+                  configId: config?.id,
+                  configName: config?.name,
+                  pageType,
+                  hasComponents: !!(config as any)?.components,
+                  componentsCount: (config as any)?.components?.length || 0,
+                  componentsForThisPage: (config as any)?.components?.filter((c: any) => 
+                    c.pageType === (pageType === 'page' ? 'page' : pageType)
+                  ).length || 0
+                });
+                return null;
+              })()}
+              <TemplateRenderer
+                config={config}
+                pageType={pageType === 'page' ? 'content' : pageType}
+                content={{
+                  title: pageType === 'cover' ? sampleText : undefined,
+                  text: pageType !== 'cover' ? sampleText : undefined,
+                  authorName: pageType === 'cover' ? 'Autor Demo' : undefined
+                }}
+                renderOptions={{
+                  context: 'admin-edit',
+                  enableScaling: true,
+                  preserveAspectRatio: true,
+                  targetDimensions: dimensions,
+                  features: {
+                    enableAnimations: false,
+                    enableInteractions: true,
+                    enableDebugInfo: false,
+                    enableValidation: true
+                  },
+                  performance: {
+                    lazyLoadImages: false,
+                    optimizeFor: 'quality'
+                  }
+                } as UnifiedRenderOptions}
+                onComponentSelect={onComponentSelect}
+                onComponentUpdate={onComponentUpdate}
+                selectedComponentId={selectedComponentId}
+                debug={true}
+              />
+            </div>
+          ) : (
+            /* Sistema legacy de componentes */
+            <ComponentRenderer
+              components={components}
+              pageType={pageType}
+              selectedComponentId={selectedComponentId}
+              onComponentSelect={onComponentSelect}
+              onComponentUpdate={onComponentUpdate}
+              containerDimensions={dimensions}
+            />
+          )}
         </div>
       </div>
     </div>

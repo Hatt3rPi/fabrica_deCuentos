@@ -99,7 +99,15 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
 
   // Función para convertir posición vertical a coordenadas
   const handleVerticalPositionChange = (verticalPos: string) => {
+    console.log('[PositionPanel] handleVerticalPositionChange llamado:', {
+      verticalPos,
+      containerDimensions,
+      componentName: config.name,
+      isImageComponent
+    });
+
     if (!containerDimensions) {
+      console.log('[PositionPanel] No hay containerDimensions, enviando solo position');
       onChange({ position: verticalPos });
       return;
     }
@@ -131,6 +139,14 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
       position: verticalPos,
       y: Math.max(0, y) // Asegurar que no sea negativo
     };
+
+    console.log('[PositionPanel] Enviando updates:', {
+      updates,
+      containerHeight,
+      componentHeight,
+      verticalMargin,
+      calculatedY: y
+    });
 
     // Actualizar tanto la posición conceptual como las coordenadas precisas
     onChange(updates);

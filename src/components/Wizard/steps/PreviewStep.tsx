@@ -10,7 +10,9 @@ import InlineTextEditor from './components/InlineTextEditor';
 import AdvancedEditModal from './components/AdvancedEditModal';
 import { useWizardLockStatus } from '../../../hooks/useWizardLockStatus';
 import StoryRenderer from '../../StoryRenderer';
+import TemplateRenderer from '../../unified/TemplateRenderer';
 import { PageType } from '../../../utils/storyStyleUtils';
+import { UnifiedRenderOptions } from '../../../types/unifiedTemplate';
 
 const PreviewStep: React.FC = () => {
   const { 
@@ -49,6 +51,9 @@ const PreviewStep: React.FC = () => {
 
   // Style hooks for dynamic preview (mantener para compatibilidad con modal avanzado)
   const { getTextStyles, getContainerStyles, getPosition, getBackgroundImage, styleConfig } = useStoryStyles();
+  
+  // Flag para usar el sistema unificado (por defecto activado)
+  const [useUnifiedRenderer] = useState(true);
 
   // Función para guardar texto inline
   const handleSaveText = async (pageId: string, newText: string) => {
@@ -370,24 +375,55 @@ const PreviewStep: React.FC = () => {
                       </button>
                     )}
                     
-                    {/* MIGRADO A STORYRENDERER: Renderizado unificado de página con overlay de edición */}
+                    {/* Renderizado usando sistema unificado o legacy */}
                     <div className="absolute inset-0">
-                      <StoryRenderer
-                        config={styleConfig}
-                        pageType={currentPageType}
-                        content={currentPageText}
-                        imageUrl={currentPageData?.imageUrl}
-                        context="wizard"
-                        dimensions={{ 
-                          width: 1536, 
-                          height: 1024 
-                        }}
-                        instanceId={`wizard-page-${currentPage}`}
-                        debug={false}
-                      />
+                      {useUnifiedRenderer ? (
+                        /* Sistema unificado */
+                        <TemplateRenderer
+                          config={styleConfig}
+                          pageType={currentPageType === 'page' ? 'content' : currentPageType}
+                          content={{
+                            title: currentPageType === 'cover' ? currentPageText : undefined,
+                            text: currentPageType !== 'cover' ? currentPageText : undefined,
+                            authorName: currentPageType === 'cover' ? 'Por Autor' : undefined
+                          }}
+                          renderOptions={{
+                            context: 'wizard',
+                            enableScaling: true,
+                            preserveAspectRatio: true,
+                            targetDimensions: { width: 1536, height: 1024 },
+                            features: {
+                              enableAnimations: false,
+                              enableInteractions: false,
+                              enableDebugInfo: false,
+                              enableValidation: true
+                            },
+                            performance: {
+                              lazyLoadImages: true,
+                              optimizeFor: 'balance'
+                            }
+                          } as UnifiedRenderOptions}
+                          debug={false}
+                        />
+                      ) : (
+                        /* Sistema legacy */
+                        <StoryRenderer
+                          config={styleConfig}
+                          pageType={currentPageType}
+                          content={currentPageText}
+                          imageUrl={currentPageData?.imageUrl}
+                          context="wizard"
+                          dimensions={{ 
+                            width: 1536, 
+                            height: 1024 
+                          }}
+                          instanceId={`wizard-page-${currentPage}`}
+                          debug={false}
+                        />
+                      )}
                       
-                      {/* Overlay de edición inline usando el sistema anterior temporalmente */}
-                      {!isLocked && !isLoading && !error && (
+                      {/* Overlay de edición inline */}
+                      {!isLocked && !isLoading && !error && !useUnifiedRenderer && (
                         <div 
                           className={`
                             absolute inset-0 flex justify-center
@@ -420,7 +456,7 @@ const PreviewStep: React.FC = () => {
                                 width: '100%',
                                 fontSize: exactFontSize,
                                 lineHeight: textStyles.lineHeight || '1.4',
-                                backgroundColor: 'transparent' // Hacer el editor transparente
+                                backgroundColor: 'transparent'
                               }}
                               className="text-center sm:text-left"
                               config={{
