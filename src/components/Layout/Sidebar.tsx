@@ -183,7 +183,7 @@ const Sidebar: React.FC = () => {
   return (
     <div className="h-full flex flex-col">
       {/* Logo section */}
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-6 border-b border-r border-gray-200 dark:border-gray-700 shadow-md bg-white dark:bg-gray-800">
         <div className="flex items-center gap-3">
           <BookOpen className="w-8 h-8 text-purple-600 dark:text-purple-400" />
           <span className="font-semibold text-gray-900 dark:text-white">CuenterIA</span>
@@ -191,7 +191,7 @@ const Sidebar: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 border-r border-gray-200 dark:border-gray-700">
         <ul className="space-y-2">
           <li>
             <Link to="/home" className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20">
