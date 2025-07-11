@@ -357,7 +357,19 @@ export function useDualSystemSync(
         
         if (syncOptions.enableLogging) {
           console.log('[EXPERIMENTAL] Forced A→B sync completed:', {
-            changes: syncResult.changes
+            changes: syncResult.changes,
+            activeConfig: {
+              cover: {
+                x: (activeConfig.coverConfig?.title as any)?.x,
+                y: (activeConfig.coverConfig?.title as any)?.y
+              }
+            },
+            updatedComponents: updatedComponents.map(c => ({
+              id: c.id,
+              name: c.name,
+              x: c.x,
+              y: c.y
+            }))
           });
         }
       }

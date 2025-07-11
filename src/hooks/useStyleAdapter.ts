@@ -403,6 +403,29 @@ export const useStyleAdapter = (
       });
       
       onComponentChange(selectedTarget.componentId, componentUpdates);
+      
+      // SOLUCIÓN: También actualizar activeConfig para cambios de posición de componentes
+      if (componentUpdates.x !== undefined || componentUpdates.y !== undefined || componentUpdates.position !== undefined) {
+        const componentPageType = selectedTarget.componentId.includes('cover') ? 'cover' : 
+                                  selectedTarget.componentId.includes('page') ? 'page' : 
+                                  selectedTarget.componentId.includes('dedicatoria') ? 'dedicatoria' : 'cover';
+        const configUpdates: Partial<StoryStyleConfig> = {};
+        
+        if (componentPageType === 'cover' && selectedTarget.componentId.includes('title')) {
+          configUpdates.coverConfig = {
+            ...config?.coverConfig,
+            title: { 
+              ...config?.coverConfig?.title, 
+              x: componentUpdates.x,
+              y: componentUpdates.y,
+              position: componentUpdates.position,
+              horizontalPosition: componentUpdates.horizontalPosition
+            }
+          };
+          console.log('[StyleAdapter] Actualizando activeConfig para cover title:', configUpdates);
+          onConfigChange(configUpdates);
+        }
+      }
     }
   }, [selectedTarget, selectedComponent, config, pageType, onConfigChange, onComponentChange]);
   
