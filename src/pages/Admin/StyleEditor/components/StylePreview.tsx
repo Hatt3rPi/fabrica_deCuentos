@@ -283,9 +283,9 @@ const StylePreview: React.FC<StylePreviewProps> = ({
                   },
                   renderOptions: {
                     context: 'admin-edit',
-                    enableScaling: false, // Deshabilitado por sanitization
-                    preserveAspectRatio: false, // Deshabilitado por sanitization
-                    targetDimensions: { width: 1536, height: 1024 }, // Fijas por sanitization
+                    enableScaling: true, // Habilitado para que las imágenes escalen correctamente
+                    preserveAspectRatio: true, // Habilitado para mantener proporciones
+                    targetDimensions: dimensions, // Usar dimensiones del contenedor actual
                     features: {
                       enableAnimations: false,
                       enableInteractions: true,

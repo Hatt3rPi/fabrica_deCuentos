@@ -559,6 +559,27 @@ const AdminStyleEditor: React.FC = () => {
           totalComponents: updatedComponents.length
         });
         
+        // 🚀 FIX: También sincronizar activeConfig.components para actualizaciones simples
+        setActiveConfig(currentConfig => {
+          if (currentConfig) {
+            const updatedConfig = {
+              ...currentConfig,
+              components: updatedComponents
+            };
+            console.log('🐛[DEBUG] Simple position update synced to activeConfig:', {
+              componentId,
+              updates,
+              finalPosition: {
+                x: updates.x,
+                y: updates.y,
+                position: updates.position
+              }
+            });
+            return updatedConfig;
+          }
+          return currentConfig;
+        });
+        
         return updatedComponents;
       });
       setIsDirty(true);

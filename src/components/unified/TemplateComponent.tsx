@@ -128,8 +128,25 @@ const TemplateComponent: React.FC<TemplateComponentProps> = ({
       return 1; // Factor de escala por defecto
     }
     
-    return calculateScaleFactor(containerDimensions, renderConfig.enableScaling);
-  }, [containerDimensions, renderConfig]);
+    const calculatedScale = calculateScaleFactor(containerDimensions, renderConfig.enableScaling);
+    
+    // 🔍 DEBUG específico para imagen de fondo
+    if (component.type === 'image' && component.isBackground) {
+      console.log('🖼️[IMAGE-SCALE] Background image scaling calculation:', {
+        componentId: component.id,
+        componentName: component.name,
+        enableScaling: renderConfig.enableScaling,
+        containerDimensions,
+        pageBaseDimensions: { width: 1536, height: 1024 },
+        calculatedScaleFactor: calculatedScale.toFixed(3),
+        scaleX: containerDimensions ? (containerDimensions.width / 1536).toFixed(3) : 'N/A',
+        scaleY: containerDimensions ? (containerDimensions.height / 1024).toFixed(3) : 'N/A',
+        willScale: renderConfig.enableScaling && !!containerDimensions
+      });
+    }
+    
+    return calculatedScale;
+  }, [containerDimensions, renderConfig, component.id, component.name, component.type, component.isBackground]);
   
   // Memoizar estilos aplicados - usar estilos directamente del component
   const appliedStyles = useMemo(() => {
@@ -295,13 +312,19 @@ const TemplateComponent: React.FC<TemplateComponentProps> = ({
           }}
           onLoad={(e) => {
             const img = e.target as HTMLImageElement;
-            console.log(`🐛[DEBUG] Image ${component.name} loaded:`, {
+            console.log(`🖼️[IMAGE-SCALE] Regular image ${component.name} loaded:`, {
               componentId: component.id,
               isBackground: component.isBackground,
               objectFit: component.objectFit || 'cover',
               naturalSize: { width: img.naturalWidth, height: img.naturalHeight },
               displaySize: { width: img.width, height: img.height },
-              containerSize: containerDimensions
+              containerSize: containerDimensions,
+              scaleFactor: scaleFactor.toFixed(3),
+              scaledDimensions: scaledGeometry,
+              parentContainerStyle: {
+                width: scaledGeometry.scaledWidth,
+                height: scaledGeometry.scaledHeight
+              }
             });
           }}
         />
@@ -319,7 +342,30 @@ const TemplateComponent: React.FC<TemplateComponentProps> = ({
             ...scaleStyleObject(component.style || {}, scaleFactor)
           }}
           onLoad={() => {
-            console.log(`🐛[DEBUG] Background ${component.name} loaded as div`);
+            console.log(`🖼️[IMAGE-SCALE] Background ${component.name} loaded as div with background-image`);
+          }}
+          ref={(el) => {
+            if (el && debug) {
+              // Log computed styles después del renderizado
+              setTimeout(() => {
+                const computedStyle = window.getComputedStyle(el);
+                const parentEl = el.parentElement;
+                console.log(`🖼️[IMAGE-SCALE] Background image rendered dimensions:`, {
+                  componentId: component.id,
+                  elementDimensions: {
+                    width: el.offsetWidth,
+                    height: el.offsetHeight
+                  },
+                  parentDimensions: parentEl ? {
+                    width: parentEl.offsetWidth,
+                    height: parentEl.offsetHeight
+                  } : 'No parent',
+                  computedBackgroundSize: computedStyle.backgroundSize,
+                  computedBackgroundPosition: computedStyle.backgroundPosition,
+                  scaleFactor: scaleFactor.toFixed(3)
+                });
+              }, 100);
+            }
           }}
         />
       )}

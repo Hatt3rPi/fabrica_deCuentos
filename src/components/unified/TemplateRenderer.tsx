@@ -478,13 +478,24 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
   const currentPageTemplate = unifiedConfig.pages[pageType === 'content' ? 'content' : pageType];
   
   // Configurar opciones de renderizado unificado
-  const unifiedRenderConfig: UnifiedRenderConfig = useMemo(() => ({
-    enableScaling: renderOptions.enableScaling,
-    targetDimensions: renderOptions.targetDimensions,
-    context: mapContextToRenderContext(renderOptions.context),
-    preserveAspectRatio: renderOptions.preserveAspectRatio,
-    enableFontValidation: renderOptions.features.enableValidation
-  }), [renderOptions]);
+  const unifiedRenderConfig: UnifiedRenderConfig = useMemo(() => {
+    const config = {
+      enableScaling: renderOptions.enableScaling,
+      targetDimensions: renderOptions.targetDimensions,
+      context: mapContextToRenderContext(renderOptions.context),
+      preserveAspectRatio: renderOptions.preserveAspectRatio,
+      enableFontValidation: renderOptions.features.enableValidation
+    };
+    
+    console.log('🖼️[IMAGE-SCALE] Creating unifiedRenderConfig in TemplateRenderer:', {
+      enableScaling: config.enableScaling,
+      targetDimensions: config.targetDimensions,
+      originalRenderOptions: renderOptions,
+      willPassToTemplateComponent: true
+    });
+    
+    return config;
+  }, [renderOptions]);
   
   // Inicio del renderizado
   useEffect(() => {
@@ -522,6 +533,17 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
         // Determinar contenido dinámico para este componente
         const dynamicContent = getDynamicContentForComponent(component, content);
         
+        // Log para imágenes background específicamente
+        if (component.type === 'image' && component.isBackground) {
+          console.log('🖼️[IMAGE-SCALE] Passing props to TemplateComponent for background image:', {
+            componentId: component.id,
+            componentName: component.name,
+            renderConfigEnableScaling: unifiedRenderConfig.enableScaling,
+            renderConfigTargetDimensions: unifiedRenderConfig.targetDimensions,
+            containerDimensions: renderOptions.targetDimensions
+          });
+        }
+
         return (
           <TemplateComponent
             key={component.id}
