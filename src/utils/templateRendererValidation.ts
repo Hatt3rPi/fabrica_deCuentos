@@ -279,12 +279,17 @@ function sanitizeProps(props: TemplateRendererPropsToValidate): TemplateRenderer
     if (sanitized.renderOptions.context === 'admin-edit') {
       console.warn('🔧 Sanitizing: Applying StylePreview-safe configuration for admin-edit context');
       
-      // Para StylePreview, deshabilitar scaling conflictivo
-      sanitized.renderOptions.enableScaling = false;
-      sanitized.renderOptions.preserveAspectRatio = false;
+      // CAMBIO: Mantener scaling habilitado para StylePreview para que las imágenes escalen correctamente
+      // sanitized.renderOptions.enableScaling = false; // COMENTADO - permitir scaling
+      // sanitized.renderOptions.preserveAspectRatio = false; // COMENTADO - permitir aspect ratio
       
-      // Usar dimensiones fijas estables
-      sanitized.renderOptions.targetDimensions = { width: 1536, height: 1024 };
+      // Mantener dimensiones dinámicas si fueron proporcionadas
+      if (!sanitized.renderOptions.targetDimensions || 
+          (sanitized.renderOptions.targetDimensions.width === 1536 && 
+           sanitized.renderOptions.targetDimensions.height === 1024)) {
+        // Solo usar fijas como fallback
+        sanitized.renderOptions.targetDimensions = { width: 1536, height: 1024 };
+      }
       
       // Optimizar para preview interactivo
       if (sanitized.renderOptions.performance) {
