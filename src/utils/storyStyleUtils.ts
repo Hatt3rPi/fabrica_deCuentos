@@ -11,7 +11,7 @@ import {
   DEFAULT_PAGE_CONFIG,
   DEFAULT_DEDICATORIA_CONFIG
 } from '../types/styleConfig';
-import { scaleStyleObject } from '../components/unified/TemplateRenderer';
+import { scaleStyleObject } from './scaleUtils';
 
 // ============================================================================
 // TIPOS Y INTERFACES

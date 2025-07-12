@@ -617,6 +617,31 @@ const AdminStyleEditor: React.FC = () => {
       const updatedComponents = prev.map(comp => 
         comp.id === componentId ? sanitizedComponent : comp
       );
+      
+      // 🚀 SOLUCIÓN: Sincronizar activeConfig.components con allComponents en tiempo real
+      setActiveConfig(currentConfig => {
+        if (currentConfig) {
+          const updatedConfig = {
+            ...currentConfig,
+            components: updatedComponents
+          };
+          console.log('🐛[DEBUG] Admin component updated:', {
+            componentId,
+            componentName: sanitizedComponent.name,
+            updatesApplied: updates,
+            finalPosition: {
+              position: sanitizedComponent.position,
+              x: sanitizedComponent.x,
+              y: sanitizedComponent.y
+            },
+            totalComponents: updatedComponents.length,
+            templateRendererWillReceiveNewData: true
+          });
+          return updatedConfig;
+        }
+        return currentConfig;
+      });
+      
       return updatedComponents;
     });
     setIsDirty(true);
@@ -681,7 +706,11 @@ const AdminStyleEditor: React.FC = () => {
     currentPageType as PageType,
     components,
     handleConfigChange,
-    handleComponentChange
+    handleComponentChange,
+    {
+      enableGranularUpdates: false,
+      enableLogging: false
+    }
   );
 
   // Función wrapper para setAllComponents con logging

@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { ComponentConfig, TextComponentConfig, ImageComponentConfig, StoryStyleConfig, PageType } from '../types/styleConfig';
+import { useGranularUpdate } from './useGranularUpdate';
 
 // Tipos para el sistema de selección
 export interface SelectionTarget {
@@ -81,6 +82,26 @@ export interface StyleAdapterReturn {
   
   /** Componente seleccionado actual (si hay uno) */
   selectedComponent: ComponentConfig | null;
+  
+  /** Estadísticas del sistema granular */
+  granularUpdateStats: {
+    granularUpdates: number;
+    fallbackUpdates: number;
+    totalUpdates: number;
+    granularRatio: number;
+    averageTime: number;
+  };
+  
+  /** Si el sistema granular está habilitado */
+  isGranularEnabled: boolean;
+  
+  /** Función para clasificar actualizaciones */
+  granularClassifyUpdate: (componentId: string, updates: Partial<ComponentConfig>) => {
+    type: 'minor' | 'major' | 'complex';
+    requiresSync: boolean;
+    affectsOthers: boolean;
+    affectedComponents: string[];
+  };
 }
 
 /**
@@ -93,8 +114,28 @@ export const useStyleAdapter = (
   pageType: PageType,
   components: ComponentConfig[],
   onConfigChange: (updates: Partial<StoryStyleConfig>) => void,
-  onComponentChange: (componentId: string, updates: Partial<ComponentConfig>) => void
+  onComponentChange: (componentId: string, updates: Partial<ComponentConfig>) => void,
+  options?: {
+    enableGranularUpdates?: boolean;
+    enableLogging?: boolean;
+  }
 ): StyleAdapterReturn => {
+  
+  // Configuración de opciones por defecto
+  const granularOptions = {
+    enableGranularUpdates: options?.enableGranularUpdates ?? true,
+    enableLogging: options?.enableLogging ?? false
+  };
+  
+  // Hook de actualización granular
+  const granularUpdate = useGranularUpdate({
+    enableGranularUpdates: granularOptions.enableGranularUpdates,
+    enableLogging: granularOptions.enableLogging,
+    onComponentUpdate: onComponentChange,
+    onConfigUpdate: onConfigChange,
+    activeConfig: config,
+    allComponents: components
+  });
   
   // Obtener el componente seleccionado si aplica
   const selectedComponent = useMemo(() => {
@@ -238,10 +279,12 @@ export const useStyleAdapter = (
   
   // Función para actualizar estilos
   const updateStyles = useCallback((updates: Partial<UnifiedStyleConfig>) => {
-    console.log('[StyleAdapter] updateStyles llamado:', {
-      selectedTarget,
+    console.log('🐛[DEBUG] StyleAdapter updateStyles:', {
+      componentName: selectedTarget.componentName,
+      componentType: selectedTarget.componentType,
       updates,
-      updatesKeys: Object.keys(updates)
+      hasPositionChanges: !!(updates.position || updates.x || updates.y),
+      selectedTarget
     });
 
     if (selectedTarget.type === 'page') {
@@ -396,13 +439,46 @@ export const useStyleAdapter = (
       }
       
       
-      console.log('[StyleAdapter] Llamando onComponentChange:', {
+      console.log('🐛[DEBUG] StyleAdapter applying:', {
         componentId: selectedTarget.componentId,
+        componentName: selectedTarget.componentName,
         componentUpdates,
-        hasPositionUpdates: !!(componentUpdates.position || componentUpdates.x || componentUpdates.y)
+        hasPositionUpdates: !!(componentUpdates.position || componentUpdates.x || componentUpdates.y),
+        positionValues: {
+          position: componentUpdates.position,
+          x: componentUpdates.x,
+          y: componentUpdates.y
+        },
+        willUseGranular: granularUpdate.shouldUseGranularUpdate(selectedTarget.componentId, componentUpdates)
       });
       
-      onComponentChange(selectedTarget.componentId, componentUpdates);
+      // Usar sistema granular si está habilitado y es apropiado
+      if (granularUpdate.shouldUseGranularUpdate(selectedTarget.componentId, componentUpdates)) {
+        const result = granularUpdate.updateComponent(selectedTarget.componentId, componentUpdates);
+        
+        if (granularOptions.enableLogging) {
+          console.log('[StyleAdapter] Actualización granular aplicada:', {
+            componentId: selectedTarget.componentId,
+            result,
+            updatesClassification: granularUpdate.classifyUpdate(selectedTarget.componentId, componentUpdates)
+          });
+        }
+      } else {
+        // Fallback al sistema tradicional para actualizaciones complejas
+        console.log('🐛[DEBUG] StyleAdapter using fallback - calling onComponentChange:', {
+          componentId: selectedTarget.componentId,
+          componentUpdates,
+          onComponentChangeDefined: typeof onComponentChange,
+          functionName: onComponentChange?.name || 'anonymous'
+        });
+        
+        try {
+          onComponentChange(selectedTarget.componentId, componentUpdates);
+          console.log('🐛[DEBUG] onComponentChange ejecutado exitosamente');
+        } catch (error) {
+          console.error('🐛[DEBUG] Error ejecutando onComponentChange:', error);
+        }
+      }
       
       // SOLUCIÓN: También actualizar activeConfig para cambios de posición de componentes
       if (componentUpdates.x !== undefined || componentUpdates.y !== undefined || componentUpdates.position !== undefined) {
@@ -412,22 +488,24 @@ export const useStyleAdapter = (
         const configUpdates: Partial<StoryStyleConfig> = {};
         
         if (componentPageType === 'cover' && selectedTarget.componentId.includes('title')) {
+          const titleUpdates: any = { ...config?.coverConfig?.title };
+          
+          // Solo actualizar propiedades que realmente cambiaron
+          if (componentUpdates.x !== undefined) titleUpdates.x = componentUpdates.x;
+          if (componentUpdates.y !== undefined) titleUpdates.y = componentUpdates.y;
+          if (componentUpdates.position !== undefined) titleUpdates.position = componentUpdates.position;
+          if (componentUpdates.horizontalPosition !== undefined) titleUpdates.horizontalPosition = componentUpdates.horizontalPosition;
+          
           configUpdates.coverConfig = {
             ...config?.coverConfig,
-            title: { 
-              ...config?.coverConfig?.title, 
-              x: componentUpdates.x,
-              y: componentUpdates.y,
-              position: componentUpdates.position,
-              horizontalPosition: componentUpdates.horizontalPosition
-            }
+            title: titleUpdates
           };
           console.log('[🔍SYNC_DEBUG] Actualizando activeConfig para cover title:', configUpdates);
           onConfigChange(configUpdates);
         }
       }
     }
-  }, [selectedTarget, selectedComponent, config, pageType, onConfigChange, onComponentChange]);
+  }, [selectedTarget, selectedComponent, config, pageType, onConfigChange, onComponentChange, granularUpdate, granularOptions]);
   
   // Información de selección
   const selectionInfo = useMemo(() => {
@@ -452,6 +530,10 @@ export const useStyleAdapter = (
     currentStyles,
     updateStyles,
     selectionInfo,
-    selectedComponent
+    selectedComponent,
+    // Información del sistema granular
+    granularUpdateStats: granularUpdate.updateStats,
+    isGranularEnabled: granularUpdate.isEnabled,
+    granularClassifyUpdate: granularUpdate.classifyUpdate
   };
 };

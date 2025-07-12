@@ -7,6 +7,7 @@ import {
   PageTemplate,
   ComponentTemplate 
 } from '../../types/unifiedTemplate';
+import TemplateComponent from './TemplateComponent';
 import { 
   applyUnifiedStyles,
   generateUnifiedCSS,
@@ -14,6 +15,7 @@ import {
   UnifiedRenderConfig 
 } from '../../utils/storyStyleUtils';
 import { StoryStyleConfig } from '../../types/styleConfig';
+import { scaleStyleObject } from '../../utils/scaleUtils';
 
 // ============================================================================
 // INTERFACES Y TIPOS
@@ -59,15 +61,35 @@ function useUnifiedConfig(
   config: UnifiedTemplateConfig | StoryStyleConfig
 ): UnifiedTemplateConfig {
   return useMemo(() => {
-    // Si ya es configuración unificada, devolverla tal como está
-    if ('pages' in config && 'dimensions' in config) {
-      return config as UnifiedTemplateConfig;
-    }
+    console.log('🎯[TEMPLATE-DEBUG] useUnifiedConfig starting conversion:', {
+      hasConfig: !!config,
+      configType: typeof config,
+      isUnified: config && 'pages' in config && 'dimensions' in config,
+      configKeys: config ? Object.keys(config) : []
+    });
+
+    try {
+      // Si ya es configuración unificada, devolverla tal como está
+      if ('pages' in config && 'dimensions' in config) {
+        console.log('🎯[TEMPLATE-DEBUG] Config is already unified, returning as-is');
+        return config as UnifiedTemplateConfig;
+      }
     
-    // Convertir configuración legacy a unificada
-    const legacyConfig = config as StoryStyleConfig;
-    
-    const unifiedConfig: UnifiedTemplateConfig = {
+      // Convertir configuración legacy a unificada
+      console.log('🎯[TEMPLATE-DEBUG] Converting legacy config to unified format...');
+      const legacyConfig = config as StoryStyleConfig;
+      
+      console.log('🎯[TEMPLATE-DEBUG] Legacy config analysis:', {
+        hasId: !!legacyConfig.id,
+        hasName: !!legacyConfig.name,
+        hasCoverConfig: !!legacyConfig.coverConfig,
+        hasPageConfig: !!legacyConfig.pageConfig,
+        hasDedicatoriaConfig: !!legacyConfig.dedicatoriaConfig,
+        hasComponents: !!(legacyConfig as any).components,
+        componentsCount: (legacyConfig as any).components?.length || 0
+      });
+      
+      const unifiedConfig: UnifiedTemplateConfig = {
       id: legacyConfig.id || 'legacy-template',
       name: legacyConfig.name || 'Template Legacy',
       version: legacyConfig.version?.toString() || '1.0',
@@ -120,12 +142,74 @@ function useUnifiedConfig(
         legacySupport: true
       },
       
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      console.log('🎯[TEMPLATE-DEBUG] Unified config created successfully:', {
+        id: unifiedConfig.id,
+        name: unifiedConfig.name,
+        pagesCount: Object.keys(unifiedConfig.pages).length,
+        pageTypes: Object.keys(unifiedConfig.pages),
+        dimensions: unifiedConfig.dimensions
+      });
+      
+      return unifiedConfig;
+      
+    } catch (error) {
+      console.error('🎯[TEMPLATE-DEBUG] ❌ Error in useUnifiedConfig conversion:', {
+        error: error.message,
+        stack: error.stack,
+        config,
+        timestamp: new Date().toISOString()
+      });
+      throw error; // Re-lanzar para que ErrorBoundary lo capture
+    }
+  }, [config, JSON.stringify(config)]);
+}
+
+// ============================================================================
+// FUNCIONES HELPER PARA RENDERIZADO GRANULAR
+// ============================================================================
+
+/**
+ * Determinar contenido dinámico para un componente específico
+ */
+function getDynamicContentForComponent(
+  component: ComponentTemplate,
+  content: { title?: string; text?: string; authorName?: string; dedicatoryText?: string; customTexts?: Record<string, string> } = {}
+): string {
+  // Mapeo basado en el tipo de componente y su contexto
+  if (component.type === 'text') {
+    // Título del cuento (cover)
+    if (component.pageType === 'cover' && component.name?.toLowerCase().includes('título')) {
+      return content.title || component.content || 'Título del Cuento';
+    }
     
-    return unifiedConfig;
-  }, [config]);
+    // Autor (cover)
+    if (component.pageType === 'cover' && component.name?.toLowerCase().includes('autor')) {
+      return content.authorName ? `Por ${content.authorName}` : component.content || 'Por Autor';
+    }
+    
+    // Texto de página interior
+    if (component.pageType === 'content' || component.pageType === 'page') {
+      return content.text || component.content || 'Texto de la historia...';
+    }
+    
+    // Texto de dedicatoria
+    if (component.pageType === 'dedicatoria') {
+      return content.dedicatoryText || component.content || 'Dedicatoria especial...';
+    }
+    
+    // Textos personalizados
+    if (content.customTexts && component.id) {
+      const customText = content.customTexts[component.id];
+      if (customText) return customText;
+    }
+  }
+  
+  // Para otros tipos de componente o sin contenido específico
+  return component.content || '';
 }
 
 // ============================================================================
@@ -276,8 +360,8 @@ function convertAdminComponentToTemplate(adminComponent: any): ComponentTemplate
     pageType: adminComponent.pageType,
     position: adminComponent.position || 'center',
     horizontalPosition: adminComponent.horizontalPosition || 'center',
-    x: adminComponent.x || 0,
-    y: adminComponent.y || 0,
+    x: adminComponent.x !== undefined ? adminComponent.x : 0,
+    y: adminComponent.y !== undefined ? adminComponent.y : 0,
     width: adminComponent.width,
     height: adminComponent.height,
     zIndex: adminComponent.zIndex || 10,
@@ -360,11 +444,35 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
   debug = false,
   onRenderComplete
 }) => {
+  console.log('🎯[TEMPLATE-DEBUG] TemplateRenderer initializing with props:', {
+    hasConfig: !!config,
+    configId: config?.id,
+    configName: config?.name,
+    pageType,
+    contentKeys: Object.keys(content),
+    renderOptionsKeys: Object.keys(renderOptions),
+    enableScaling: renderOptions.enableScaling,
+    preserveAspectRatio: renderOptions.preserveAspectRatio,
+    targetDimensions: renderOptions.targetDimensions,
+    context: renderOptions.context,
+    debug,
+    timestamp: new Date().toISOString()
+  });
+
   const [renderResult, setRenderResult] = useState<UnifiedRenderResult | null>(null);
   const [renderStartTime, setRenderStartTime] = useState<number>(0);
   
   // Convertir configuración a formato unificado
+  console.log('🎯[TEMPLATE-DEBUG] About to convert config to unified format...');
   const unifiedConfig = useUnifiedConfig(config);
+  console.log('🎯[TEMPLATE-DEBUG] Config converted successfully:', {
+    unifiedConfigId: unifiedConfig.id,
+    unifiedConfigName: unifiedConfig.name,
+    hasPagesConfig: !!unifiedConfig.pages,
+    pageTypes: Object.keys(unifiedConfig.pages),
+    requestedPageType: pageType,
+    currentPageExists: !!unifiedConfig.pages[pageType === 'content' ? 'content' : pageType]
+  });
   
   // Obtener template de la página actual
   const currentPageTemplate = unifiedConfig.pages[pageType === 'content' ? 'content' : pageType];
@@ -383,36 +491,58 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
     setRenderStartTime(performance.now());
   }, [config, pageType, renderOptions]);
   
-  // Renderizar componentes
+  // Renderizar componentes usando TemplateComponent optimizado
   const renderedComponents = useMemo(() => {
     if (!currentPageTemplate) {
-      console.log(`[fixing_style] No currentPageTemplate para ${pageType}`);
+      console.log(`[GranularRender] No currentPageTemplate para ${pageType}`);
       return [];
     }
     
-    console.log(`[fixing_style] Renderizando componentes para ${pageType}:`, {
-      templateId: currentPageTemplate.id,
-      totalComponents: currentPageTemplate.components.length,
-      componentDetails: currentPageTemplate.components.map(c => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        visible: c.visible,
-        isBackground: c.isBackground,
-        zIndex: c.zIndex,
-        position: { x: c.x, y: c.y },
-        hasStyle: !!c.style
-      }))
-    });
+    if (debug) {
+      console.log(`[GranularRender] Renderizando componentes para ${pageType}:`, {
+        templateId: currentPageTemplate.id,
+        totalComponents: currentPageTemplate.components.length,
+        componentDetails: currentPageTemplate.components.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: c.type,
+          visible: c.visible,
+          isBackground: c.isBackground,
+          zIndex: c.zIndex,
+          position: { x: c.x, y: c.y },
+          hasStyle: !!c.style
+        }))
+      });
+    }
     
+    // Usar TemplateComponent optimizado para cada componente
     const rendered = currentPageTemplate.components
       .sort((a, b) => a.renderPriority - b.renderPriority)
-      .map(component => renderComponent(component, unifiedRenderConfig, content));
+      .map(component => {
+        // Determinar contenido dinámico para este componente
+        const dynamicContent = getDynamicContentForComponent(component, content);
+        
+        return (
+          <TemplateComponent
+            key={component.id}
+            component={component}
+            content={dynamicContent}
+            renderConfig={unifiedRenderConfig}
+            isSelected={selectedComponentId === component.id}
+            onSelect={onComponentSelect}
+            onUpdate={onComponentUpdate}
+            containerDimensions={renderOptions.targetDimensions}
+            debug={debug}
+          />
+        );
+      });
     
-    console.log(`[fixing_style] Componentes renderizados: ${rendered.length} elementos React`);
+    if (debug) {
+      console.log(`[GranularRender] Componentes renderizados: ${rendered.length} elementos optimizados`);
+    }
     
     return rendered;
-  }, [currentPageTemplate, unifiedRenderConfig, content, pageType]);
+  }, [currentPageTemplate, unifiedRenderConfig, content, pageType, selectedComponentId, onComponentSelect, onComponentUpdate, renderOptions.targetDimensions, debug]);
   
   // Estilos del contenedor principal
   const containerStyles = useMemo(() => {
@@ -473,166 +603,56 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
     }
   }, [renderStartTime, renderedComponents.length, debug, unifiedConfig, renderOptions, onRenderComplete]);
   
-  return (
-    <div 
-      style={{
-        ...containerStyles,
-        // Debug temporal: borde rojo para ver el contenedor
-        border: debug ? '2px solid red' : undefined
-      }}
-      className="template-renderer"
-      data-template-id={unifiedConfig.id}
-      data-page-type={pageType}
-      data-context={renderOptions.context}
-    >
-      {/* Cargar fuentes de Google Fonts */}
-      {unifiedConfig.globalStyles.fontLoading.googleFonts.length > 0 && (
-        <GoogleFontsLoader fonts={unifiedConfig.globalStyles.fontLoading.googleFonts} />
-      )}
-      
-      {/* Renderizar componentes */}
-      {renderedComponents}
-      
-      {/* Información de debug */}
-      {debug && renderResult && (
-        <DebugOverlay renderResult={renderResult} />
-      )}
-    </div>
-  );
+  try {
+    console.log('🎯[TEMPLATE-DEBUG] TemplateRenderer about to render JSX...');
+    
+    return (
+      <div 
+        style={{
+          ...containerStyles,
+          // Debug temporal: borde rojo para ver el contenedor
+          border: debug ? '2px solid red' : undefined
+        }}
+        className="template-renderer"
+        data-template-id={unifiedConfig.id}
+        data-page-type={pageType}
+        data-context={renderOptions.context}
+      >
+        {/* Cargar fuentes de Google Fonts */}
+        {unifiedConfig.globalStyles.fontLoading.googleFonts.length > 0 && (
+          <GoogleFontsLoader fonts={unifiedConfig.globalStyles.fontLoading.googleFonts} />
+        )}
+        
+        {/* Renderizar componentes */}
+        {renderedComponents}
+        
+        {/* Información de debug */}
+        {debug && renderResult && (
+          <DebugOverlay renderResult={renderResult} />
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('🎯[TEMPLATE-DEBUG] ❌ Error during TemplateRenderer JSX render:', {
+      error: error.message,
+      stack: error.stack,
+      props: {
+        configId: config?.id,
+        pageType,
+        renderOptionsContext: renderOptions.context,
+        targetDimensions: renderOptions.targetDimensions
+      },
+      timestamp: new Date().toISOString()
+    });
+    throw error; // Re-lanzar para ErrorBoundary
+  }
 };
 
 // ============================================================================
 // FUNCIONES DE ESCALADO UNIVERSAL
 // ============================================================================
 
-/**
- * Escala un valor CSS individual basado en el factor de escala
- * Maneja diferentes unidades y valores complejos como textShadow y boxShadow
- */
-function scaleStyleValue(value: string | number | undefined, scaleFactor: number, property: string): string | number | undefined {
-  if (!value || scaleFactor === 1) return value;
-  
-  // Convertir a string para procesamiento
-  const strValue = String(value);
-  
-  // Casos especiales para propiedades complejas
-  if (property === 'textShadow' || property === 'boxShadow') {
-    return scaleComplexShadow(strValue, scaleFactor);
-  }
-  
-  // Manejo de valores con múltiples componentes (ej: "2rem 3rem", "10px 20px 30px 40px")
-  if (strValue.includes(' ')) {
-    return strValue.split(' ').map(part => scaleSingleValue(part.trim(), scaleFactor)).join(' ');
-  }
-  
-  return scaleSingleValue(strValue, scaleFactor);
-}
 
-/**
- * Escala un valor CSS simple (una sola unidad)
- */
-function scaleSingleValue(value: string, scaleFactor: number): string {
-  // No escalar porcentajes, auto, inherit, none, etc.
-  if (value.includes('%') || ['auto', 'inherit', 'initial', 'none', 'normal'].includes(value)) {
-    return value;
-  }
-  
-  // Escalar pixels
-  const pxMatch = value.match(/^(-?\d*\.?\d+)px$/);
-  if (pxMatch) {
-    const scaledValue = parseFloat(pxMatch[1]) * scaleFactor;
-    return `${Math.round(scaledValue * 100) / 100}px`; // Redondear a 2 decimales
-  }
-  
-  // Escalar rem
-  const remMatch = value.match(/^(-?\d*\.?\d+)rem$/);
-  if (remMatch) {
-    const scaledValue = parseFloat(remMatch[1]) * scaleFactor;
-    return `${Math.round(scaledValue * 1000) / 1000}rem`; // Redondear a 3 decimales
-  }
-  
-  // Escalar em
-  const emMatch = value.match(/^(-?\d*\.?\d+)em$/);
-  if (emMatch) {
-    const scaledValue = parseFloat(emMatch[1]) * scaleFactor;
-    return `${Math.round(scaledValue * 1000) / 1000}em`;
-  }
-  
-  // Valores numéricos sin unidad (como lineHeight: "1.4")
-  const numMatch = value.match(/^(-?\d*\.?\d+)$/);
-  if (numMatch) {
-    // No escalar ratios/multiplicadores puros
-    return value;
-  }
-  
-  // Si no coincide con ningún patrón, devolver sin cambios
-  return value;
-}
-
-/**
- * Escala valores complejos de sombras (textShadow, boxShadow)
- * Ej: "2px 2px 4px rgba(0,0,0,0.5)" → "1.067px 1.067px 2.133px rgba(0,0,0,0.5)"
- */
-function scaleComplexShadow(shadowValue: string, scaleFactor: number): string {
-  if (shadowValue === 'none' || !shadowValue) return shadowValue;
-  
-  // Separar múltiples sombras por comas
-  const shadows = shadowValue.split(',').map(shadow => shadow.trim());
-  
-  return shadows.map(shadow => {
-    // Pattern para extraer valores de sombra: horizontal vertical blur spread color
-    // Nota: spread es opcional, color puede estar al inicio o al final
-    const parts = shadow.trim().split(/\s+/);
-    
-    return parts.map(part => {
-      // Si es un valor de pixel, escalarlo
-      if (part.includes('px') && !part.includes('rgba') && !part.includes('rgb') && !part.includes('#')) {
-        return scaleSingleValue(part, scaleFactor);
-      }
-      // Mantener colores, palabras clave sin cambios
-      return part;
-    }).join(' ');
-  }).join(', ');
-}
-
-/**
- * Escala todos los estilos CSS de un objeto
- */
-function scaleStyleObject(styles: React.CSSProperties, scaleFactor: number): React.CSSProperties {
-  if (!styles || scaleFactor === 1) return styles;
-  
-  const scaledStyles: React.CSSProperties = {};
-  
-  // Lista de propiedades que deben escalarse
-  const scalableProps: (keyof React.CSSProperties)[] = [
-    // Tipografía
-    'fontSize', 'lineHeight', 'letterSpacing',
-    // Espaciado
-    'padding', 'margin', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-    'marginTop', 'marginRight', 'marginBottom', 'marginLeft',
-    // Bordes
-    'borderRadius', 'borderWidth', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-    // Efectos
-    'textShadow', 'boxShadow',
-    // Dimensiones (algunas veces definidas en estilos)
-    'width', 'height', 'maxWidth', 'maxHeight', 'minWidth', 'minHeight',
-    // Posicionamiento
-    'top', 'right', 'bottom', 'left'
-  ];
-  
-  for (const [key, value] of Object.entries(styles)) {
-    const prop = key as keyof React.CSSProperties;
-    
-    if (scalableProps.includes(prop)) {
-      scaledStyles[prop] = scaleStyleValue(value as any, scaleFactor, key) as any;
-    } else {
-      // Mantener propiedades no escalables sin cambios
-      scaledStyles[prop] = value as any;
-    }
-  }
-  
-  return scaledStyles;
-}
 
 // ============================================================================
 // FUNCIONES AUXILIARES
@@ -653,6 +673,8 @@ function mapContextToRenderContext(context: UnifiedRenderContext): 'admin' | 'pd
   }
 }
 
+// DEPRECATED: Reemplazado por TemplateComponent optimizado
+/*
 function renderComponent(
   component: ComponentTemplate,
   renderConfig: UnifiedRenderConfig,
@@ -758,12 +780,12 @@ function renderComponent(
     };
   }
   
-  console.log(`[fixing_style] ESCALADO para ${component.id}:`, {
-    original: { x: component.x, y: component.y, width: component.width, height: component.height },
-    scale: { scaleX: scaleX.toFixed(3), scaleY: scaleY.toFixed(3), scaleFactor: scaleFactor.toFixed(3) },
-    scaled: { x: scaledX, y: scaledY, width: scaledWidth, height: scaledHeight },
-    targetDimensions,
-    originalDimensions
+  console.log(`[🔍SYNC_DEBUG] TemplateRenderer escalando ${component.id}:`, {
+    componentName: component.name,
+    originalCoords: { x: component.x, y: component.y },
+    scaledCoords: { x: scaledX, y: scaledY },
+    scaleFactor: scaleFactor.toFixed(3),
+    willApplyToCSS: { top: scaledY, left: scaledX }
   });
   
   // Estilos del contenedor con coordenadas escaladas
@@ -908,6 +930,7 @@ function renderComponent(
   
   return renderedElement;
 }
+*/
 
 function getDynamicContent(
   component: ComponentTemplate, 
@@ -1040,8 +1063,4 @@ export type {
   UnifiedRenderResult 
 };
 
-// Exportar funciones de escalado para uso en otros módulos
-export {
-  scaleStyleValue,
-  scaleStyleObject
-};
+// Funciones de escalado movidas a src/utils/scaleUtils.ts para evitar importaciones circulares

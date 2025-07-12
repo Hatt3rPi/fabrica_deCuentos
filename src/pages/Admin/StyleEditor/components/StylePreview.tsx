@@ -4,6 +4,12 @@ import { StoryRenderer } from '../../../../components/StoryRenderer';
 import ComponentRenderer from './ComponentRenderer';
 import TemplateRenderer from '../../../../components/unified/TemplateRenderer';
 import { UnifiedRenderOptions } from '../../../../types/unifiedTemplate';
+import TemplateRendererErrorBoundary from '../../../../components/ErrorBoundaries/TemplateRendererErrorBoundary';
+import { 
+  validateTemplateRendererProps, 
+  logTemplateRendererProps,
+  TemplateRendererPropsToValidate 
+} from '../../../../utils/templateRendererValidation';
 
 interface StylePreviewProps {
   config: StoryStyleConfig;
@@ -256,48 +262,100 @@ const StylePreview: React.FC<StylePreviewProps> = ({
           {/* Renderizado usando sistema unificado o legacy */}
           {useUnifiedRenderer ? (
             <div className="absolute inset-0">
+              {/* Logging de debugging - ejecutar antes del render */}
               {(() => {
-                console.log('[fixing_style] StylePreview recibiendo config:', {
-                  configId: config?.id,
-                  configName: config?.name,
-                  pageType,
-                  hasComponents: !!(config as any)?.components,
-                  componentsCount: (config as any)?.components?.length || 0,
-                  componentsForThisPage: (config as any)?.components?.filter((c: any) => 
-                    c.pageType === (pageType === 'page' ? 'page' : pageType)
-                  ).length || 0
+                console.log('🎯[TEMPLATE-DEBUG] StylePreview preparing to render TemplateRenderer:', {
+                  timestamp: new Date().toISOString(),
+                  useUnifiedRenderer,
+                  dimensions
                 });
-                return null;
               })()}
-              <TemplateRenderer
-                config={config}
-                pageType={pageType === 'page' ? 'content' : pageType}
-                content={{
-                  title: pageType === 'cover' ? sampleText : undefined,
-                  text: pageType !== 'cover' ? sampleText : undefined,
-                  authorName: pageType === 'cover' ? 'Autor Demo' : undefined
-                }}
-                renderOptions={{
-                  context: 'admin-edit',
-                  enableScaling: true,
-                  preserveAspectRatio: true,
-                  targetDimensions: dimensions,
-                  features: {
-                    enableAnimations: false,
-                    enableInteractions: true,
-                    enableDebugInfo: false,
-                    enableValidation: true
+
+              <TemplateRendererErrorBoundary
+                context="StylePreview-AdminEdit"
+                templateRendererProps={{
+                  config,
+                  pageType: pageType === 'page' ? 'content' : pageType,
+                  content: {
+                    title: pageType === 'cover' ? sampleText : undefined,
+                    text: pageType !== 'cover' ? sampleText : undefined,
+                    authorName: pageType === 'cover' ? 'Autor Demo' : undefined
                   },
-                  performance: {
-                    lazyLoadImages: false,
-                    optimizeFor: 'quality'
-                  }
-                } as UnifiedRenderOptions}
-                onComponentSelect={onComponentSelect}
-                onComponentUpdate={onComponentUpdate}
-                selectedComponentId={selectedComponentId}
-                debug={true}
-              />
+                  renderOptions: {
+                    context: 'admin-edit',
+                    enableScaling: false, // Deshabilitado por sanitization
+                    preserveAspectRatio: false, // Deshabilitado por sanitization
+                    targetDimensions: { width: 1536, height: 1024 }, // Fijas por sanitization
+                    features: {
+                      enableAnimations: false,
+                      enableInteractions: true,
+                      enableDebugInfo: false,
+                      enableValidation: true
+                    },
+                    performance: {
+                      lazyLoadImages: false,
+                      optimizeFor: 'quality'
+                    }
+                  },
+                  onComponentSelect,
+                  onComponentUpdate,
+                  selectedComponentId,
+                  debug: true
+                }}
+                onError={(error, errorInfo, context) => {
+                  console.error('🎯[TEMPLATE-DEBUG] 🚨 TemplateRenderer crashed in StylePreview:', {
+                    error,
+                    errorInfo,
+                    context,
+                    timestamp: new Date().toISOString()
+                  });
+                }}
+                fallback={
+                  <div className="absolute inset-0 bg-yellow-50 border-2 border-yellow-400 flex items-center justify-center">
+                    <div className="text-center p-4">
+                      <h3 className="text-lg font-bold text-yellow-600 mb-2">⚠️ TemplateRenderer Error Capturado</h3>
+                      <p className="text-sm text-yellow-700">
+                        Error detectado y capturado por ErrorBoundary.
+                        <br />
+                        Revisa la consola para detalles específicos.
+                      </p>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Config: {config?.name || 'No config'} | Page: {pageType}
+                      </div>
+                    </div>
+                  </div>
+                }
+              >
+                <TemplateRenderer
+                  config={config}
+                  pageType={pageType === 'page' ? 'content' : pageType}
+                  content={{
+                    title: pageType === 'cover' ? sampleText : undefined,
+                    text: pageType !== 'cover' ? sampleText : undefined,
+                    authorName: pageType === 'cover' ? 'Autor Demo' : undefined
+                  }}
+                  renderOptions={{
+                    context: 'admin-edit',
+                    enableScaling: false, // Deshabilitado por sanitization
+                    preserveAspectRatio: false, // Deshabilitado por sanitization
+                    targetDimensions: { width: 1536, height: 1024 }, // Fijas por sanitization
+                    features: {
+                      enableAnimations: false,
+                      enableInteractions: true,
+                      enableDebugInfo: false,
+                      enableValidation: true
+                    },
+                    performance: {
+                      lazyLoadImages: false,
+                      optimizeFor: 'quality'
+                    }
+                  }}
+                  onComponentSelect={onComponentSelect}
+                  onComponentUpdate={onComponentUpdate}
+                  selectedComponentId={selectedComponentId}
+                  debug={true}
+                />
+              </TemplateRendererErrorBoundary>
             </div>
           ) : (
             /* Sistema legacy de componentes */
