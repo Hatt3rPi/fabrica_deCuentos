@@ -130,17 +130,12 @@ const TemplateComponent: React.FC<TemplateComponentProps> = ({
     
     const calculatedScale = calculateScaleFactor(containerDimensions, renderConfig.enableScaling);
     
-    // 🔍 DEBUG específico para imagen de fondo
-    if (component.type === 'image' && component.isBackground) {
-      console.log('🖼️[IMAGE-SCALE] Background image scaling calculation:', {
+    // Log de debugging solo si el escalado no funciona como esperado
+    if (component.type === 'image' && component.isBackground && (!renderConfig.enableScaling || calculatedScale === 1)) {
+      console.warn('🖼️[IMAGE-SCALE] Background image scaling issue:', {
         componentId: component.id,
-        componentName: component.name,
         enableScaling: renderConfig.enableScaling,
-        containerDimensions,
-        pageBaseDimensions: { width: 1536, height: 1024 },
         calculatedScaleFactor: calculatedScale.toFixed(3),
-        scaleX: containerDimensions ? (containerDimensions.width / 1536).toFixed(3) : 'N/A',
-        scaleY: containerDimensions ? (containerDimensions.height / 1024).toFixed(3) : 'N/A',
         willScale: renderConfig.enableScaling && !!containerDimensions
       });
     }

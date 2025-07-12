@@ -279,13 +279,15 @@ export const useStyleAdapter = (
   
   // Función para actualizar estilos
   const updateStyles = useCallback((updates: Partial<UnifiedStyleConfig>) => {
-    console.log('🐛[DEBUG] StyleAdapter updateStyles:', {
-      componentName: selectedTarget.componentName,
-      componentType: selectedTarget.componentType,
-      updates,
-      hasPositionChanges: !!(updates.position || updates.x || updates.y),
-      selectedTarget
-    });
+    // Log solo para debugging de issues específicos
+    if (options?.enableLogging) {
+      console.log('🐛[DEBUG] StyleAdapter updateStyles:', {
+        componentName: selectedTarget.componentName,
+        componentType: selectedTarget.componentType,
+        updates,
+        hasPositionChanges: !!(updates.position || updates.x || updates.y)
+      });
+    }
 
     if (selectedTarget.type === 'page') {
       // Actualizar configuración de página

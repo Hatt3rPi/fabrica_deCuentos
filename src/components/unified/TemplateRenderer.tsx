@@ -487,12 +487,13 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
       enableFontValidation: renderOptions.features.enableValidation
     };
     
-    console.log('🖼️[IMAGE-SCALE] Creating unifiedRenderConfig in TemplateRenderer:', {
-      enableScaling: config.enableScaling,
-      targetDimensions: config.targetDimensions,
-      originalRenderOptions: renderOptions,
-      willPassToTemplateComponent: true
-    });
+    // Log solo si hay problemas de configuración
+    if (!config.enableScaling) {
+      console.warn('🖼️[IMAGE-SCALE] Scaling disabled in TemplateRenderer:', {
+        enableScaling: config.enableScaling,
+        context: renderOptions.context
+      });
+    }
     
     return config;
   }, [renderOptions]);
@@ -533,15 +534,9 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({
         // Determinar contenido dinámico para este componente
         const dynamicContent = getDynamicContentForComponent(component, content);
         
-        // Log para imágenes background específicamente
-        if (component.type === 'image' && component.isBackground) {
-          console.log('🖼️[IMAGE-SCALE] Passing props to TemplateComponent for background image:', {
-            componentId: component.id,
-            componentName: component.name,
-            renderConfigEnableScaling: unifiedRenderConfig.enableScaling,
-            renderConfigTargetDimensions: unifiedRenderConfig.targetDimensions,
-            containerDimensions: renderOptions.targetDimensions
-          });
+        // Log solo si hay inconsistencias en la configuración
+        if (component.type === 'image' && component.isBackground && !unifiedRenderConfig.enableScaling) {
+          console.warn('🖼️[IMAGE-SCALE] Background image with scaling disabled:', component.id);
         }
 
         return (
