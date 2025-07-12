@@ -156,13 +156,48 @@ const TemplateComponent: React.FC<TemplateComponentProps> = ({
     
     // Usar estilos directamente del component en lugar de applyUnifiedStyles
     // Los estilos ya deberían venir aplicados desde TemplateRenderer
+    const containerStyle = component.containerStyle || {};
+    
+    // Mapear alineaciones del containerStyle a CSS flexbox
+    const getFlexAlignment = (alignment: string | undefined, isVertical = false) => {
+      if (isVertical) {
+        switch (alignment) {
+          case 'top': return 'flex-start';
+          case 'center': return 'center';
+          case 'bottom': return 'flex-end';
+          default: return 'center';
+        }
+      } else {
+        switch (alignment) {
+          case 'left': return 'flex-start';
+          case 'center': return 'center';
+          case 'right': return 'flex-end';
+          default: return 'center';
+        }
+      }
+    };
+    
+    const positioning = {
+      alignItems: getFlexAlignment(containerStyle.verticalAlignment, true),
+      justifyContent: getFlexAlignment(containerStyle.horizontalAlignment, false)
+    };
+    
+    // Log solo para cambios de alineación
+    if (containerStyle.horizontalAlignment || containerStyle.verticalAlignment) {
+      console.log('🐛[DEBUG] TemplateComponent alignment applied:', {
+        componentId: component.id,
+        componentName: component.name,
+        horizontalAlignment: containerStyle.horizontalAlignment,
+        verticalAlignment: containerStyle.verticalAlignment,
+        cssJustifyContent: positioning.justifyContent,
+        cssAlignItems: positioning.alignItems
+      });
+    }
+    
     return {
       textStyle: component.style || {},
-      containerStyle: component.containerStyle || {},
-      positioning: {
-        alignItems: 'center', // Default positioning
-        justifyContent: 'center'
-      }
+      containerStyle,
+      positioning
     };
   }, [component.style, component.containerStyle, component.id, debug, scaleFactor]);
   

@@ -395,6 +395,12 @@ export const useStyleAdapter = (
         
         if (Object.keys(containerStyleUpdates).length > 0) {
           componentUpdates.containerStyle = { ...(selectedComponent as TextComponentConfig).containerStyle, ...containerStyleUpdates };
+          console.log('🐛[DEBUG] ContainerStyle updates detected:', {
+            componentId: selectedTarget.componentId,
+            componentName: selectedTarget.componentName,
+            containerStyleUpdates,
+            finalContainerStyle: componentUpdates.containerStyle
+          });
         }
         
         if (updates.position !== undefined) componentUpdates.position = updates.position;
@@ -482,30 +488,9 @@ export const useStyleAdapter = (
         }
       }
       
-      // SOLUCIÓN: También actualizar activeConfig para cambios de posición de componentes
-      if (componentUpdates.x !== undefined || componentUpdates.y !== undefined || componentUpdates.position !== undefined) {
-        const componentPageType = selectedTarget.componentId.includes('cover') ? 'cover' : 
-                                  selectedTarget.componentId.includes('page') ? 'page' : 
-                                  selectedTarget.componentId.includes('dedicatoria') ? 'dedicatoria' : 'cover';
-        const configUpdates: Partial<StoryStyleConfig> = {};
-        
-        if (componentPageType === 'cover' && selectedTarget.componentId.includes('title')) {
-          const titleUpdates: any = { ...config?.coverConfig?.title };
-          
-          // Solo actualizar propiedades que realmente cambiaron
-          if (componentUpdates.x !== undefined) titleUpdates.x = componentUpdates.x;
-          if (componentUpdates.y !== undefined) titleUpdates.y = componentUpdates.y;
-          if (componentUpdates.position !== undefined) titleUpdates.position = componentUpdates.position;
-          if (componentUpdates.horizontalPosition !== undefined) titleUpdates.horizontalPosition = componentUpdates.horizontalPosition;
-          
-          configUpdates.coverConfig = {
-            ...config?.coverConfig,
-            title: titleUpdates
-          };
-          console.log('[🔍SYNC_DEBUG] Actualizando activeConfig para cover title:', configUpdates);
-          onConfigChange(configUpdates);
-        }
-      }
+      // ELIMINADO: Lógica específica que causaba interferencia entre componentes
+      // La sincronización ya se maneja correctamente en AdminStyleEditor.tsx líneas 562-664
+      // donde se actualiza tanto allComponents como activeConfig.components automáticamente
     }
   }, [selectedTarget, selectedComponent, config, pageType, onConfigChange, onComponentChange, granularUpdate, granularOptions]);
   
