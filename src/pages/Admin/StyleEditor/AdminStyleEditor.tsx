@@ -24,6 +24,8 @@ import { NotificationType, NotificationPriority } from '../../../types/notificat
 import { styleConfigService } from '../../../services/styleConfigService';
 import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG, ComponentConfig, PageType, migrateConfigToComponents, TextComponentConfig, ensureBackgroundComponents, DEFAULT_COMPONENTS } from '../../../types/styleConfig';
 import StylePreview from './components/StylePreview';
+import StylePreviewTDD from './components/StylePreviewTDD';
+import TDDPanelAdapter from './components/TDDPanelAdapter';
 import TypographyPanel from './components/TypographyPanel';
 import PositionPanel from './components/PositionPanel';
 import ColorPanel from './components/ColorPanel';
@@ -39,6 +41,7 @@ import ContentEditorPanel from './components/ContentEditorPanel';
 import { useStyleAdapter, SelectionTarget } from '../../../hooks/useStyleAdapter';
 import { validateAndSanitize, ValidationResult, isEqual } from '../../../utils/validation';
 import { useDualSystemSync } from '../../../hooks/useDualSystemSync';
+import { useTDDMigration } from '../../../hooks/useTDDMigration';
 
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
@@ -84,6 +87,10 @@ const AdminStyleEditor: React.FC = () => {
   const [showRulers, setShowRulers] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  
+  // Estados para sistema TDD
+  const [useTDDSystem, setUseTDDSystem] = useState(false);
+  const [showMigrationPanel, setShowMigrationPanel] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
@@ -734,6 +741,14 @@ const AdminStyleEditor: React.FC = () => {
     }
   );
 
+  // Hook para migración TDD
+  const tddMigration = useTDDMigration({
+    activeConfig,
+    allComponents,
+    onConfigUpdate: setActiveConfig,
+    onComponentsUpdate: setAllComponents
+  });
+
   // Función wrapper para setAllComponents con logging
   const handleSetAllComponents = useCallback((newComponents: ComponentConfig[] | ((prev: ComponentConfig[]) => ComponentConfig[])) => {
     console.log('[DualSystemSync] setAllComponents llamado:', {
@@ -844,6 +859,47 @@ const AdminStyleEditor: React.FC = () => {
     );
   };
 
+  // Callbacks para paneles TDD
+  const handleTDDComponentUpdate = useCallback((componentId: string, updates: any) => {
+    const updatedComponents = allComponents.map(comp => 
+      comp.id === componentId ? { ...comp, ...updates } : comp
+    );
+    setAllComponents(updatedComponents);
+    setIsDirty(true);
+  }, [allComponents]);
+
+  const handleTDDComponentSelect = useCallback((componentId: string) => {
+    setSelectedTarget({ type: 'component', componentId });
+  }, []);
+
+  const handleTDDComponentAdd = useCallback((newComponent: ComponentConfig) => {
+    setAllComponents(prev => [...prev, newComponent]);
+    setIsDirty(true);
+  }, []);
+
+  const handleTDDComponentDelete = useCallback((componentId: string) => {
+    setAllComponents(prev => prev.filter(comp => comp.id !== componentId));
+    setIsDirty(true);
+  }, []);
+
+  // Funciones de migración TDD
+  const handleToggleTDD = useCallback(() => {
+    setUseTDDSystem(!useTDDSystem);
+    if (!useTDDSystem && !tddMigration.isMigrated && tddMigration.canMigrate) {
+      setShowMigrationPanel(true);
+    }
+  }, [useTDDSystem, tddMigration.isMigrated, tddMigration.canMigrate]);
+
+  const handleMigrateToTDD = useCallback(async () => {
+    try {
+      await tddMigration.migrateToUnified();
+      setUseTDDSystem(true);
+      setShowMigrationPanel(false);
+    } catch (error) {
+      console.error('Error al migrar a TDD:', error);
+    }
+  }, [tddMigration]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -896,6 +952,37 @@ const AdminStyleEditor: React.FC = () => {
                 <Palette className="w-4 h-4" />
                 Crear Template
               </button>
+              
+              {/* Toggle Sistema TDD */}
+              <button
+                onClick={handleToggleTDD}
+                data-testid="toggle-tdd-system"
+                className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                  useTDDSystem
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <Zap className="w-4 h-4" />
+                {useTDDSystem ? 'Sistema TDD' : 'Activar TDD'}
+              </button>
+
+              {/* Botón de migración */}
+              {!tddMigration.isMigrated && tddMigration.canMigrate && (
+                <button
+                  onClick={handleMigrateToTDD}
+                  disabled={tddMigration.isProcessing}
+                  data-testid="migrate-legacy-button"
+                  className="px-4 py-2 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {tddMigration.isProcessing ? (
+                    <div className="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Zap className="w-4 h-4" />
+                  )}
+                  Migrar a TDD
+                </button>
+              )}
             </div>
             
             <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2 hidden sm:block" />
@@ -956,6 +1043,7 @@ const AdminStyleEditor: React.FC = () => {
             <button
               onClick={handleSave}
               disabled={!isDirty || isSaving}
+              data-testid="save-styles-button"
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {isSaving ? (
@@ -1105,99 +1193,118 @@ const AdminStyleEditor: React.FC = () => {
               </>
             )}
 
-            {activePanel === 'typography' && activeConfig && styleAdapter.selectionInfo.canEdit.typography && (
-              <TypographyPanel
-                config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
-                onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => styleAdapter.updateStyles(updates) :
-                  (currentPageType === 'cover' ? updateCoverConfig :
-                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                   updatePageConfig)
-                }
+            {/* Renderizado condicional: TDD vs Legacy */}
+            {useTDDSystem ? (
+              // Sistema TDD con paneles unificados
+              <TDDPanelAdapter
+                activePanel={activePanel}
+                selectedComponent={selectedTarget.componentId ? 
+                  components.find(c => c.id === selectedTarget.componentId) || null : null}
+                allComponents={allComponents}
+                currentPageType={currentPageType}
+                onUpdateComponent={handleTDDComponentUpdate}
+                onSelectComponent={handleTDDComponentSelect}
+                onAddComponent={handleTDDComponentAdd}
+                onDeleteComponent={handleTDDComponentDelete}
               />
-            )}
-            
-            {activePanel === 'position' && activeConfig && styleAdapter.selectionInfo.canEdit.position && 
-             // Mostrar panel de posición solo para componentes que NO sean de fondo
-             (selectedTarget.type === 'component' && 
-              styleAdapter.selectedComponent && 
-              !(styleAdapter.selectedComponent as any).isBackground) && (
-              <PositionPanel
-                config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
-                onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => styleAdapter.updateStyles(updates) :
-                  (currentPageType === 'cover' ? updateCoverConfig :
-                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                   updatePageConfig)
-                }
-                pageType={currentPageType}
-                isImageComponent={selectedTarget.type === 'component' && selectedTarget.componentType === 'image'}
-                containerDimensions={containerDimensions}
-              />
-            )}
-            
-            {activePanel === 'colors' && activeConfig && styleAdapter.selectionInfo.canEdit.colors && (
-              <ColorPanel
-                config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
-                onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => styleAdapter.updateStyles(updates) :
-                  (currentPageType === 'cover' ? updateCoverConfig :
-                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                   updatePageConfig)
-                }
-              />
-            )}
-            
-            {activePanel === 'effects' && activeConfig && styleAdapter.selectionInfo.canEdit.effects && (
-              <EffectsPanel
-                containerStyle={selectedTarget.type === 'component' ? 
-                  {
-                    background: styleAdapter.currentStyles.backgroundColor,
-                    boxShadow: styleAdapter.currentStyles.boxShadow,
-                    backdropFilter: styleAdapter.currentStyles.backdropFilter,
-                    border: styleAdapter.currentStyles.border
-                  } :
-                  getCurrentConfig().containerStyle
-                }
-                onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => {
-                    const styleUpdates: any = {};
-                    if (updates.background !== undefined) styleUpdates.backgroundColor = updates.background;
-                    if (updates.boxShadow !== undefined) styleUpdates.boxShadow = updates.boxShadow;
-                    if (updates.backdropFilter !== undefined) styleUpdates.backdropFilter = updates.backdropFilter;
-                    if (updates.border !== undefined) styleUpdates.border = updates.border;
-                    styleAdapter.updateStyles(styleUpdates);
-                  } :
-                  updateContainerStyle
-                }
-              />
-            )}
-            
-            {activePanel === 'container' && activeConfig && styleAdapter.selectionInfo.canEdit.container && (
-              <ContainerPanel
-                containerStyle={selectedTarget.type === 'component' ? 
-                  { 
-                    background: styleAdapter.currentStyles.backgroundColor,
-                    borderRadius: styleAdapter.currentStyles.borderRadius,
-                    padding: styleAdapter.currentStyles.padding,
-                    border: styleAdapter.currentStyles.border,
-                    // Incluir propiedades de alineación y escalado
-                    horizontalAlignment: styleAdapter.currentStyles.horizontalAlignment,
-                    verticalAlignment: styleAdapter.currentStyles.verticalAlignment,
-                    scaleWidth: styleAdapter.currentStyles.scaleWidth,
-                    scaleHeight: styleAdapter.currentStyles.scaleHeight,
-                    scaleWidthUnit: styleAdapter.currentStyles.scaleWidthUnit,
-                    scaleHeightUnit: styleAdapter.currentStyles.scaleHeightUnit,
-                    maintainAspectRatio: styleAdapter.currentStyles.maintainAspectRatio
-                  } :
-                  getCurrentConfig().containerStyle
-                }
-                onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => styleAdapter.updateStyles(updates) :
-                  updateContainerStyle
-                }
-                pageType={currentPageType}
-              />
+            ) : (
+              // Sistema Legacy
+              <>
+                {activePanel === 'typography' && activeConfig && styleAdapter.selectionInfo.canEdit.typography && (
+                  <TypographyPanel
+                    config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
+                    onChange={selectedTarget.type === 'component' ? 
+                      (updates: any) => styleAdapter.updateStyles(updates) :
+                      (currentPageType === 'cover' ? updateCoverConfig :
+                       currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                       updatePageConfig)
+                    }
+                  />
+                )}
+                
+                {activePanel === 'position' && activeConfig && styleAdapter.selectionInfo.canEdit.position && 
+                 // Mostrar panel de posición solo para componentes que NO sean de fondo
+                 (selectedTarget.type === 'component' && 
+                  styleAdapter.selectedComponent && 
+                  !(styleAdapter.selectedComponent as any).isBackground) && (
+                  <PositionPanel
+                    config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
+                    onChange={selectedTarget.type === 'component' ? 
+                      (updates: any) => styleAdapter.updateStyles(updates) :
+                      (currentPageType === 'cover' ? updateCoverConfig :
+                       currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                       updatePageConfig)
+                    }
+                    pageType={currentPageType}
+                    isImageComponent={selectedTarget.type === 'component' && selectedTarget.componentType === 'image'}
+                    containerDimensions={containerDimensions}
+                  />
+                )}
+                
+                {activePanel === 'colors' && activeConfig && styleAdapter.selectionInfo.canEdit.colors && (
+                  <ColorPanel
+                    config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
+                    onChange={selectedTarget.type === 'component' ? 
+                      (updates: any) => styleAdapter.updateStyles(updates) :
+                      (currentPageType === 'cover' ? updateCoverConfig :
+                       currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                       updatePageConfig)
+                    }
+                  />
+                )}
+                
+                {activePanel === 'effects' && activeConfig && styleAdapter.selectionInfo.canEdit.effects && (
+                  <EffectsPanel
+                    containerStyle={selectedTarget.type === 'component' ? 
+                      {
+                        background: styleAdapter.currentStyles.backgroundColor,
+                        boxShadow: styleAdapter.currentStyles.boxShadow,
+                        backdropFilter: styleAdapter.currentStyles.backdropFilter,
+                        border: styleAdapter.currentStyles.border
+                      } :
+                      getCurrentConfig().containerStyle
+                    }
+                    onChange={selectedTarget.type === 'component' ? 
+                      (updates: any) => {
+                        const styleUpdates: any = {};
+                        if (updates.background !== undefined) styleUpdates.backgroundColor = updates.background;
+                        if (updates.boxShadow !== undefined) styleUpdates.boxShadow = updates.boxShadow;
+                        if (updates.backdropFilter !== undefined) styleUpdates.backdropFilter = updates.backdropFilter;
+                        if (updates.border !== undefined) styleUpdates.border = updates.border;
+                        styleAdapter.updateStyles(styleUpdates);
+                      } :
+                      updateContainerStyle
+                    }
+                  />
+                )}
+                
+                {activePanel === 'container' && activeConfig && styleAdapter.selectionInfo.canEdit.container && (
+                  <ContainerPanel
+                    containerStyle={selectedTarget.type === 'component' ? 
+                      { 
+                        background: styleAdapter.currentStyles.backgroundColor,
+                        borderRadius: styleAdapter.currentStyles.borderRadius,
+                        padding: styleAdapter.currentStyles.padding,
+                        border: styleAdapter.currentStyles.border,
+                        // Incluir propiedades de alineación y escalado
+                        horizontalAlignment: styleAdapter.currentStyles.horizontalAlignment,
+                        verticalAlignment: styleAdapter.currentStyles.verticalAlignment,
+                        scaleWidth: styleAdapter.currentStyles.scaleWidth,
+                        scaleHeight: styleAdapter.currentStyles.scaleHeight,
+                        scaleWidthUnit: styleAdapter.currentStyles.scaleWidthUnit,
+                        scaleHeightUnit: styleAdapter.currentStyles.scaleHeightUnit,
+                        maintainAspectRatio: styleAdapter.currentStyles.maintainAspectRatio
+                      } :
+                      getCurrentConfig().containerStyle
+                    }
+                    onChange={selectedTarget.type === 'component' ? 
+                      (updates: any) => styleAdapter.updateStyles(updates) :
+                      updateContainerStyle
+                    }
+                    pageType={currentPageType}
+                  />
+                )}
+              </>
             )}
             
             
@@ -1297,9 +1404,13 @@ const AdminStyleEditor: React.FC = () => {
             
             {/* Page Type Switcher */}
             <div className="flex justify-center mb-4 md:mb-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex w-full max-w-lg md:w-auto">
+              <div 
+                data-testid="page-type-selector" 
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex w-full max-w-lg md:w-auto"
+              >
                 <button
                   onClick={() => setCurrentPageType('cover')}
+                  data-testid="page-type-cover"
                   className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPageType === 'cover'
                       ? 'bg-purple-600 text-white'
@@ -1310,6 +1421,7 @@ const AdminStyleEditor: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setCurrentPageType('page')}
+                  data-testid="page-type-page"
                   className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPageType === 'page'
                       ? 'bg-purple-600 text-white'
@@ -1321,6 +1433,7 @@ const AdminStyleEditor: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setCurrentPageType('dedicatoria')}
+                  data-testid="page-type-dedicatoria"
                   className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPageType === 'dedicatoria'
                       ? 'bg-purple-600 text-white'
@@ -1335,28 +1448,47 @@ const AdminStyleEditor: React.FC = () => {
 
             {/* Preview Component */}
             {activeConfig ? (
-              <StylePreview
-                config={activeConfig}
-                pageType={currentPageType}
-                sampleImage={
-                  currentPageType === 'cover' ? defaultCoverImage :
-                  currentPageType === 'dedicatoria' ? defaultDedicatoriaImage :
-                  defaultPageImage
-                }
-                sampleText={
-                  currentPageType === 'cover' ? customCoverText :
-                  currentPageType === 'dedicatoria' ? customDedicatoriaText :
-                  customPageText
-                }
-                showGrid={showGrid}
-                showRulers={showRulers}
-                zoomLevel={zoomLevel}
-                selectedComponentId={selectedTarget.componentId}
-                onComponentSelect={handleComponentSelection}
-                onComponentUpdate={handleComponentChange}
-                components={components}
-                onDimensionsChange={setContainerDimensions}
-              />
+              useTDDSystem ? (
+                <StylePreviewTDD
+                  activeConfig={activeConfig}
+                  currentPageType={currentPageType}
+                  sampleText={
+                    currentPageType === 'cover' ? customCoverText :
+                    currentPageType === 'dedicatoria' ? customDedicatoriaText :
+                    customPageText
+                  }
+                  zoomLevel={zoomLevel}
+                  showGrid={showGrid}
+                  showRulers={showRulers}
+                  selectedComponent={selectedTarget.componentId ? 
+                    components.find(c => c.id === selectedTarget.componentId) || null : null}
+                  onComponentSelect={handleTDDComponentSelect}
+                  allComponents={allComponents}
+                />
+              ) : (
+                <StylePreview
+                  config={activeConfig}
+                  pageType={currentPageType}
+                  sampleImage={
+                    currentPageType === 'cover' ? defaultCoverImage :
+                    currentPageType === 'dedicatoria' ? defaultDedicatoriaImage :
+                    defaultPageImage
+                  }
+                  sampleText={
+                    currentPageType === 'cover' ? customCoverText :
+                    currentPageType === 'dedicatoria' ? customDedicatoriaText :
+                    customPageText
+                  }
+                  showGrid={showGrid}
+                  showRulers={showRulers}
+                  zoomLevel={zoomLevel}
+                  selectedComponentId={selectedTarget.componentId}
+                  onComponentSelect={handleComponentSelection}
+                  onComponentUpdate={handleComponentChange}
+                  components={components}
+                  onDimensionsChange={setContainerDimensions}
+                />
+              )
             ) : (
               <div className="flex items-center justify-center h-96 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
                 <p className="text-gray-500 dark:text-gray-400">Cargando template activo...</p>
