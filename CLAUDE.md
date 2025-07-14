@@ -36,9 +36,10 @@ docker system prune
 - `npm run preview` - Previsualizar build de producción
 
 ### Testing
+- `npm run test` - Ejecutar pruebas unitarias con Vitest en modo watch (TDD)
+- `npm run test:run` - Ejecutar todas las pruebas unitarias una vez
 - `npm run cypress:open` - Abrir interfaz gráfica de Cypress para testing interactivo
-- `npm run cypress:run` - Ejecutar todas las pruebas de Cypress en modo headless (26 pruebas)
-- `npm run fas_creacion_personaje.cy.js` - Ejecutar pruebas end-to-end (alias para cypress:run)m
+- `npx cypress run --spec "cypress/e2e/fas_creacion_personaje.cy.js"` - Ejecutar ÚNICA prueba e2e validada
 
 
 ### Supabase
@@ -119,12 +120,20 @@ Credenciales de demo:
 
 ## Mejores Prácticas de Claude Code
 
-### Gestión de Tareas
+### 🔴 FLUJO TDD OBLIGATORIO PARA CLAUDE
+1. **ANTES de escribir código**: Crear test que falle
+2. **DURANTE desarrollo**: Mantener `npm run test` en watch
+3. **CADA cambio**: Verificar que tests siguen pasando
+4. **ANTES de commit**: Ejecutar suite completa de tests
+
+### Gestión de Tareas TDD
 - **Siempre usar herramientas TodoWrite/TodoRead** para tareas complejas (3+ pasos)
+- **Primera tarea siempre**: "Escribir test que falle para [funcionalidad]"
+- **Segunda tarea**: "Implementar código mínimo para hacer pasar el test"
+- **Tercera tarea**: "Refactorizar manteniendo tests verdes"
 - Marcar todos como `in_progress` ANTES de comenzar el trabajo
 - Completar todos INMEDIATAMENTE después de finalizar cada tarea
 - Tener solo UNA tarea `in_progress` a la vez
-- Dividir tareas grandes en elementos específicos y accionables
 
 ### Operaciones de Base de Datos
 - **Usar funciones RPC para operaciones complejas** (ej., `link_character_to_story`)
@@ -138,12 +147,38 @@ Credenciales de demo:
 - Usar bloques `try/catch/finally` para operaciones asíncronas
 - Registrar errores con contexto para depuración
 
-### Estrategia de Testing
-- **Ejecutar pruebas antes de cada commit**: `npm run cypress:run`
-- Usar nombres de prueba descriptivos que expliquen el flujo del usuario
-- Incluir limpieza al inicio de pruebas comprehensivas
-- Actualizar credenciales de prueba para coincidir con usuario demo actual
-- Usar atributos `data-testid` para selectores de prueba confiables
+### Estrategia de Testing y TDD
+
+#### 🔴 METODOLOGÍA TDD OBLIGATORIA
+1. **RED**: Escribir prueba que falle primero
+2. **GREEN**: Escribir código mínimo para que pase
+3. **REFACTOR**: Mejorar el código manteniendo las pruebas pasando
+4. **REPEAT**: Repetir ciclo para cada nueva funcionalidad
+
+#### 📋 CHECKLIST TDD PARA CADA FEATURE:
+- [ ] Escribir prueba unitaria que falle (`npm run test`)
+- [ ] Implementar código mínimo para que pase
+- [ ] Refactorizar manteniendo pruebas verdes
+- [ ] Agregar casos edge en las pruebas
+- [ ] Verificar con prueba e2e validada: `npx cypress run --spec "cypress/e2e/fas_creacion_personaje.cy.js"`
+
+#### 🧪 PIRÁMIDE DE TESTING:
+1. **Unitarias (70%)**: Vitest - Lógica de negocio, hooks, servicios
+2. **Integración (20%)**: Componentes con contexto
+3. **E2E (10%)**: Solo flujo crítico validado (creación personaje)
+
+#### 📝 CONVENCIONES DE NAMING:
+- Tests unitarios: `[component/hook/service].test.ts`
+- Tests e2e: `[feature].cy.js`
+- Describe: "Componente/Hook/Service - Comportamiento"
+- It: "debe [acción esperada] cuando [condición]"
+
+#### 🎯 ÁREAS PRIORITARIAS PARA TDD:
+- Hooks personalizados (useAutosave, useWizardFlow)
+- Servicios críticos (storyService, characterService)
+- Stores de Zustand (wizardFlowStore)
+- Validaciones de formularios
+- Lógica de negocio del flujo wizard
 
 ### Calidad de Código
 - **Ejecutar linting antes de commits**: `npm run lint`
@@ -165,11 +200,14 @@ Credenciales de demo:
 - Probar funcionalidad antes de hacer commit
 - Crear PRs para todos los cambios, incluso documentación
 
-### Prioridad de Comandos de Desarrollo
+### Prioridad de Comandos de Desarrollo TDD
 1. **Antes de comenzar**: `npm run dev` (verificar que la app funciona)
-2. **Durante desarrollo**: `npm run lint` (verificar calidad de código)
-3. **Antes de commit**: `npm run cypress:run` (verificar que las pruebas pasen)
-4. **Para cambios de base de datos**: `npm run supabase:pull` (sincronizar esquema)
+2. **Desarrollo TDD**: `npm run test` (modo watch para ciclo RED-GREEN-REFACTOR)
+3. **Durante desarrollo**: `npm run lint` (verificar calidad de código)
+4. **Antes de commit**: 
+   - `npm run test:run` (verificar todas las unitarias)
+   - `npx cypress run --spec "cypress/e2e/fas_creacion_personaje.cy.js"` (única e2e validada)
+5. **Para cambios de base de datos**: `npm run supabase:pull` (sincronizar esquema)
 
 ### Errores Comunes a Evitar
 - No saltarse reglas de validación del flujo wizard
@@ -235,3 +273,106 @@ docs/
 - Siempre incluir variables de entorno si son necesarias
 - Actualizar también settings.local.json y permisos para mantener consistencia
 - Ver guía completa en `/docs/maintenance/mcp-integration-guide.md`
+
+## 🧪 GUÍAS TDD ESPECÍFICAS POR STACK
+
+### React Components + TypeScript
+```typescript
+// 1. RED - Test que falla
+describe('CharacterCard - Renderizado', () => {
+  it('debe mostrar nombre del personaje cuando se proporciona', () => {
+    render(<CharacterCard name="Test" />);
+    expect(screen.getByText('Test')).toBeInTheDocument();
+  });
+});
+
+// 2. GREEN - Implementación mínima
+export const CharacterCard = ({ name }: { name: string }) => (
+  <div>{name}</div>
+);
+
+// 3. REFACTOR - Mejorar sin romper tests
+```
+
+### Custom Hooks con Vitest
+```typescript
+// 1. RED - Test del comportamiento esperado
+describe('useAutosave - Funcionalidad básica', () => {
+  it('debe guardar automáticamente después del delay', async () => {
+    const mockSave = vi.fn();
+    const { result } = renderHook(() => useAutosave(testData, mockSave));
+    
+    await waitFor(() => expect(mockSave).toHaveBeenCalled());
+  });
+});
+
+// 2. GREEN - Hook mínimo que pase
+// 3. REFACTOR - Optimizar implementación
+```
+
+### Supabase Edge Functions
+```typescript
+// 1. RED - Test de la función
+describe('generateStory Edge Function', () => {
+  it('debe retornar historia válida con personajes', async () => {
+    const result = await generateStory({ characters: [testChar] });
+    expect(result.story).toBeDefined();
+    expect(result.pages).toBeGreaterThan(0);
+  });
+});
+
+// Usar mocks para external APIs en tests unitarios
+```
+
+### Zustand Stores
+```typescript
+// 1. RED - Test del comportamiento del store
+describe('wizardFlowStore - Estados', () => {
+  it('debe actualizar estado de personajes correctamente', () => {
+    const { result } = renderHook(() => useWizardFlowStore());
+    
+    act(() => {
+      result.current.setPersonajesCompletado(2);
+    });
+    
+    expect(result.current.personajes.estado).toBe('completado');
+  });
+});
+```
+
+### Cypress E2E (Solo para flujo crítico validado)
+```javascript
+// Solo usar para cypress/e2e/fas_creacion_personaje.cy.js
+describe('Creación de Personaje - Flujo Completo', () => {
+  it('debe completar creación exitosamente', () => {
+    cy.visit('/');
+    cy.get('[data-testid="crear-personaje"]').click();
+    // ... resto del flujo validado
+  });
+});
+```
+
+### Patrones TDD para La CuenterIA
+
+#### Testing de Context Providers
+- Mock de AuthContext para pruebas unitarias
+- Testing de WizardContext con estados predefinidos
+- Verificar propagación correcta de datos
+
+#### Testing de Autoguardado
+- Mocks de localStorage y Supabase
+- Testing de reintentos y recuperación
+- Verificar persistencia en diferentes escenarios
+
+#### Testing de Validaciones Wizard
+- Estados de progresión secuencial
+- Validación de requisitos por paso
+- Manejo de errores y rollback
+
+### 🚨 REGLAS TDD ESPECÍFICAS DEL PROYECTO
+
+1. **NUNCA escribir componente sin test primero**
+2. **SIEMPRE mockear Supabase en tests unitarios**
+3. **OBLIGATORIO usar data-testid para selectores**
+4. **VERIFICAR con única e2e validada antes de commit**
+5. **MANTENER tests independientes y determinísticos**
