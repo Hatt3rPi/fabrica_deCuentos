@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Edit2, Trash2, Lock } from 'lucide-react';
+import { Edit2, Trash2, Lock, Settings } from 'lucide-react';
+import { useState } from 'react';
 import { Character } from '../../types';
 
 interface CharacterCardProps {
@@ -23,6 +24,10 @@ interface CharacterCardProps {
    * When true, the character card shows as locked and actions are disabled.
    */
   isLocked?: boolean;
+  /**
+   * Additional CSS classes for the card container
+   */
+  className?: string;
 }
 
 const CharacterCard: React.FC<CharacterCardProps> = ({
@@ -30,12 +35,14 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
   onEdit,
   onDelete,
   showActions = true,
-  actionsIconOnly = false,
   showDescription = true,
   onClick,
   isSelected,
   isLocked = false,
+  className = '',
 }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
     <motion.div
       layout
@@ -44,60 +51,58 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
       exit={{ opacity: 0, scale: 0.9 }}
       onClick={onClick}
       data-testid={`character-card-${character.id}`}
-      className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden ${onClick ? 'cursor-pointer' : ''}`}
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden ${onClick ? 'cursor-pointer' : ''} group ${className}`}
     >
       <div className="aspect-square relative">
         {character.thumbnailUrl ? (
           <img
             src={character.thumbnailUrl}
             alt={character.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
             <span className="text-gray-400 dark:text-gray-500">Sin imagen</span>
           </div>
         )}
-        {isSelected && (
-          <div className="absolute inset-0 bg-purple-600 bg-opacity-20 flex items-center justify-center pointer-events-none">
-            <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm">✓</div>
-          </div>
-        )}
-      </div>
 
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">
-          {character.name}
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{character.age} años</p>
-        {showDescription && (
-          <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-4">
-            {typeof character.description === 'object'
-              ? character.description.es
-              : character.description}
-          </p>
-        )}
+        {/* Nombre y edad siempre visibles */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+          <h3 className="text-lg font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{character.name}</h3>
+          <p className="text-sm text-gray-100 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{character.age} años</p>
+        </div>
 
-        {showActions && (
-          <div className="flex gap-2">
-            {isLocked ? (
-              <div className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-gray-400 bg-gray-50 rounded-md">
-                <Lock className="w-4 h-4" />
-                {!actionsIconOnly && <span>Bloqueado</span>}
-              </div>
-            ) : (
-              <>
+        {/* Menú de tuerca */}
+        {showActions && !isLocked && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMenuOpen(!isMenuOpen);
+              }}
+              className="p-1.5 rounded-full bg-black/30 text-white/80 hover:bg-black/50 hover:text-white transition-all"
+              aria-label="Opciones del personaje"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Menú desplegable */}
+            {isMenuOpen && (
+              <div 
+                className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg py-1 z-10"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {onEdit && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onEdit(character.id);
+                      setIsMenuOpen(false);
                     }}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-md transition-colors"
-                    aria-label="Editar personaje"
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
-                    <Edit2 className="w-4 h-4" />
-                    {!actionsIconOnly && <span>Editar</span>}
+                    <Edit2 className="w-4 h-4 text-purple-600" />
+                    <span>Editar personaje</span>
                   </button>
                 )}
                 {onDelete && (
@@ -105,19 +110,44 @@ const CharacterCard: React.FC<CharacterCardProps> = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(character.id);
+                      setIsMenuOpen(false);
                     }}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
-                    aria-label="Eliminar personaje"
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    {!actionsIconOnly && <span>Eliminar</span>}
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                    <span>Eliminar personaje</span>
                   </button>
                 )}
-              </>
+              </div>
             )}
           </div>
         )}
+
+        {/* Estado de bloqueado */}
+        {isLocked && (
+          <div className="absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white">
+            <Lock className="w-4 h-4" />
+          </div>
+        )}
+
+        {/* Indicador de selección */}
+        {isSelected && (
+          <div className="absolute inset-0 bg-purple-600 bg-opacity-20 flex items-center justify-center pointer-events-none">
+            <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm">✓</div>
+          </div>
+        )}
       </div>
+
+      {/* Descripción (opcional) */}
+      {showDescription && (
+        <div className="p-4">
+          <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+            {typeof character.description === 'object'
+              ? character.description.es
+              : character.description || 'Sin descripción'}
+          </p>
+        </div>
+      )}
     </motion.div>
   );
 };
