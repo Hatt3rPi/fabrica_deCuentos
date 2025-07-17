@@ -29,6 +29,7 @@
     "@tailwindcss/typography": "^0.5.16",
     "@types/react-datepicker": "^7.0.0",
     "date-fns": "^4.1.0",
+    "fast-average-color": "^9.5.0",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",

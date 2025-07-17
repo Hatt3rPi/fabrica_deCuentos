@@ -41,12 +41,6 @@ const StoryCardMobile: React.FC<StoryCardMobileProps> = ({
     }
   };
 
-  const handleMouseLeave = () => {
-    if (isDeleteModalOpen) {
-      setIsDeleteModalOpen(false);
-    }
-  };
-
   const handleConfirmDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(e, story);
@@ -61,61 +55,59 @@ const StoryCardMobile: React.FC<StoryCardMobileProps> = ({
   return (
     <>
       <div 
-        className="md:hidden relative h-64 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden cursor-pointer"
+        className="md:hidden relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden cursor-pointer group"
         onClick={story.status === 'completed' ? onRead : onContinue}
       >
         {/* Background image */}
-        <StoryImage
-          imageUrl={imageUrl}
-          title={story.title}
-          isLoading={isLoading}
-          variant="mobile"
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          showTitleOverlay={false}
-        />
-        
-        {/* Content overlay */}
-        <div className="absolute inset-0 flex flex-col p-4">
-          {/* Status and delete button top bar */}
-          <div className="flex justify-between w-full">
-            {/* Status badge on the left */}
-            <div className="z-10">
-              <StatusBadge
-                status={story.status}
-                isPurchased={isPurchased}
-                variant="mobile"
-              />
-            </div>
-            
-            {/* Delete button on the right */}
+        <div className="relative w-full h-full">
+          <StoryImage
+            imageUrl={imageUrl}
+            title={story.title}
+            isLoading={isLoading}
+            variant="mobile"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            showTitleOverlay={false}
+          />
+          
+          {/* Hover overlay with buttons */}
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 space-y-3">
             <button 
-              onClick={handleDeleteClick}
-              onMouseLeave={handleMouseLeave}
-              className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all z-10
-                ${isDeleteModalOpen 
-                  ? 'bg-red-500 hover:bg-red-600 text-white' 
-                  : 'bg-white/90 hover:bg-white text-gray-700 hover:text-red-500'}
-                hover:scale-110`}
-              aria-label={isDeleteModalOpen ? 'Confirmar eliminar' : 'Eliminar cuento'}
+              onClick={(e) => {
+                e.stopPropagation();
+                story.status === 'completed' ? onRead() : onContinue();
+              }}
+              className="w-3/4 px-4 py-2 bg-white/90 text-gray-800 rounded-lg font-medium hover:bg-white transition-colors duration-200"
             >
-              <Trash2 className="w-5 h-5" />
+              {story.status === 'completed' ? 'Leer' : 'Continuar'}
+            </button>
+            
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClick(e);
+              }}
+              className="w-3/4 px-4 py-2 bg-red-500/90 text-white rounded-lg font-medium hover:bg-red-600 transition-colors duration-200 flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Eliminar
             </button>
           </div>
-          
-          {/* Title at bottom */}
-          <div className="mt-auto">
-            <div className="relative overflow-hidden px-3 py-2.5 rounded-b-lg bg-[#f5f2e9] border border-amber-100 shadow-[0_2px_5px_rgba(0,0,0,0.05)]">
-              {/* Textura de papel con patrón sutil */}
-              <div className="absolute inset-0 opacity-20" style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29-22c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM32 63c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm57-13c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm-9-21c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23e6d9bc' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E")`
-              }} />
-              
-              <h3 className="relative text-sm font-serif font-medium text-amber-900/90 text-center leading-snug tracking-normal line-clamp-2">
-                {story.title || <span className="italic">Sin título</span>}
-                <div className="w-12 h-px bg-gradient-to-r from-transparent via-amber-400/70 to-transparent mx-auto mt-2 rounded-full" />
-              </h3>
-            </div>
-          </div>
+        </div>
+        
+        {/* Status badge */}
+        <div className="absolute top-2 left-2 z-10">
+          <StatusBadge
+            status={story.status}
+            isPurchased={isPurchased}
+            variant="mobile"
+          />
+        </div>
+        
+        {/* Title at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
+          <h3 className="text-white font-medium text-sm line-clamp-1">
+            {story.title || <span className="italic">Sin título</span>}
+          </h3>
         </div>
       </div>
 
