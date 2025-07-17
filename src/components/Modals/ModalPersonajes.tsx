@@ -166,7 +166,7 @@ const ModalPersonajes: React.FC<ModalPersonajesProps> = ({ isOpen, onClose }) =>
               <Loader className="w-8 h-8 text-purple-600 animate-spin" />
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {characters.map((character) => (
                 <div
                   key={character.id}
