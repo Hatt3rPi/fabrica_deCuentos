@@ -2,6 +2,14 @@ import React, { useRef, useEffect, useState } from 'react';
 import { StoryStyleConfig, ComponentConfig } from '../../../../types/styleConfig';
 import { StoryRenderer } from '../../../../components/StoryRenderer';
 import ComponentRenderer from './ComponentRenderer';
+import TemplateRenderer from '../../../../components/unified/TemplateRenderer';
+import { UnifiedRenderOptions } from '../../../../types/unifiedTemplate';
+import TemplateRendererErrorBoundary from '../../../../components/ErrorBoundaries/TemplateRendererErrorBoundary';
+import { 
+  validateTemplateRendererProps, 
+  logTemplateRendererProps,
+  TemplateRendererPropsToValidate 
+} from '../../../../utils/templateRendererValidation';
 
 interface StylePreviewProps {
   config: StoryStyleConfig;
@@ -15,6 +23,8 @@ interface StylePreviewProps {
   onComponentSelect?: (componentId: string | null) => void;
   onComponentUpdate?: (componentId: string, updates: Partial<ComponentConfig>) => void;
   components?: ComponentConfig[];
+  onDimensionsChange?: (dimensions: { width: number; height: number }) => void;
+  useUnifiedRenderer?: boolean; // Flag para usar el nuevo sistema unificado
 }
 
 const StylePreview: React.FC<StylePreviewProps> = ({
@@ -28,21 +38,14 @@ const StylePreview: React.FC<StylePreviewProps> = ({
   selectedComponentId,
   onComponentSelect,
   onComponentUpdate,
-  components = []
+  components = [],
+  onDimensionsChange,
+  useUnifiedRenderer = true // Por defecto usar el sistema unificado
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scale = zoomLevel / 100;
   const [dimensions, setDimensions] = useState({ width: 1536, height: 1024 });
 
-  // Debug: Log de componentes recibidos
-  console.log('👁️ StylePreview received components:', components.map(c => ({ 
-    id: c.id, 
-    name: c.name, 
-    pageType: c.pageType, 
-    type: c.type, 
-    isBackground: c.type === 'image' ? c.isBackground : undefined,
-    url: c.type === 'image' ? c.url : undefined
-  })));
 
   // Calcular dimensiones responsivas
   useEffect(() => {
@@ -75,10 +78,13 @@ const StylePreview: React.FC<StylePreviewProps> = ({
         height = width / aspectRatio;
       }
       
-      setDimensions({ 
+      const newDimensions = { 
         width: Math.floor(width), 
         height: Math.floor(height) 
-      });
+      };
+      
+      setDimensions(newDimensions);
+      onDimensionsChange?.(newDimensions);
     };
     
     updateDimensions();
@@ -253,15 +259,115 @@ const StylePreview: React.FC<StylePreviewProps> = ({
             </div>
           )}
 
-          {/* Componentes renderizados */}
-          <ComponentRenderer
-            components={components}
-            pageType={pageType}
-            selectedComponentId={selectedComponentId}
-            onComponentSelect={onComponentSelect}
-            onComponentUpdate={onComponentUpdate}
-            containerDimensions={dimensions}
-          />
+          {/* Renderizado usando sistema unificado o legacy */}
+          {useUnifiedRenderer ? (
+            <div className="absolute inset-0">
+              {/* Logging de debugging - ejecutar antes del render */}
+              {(() => {
+                console.log('🎯[TEMPLATE-DEBUG] StylePreview preparing to render TemplateRenderer:', {
+                  timestamp: new Date().toISOString(),
+                  useUnifiedRenderer,
+                  dimensions
+                });
+              })()}
+
+              <TemplateRendererErrorBoundary
+                context="StylePreview-AdminEdit"
+                templateRendererProps={{
+                  config,
+                  pageType: pageType === 'page' ? 'content' : pageType,
+                  content: {
+                    title: pageType === 'cover' ? sampleText : undefined,
+                    text: pageType !== 'cover' ? sampleText : undefined,
+                    authorName: pageType === 'cover' ? 'Autor Demo' : undefined
+                  },
+                  renderOptions: {
+                    context: 'admin-edit',
+                    enableScaling: true, // Habilitado para que las imágenes escalen correctamente
+                    preserveAspectRatio: true, // Habilitado para mantener proporciones
+                    targetDimensions: dimensions, // Usar dimensiones del contenedor actual
+                    features: {
+                      enableAnimations: false,
+                      enableInteractions: true,
+                      enableDebugInfo: false,
+                      enableValidation: true
+                    },
+                    performance: {
+                      lazyLoadImages: false,
+                      optimizeFor: 'quality'
+                    }
+                  },
+                  onComponentSelect,
+                  onComponentUpdate,
+                  selectedComponentId,
+                  debug: true
+                }}
+                onError={(error, errorInfo, context) => {
+                  console.error('🎯[TEMPLATE-DEBUG] 🚨 TemplateRenderer crashed in StylePreview:', {
+                    error,
+                    errorInfo,
+                    context,
+                    timestamp: new Date().toISOString()
+                  });
+                }}
+                fallback={
+                  <div className="absolute inset-0 bg-yellow-50 border-2 border-yellow-400 flex items-center justify-center">
+                    <div className="text-center p-4">
+                      <h3 className="text-lg font-bold text-yellow-600 mb-2">⚠️ TemplateRenderer Error Capturado</h3>
+                      <p className="text-sm text-yellow-700">
+                        Error detectado y capturado por ErrorBoundary.
+                        <br />
+                        Revisa la consola para detalles específicos.
+                      </p>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Config: {config?.name || 'No config'} | Page: {pageType}
+                      </div>
+                    </div>
+                  </div>
+                }
+              >
+                <TemplateRenderer
+                  config={config}
+                  pageType={pageType === 'page' ? 'content' : pageType}
+                  content={{
+                    title: pageType === 'cover' ? sampleText : undefined,
+                    text: pageType !== 'cover' ? sampleText : undefined,
+                    authorName: pageType === 'cover' ? 'Autor Demo' : undefined
+                  }}
+                  renderOptions={{
+                    context: 'admin-edit',
+                    enableScaling: true, // Habilitado para que las imágenes escalen correctamente
+                    preserveAspectRatio: true, // Habilitado para mantener proporciones
+                    targetDimensions: dimensions, // Usar dimensiones del contenedor actual
+                    features: {
+                      enableAnimations: false,
+                      enableInteractions: true,
+                      enableDebugInfo: false,
+                      enableValidation: true
+                    },
+                    performance: {
+                      lazyLoadImages: false,
+                      optimizeFor: 'quality'
+                    }
+                  }}
+                  onComponentSelect={onComponentSelect}
+                  onComponentUpdate={onComponentUpdate}
+                  selectedComponentId={selectedComponentId}
+                  debug={true}
+                />
+              </TemplateRendererErrorBoundary>
+            </div>
+          ) : (
+            /* Sistema legacy de componentes */
+            <ComponentRenderer
+              components={components}
+              pageType={pageType}
+              selectedComponentId={selectedComponentId}
+              onComponentSelect={onComponentSelect}
+              onComponentUpdate={onComponentUpdate}
+              containerDimensions={dimensions}
+            />
+          )}
         </div>
       </div>
     </div>

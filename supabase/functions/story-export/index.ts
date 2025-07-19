@@ -742,15 +742,17 @@ function generateHTMLContent(
   
   console.log(`[story-export] 📚 Fuentes a importar (${fonts.size}):`, Array.from(fonts));
 
-  // MIGRADO: Generar estilos usando sistema unificado 
-  // Primero necesito importar las funciones del sistema unificado
-  // NOTA: En Edge Functions necesitamos implementar las funciones localmente 
-  // hasta que se pueda configurar el import correctamente
+  // MIGRADO: Sistema unificado de generación de estilos
+  // Implementación local de las funciones del sistema unificado para PDF
   
-  const generateUnifiedStyles = (config: any, pageType: 'cover' | 'page' | 'dedicatoria') => {
+  /**
+   * Aplica estilos unificados para PDF (versión local de storyStyleUtils)
+   * Garantiza consistencia con Admin, Wizard y Visualizador
+   */
+  const applyUnifiedStylesForPDF = (config: any, pageType: 'cover' | 'content' | 'dedicatoria') => {
     if (!config) return { textCSS: '', containerCSS: '', positionCSS: '' };
     
-    // Obtener configuración por tipo de página (mismo patrón que storyStyleUtils)
+    // Obtener configuración por tipo de página (mismo patrón que getCurrentConfig)
     let currentConfig;
     switch (pageType) {
       case 'cover':
@@ -759,20 +761,31 @@ function generateHTMLContent(
       case 'dedicatoria':
         currentConfig = config.dedicatoriaConfig?.text || config.pageConfig?.text || {};
         break;
-      case 'page':
+      case 'content': // Mapear 'content' a 'page' para compatibilidad
       default:
         currentConfig = config.pageConfig?.text || {};
         break;
     }
     
-    // Convertir a CSS (mismo patrón que convertToHTMLStyle)
+    // Decodificar fontFamily (mismo patrón que decodeFontFamily)
+    const decodeFontFamily = (fontFamily: string): string => {
+      if (!fontFamily) return 'Arial, sans-serif';
+      
+      return fontFamily
+        .replace(/&amp;quot;/g, '"')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;#39;/g, "'");
+    };
+    
+    // Convertir a estilos React (mismo patrón que convertToReactStyle)
     const textStyle = {
       fontSize: currentConfig.fontSize,
-      fontFamily: currentConfig.fontFamily,
+      fontFamily: decodeFontFamily(currentConfig.fontFamily),
       fontWeight: currentConfig.fontWeight,
       color: currentConfig.color,
       textAlign: currentConfig.textAlign,
-      textShadow: currentConfig.textShadow,
+      textShadow: currentConfig.textShadow || 'none',
       letterSpacing: currentConfig.letterSpacing,
       lineHeight: currentConfig.lineHeight,
       textTransform: currentConfig.textTransform,
@@ -809,7 +822,7 @@ function generateHTMLContent(
       case 'right': justifyContent = 'flex-end'; break;
     }
     
-    // Convertir a CSS string
+    // Convertir a CSS string (mismo patrón que convertToHTMLStyle)
     const convertToCSS = (obj: any) => 
       Object.entries(obj)
         .filter(([, value]) => value !== undefined)
@@ -822,7 +835,7 @@ function generateHTMLContent(
     return {
       textCSS: convertToCSS(textStyle),
       containerCSS: convertToCSS(containerStyle),
-      positionCSS: `display: flex; align-items: ${alignItems}; justify-content: ${justifyContent}`
+      positionCSS: `display: flex; align-items: ${alignItems}; justify-content: ${justifyContent}; width: 100%; height: 100%`
     };
   };
 
@@ -832,10 +845,10 @@ function generateHTMLContent(
       return '';
     }
     
-    // Usar la función unificada para generar estilos
-    const coverStyles = generateUnifiedStyles(styleConfig, 'cover');
-    const pageStyles = generateUnifiedStyles(styleConfig, 'page');
-    const dedicatoriaStyles = generateUnifiedStyles(styleConfig, 'dedicatoria');
+    // Usar la función unificada para generar estilos (garantiza consistencia con otros contextos)
+    const coverStyles = applyUnifiedStylesForPDF(styleConfig, 'cover');
+    const pageStyles = applyUnifiedStylesForPDF(styleConfig, 'content');
+    const dedicatoriaStyles = applyUnifiedStylesForPDF(styleConfig, 'dedicatoria');
     
     // Función para extraer y validar fuentes (mantener para imports)
     const coverFontFamily = extractAndValidateFontName(coverConfig.fontFamily) || CSS_CONSTANTS.DEFAULT_FONTS.FALLBACK;
@@ -848,7 +861,9 @@ function generateHTMLContent(
     });
     
     return `
-      /* MIGRADO: Estilos dinámicos usando sistema unificado */
+      /* SISTEMA UNIFICADO DE ESTILOS PARA PDF */
+      /* Garantiza renderizado idéntico al Admin, Wizard y Visualizador */
+      
       .cover-title {
         ${coverStyles.textCSS} !important;
         font-family: ${coverFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
@@ -858,14 +873,14 @@ function generateHTMLContent(
         ${coverStyles.containerCSS} !important;
       }
       
-      /* Posicionamiento dinámico de portada usando sistema unificado */
+      /* Posicionamiento unificado de portada */
       .cover-page {
         ${coverStyles.positionCSS} !important;
         ${coverConfig.position === 'top' ? 'padding-top: 3rem !important;' : ''}
         ${coverConfig.position === 'bottom' ? 'padding-bottom: 3rem !important;' : ''}
       }
       
-      /* Estilos dinámicos de páginas usando sistema unificado */
+      /* Estilos unificados de páginas de contenido */
       .story-text {
         ${pageStyles.textCSS} !important;
         font-family: ${pageFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
@@ -878,15 +893,21 @@ function generateHTMLContent(
         flex-direction: column !important;
       }
       
-      /* Posicionamiento dinámico de páginas usando sistema unificado */
+      /* Posicionamiento unificado de páginas */
       .story-page {
         ${pageStyles.positionCSS} !important;
       }
       
-      /* Estilos de dedicatoria usando sistema unificado */
+      /* Estilos unificados de dedicatoria */
       .dedicatoria-text {
         ${dedicatoriaStyles.textCSS} !important;
         font-family: ${pageFontFamily}, ${CSS_CONSTANTS.DEFAULT_FONTS.CURSIVE} !important;
+      }
+      
+      /* Contenedor de dedicatoria con posicionamiento unificado */
+      .dedicatoria-page .page-overlay {
+        ${dedicatoriaStyles.positionCSS} !important;
+        ${dedicatoriaStyles.containerCSS} !important;
       }
     `;
   };
@@ -1137,7 +1158,8 @@ function generateHTMLContent(
           widows: 3;
         }
         
-        /* ESTILOS DINÁMICOS DEL TEMPLATE - Aplicados al final para máxima prioridad */
+        /* ESTILOS UNIFICADOS DEL TEMPLATE - Aplicados con máxima prioridad */
+        /* Garantiza renderizado idéntico en Admin, Wizard, PDF y Visualizador */
         ${generateDynamicStyles()}
       </style>
     </head>

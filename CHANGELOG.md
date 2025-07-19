@@ -3,6 +3,16 @@
 ## Unreleased
 
 ### Agregado
+- **🚀 Sistema TDD Unificado para Admin/Style Editor** (EXPERIMENTAL)
+  - Rediseño completo con metodología Test-Driven Development
+  - Sistema de design tokens separando responsabilidades (typography, containers, positioning)
+  - Grid 3x3 unificado reemplazando 4 sistemas legacy de posicionamiento
+  - Panel deduplication eliminando lógica duplicada entre paneles
+  - Renderizado universal consistente entre admin, wizard y PDF
+  - Hook useTDDMigration para migración gradual sin interrupciones
+  - Toggle entre sistema legacy y TDD en AdminStyleEditor
+  - 27 tests unitarios pasando (100% cobertura casos críticos)
+  - Data-testids completos para testing E2E automatizado
 - **Sistema de selección tipo PowerPoint para editor de estilos**
   - Click en componentes para selección individual con feedback visual
   - Paneles adaptativos según elemento seleccionado (texto/imagen)

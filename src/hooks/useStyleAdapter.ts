@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { ComponentConfig, TextComponentConfig, ImageComponentConfig, StoryStyleConfig, PageType } from '../types/styleConfig';
+import { useGranularUpdate } from './useGranularUpdate';
 
 // Tipos para el sistema de selección
 export interface SelectionTarget {
@@ -27,6 +28,8 @@ export interface UnifiedStyleConfig {
   // Position & Layout
   position?: string;
   horizontalPosition?: string;
+  x?: number;
+  y?: number;
   
   // Effects & Container
   backgroundColor?: string;
@@ -36,6 +39,15 @@ export interface UnifiedStyleConfig {
   boxShadow?: string;
   backdropFilter?: string;
   border?: string;
+  
+  // Container alignment and scaling
+  horizontalAlignment?: 'left' | 'center' | 'right';
+  verticalAlignment?: 'top' | 'center' | 'bottom';
+  scaleWidth?: string;
+  scaleHeight?: string;
+  scaleWidthUnit?: 'px' | '%' | 'auto';
+  scaleHeightUnit?: 'px' | '%' | 'auto';
+  maintainAspectRatio?: boolean;
   
   // Image specific
   objectFit?: string;
@@ -67,6 +79,29 @@ export interface StyleAdapterReturn {
       container: boolean;
     };
   };
+  
+  /** Componente seleccionado actual (si hay uno) */
+  selectedComponent: ComponentConfig | null;
+  
+  /** Estadísticas del sistema granular */
+  granularUpdateStats: {
+    granularUpdates: number;
+    fallbackUpdates: number;
+    totalUpdates: number;
+    granularRatio: number;
+    averageTime: number;
+  };
+  
+  /** Si el sistema granular está habilitado */
+  isGranularEnabled: boolean;
+  
+  /** Función para clasificar actualizaciones */
+  granularClassifyUpdate: (componentId: string, updates: Partial<ComponentConfig>) => {
+    type: 'minor' | 'major' | 'complex';
+    requiresSync: boolean;
+    affectsOthers: boolean;
+    affectedComponents: string[];
+  };
 }
 
 /**
@@ -79,8 +114,28 @@ export const useStyleAdapter = (
   pageType: PageType,
   components: ComponentConfig[],
   onConfigChange: (updates: Partial<StoryStyleConfig>) => void,
-  onComponentChange: (componentId: string, updates: Partial<ComponentConfig>) => void
+  onComponentChange: (componentId: string, updates: Partial<ComponentConfig>) => void,
+  options?: {
+    enableGranularUpdates?: boolean;
+    enableLogging?: boolean;
+  }
 ): StyleAdapterReturn => {
+  
+  // Configuración de opciones por defecto
+  const granularOptions = {
+    enableGranularUpdates: options?.enableGranularUpdates ?? true,
+    enableLogging: options?.enableLogging ?? false
+  };
+  
+  // Hook de actualización granular
+  const granularUpdate = useGranularUpdate({
+    enableGranularUpdates: granularOptions.enableGranularUpdates,
+    enableLogging: granularOptions.enableLogging,
+    onComponentUpdate: onComponentChange,
+    onConfigUpdate: onConfigChange,
+    activeConfig: config,
+    allComponents: components
+  });
   
   // Obtener el componente seleccionado si aplica
   const selectedComponent = useMemo(() => {
@@ -160,6 +215,9 @@ export const useStyleAdapter = (
         textShadow: textComp.style?.textShadow || 'none',
         position: textComp.position,
         horizontalPosition: textComp.horizontalPosition,
+        // Agregar coordenadas x e y al mapeo
+        x: textComp.x,
+        y: textComp.y,
         backgroundColor: textComp.style?.backgroundColor,
         borderRadius: textComp.style?.borderRadius,
         padding: textComp.style?.padding,
@@ -167,7 +225,15 @@ export const useStyleAdapter = (
         border: textComp.style?.border,
         backdropFilter: textComp.style?.backdropFilter,
         opacity: textComp.style?.opacity || 1,
-        content: textComp.content
+        content: textComp.content,
+        // Nuevas propiedades de contenedor
+        horizontalAlignment: textComp.containerStyle?.horizontalAlignment,
+        verticalAlignment: textComp.containerStyle?.verticalAlignment,
+        scaleWidth: textComp.containerStyle?.scaleWidth,
+        scaleHeight: textComp.containerStyle?.scaleHeight,
+        scaleWidthUnit: textComp.containerStyle?.scaleWidthUnit,
+        scaleHeightUnit: textComp.containerStyle?.scaleHeightUnit,
+        maintainAspectRatio: textComp.containerStyle?.maintainAspectRatio
       };
     }
     
@@ -176,6 +242,9 @@ export const useStyleAdapter = (
       return {
         position: imgComp.position,
         horizontalPosition: imgComp.horizontalPosition,
+        // Agregar coordenadas x e y al mapeo
+        x: imgComp.x,
+        y: imgComp.y,
         width: imgComp.width,
         height: imgComp.height,
         objectFit: imgComp.objectFit,
@@ -185,7 +254,15 @@ export const useStyleAdapter = (
         border: imgComp.style?.border,
         backdropFilter: imgComp.style?.backdropFilter,
         opacity: imgComp.style?.opacity || 1,
-        imageUrl: imgComp.url
+        imageUrl: imgComp.url,
+        // Nuevas propiedades de contenedor para imágenes
+        horizontalAlignment: imgComp.containerStyle?.horizontalAlignment,
+        verticalAlignment: imgComp.containerStyle?.verticalAlignment,
+        scaleWidth: imgComp.containerStyle?.scaleWidth,
+        scaleHeight: imgComp.containerStyle?.scaleHeight,
+        scaleWidthUnit: imgComp.containerStyle?.scaleWidthUnit,
+        scaleHeightUnit: imgComp.containerStyle?.scaleHeightUnit,
+        maintainAspectRatio: imgComp.containerStyle?.maintainAspectRatio
       };
     }
     
@@ -202,6 +279,16 @@ export const useStyleAdapter = (
   
   // Función para actualizar estilos
   const updateStyles = useCallback((updates: Partial<UnifiedStyleConfig>) => {
+    // Log solo para debugging de issues específicos
+    if (options?.enableLogging) {
+      console.log('🐛[DEBUG] StyleAdapter updateStyles:', {
+        componentName: selectedTarget.componentName,
+        componentType: selectedTarget.componentType,
+        updates,
+        hasPositionChanges: !!(updates.position || updates.x || updates.y)
+      });
+    }
+
     if (selectedTarget.type === 'page') {
       // Actualizar configuración de página
       const pageUpdates: any = {};
@@ -226,6 +313,15 @@ export const useStyleAdapter = (
       if (updates.boxShadow !== undefined) containerUpdates.boxShadow = updates.boxShadow;
       if (updates.backdropFilter !== undefined) containerUpdates.backdropFilter = updates.backdropFilter;
       if (updates.border !== undefined) containerUpdates.border = updates.border;
+      
+      // Nuevas propiedades de contenedor
+      if (updates.horizontalAlignment !== undefined) containerUpdates.horizontalAlignment = updates.horizontalAlignment;
+      if (updates.verticalAlignment !== undefined) containerUpdates.verticalAlignment = updates.verticalAlignment;
+      if (updates.scaleWidth !== undefined) containerUpdates.scaleWidth = updates.scaleWidth;
+      if (updates.scaleHeight !== undefined) containerUpdates.scaleHeight = updates.scaleHeight;
+      if (updates.scaleWidthUnit !== undefined) containerUpdates.scaleWidthUnit = updates.scaleWidthUnit;
+      if (updates.scaleHeightUnit !== undefined) containerUpdates.scaleHeightUnit = updates.scaleHeightUnit;
+      if (updates.maintainAspectRatio !== undefined) containerUpdates.maintainAspectRatio = updates.maintainAspectRatio;
       
       if (Object.keys(containerUpdates).length > 0) {
         pageUpdates.containerStyle = { ...config?.[`${pageType}Config`]?.text?.containerStyle, ...containerUpdates };
@@ -253,6 +349,13 @@ export const useStyleAdapter = (
       onConfigChange(configUpdates);
     } else if (selectedTarget.type === 'component' && selectedTarget.componentId) {
       // Actualizar componente
+      console.log('[StyleAdapter] Actualizando componente:', {
+        componentId: selectedTarget.componentId,
+        componentType: selectedComponent?.type,
+        componentName: selectedComponent?.name,
+        updates
+      });
+      
       const componentUpdates: Partial<ComponentConfig> = {};
       
       if (selectedComponent?.type === 'text') {
@@ -280,8 +383,30 @@ export const useStyleAdapter = (
           componentUpdates.style = { ...(selectedComponent as TextComponentConfig).style, ...styleUpdates };
         }
         
+        // Manejar updates de containerStyle para componentes
+        const containerStyleUpdates: any = {};
+        if (updates.horizontalAlignment !== undefined) containerStyleUpdates.horizontalAlignment = updates.horizontalAlignment;
+        if (updates.verticalAlignment !== undefined) containerStyleUpdates.verticalAlignment = updates.verticalAlignment;
+        if (updates.scaleWidth !== undefined) containerStyleUpdates.scaleWidth = updates.scaleWidth;
+        if (updates.scaleHeight !== undefined) containerStyleUpdates.scaleHeight = updates.scaleHeight;
+        if (updates.scaleWidthUnit !== undefined) containerStyleUpdates.scaleWidthUnit = updates.scaleWidthUnit;
+        if (updates.scaleHeightUnit !== undefined) containerStyleUpdates.scaleHeightUnit = updates.scaleHeightUnit;
+        if (updates.maintainAspectRatio !== undefined) containerStyleUpdates.maintainAspectRatio = updates.maintainAspectRatio;
+        
+        if (Object.keys(containerStyleUpdates).length > 0) {
+          componentUpdates.containerStyle = { ...(selectedComponent as TextComponentConfig).containerStyle, ...containerStyleUpdates };
+          console.log('🐛[DEBUG] ContainerStyle updates detected:', {
+            componentId: selectedTarget.componentId,
+            componentName: selectedTarget.componentName,
+            containerStyleUpdates,
+            finalContainerStyle: componentUpdates.containerStyle
+          });
+        }
+        
         if (updates.position !== undefined) componentUpdates.position = updates.position;
         if (updates.horizontalPosition !== undefined) componentUpdates.horizontalPosition = updates.horizontalPosition;
+        if (updates.x !== undefined) componentUpdates.x = updates.x;
+        if (updates.y !== undefined) componentUpdates.y = updates.y;
         if (updates.content !== undefined) (componentUpdates as Partial<TextComponentConfig>).content = updates.content;
       } else if (selectedComponent?.type === 'image') {
         const styleUpdates: any = {};
@@ -296,8 +421,24 @@ export const useStyleAdapter = (
           componentUpdates.style = { ...(selectedComponent as ImageComponentConfig).style, ...styleUpdates };
         }
         
+        // Manejar updates de containerStyle para imágenes
+        const containerStyleUpdates: any = {};
+        if (updates.horizontalAlignment !== undefined) containerStyleUpdates.horizontalAlignment = updates.horizontalAlignment;
+        if (updates.verticalAlignment !== undefined) containerStyleUpdates.verticalAlignment = updates.verticalAlignment;
+        if (updates.scaleWidth !== undefined) containerStyleUpdates.scaleWidth = updates.scaleWidth;
+        if (updates.scaleHeight !== undefined) containerStyleUpdates.scaleHeight = updates.scaleHeight;
+        if (updates.scaleWidthUnit !== undefined) containerStyleUpdates.scaleWidthUnit = updates.scaleWidthUnit;
+        if (updates.scaleHeightUnit !== undefined) containerStyleUpdates.scaleHeightUnit = updates.scaleHeightUnit;
+        if (updates.maintainAspectRatio !== undefined) containerStyleUpdates.maintainAspectRatio = updates.maintainAspectRatio;
+        
+        if (Object.keys(containerStyleUpdates).length > 0) {
+          componentUpdates.containerStyle = { ...(selectedComponent as ImageComponentConfig).containerStyle, ...containerStyleUpdates };
+        }
+        
         if (updates.position !== undefined) componentUpdates.position = updates.position;
         if (updates.horizontalPosition !== undefined) componentUpdates.horizontalPosition = updates.horizontalPosition;
+        if (updates.x !== undefined) componentUpdates.x = updates.x;
+        if (updates.y !== undefined) componentUpdates.y = updates.y;
         if (updates.width !== undefined) (componentUpdates as Partial<ImageComponentConfig>).width = updates.width;
         if (updates.height !== undefined) (componentUpdates as Partial<ImageComponentConfig>).height = updates.height;
         if (updates.objectFit !== undefined) (componentUpdates as Partial<ImageComponentConfig>).objectFit = updates.objectFit;
@@ -305,9 +446,53 @@ export const useStyleAdapter = (
         if (updates.imageUrl !== undefined) (componentUpdates as Partial<ImageComponentConfig>).url = updates.imageUrl;
       }
       
-      onComponentChange(selectedTarget.componentId, componentUpdates);
+      
+      console.log('🐛[DEBUG] StyleAdapter applying:', {
+        componentId: selectedTarget.componentId,
+        componentName: selectedTarget.componentName,
+        componentUpdates,
+        hasPositionUpdates: !!(componentUpdates.position || componentUpdates.x || componentUpdates.y),
+        positionValues: {
+          position: componentUpdates.position,
+          x: componentUpdates.x,
+          y: componentUpdates.y
+        },
+        willUseGranular: granularUpdate.shouldUseGranularUpdate(selectedTarget.componentId, componentUpdates)
+      });
+      
+      // Usar sistema granular si está habilitado y es apropiado
+      if (granularUpdate.shouldUseGranularUpdate(selectedTarget.componentId, componentUpdates)) {
+        const result = granularUpdate.updateComponent(selectedTarget.componentId, componentUpdates);
+        
+        if (granularOptions.enableLogging) {
+          console.log('[StyleAdapter] Actualización granular aplicada:', {
+            componentId: selectedTarget.componentId,
+            result,
+            updatesClassification: granularUpdate.classifyUpdate(selectedTarget.componentId, componentUpdates)
+          });
+        }
+      } else {
+        // Fallback al sistema tradicional para actualizaciones complejas
+        console.log('🐛[DEBUG] StyleAdapter using fallback - calling onComponentChange:', {
+          componentId: selectedTarget.componentId,
+          componentUpdates,
+          onComponentChangeDefined: typeof onComponentChange,
+          functionName: onComponentChange?.name || 'anonymous'
+        });
+        
+        try {
+          onComponentChange(selectedTarget.componentId, componentUpdates);
+          console.log('🐛[DEBUG] onComponentChange ejecutado exitosamente');
+        } catch (error) {
+          console.error('🐛[DEBUG] Error ejecutando onComponentChange:', error);
+        }
+      }
+      
+      // ELIMINADO: Lógica específica que causaba interferencia entre componentes
+      // La sincronización ya se maneja correctamente en AdminStyleEditor.tsx líneas 562-664
+      // donde se actualiza tanto allComponents como activeConfig.components automáticamente
     }
-  }, [selectedTarget, selectedComponent, config, pageType, onConfigChange, onComponentChange]);
+  }, [selectedTarget, selectedComponent, config, pageType, onConfigChange, onComponentChange, granularUpdate, granularOptions]);
   
   // Información de selección
   const selectionInfo = useMemo(() => {
@@ -331,6 +516,11 @@ export const useStyleAdapter = (
   return {
     currentStyles,
     updateStyles,
-    selectionInfo
+    selectionInfo,
+    selectedComponent,
+    // Información del sistema granular
+    granularUpdateStats: granularUpdate.updateStats,
+    isGranularEnabled: granularUpdate.isEnabled,
+    granularClassifyUpdate: granularUpdate.classifyUpdate
   };
 };

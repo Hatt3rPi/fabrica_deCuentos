@@ -51,6 +51,33 @@ const FONT_WEIGHTS = [
 ];
 
 const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) => {
+  // Extraer el valor de la fuente actual del config
+  const getCurrentFontValue = () => {
+    if (!config.fontFamily) {
+      return 'Indie Flower';
+    }
+    
+    // Extraer el nombre de la fuente del fontFamily string
+    // Puede venir como: "Roboto", sans-serif o Roboto, sans-serif
+    // TAMBIÉN puede venir con HTML entities: &quot;Galindo&quot;, cursive
+    
+    // Primero decodificar HTML entities (puede haber doble encoding)
+    const decodedFontFamily = config.fontFamily
+      .replace(/&amp;quot;/g, '"')  // Para &amp;quot; → "
+      .replace(/&quot;/g, '"')      // Para &quot; → "
+      .replace(/&#39;/g, "'")     // Para &#39; → '
+      .replace(/&amp;#39;/g, "'");  // Para &amp;#39; → '
+      
+    const fontMatch = decodedFontFamily.match(/^["']?([^"',]+)["']?/);
+    const currentFont = fontMatch ? fontMatch[1].trim() : 'Indie Flower';
+    
+    // Verificar si la fuente existe en nuestras opciones
+    const fontExists = FONT_OPTIONS.some(f => f.value === currentFont);
+    const finalFont = fontExists ? currentFont : 'Indie Flower';
+    
+    return finalFont;
+  };
+
   // Extraer valor numérico del fontSize
   const getFontSizeValue = () => {
     const match = config.fontSize.match(/(\d+(?:\.\d+)?)/);
@@ -94,10 +121,7 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
           Fuente
         </label>
         <select
-          value={(() => {
-            const currentFont = config.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-            return FONT_OPTIONS.find(f => f.value === currentFont)?.value || currentFont;
-          })()}
+          value={getCurrentFontValue()}
           onChange={(e) => {
             const font = FONT_OPTIONS.find(f => f.value === e.target.value);
             const fontFamily = font?.category === 'serif' 
@@ -105,9 +129,16 @@ const TypographyPanel: React.FC<TypographyPanelProps> = ({ config, onChange }) =
               : font?.category === 'sans-serif'
               ? `"${e.target.value}", sans-serif`
               : `"${e.target.value}", cursive`;
+            
             onChange({ fontFamily });
           }}
+          onFocus={() => {
+            console.log('[fixing styles] 🎯 DROPDOWN DE FUENTE ABIERTO');
+            console.log('[fixing styles] 📊 Estado actual del dropdown:', getCurrentFontValue());
+            console.log('[fixing styles] 📋 Config actual completo:', config);
+          }}
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          data-testid="font-family-select"
         >
           <optgroup label="Manuscritas">
             {FONT_OPTIONS.filter(f => f.category === 'handwriting').map(font => (

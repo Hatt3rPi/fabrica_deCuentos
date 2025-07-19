@@ -24,6 +24,8 @@ import { NotificationType, NotificationPriority } from '../../../types/notificat
 import { styleConfigService } from '../../../services/styleConfigService';
 import { StoryStyleConfig, StyleTemplate, DEFAULT_COVER_CONFIG, DEFAULT_PAGE_CONFIG, DEFAULT_DEDICATORIA_CONFIG, ComponentConfig, PageType, migrateConfigToComponents, TextComponentConfig, ensureBackgroundComponents, DEFAULT_COMPONENTS } from '../../../types/styleConfig';
 import StylePreview from './components/StylePreview';
+import StylePreviewTDD from './components/StylePreviewTDD';
+import TDDPanelAdapter from './components/TDDPanelAdapter';
 import TypographyPanel from './components/TypographyPanel';
 import PositionPanel from './components/PositionPanel';
 import ColorPanel from './components/ColorPanel';
@@ -38,6 +40,8 @@ import ComponentsPanel from './components/ComponentsPanel';
 import ContentEditorPanel from './components/ContentEditorPanel';
 import { useStyleAdapter, SelectionTarget } from '../../../hooks/useStyleAdapter';
 import { validateAndSanitize, ValidationResult, isEqual } from '../../../utils/validation';
+import { useDualSystemSync } from '../../../hooks/useDualSystemSync';
+import { useTDDMigration } from '../../../hooks/useTDDMigration';
 
 // Texto de muestra para preview
 const SAMPLE_TEXTS = {
@@ -67,6 +71,7 @@ const AdminStyleEditor: React.FC = () => {
   // Sistema de selección PowerPoint-like
   const [selectedTarget, setSelectedTarget] = useState<SelectionTarget>({ type: 'page' });
   const [allComponents, setAllComponents] = useState<ComponentConfig[]>([]);
+  const [componentsLoaded, setComponentsLoaded] = useState<boolean>(false);
   
   // Obtener componentes de la página actual
   const components = useMemo(() => 
@@ -82,9 +87,14 @@ const AdminStyleEditor: React.FC = () => {
   const [showRulers, setShowRulers] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  
+  // Estados para sistema TDD
+  const [useTDDSystem, setUseTDDSystem] = useState(false);
+  const [showMigrationPanel, setShowMigrationPanel] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
+  const [containerDimensions, setContainerDimensions] = useState<{ width: number; height: number }>({ width: 1536, height: 1024 });
 
   // Cargar template activo y imágenes de muestra
   useEffect(() => {
@@ -170,6 +180,18 @@ const AdminStyleEditor: React.FC = () => {
     try {
       setIsLoading(true);
       const template = await styleConfigService.getActiveTemplate();
+      
+      console.log('[fixing_style] Template cargado desde BD:', {
+        hasTemplate: !!template,
+        templateId: template?.id,
+        templateName: template?.name,
+        hasConfigData: !!template?.config_data,
+        configDataType: typeof template?.config_data,
+        configDataKeys: template?.config_data ? Object.keys(template.config_data) : [],
+        hasComponents: !!(template?.config_data?.components),
+        componentsCount: template?.config_data?.components?.length || 0
+      });
+      
       if (template) {
         setActiveTemplate(template);
         
@@ -186,8 +208,22 @@ const AdminStyleEditor: React.FC = () => {
           dedicatoriaBackgroundUrl: undefined,
           coverSampleText: undefined,
           pageSampleText: undefined,
-          dedicatoriaSampleText: undefined
+          dedicatoriaSampleText: undefined,
+          // CRÍTICO: Incluir componentes en el config para el TemplateRenderer
+          ...(template.configData.components ? { components: template.configData.components } : {})
         };
+        
+        console.log('[fixing_style] Config final creado:', {
+          configId: config.id,
+          hasComponents: !!(config as any).components,
+          componentsCount: (config as any).components?.length || 0,
+          componentPreview: (config as any).components?.slice(0, 2).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            pageType: c.pageType,
+            type: c.type
+          }))
+        });
         
         setActiveConfig(config);
         setOriginalConfig(config);
@@ -195,14 +231,11 @@ const AdminStyleEditor: React.FC = () => {
         // CRÍTICO: Cargar componentes guardados en el template
         if (template.configData.components && template.configData.components.length > 0) {
           setAllComponents(template.configData.components);
-          console.log('🧩 Componentes cargados desde BD:', {
-            count: template.configData.components.length,
-            components: template.configData.components
-          });
+          setComponentsLoaded(true); // Marcar como cargados desde BD
         } else {
           // Si no hay componentes guardados, se crearán automáticamente por el useEffect de migración
           setAllComponents([]);
-          console.log('🧩 No hay componentes guardados, se crearán por defecto');
+          setComponentsLoaded(false); // Marcar como NO cargados
         }
         
         if (template.customTexts) {
@@ -483,17 +516,40 @@ const AdminStyleEditor: React.FC = () => {
 
   // Función para actualizar configuración general
   const handleConfigChange = useCallback((updates: Partial<StoryStyleConfig>) => {
+    console.log('[DualSystemSync] handleConfigChange llamado:', {
+      updatesKeys: Object.keys(updates),
+      currentConfigId: activeConfig?.id,
+      timestamp: new Date().toISOString()
+    });
     setActiveConfig(prev => prev ? { ...prev, ...updates } : prev);
-  }, []);
+  }, [activeConfig?.id]);
 
   // Función para manejar cambios en componentes con validación
   const handleComponentChange = useCallback((componentId: string, updates: Partial<ComponentConfig>) => {
-    console.log('📝 Updating component:', componentId, updates);
+    console.log('[DualSystemSync] handleComponentChange llamado:', {
+      componentId,
+      updatesKeys: Object.keys(updates),
+      isSimpleUpdate: Object.keys(updates).every(key => ['x', 'y'].includes(key)),
+      timestamp: new Date().toISOString()
+    });
     
-    // Para actualizaciones simples como coordenadas (x, y), no validar como componente completo
-    const isSimplePositionUpdate = Object.keys(updates).every(key => ['x', 'y'].includes(key));
+    // Para actualizaciones simples como coordenadas (x, y) y posición, no validar como componente completo
+    const isSimplePositionUpdate = Object.keys(updates).every(key => ['x', 'y', 'position', 'horizontalPosition'].includes(key));
     
     if (isSimplePositionUpdate) {
+      console.log('[DualSystemSync] Actualizando posición simple:', {
+        componentId,
+        updates,
+        updateKeys: Object.keys(updates),
+        values: {
+          x: updates.x,
+          y: updates.y,
+          position: (updates as any).position,
+          horizontalPosition: (updates as any).horizontalPosition
+        },
+        isSimplePositionUpdate
+      });
+      
       // Validar solo que sean números válidos
       if (typeof updates.x === 'number' && updates.x < 0) updates.x = 0;
       if (typeof updates.y === 'number' && updates.y < 0) updates.y = 0;
@@ -503,14 +559,54 @@ const AdminStyleEditor: React.FC = () => {
         const updatedComponents = prev.map(comp => 
           comp.id === componentId ? { ...comp, ...updates } : comp
         );
-        console.log('📦 Updated components (position):', updatedComponents);
+        
+        console.log('[DualSystemSync] Componentes después de actualizar:', {
+          componentId,
+          updatedComponent: updatedComponents.find(c => c.id === componentId),
+          totalComponents: updatedComponents.length
+        });
+        
+        // 🚀 FIX: También sincronizar activeConfig.components para actualizaciones simples
+        setActiveConfig(currentConfig => {
+          if (currentConfig) {
+            const updatedConfig = {
+              ...currentConfig,
+              components: updatedComponents
+            };
+            console.log('🐛[DEBUG] Simple position update synced to activeConfig:', {
+              componentId,
+              updates,
+              finalPosition: {
+                x: updates.x,
+                y: updates.y,
+                position: updates.position
+              }
+            });
+            return updatedConfig;
+          }
+          return currentConfig;
+        });
+        
         return updatedComponents;
       });
       setIsDirty(true);
+      
+      // EXPERIMENTAL: Forzar sincronización A→B inmediatamente para cambios de posición
+      if (forceAtoB && activeConfig) {
+        console.log('[🔍SYNC_DEBUG] Forzando sincronización A→B para cambios de posición');
+        forceAtoB();
+      }
       return;
     }
     
     // Para actualizaciones complejas, obtener el componente completo y validar
+    console.log('[DualSystemSync] Actualizando componente completo:', {
+      componentId,
+      updatesKeys: Object.keys(updates),
+      hasPositionUpdates: !!(updates.position || updates.x || updates.y),
+      updates
+    });
+    
     const existingComponent = allComponents.find(comp => comp.id === componentId);
     if (!existingComponent) {
       console.error('❌ Component not found:', componentId);
@@ -549,7 +645,31 @@ const AdminStyleEditor: React.FC = () => {
       const updatedComponents = prev.map(comp => 
         comp.id === componentId ? sanitizedComponent : comp
       );
-      console.log('📦 Updated components (validated):', updatedComponents);
+      
+      // 🚀 SOLUCIÓN: Sincronizar activeConfig.components con allComponents en tiempo real
+      setActiveConfig(currentConfig => {
+        if (currentConfig) {
+          const updatedConfig = {
+            ...currentConfig,
+            components: updatedComponents
+          };
+          console.log('🐛[DEBUG] Admin component updated:', {
+            componentId,
+            componentName: sanitizedComponent.name,
+            updatesApplied: updates,
+            finalPosition: {
+              position: sanitizedComponent.position,
+              x: sanitizedComponent.x,
+              y: sanitizedComponent.y
+            },
+            totalComponents: updatedComponents.length,
+            templateRendererWillReceiveNewData: true
+          });
+          return updatedConfig;
+        }
+        return currentConfig;
+      });
+      
       return updatedComponents;
     });
     setIsDirty(true);
@@ -568,6 +688,10 @@ const AdminStyleEditor: React.FC = () => {
         });
         // Cambiar automáticamente al tab de contenido para componentes por defecto
         if (component.isDefault && activePanel === 'components') {
+          setActivePanel('content');
+        }
+        // Si se selecciona un componente de fondo y el panel actual es posición, cambiar a otro panel
+        if ((component as any).isBackground && activePanel === 'position') {
           setActivePanel('content');
         }
       }
@@ -610,7 +734,44 @@ const AdminStyleEditor: React.FC = () => {
     currentPageType as PageType,
     components,
     handleConfigChange,
-    handleComponentChange
+    handleComponentChange,
+    {
+      enableGranularUpdates: false,
+      enableLogging: false
+    }
+  );
+
+  // Hook para migración TDD
+  const tddMigration = useTDDMigration({
+    activeConfig,
+    allComponents,
+    onConfigUpdate: setActiveConfig,
+    onComponentsUpdate: setAllComponents
+  });
+
+  // Función wrapper para setAllComponents con logging
+  const handleSetAllComponents = useCallback((newComponents: ComponentConfig[] | ((prev: ComponentConfig[]) => ComponentConfig[])) => {
+    console.log('[DualSystemSync] setAllComponents llamado:', {
+      isFunction: typeof newComponents === 'function',
+      newComponentsCount: typeof newComponents === 'function' ? 'función' : newComponents.length,
+      currentCount: allComponents.length,
+      timestamp: new Date().toISOString()
+    });
+    setAllComponents(newComponents);
+  }, [allComponents.length]);
+
+  // Hook para sincronización bidireccional entre sistemas A (legacy) y B (componentes)
+  const { forceAtoB } = useDualSystemSync(
+    activeConfig,
+    allComponents,
+    handleConfigChange,
+    handleSetAllComponents,
+    {
+      enableSync: true,
+      enableLogging: true,
+      debounceMs: 150,
+      experimentalPositionSync: true // Flag experimental para fix de posición
+    }
   );
 
   const getCurrentConfig = () => {
@@ -698,6 +859,47 @@ const AdminStyleEditor: React.FC = () => {
     );
   };
 
+  // Callbacks para paneles TDD
+  const handleTDDComponentUpdate = useCallback((componentId: string, updates: any) => {
+    const updatedComponents = allComponents.map(comp => 
+      comp.id === componentId ? { ...comp, ...updates } : comp
+    );
+    setAllComponents(updatedComponents);
+    setIsDirty(true);
+  }, [allComponents]);
+
+  const handleTDDComponentSelect = useCallback((componentId: string) => {
+    setSelectedTarget({ type: 'component', componentId });
+  }, []);
+
+  const handleTDDComponentAdd = useCallback((newComponent: ComponentConfig) => {
+    setAllComponents(prev => [...prev, newComponent]);
+    setIsDirty(true);
+  }, []);
+
+  const handleTDDComponentDelete = useCallback((componentId: string) => {
+    setAllComponents(prev => prev.filter(comp => comp.id !== componentId));
+    setIsDirty(true);
+  }, []);
+
+  // Funciones de migración TDD
+  const handleToggleTDD = useCallback(() => {
+    setUseTDDSystem(!useTDDSystem);
+    if (!useTDDSystem && !tddMigration.isMigrated && tddMigration.canMigrate) {
+      setShowMigrationPanel(true);
+    }
+  }, [useTDDSystem, tddMigration.isMigrated, tddMigration.canMigrate]);
+
+  const handleMigrateToTDD = useCallback(async () => {
+    try {
+      await tddMigration.migrateToUnified();
+      setUseTDDSystem(true);
+      setShowMigrationPanel(false);
+    } catch (error) {
+      console.error('Error al migrar a TDD:', error);
+    }
+  }, [tddMigration]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -750,6 +952,37 @@ const AdminStyleEditor: React.FC = () => {
                 <Palette className="w-4 h-4" />
                 Crear Template
               </button>
+              
+              {/* Toggle Sistema TDD */}
+              <button
+                onClick={handleToggleTDD}
+                data-testid="toggle-tdd-system"
+                className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                  useTDDSystem
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <Zap className="w-4 h-4" />
+                {useTDDSystem ? 'Sistema TDD' : 'Activar TDD'}
+              </button>
+
+              {/* Botón de migración */}
+              {!tddMigration.isMigrated && tddMigration.canMigrate && (
+                <button
+                  onClick={handleMigrateToTDD}
+                  disabled={tddMigration.isProcessing}
+                  data-testid="migrate-legacy-button"
+                  className="px-4 py-2 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {tddMigration.isProcessing ? (
+                    <div className="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Zap className="w-4 h-4" />
+                  )}
+                  Migrar a TDD
+                </button>
+              )}
             </div>
             
             <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2 hidden sm:block" />
@@ -810,6 +1043,7 @@ const AdminStyleEditor: React.FC = () => {
             <button
               onClick={handleSave}
               disabled={!isDirty || isSaving}
+              data-testid="save-styles-button"
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {isSaving ? (
@@ -878,91 +1112,6 @@ const AdminStyleEditor: React.FC = () => {
               </div>
             </div>
 
-            {/* Panel Tabs */}
-            <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
-              <button
-                onClick={() => setActivePanel('components')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'components'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Layers className="w-4 h-4 inline mr-1" />
-                Elementos
-              </button>
-              {selectedTarget.type === 'component' && (
-                <button
-                  onClick={() => setActivePanel('content')}
-                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activePanel === 'content'
-                      ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
-                >
-                  <Edit className="w-4 h-4 inline mr-1" />
-                  Contenido
-                </button>
-              )}
-              <button
-                onClick={() => setActivePanel('typography')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'typography'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Type className="w-4 h-4 inline mr-1" />
-                Tipografía
-              </button>
-              <button
-                onClick={() => setActivePanel('position')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'position'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Move className="w-4 h-4 inline mr-1" />
-                Posición
-              </button>
-            </div>
-
-            <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
-              <button
-                onClick={() => setActivePanel('colors')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'colors'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Palette className="w-4 h-4 inline mr-1" />
-                Colores
-              </button>
-              <button
-                onClick={() => setActivePanel('effects')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'effects'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Layers className="w-4 h-4 inline mr-1" />
-                Efectos
-              </button>
-              <button
-                onClick={() => setActivePanel('container')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activePanel === 'container'
-                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-              >
-                <Settings className="w-4 h-4 inline mr-1" />
-                Contenedor
-              </button>
-            </div>
 
 
             {/* Active Panel Content */}
@@ -1044,87 +1193,119 @@ const AdminStyleEditor: React.FC = () => {
               </>
             )}
 
-            {activePanel === 'typography' && activeConfig && styleAdapter.selectionInfo.canEdit.typography && (
-              <TypographyPanel
-                config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
-                onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => styleAdapter.updateStyles(updates) :
-                  (currentPageType === 'cover' ? updateCoverConfig :
-                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                   updatePageConfig)
-                }
+            {/* Renderizado condicional: TDD vs Legacy */}
+            {useTDDSystem ? (
+              // Sistema TDD con paneles unificados
+              <TDDPanelAdapter
+                activePanel={activePanel}
+                selectedComponent={selectedTarget.componentId ? 
+                  components.find(c => c.id === selectedTarget.componentId) || null : null}
+                allComponents={allComponents}
+                currentPageType={currentPageType}
+                onUpdateComponent={handleTDDComponentUpdate}
+                onSelectComponent={handleTDDComponentSelect}
+                onAddComponent={handleTDDComponentAdd}
+                onDeleteComponent={handleTDDComponentDelete}
               />
+            ) : (
+              // Sistema Legacy
+              <>
+                {activePanel === 'typography' && activeConfig && styleAdapter.selectionInfo.canEdit.typography && (
+                  <TypographyPanel
+                    config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
+                    onChange={selectedTarget.type === 'component' ? 
+                      (updates: any) => styleAdapter.updateStyles(updates) :
+                      (currentPageType === 'cover' ? updateCoverConfig :
+                       currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                       updatePageConfig)
+                    }
+                  />
+                )}
+                
+                {activePanel === 'position' && activeConfig && styleAdapter.selectionInfo.canEdit.position && 
+                 // Mostrar panel de posición solo para componentes que NO sean de fondo
+                 (selectedTarget.type === 'component' && 
+                  styleAdapter.selectedComponent && 
+                  !(styleAdapter.selectedComponent as any).isBackground) && (
+                  <PositionPanel
+                    config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
+                    onChange={selectedTarget.type === 'component' ? 
+                      (updates: any) => styleAdapter.updateStyles(updates) :
+                      (currentPageType === 'cover' ? updateCoverConfig :
+                       currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                       updatePageConfig)
+                    }
+                    pageType={currentPageType}
+                    isImageComponent={selectedTarget.type === 'component' && selectedTarget.componentType === 'image'}
+                    containerDimensions={containerDimensions}
+                  />
+                )}
+                
+                {activePanel === 'colors' && activeConfig && styleAdapter.selectionInfo.canEdit.colors && (
+                  <ColorPanel
+                    config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
+                    onChange={selectedTarget.type === 'component' ? 
+                      (updates: any) => styleAdapter.updateStyles(updates) :
+                      (currentPageType === 'cover' ? updateCoverConfig :
+                       currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
+                       updatePageConfig)
+                    }
+                  />
+                )}
+                
+                {activePanel === 'effects' && activeConfig && styleAdapter.selectionInfo.canEdit.effects && (
+                  <EffectsPanel
+                    containerStyle={selectedTarget.type === 'component' ? 
+                      {
+                        background: styleAdapter.currentStyles.backgroundColor,
+                        boxShadow: styleAdapter.currentStyles.boxShadow,
+                        backdropFilter: styleAdapter.currentStyles.backdropFilter,
+                        border: styleAdapter.currentStyles.border
+                      } :
+                      getCurrentConfig().containerStyle
+                    }
+                    onChange={selectedTarget.type === 'component' ? 
+                      (updates: any) => {
+                        const styleUpdates: any = {};
+                        if (updates.background !== undefined) styleUpdates.backgroundColor = updates.background;
+                        if (updates.boxShadow !== undefined) styleUpdates.boxShadow = updates.boxShadow;
+                        if (updates.backdropFilter !== undefined) styleUpdates.backdropFilter = updates.backdropFilter;
+                        if (updates.border !== undefined) styleUpdates.border = updates.border;
+                        styleAdapter.updateStyles(styleUpdates);
+                      } :
+                      updateContainerStyle
+                    }
+                  />
+                )}
+                
+                {activePanel === 'container' && activeConfig && styleAdapter.selectionInfo.canEdit.container && (
+                  <ContainerPanel
+                    containerStyle={selectedTarget.type === 'component' ? 
+                      { 
+                        background: styleAdapter.currentStyles.backgroundColor,
+                        borderRadius: styleAdapter.currentStyles.borderRadius,
+                        padding: styleAdapter.currentStyles.padding,
+                        border: styleAdapter.currentStyles.border,
+                        // Incluir propiedades de alineación y escalado
+                        horizontalAlignment: styleAdapter.currentStyles.horizontalAlignment,
+                        verticalAlignment: styleAdapter.currentStyles.verticalAlignment,
+                        scaleWidth: styleAdapter.currentStyles.scaleWidth,
+                        scaleHeight: styleAdapter.currentStyles.scaleHeight,
+                        scaleWidthUnit: styleAdapter.currentStyles.scaleWidthUnit,
+                        scaleHeightUnit: styleAdapter.currentStyles.scaleHeightUnit,
+                        maintainAspectRatio: styleAdapter.currentStyles.maintainAspectRatio
+                      } :
+                      getCurrentConfig().containerStyle
+                    }
+                    onChange={selectedTarget.type === 'component' ? 
+                      (updates: any) => styleAdapter.updateStyles(updates) :
+                      updateContainerStyle
+                    }
+                    pageType={currentPageType}
+                  />
+                )}
+              </>
             )}
-            
-            {activePanel === 'position' && activeConfig && styleAdapter.selectionInfo.canEdit.position && (
-              <PositionPanel
-                config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
-                onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => styleAdapter.updateStyles(updates) :
-                  (currentPageType === 'cover' ? updateCoverConfig :
-                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                   updatePageConfig)
-                }
-                pageType={currentPageType}
-                isImageComponent={selectedTarget.type === 'component' && selectedTarget.componentType === 'image'}
-              />
-            )}
-            
-            {activePanel === 'colors' && activeConfig && styleAdapter.selectionInfo.canEdit.colors && (
-              <ColorPanel
-                config={selectedTarget.type === 'component' ? styleAdapter.currentStyles : getCurrentConfig()}
-                onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => styleAdapter.updateStyles(updates) :
-                  (currentPageType === 'cover' ? updateCoverConfig :
-                   currentPageType === 'dedicatoria' ? updateDedicatoriaConfig :
-                   updatePageConfig)
-                }
-              />
-            )}
-            
-            {activePanel === 'effects' && activeConfig && styleAdapter.selectionInfo.canEdit.effects && (
-              <EffectsPanel
-                containerStyle={selectedTarget.type === 'component' ? 
-                  {
-                    background: styleAdapter.currentStyles.backgroundColor,
-                    boxShadow: styleAdapter.currentStyles.boxShadow,
-                    backdropFilter: styleAdapter.currentStyles.backdropFilter,
-                    border: styleAdapter.currentStyles.border
-                  } :
-                  getCurrentConfig().containerStyle
-                }
-                onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => {
-                    const styleUpdates: any = {};
-                    if (updates.background !== undefined) styleUpdates.backgroundColor = updates.background;
-                    if (updates.boxShadow !== undefined) styleUpdates.boxShadow = updates.boxShadow;
-                    if (updates.backdropFilter !== undefined) styleUpdates.backdropFilter = updates.backdropFilter;
-                    if (updates.border !== undefined) styleUpdates.border = updates.border;
-                    styleAdapter.updateStyles(styleUpdates);
-                  } :
-                  updateContainerStyle
-                }
-              />
-            )}
-            
-            {activePanel === 'container' && activeConfig && styleAdapter.selectionInfo.canEdit.container && (
-              <ContainerPanel
-                containerStyle={selectedTarget.type === 'component' ? 
-                  { 
-                    background: styleAdapter.currentStyles.backgroundColor,
-                    borderRadius: styleAdapter.currentStyles.borderRadius,
-                    padding: styleAdapter.currentStyles.padding
-                  } :
-                  getCurrentConfig().containerStyle
-                }
-                onChange={selectedTarget.type === 'component' ? 
-                  (updates: any) => styleAdapter.updateStyles(updates) :
-                  updateContainerStyle
-                }
-                pageType={currentPageType}
-              />
-            )}
-            
             
             
           </div>
@@ -1133,11 +1314,103 @@ const AdminStyleEditor: React.FC = () => {
         {/* Preview Area */}
         <div className="flex-1 bg-gray-100 dark:bg-gray-900 p-4 md:p-8 overflow-auto">
           <div className="w-full mx-auto">
+            {/* Panel Tabs - Una sola fila horizontal */}
+            <div className="flex gap-1 mb-4 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm overflow-x-auto">
+              <button
+                onClick={() => setActivePanel('components')}
+                className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'components'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Layers className="w-4 h-4 inline mr-1" />
+                Elementos
+              </button>
+              {selectedTarget.type === 'component' && (
+                <button
+                  onClick={() => setActivePanel('content')}
+                  className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activePanel === 'content'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Edit className="w-4 h-4 inline mr-1" />
+                  Contenido
+                </button>
+              )}
+              <button
+                onClick={() => setActivePanel('typography')}
+                className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'typography'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Type className="w-4 h-4 inline mr-1" />
+                Tipografía
+              </button>
+              {/* Botón Posición para componentes no-fondo */}
+              {(selectedTarget.type === 'component' && 
+                styleAdapter.selectedComponent && 
+                !(styleAdapter.selectedComponent as any).isBackground) && (
+                <button
+                  onClick={() => setActivePanel('position')}
+                  className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activePanel === 'position'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Move className="w-4 h-4 inline mr-1" />
+                  Posición
+                </button>
+              )}
+              <button
+                onClick={() => setActivePanel('colors')}
+                className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'colors'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Palette className="w-4 h-4 inline mr-1" />
+                Colores
+              </button>
+              <button
+                onClick={() => setActivePanel('effects')}
+                className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'effects'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Layers className="w-4 h-4 inline mr-1" />
+                Efectos
+              </button>
+              <button
+                onClick={() => setActivePanel('container')}
+                className={`flex-shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activePanel === 'container'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Settings className="w-4 h-4 inline mr-1" />
+                Contenedor
+              </button>
+            </div>
+            
             {/* Page Type Switcher */}
             <div className="flex justify-center mb-4 md:mb-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex w-full max-w-lg md:w-auto">
+              <div 
+                data-testid="page-type-selector" 
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex w-full max-w-lg md:w-auto"
+              >
                 <button
                   onClick={() => setCurrentPageType('cover')}
+                  data-testid="page-type-cover"
                   className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPageType === 'cover'
                       ? 'bg-purple-600 text-white'
@@ -1148,6 +1421,7 @@ const AdminStyleEditor: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setCurrentPageType('page')}
+                  data-testid="page-type-page"
                   className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPageType === 'page'
                       ? 'bg-purple-600 text-white'
@@ -1159,6 +1433,7 @@ const AdminStyleEditor: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setCurrentPageType('dedicatoria')}
+                  data-testid="page-type-dedicatoria"
                   className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     currentPageType === 'dedicatoria'
                       ? 'bg-purple-600 text-white'
@@ -1173,27 +1448,47 @@ const AdminStyleEditor: React.FC = () => {
 
             {/* Preview Component */}
             {activeConfig ? (
-              <StylePreview
-                config={activeConfig}
-                pageType={currentPageType}
-                sampleImage={
-                  currentPageType === 'cover' ? defaultCoverImage :
-                  currentPageType === 'dedicatoria' ? defaultDedicatoriaImage :
-                  defaultPageImage
-                }
-                sampleText={
-                  currentPageType === 'cover' ? customCoverText :
-                  currentPageType === 'dedicatoria' ? customDedicatoriaText :
-                  customPageText
-                }
-                showGrid={showGrid}
-                showRulers={showRulers}
-                zoomLevel={zoomLevel}
-                selectedComponentId={selectedTarget.componentId}
-                onComponentSelect={handleComponentSelection}
-                onComponentUpdate={handleComponentChange}
-                components={components}
-              />
+              useTDDSystem ? (
+                <StylePreviewTDD
+                  activeConfig={activeConfig}
+                  currentPageType={currentPageType}
+                  sampleText={
+                    currentPageType === 'cover' ? customCoverText :
+                    currentPageType === 'dedicatoria' ? customDedicatoriaText :
+                    customPageText
+                  }
+                  zoomLevel={zoomLevel}
+                  showGrid={showGrid}
+                  showRulers={showRulers}
+                  selectedComponent={selectedTarget.componentId ? 
+                    components.find(c => c.id === selectedTarget.componentId) || null : null}
+                  onComponentSelect={handleTDDComponentSelect}
+                  allComponents={allComponents}
+                />
+              ) : (
+                <StylePreview
+                  config={activeConfig}
+                  pageType={currentPageType}
+                  sampleImage={
+                    currentPageType === 'cover' ? defaultCoverImage :
+                    currentPageType === 'dedicatoria' ? defaultDedicatoriaImage :
+                    defaultPageImage
+                  }
+                  sampleText={
+                    currentPageType === 'cover' ? customCoverText :
+                    currentPageType === 'dedicatoria' ? customDedicatoriaText :
+                    customPageText
+                  }
+                  showGrid={showGrid}
+                  showRulers={showRulers}
+                  zoomLevel={zoomLevel}
+                  selectedComponentId={selectedTarget.componentId}
+                  onComponentSelect={handleComponentSelection}
+                  onComponentUpdate={handleComponentChange}
+                  components={components}
+                  onDimensionsChange={setContainerDimensions}
+                />
+              )
             ) : (
               <div className="flex items-center justify-center h-96 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
                 <p className="text-gray-500 dark:text-gray-400">Cargando template activo...</p>

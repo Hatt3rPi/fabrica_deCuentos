@@ -11,6 +11,7 @@ import {
   DEFAULT_PAGE_CONFIG,
   DEFAULT_DEDICATORIA_CONFIG
 } from '../types/styleConfig';
+import { scaleStyleObject } from './scaleUtils';
 
 // ============================================================================
 // TIPOS Y INTERFACES
@@ -389,12 +390,291 @@ export function debugStyleConfig(
 }
 
 // ============================================================================
-// EXPORTACIONES
+// FUNCIONES DE MANEJO DE FUENTES UNIFICADAS
+// ============================================================================
+
+/**
+ * Decodifica HTML entities en fontFamily de manera consistente
+ * UNIFICADO: Para uso en Admin, PDF y Wizard
+ */
+export function decodeFontFamily(fontFamily: string): string {
+  if (!fontFamily) return 'Arial, sans-serif';
+  
+  // Decodificar HTML entities (puede haber doble encoding)
+  const decoded = fontFamily
+    .replace(/&amp;quot;/g, '"')  // Para &amp;quot; → "
+    .replace(/&quot;/g, '"')      // Para &quot; → "
+    .replace(/&#39;/g, "'")       // Para &#39; → '
+    .replace(/&amp;#39;/g, "'");  // Para &amp;#39; → '
+    
+  return decoded;
+}
+
+/**
+ * Extrae el nombre de la fuente del fontFamily string de manera consistente
+ * UNIFICADO: Para uso en Admin, PDF y Wizard
+ */
+export function extractFontName(fontFamily: string): string {
+  const decodedFontFamily = decodeFontFamily(fontFamily);
+  
+  // Extraer el nombre de la fuente del fontFamily string
+  // Puede venir como: "Roboto", sans-serif o Roboto, sans-serif
+  const fontMatch = decodedFontFamily.match(/^["']?([^"',]+)["']?/);
+  const fontName = fontMatch ? fontMatch[1].trim() : 'Arial';
+  
+  return fontName;
+}
+
+/**
+ * Valida si una fuente está disponible en el sistema
+ * UNIFICADO: Para verificación consistente
+ */
+export function validateFontAvailability(fontFamily: string): boolean {
+  const fontName = extractFontName(fontFamily);
+  
+  // Lista de fuentes comúnmente disponibles y fuentes del proyecto
+  const availableFonts = [
+    'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana',
+    'Inter', 'Roboto', 'Open Sans', 'Lato', 'Poppins',
+    'Indie Flower', 'Fredoka One', 'Galindo', 'Quicksand'
+  ];
+  
+  return availableFonts.some(font => 
+    font.toLowerCase() === fontName.toLowerCase()
+  );
+}
+
+// ============================================================================
+// DIMENSIONES UNIFICADAS Y ESCALADO AVANZADO
+// ============================================================================
+
+/**
+ * Dimensiones estándar para todas las páginas
+ * FIJO: Garantiza consistencia entre todos los contextos
+ */
+export const UNIFIED_PAGE_DIMENSIONS = {
+  width: 1536,
+  height: 1024,
+  aspectRatio: 3/2
+} as const;
+
+/**
+ * Calcula escalado proporcional avanzado con múltiples factores
+ * MEJORADO: Versión extendida de getScaledFontSize
+ */
+export function calculateScaledSize(
+  originalSize: string,
+  targetDimensions: { width: number; height: number },
+  baseDimensions: { width: number; height: number } = UNIFIED_PAGE_DIMENSIONS,
+  options: {
+    preserveAspectRatio?: boolean;
+    minScale?: number;
+    maxScale?: number;
+  } = {}
+): string {
+  const { preserveAspectRatio = true, minScale = 0.5, maxScale = 2.0 } = options;
+  
+  // Calcular factores de escala
+  const scaleFactorWidth = targetDimensions.width / baseDimensions.width;
+  const scaleFactorHeight = targetDimensions.height / baseDimensions.height;
+  
+  // Usar el menor factor para mantener proporciones o el promedio si no
+  const scaleFactor = preserveAspectRatio 
+    ? Math.min(scaleFactorWidth, scaleFactorHeight)
+    : (scaleFactorWidth + scaleFactorHeight) / 2;
+  
+  // Aplicar límites de escalado
+  const clampedScaleFactor = Math.max(minScale, Math.min(maxScale, scaleFactor));
+  
+  // Extraer valor numérico y unidad
+  const sizeMatch = originalSize.match(/^([\d.]+)(.+)$/);
+  if (!sizeMatch) return originalSize;
+  
+  const [, value, unit] = sizeMatch;
+  const numericValue = parseFloat(value);
+  const scaledValue = numericValue * clampedScaleFactor;
+  
+  return `${scaledValue.toFixed(2)}${unit}`;
+}
+
+// ============================================================================
+// APLICACIÓN UNIFICADA AVANZADA DE ESTILOS
+// ============================================================================
+
+/**
+ * Configuración para renderizado unificado
+ */
+export interface UnifiedRenderConfig {
+  enableScaling?: boolean;
+  targetDimensions?: { width: number; height: number };
+  context: RenderContext;
+  preserveAspectRatio?: boolean;
+  enableFontValidation?: boolean;
+}
+
+/**
+ * Aplica estilos de manera completamente unificada con validaciones
+ * FUNCIÓN PRINCIPAL MEJORADA: Para uso en todos los contextos
+ */
+export function applyUnifiedStyles(
+  config: StoryStyleConfig | null | undefined,
+  pageType: PageType,
+  renderConfig: UnifiedRenderConfig
+): StyleApplication & {
+  fontName: string;
+  isValidFont: boolean;
+  scaleFactor?: number;
+} {
+  const {
+    enableScaling = false,
+    targetDimensions,
+    context,
+    preserveAspectRatio = true,
+    enableFontValidation = true
+  } = renderConfig;
+
+  const currentConfig = getCurrentConfigWithDefaults(config, pageType);
+  
+  // Aplicar escalado completo si está habilitado usando el nuevo sistema unificado
+  const baseTextStyle = convertToReactStyle(currentConfig);
+  const baseContainerStyle = convertContainerToReactStyle(currentConfig.containerStyle);
+  let textStyle = baseTextStyle;
+  let containerStyle = baseContainerStyle;
+  let scaleFactor: number | undefined;
+
+  if (enableScaling && targetDimensions) {
+    // Calcular el factor de escala usando las dimensiones unificadas
+    const scaleX = targetDimensions.width / UNIFIED_PAGE_DIMENSIONS.width;
+    const scaleY = targetDimensions.height / UNIFIED_PAGE_DIMENSIONS.height;
+    scaleFactor = preserveAspectRatio ? Math.min(scaleX, scaleY) : scaleX;
+    
+    // Aplicar escalado completo usando las nuevas funciones unificadas
+    textStyle = scaleStyleObject(baseTextStyle, scaleFactor);
+    containerStyle = scaleStyleObject(baseContainerStyle, scaleFactor);
+    
+    console.log(`[storyStyleUtils] Escalado aplicado:`, {
+      pageType,
+      scaleFactor: scaleFactor.toFixed(3),
+      targetDimensions,
+      originalDimensions: UNIFIED_PAGE_DIMENSIONS,
+      originalTextStyle: baseTextStyle,
+      scaledTextStyle: textStyle,
+      originalContainerStyle: baseContainerStyle,
+      scaledContainerStyle: containerStyle
+    });
+  }
+
+  // Validar y limpiar fontFamily
+  const originalFontFamily = textStyle.fontFamily as string || 'Arial, sans-serif';
+  const decodedFontFamily = decodeFontFamily(originalFontFamily);
+  const fontName = extractFontName(decodedFontFamily);
+  const isValidFont = enableFontValidation ? validateFontAvailability(decodedFontFamily) : true;
+
+  // Aplicar fontFamily limpia
+  textStyle = {
+    ...textStyle,
+    fontFamily: decodedFontFamily
+  };
+
+  // Optimizaciones específicas por contexto
+  if (context === 'pdf') {
+    // Para PDF, asegurar que los estilos sean compatibles
+    textStyle = {
+      ...textStyle,
+      // Asegurar que textShadow sea compatible con PDF
+      textShadow: textStyle.textShadow || 'none'
+    };
+  }
+
+  return {
+    textStyle,
+    containerStyle, // Usar el containerStyle escalado
+    positioning: getContainerPosition(currentConfig),
+    fontName,
+    isValidFont,
+    scaleFactor
+  };
+}
+
+/**
+ * Genera estilos CSS completos para cualquier contexto
+ * UNIFICADO: Reemplaza generatePDFStyles y otros métodos específicos
+ */
+export function generateUnifiedCSS(
+  config: StoryStyleConfig | null | undefined,
+  pageType: PageType,
+  renderConfig: UnifiedRenderConfig
+): {
+  textCSS: string;
+  containerCSS: string;
+  positionCSS: string;
+  debugInfo?: object;
+} {
+  const appliedStyles = applyUnifiedStyles(config, pageType, renderConfig);
+  
+  const debugInfo = renderConfig.context === 'admin' ? {
+    fontName: appliedStyles.fontName,
+    isValidFont: appliedStyles.isValidFont,
+    scaleFactor: appliedStyles.scaleFactor,
+    pageType,
+    context: renderConfig.context
+  } : undefined;
+
+  return {
+    textCSS: convertToHTMLStyle(appliedStyles.textStyle),
+    containerCSS: convertToHTMLStyle(appliedStyles.containerStyle),
+    positionCSS: `
+      display: flex;
+      align-items: ${appliedStyles.positioning.alignItems};
+      justify-content: ${appliedStyles.positioning.justifyContent};
+      width: 100%;
+      height: 100%;
+    `.trim(),
+    debugInfo
+  };
+}
+
+// ============================================================================
+// MIGRACIÓN Y COMPATIBILIDAD
+// ============================================================================
+
+/**
+ * Migra configuración legacy a formato unificado
+ * COMPATIBILIDAD: Para transición gradual
+ */
+export function migrateLegacyConfig(legacyConfig: any): StoryStyleConfig {
+  // Implementar lógica de migración según sea necesario
+  // Por ahora, asumimos que el config ya está en el formato correcto
+  return legacyConfig as StoryStyleConfig;
+}
+
+/**
+ * Valida compatibilidad entre diferentes versiones de configuración
+ */
+export function validateConfigCompatibility(config: any): {
+  isCompatible: boolean;
+  version: string;
+  migrationRequired: boolean;
+} {
+  // Detectar versión de la configuración
+  const version = config.version || '1.0';
+  const hasNewStructure = config.coverConfig && config.pageConfig;
+  
+  return {
+    isCompatible: hasNewStructure,
+    version,
+    migrationRequired: !hasNewStructure
+  };
+}
+
+// ============================================================================
+// EXPORTACIONES ACTUALIZADAS
 // ============================================================================
 
 export default {
   // Funciones principales
   applyStandardStyles,
+  applyUnifiedStyles,
   getCurrentConfig,
   getCurrentConfigWithDefaults,
   
@@ -405,16 +685,30 @@ export default {
   
   // Escalado proporcional
   getScaledFontSize,
+  calculateScaledSize,
   
   // Posicionamiento
   getContainerPosition,
   
-  // PDF específico
+  // Fuentes
+  decodeFontFamily,
+  extractFontName,
+  validateFontAvailability,
+  
+  // CSS unificado
   generatePDFStyles,
+  generateUnifiedCSS,
   
   // Validación
   validateStyleConfig,
+  validateConfigCompatibility,
+  
+  // Migración
+  migrateLegacyConfig,
   
   // Debugging
-  debugStyleConfig
+  debugStyleConfig,
+  
+  // Constantes
+  UNIFIED_PAGE_DIMENSIONS
 };

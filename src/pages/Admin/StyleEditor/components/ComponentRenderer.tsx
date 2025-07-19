@@ -158,16 +158,137 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         fontSize: textComponent.style.fontSize ? getScaledFontSize(textComponent.style.fontSize, containerDimensions) : textComponent.style.fontSize
       } : {};
       
-      // Debug: log del escalado de texto
-      if (textComponent.style?.fontSize) {
-        console.log('📏 Font scaling:', {
-          component: textComponent.name,
-          original: textComponent.style.fontSize,
-          scaled: scaledStyles.fontSize,
-          containerDimensions,
-          scaleFactor: containerDimensions ? Math.min(containerDimensions.width / 1536, containerDimensions.height / 1024) : 'N/A'
-        });
+
+      // Decodificar HTML entities en fontFamily para CSS
+      const decodedFontFamily = scaledStyles?.fontFamily 
+        ? scaledStyles.fontFamily
+            .replace(/&amp;quot;/g, '"')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;#39;/g, "'")
+        : undefined;
+      
+      // Calcular alineación y escalado del contenedor
+      const containerStyle = (component as TextComponentConfig).containerStyle || {};
+      
+      // Aplicar alineación y escalado del contenedor
+      let alignmentStyles: any = {};
+      
+      // Aplicar sistema de alineación si está configurado
+      if (containerStyle.horizontalAlignment || containerStyle.verticalAlignment) {
+        
+        // Hacer el contenedor un flexbox
+        alignmentStyles.display = 'flex';
+        alignmentStyles.flexDirection = 'column';
+        alignmentStyles.height = '100%';
+        alignmentStyles.width = '100%';
+        
+        // Aplicar alineación horizontal (afecta alignItems en flexbox)
+        if (containerStyle.horizontalAlignment) {
+          switch (containerStyle.horizontalAlignment) {
+            case 'left':
+              alignmentStyles.alignItems = 'flex-start';
+              alignmentStyles.textAlign = 'left';
+              break;
+            case 'center':
+              alignmentStyles.alignItems = 'center';
+              alignmentStyles.textAlign = 'center';
+              break;
+            case 'right':
+              alignmentStyles.alignItems = 'flex-end';
+              alignmentStyles.textAlign = 'right';
+              break;
+          }
+        }
+        
+        // Aplicar alineación vertical (afecta justifyContent en flexbox)
+        if (containerStyle.verticalAlignment) {
+          switch (containerStyle.verticalAlignment) {
+            case 'top':
+              alignmentStyles.justifyContent = 'flex-start';
+              break;
+            case 'center':
+              alignmentStyles.justifyContent = 'center';
+              break;
+            case 'bottom':
+              alignmentStyles.justifyContent = 'flex-end';
+              break;
+          }
+        }
       }
+      
+      // Aplicar escalado de contenido
+      let scaleStyles: any = {};
+      if (containerStyle.scaleWidth || containerStyle.scaleHeight) {
+        
+        // Aplicar ancho - CORREGIDO: usar maxWidth para evitar overflow
+        if (containerStyle.scaleWidth && containerStyle.scaleWidth !== '100') {
+          const widthValue = containerStyle.scaleWidth + (containerStyle.scaleWidthUnit || '%');
+          if (containerStyle.scaleWidthUnit === 'auto') {
+            scaleStyles.width = 'auto';
+          } else {
+            scaleStyles.maxWidth = widthValue;
+            scaleStyles.width = widthValue;
+          }
+        }
+        
+        // Aplicar alto - Para componentes de texto, priorizar altura automática
+        if (containerStyle.scaleHeight && containerStyle.scaleHeight !== '100') {
+          const heightValue = containerStyle.scaleHeight + (containerStyle.scaleHeightUnit || '%');
+          if (containerStyle.scaleHeightUnit === 'auto') {
+            scaleStyles.height = 'auto';
+          } else {
+            // Para componentes de texto, usar height: auto por defecto a menos que se especifique lo contrario
+            if (component.type === 'text') {
+              scaleStyles.height = 'auto';
+              // Solo aplicar minHeight si es realmente necesario (valores muy pequeños)
+              const heightNumber = parseInt(containerStyle.scaleHeight);
+              if (heightNumber < 50 && containerStyle.scaleHeightUnit === '%') {
+                scaleStyles.minHeight = heightValue;
+              }
+            } else {
+              scaleStyles.minHeight = heightValue;
+            }
+            
+            // Para textos, usar min-height en lugar de height fija
+            if (containerStyle.scaleHeightUnit === 'px') {
+              scaleStyles.fontSize = 'calc(' + (scaledStyles.fontSize || '2rem') + ' * ' + (parseInt(containerStyle.scaleHeight) / 100) + ')';
+            }
+          }
+        }
+        
+        // Mantener calidad al escalar
+        if (containerStyle.maintainAspectRatio) {
+          scaleStyles.aspectRatio = 'auto';
+          scaleStyles.objectFit = 'contain';
+        }
+      }
+      
+      // Log adicional para verificar el style final que se aplicará
+      const finalStyle = {
+        ...positionStyles,
+        // Aplicar maxWidth - para componentes de autor usar 95%, otros 85%
+        maxWidth: scaleStyles.width || scaleStyles.maxWidth || 
+                  (component.name?.includes('Autor') ? '95%' : '85%'),
+        transition: isDragging ? 'none' : 'all 0.2s ease',
+        ...scaledStyles,
+        ...alignmentStyles,
+        ...scaleStyles,
+        background: scaledStyles?.backgroundColor || 'transparent',
+        borderRadius: scaledStyles?.borderRadius || '0',
+        padding: scaledStyles?.padding || '0',
+        boxShadow: scaledStyles?.boxShadow || 'none',
+        backdropFilter: scaledStyles?.backdropFilter || 'none',
+        opacity: scaledStyles?.opacity !== undefined ? scaledStyles.opacity : 1,
+        zIndex: component.zIndex || 0,
+        userSelect: 'none',
+        fontFamily: decodedFontFamily,  // ✅ Usar la versión decodificada
+        // Asegurar que la altura sea automática para texto
+        height: component.type === 'text' ? 'auto' : finalStyle.height,
+        // Estilos de borde con debug opcional
+        border: alignmentStyles.display ? '2px dashed rgba(128, 90, 213, 0.3)' : (scaledStyles?.border || 'none'),
+      };
+      
       
       return (
         <div
@@ -178,22 +299,7 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             onComponentSelect?.(component.id);
           }}
           onMouseDown={(e) => handleMouseDown(e, component)}
-          style={{
-            ...positionStyles,
-            maxWidth: '85%',
-            transition: isDragging ? 'none' : 'all 0.2s ease',
-            ...scaledStyles,
-            // Aplicar estilos específicos para garantizar compatibilidad
-            background: scaledStyles?.backgroundColor || 'transparent',
-            borderRadius: scaledStyles?.borderRadius || '0',
-            padding: scaledStyles?.padding || '0',
-            border: scaledStyles?.border || 'none',
-            boxShadow: scaledStyles?.boxShadow || 'none',
-            backdropFilter: scaledStyles?.backdropFilter || 'none',
-            opacity: scaledStyles?.opacity !== undefined ? scaledStyles.opacity : 1,
-            zIndex: component.zIndex || 0,
-            userSelect: 'none', // Evitar selección de texto durante drag
-          }}
+          style={finalStyle}
           className={`
             ${isSelected ? 'ring-2 ring-purple-500 ring-offset-2' : ''}
             hover:outline hover:outline-2 hover:outline-purple-300
@@ -209,34 +315,95 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       const imageComponent = component as ImageComponentConfig;
       const positionStyles = getPositionStyles(component);
       
-      // Determinar tamaño
+      // Calcular escalado y alineación del contenedor para imágenes
+      const containerStyle = (component as ImageComponentConfig).containerStyle || {};
+      
+      
+      // Determinar tamaño base
       let sizeStyles: React.CSSProperties = {};
       
       // Para componentes de fondo, usar tamaño completo
       if (imageComponent.isBackground) {
         sizeStyles = { width: '100%', height: '100%' };
-        console.log('🎨 Rendering background image:', imageComponent.name, 'URL:', imageComponent.url, 'Component ID:', imageComponent.id);
-        console.log('🎨 Background position styles:', positionStyles);
-        console.log('🎨 Background size styles:', sizeStyles);
       } else {
-        switch (imageComponent.size) {
-          case 'small':
-            sizeStyles = { width: '100px', height: '100px' };
-            break;
-          case 'medium':
-            sizeStyles = { width: '200px', height: '200px' };
-            break;
-          case 'large':
-            sizeStyles = { width: '300px', height: '300px' };
-            break;
-          case 'custom':
-            sizeStyles = { 
-              width: imageComponent.width || '200px', 
-              height: imageComponent.height || '200px' 
-            };
-            break;
-          default:
-            sizeStyles = { width: '200px', height: '200px' };
+        // Aplicar escalado personalizado si existe
+        if (containerStyle.scaleWidth || containerStyle.scaleHeight) {
+          
+          if (containerStyle.scaleWidth) {
+            const widthValue = containerStyle.scaleWidth + (containerStyle.scaleWidthUnit || '%');
+            sizeStyles.width = containerStyle.scaleWidthUnit === 'auto' ? 'auto' : widthValue;
+          }
+          
+          if (containerStyle.scaleHeight) {
+            const heightValue = containerStyle.scaleHeight + (containerStyle.scaleHeightUnit || '%');
+            sizeStyles.height = containerStyle.scaleHeightUnit === 'auto' ? 'auto' : heightValue;
+          }
+          
+          // Mantener aspecto si está habilitado
+          if (containerStyle.maintainAspectRatio) {
+            sizeStyles.aspectRatio = 'auto';
+            sizeStyles.objectFit = 'contain';
+          }
+        } else {
+          // Usar tamaños predefinidos
+          switch (imageComponent.size) {
+            case 'small':
+              sizeStyles = { width: '100px', height: '100px' };
+              break;
+            case 'medium':
+              sizeStyles = { width: '200px', height: '200px' };
+              break;
+            case 'large':
+              sizeStyles = { width: '300px', height: '300px' };
+              break;
+            case 'custom':
+              sizeStyles = { 
+                width: imageComponent.width || '200px', 
+                height: imageComponent.height || '200px' 
+              };
+              break;
+            default:
+              sizeStyles = { width: '200px', height: '200px' };
+          }
+        }
+      }
+      
+      // Aplicar alineación a imágenes
+      let imageAlignmentStyles: any = {};
+      if (containerStyle.horizontalAlignment || containerStyle.verticalAlignment) {
+        
+        imageAlignmentStyles.display = 'flex';
+        imageAlignmentStyles.width = '100%';
+        imageAlignmentStyles.height = '100%';
+        
+        // Alineación horizontal
+        if (containerStyle.horizontalAlignment) {
+          switch (containerStyle.horizontalAlignment) {
+            case 'left':
+              imageAlignmentStyles.justifyContent = 'flex-start';
+              break;
+            case 'center':
+              imageAlignmentStyles.justifyContent = 'center';
+              break;
+            case 'right':
+              imageAlignmentStyles.justifyContent = 'flex-end';
+              break;
+          }
+        }
+        
+        // Alineación vertical
+        if (containerStyle.verticalAlignment) {
+          switch (containerStyle.verticalAlignment) {
+            case 'top':
+              imageAlignmentStyles.alignItems = 'flex-start';
+              break;
+            case 'center':
+              imageAlignmentStyles.alignItems = 'center';
+              break;
+            case 'bottom':
+              imageAlignmentStyles.alignItems = 'flex-end';
+              break;
+          }
         }
       }
 
@@ -252,12 +419,13 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           style={{
             ...positionStyles,
             ...sizeStyles,
+            ...imageAlignmentStyles,
             cursor: isSelected ? 'move' : 'pointer',
             transition: isDragging ? 'none' : 'all 0.2s ease',
             ...imageComponent.style,
             // Aplicar estilos específicos para garantizar compatibilidad
             borderRadius: imageComponent.style?.borderRadius || '0',
-            border: imageComponent.style?.border || 'none',
+            border: imageAlignmentStyles.display ? '2px dashed rgba(128, 90, 213, 0.3)' : (imageComponent.style?.border || 'none'),
             boxShadow: imageComponent.style?.boxShadow || 'none',
             backdropFilter: imageComponent.style?.backdropFilter || 'none',
             opacity: imageComponent.style?.opacity !== undefined ? imageComponent.style.opacity : 1,
@@ -274,7 +442,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             <img
               src={imageComponent.url}
               alt={component.name}
-              onLoad={() => console.log('🖼️ Image loaded successfully:', imageComponent.url)}
               onError={(e) => console.error('❌ Image failed to load:', imageComponent.url, e)}
               style={{
                 width: '100%',
@@ -326,7 +493,6 @@ const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       return zIndexA - zIndexB; // Orden ascendente: -1, 0, 1, 10, etc.
     });
   
-  console.log('🔄 Rendering components for', pageType, ':', pageComponents.map(c => ({ id: c.id, name: c.name, type: c.type, isBackground: c.isBackground, url: c.type === 'image' ? (c as ImageComponentConfig).url : 'N/A' })));
 
   return (
     <div ref={containerRef} className="absolute inset-0 w-full h-full">

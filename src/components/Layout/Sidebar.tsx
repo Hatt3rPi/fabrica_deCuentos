@@ -245,6 +245,7 @@ const Sidebar: React.FC = () => {
             <li>
               <Link
                 to="/admin/style"
+                data-testid="admin-nav-styles"
                 className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-lg dark:text-gray-300 dark:hover:bg-purple-900/20"
               >
                 <Palette className="w-5 h-5" />

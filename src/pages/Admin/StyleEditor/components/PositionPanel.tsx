@@ -6,9 +6,10 @@ interface PositionPanelProps {
   onChange: (updates: any) => void;
   pageType: 'cover' | 'page';
   isImageComponent?: boolean;
+  containerDimensions?: { width: number; height: number };
 }
 
-const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageType, isImageComponent = false }) => {
+const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageType, isImageComponent = false, containerDimensions }) => {
   const verticalPositions = [
     { value: 'top', label: 'Superior', icon: '↑' },
     { value: 'center', label: 'Centro', icon: '•' },
@@ -35,7 +36,7 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
     }
   };
 
-  const paddingValues = parsePadding(config.containerStyle.padding);
+  const paddingValues = parsePadding(config.containerStyle?.padding || '2rem');
 
   const updatePadding = (side: string, value: number) => {
     const current = { ...paddingValues };
@@ -50,13 +51,13 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
   };
 
   const getMaxWidthValue = () => {
-    const maxWidth = config.containerStyle.maxWidth || '100%';
+    const maxWidth = config.containerStyle?.maxWidth || '100%';
     const match = maxWidth.match(/(\d+)/);
     return match ? parseInt(match[1]) : 100;
   };
 
   const getMaxWidthUnit = () => {
-    const maxWidth = config.containerStyle.maxWidth || '100%';
+    const maxWidth = config.containerStyle?.maxWidth || '100%';
     return maxWidth.includes('px') ? 'px' : '%';
   };
 
@@ -70,7 +71,7 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
   };
 
   const getMinHeightValue = () => {
-    const minHeight = config.containerStyle.minHeight || '0%';
+    const minHeight = config.containerStyle?.minHeight || '0%';
     const match = minHeight.match(/(\d+)/);
     return match ? parseInt(match[1]) : 0;
   };
@@ -96,6 +97,120 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
     });
   };
 
+  // Función para convertir posición vertical a coordenadas
+  const handleVerticalPositionChange = (verticalPos: string) => {
+    console.log('🐛[DEBUG] Position change:', {
+      componentName: config.name,
+      newPosition: verticalPos,
+      containerDimensions,
+      isImageComponent
+    });
+
+    if (!containerDimensions) {
+      console.log('[PositionPanel] No hay containerDimensions, enviando solo position');
+      onChange({ position: verticalPos });
+      return;
+    }
+
+    const containerHeight = containerDimensions.height;
+    // Para texto, usar una estimación más realista basada en el contenedor
+    const componentHeight = isImageComponent ? getImageHeight() : Math.min(150, containerHeight * 0.2); // 20% del contenedor o 150px
+    let y = 0;
+
+    // Márgenes adaptativos: más margen para texto
+    const verticalMargin = isImageComponent ? 20 : 40;
+
+    switch (verticalPos) {
+      case 'top':
+        // Borde superior del componente en el límite superior
+        y = verticalMargin;
+        break;
+      case 'center':
+        // Centro del componente en el centro del contenedor
+        y = Math.round((containerHeight - componentHeight) / 2);
+        break;
+      case 'bottom':
+        // Borde inferior del componente en el límite inferior
+        y = Math.round(containerHeight - componentHeight - verticalMargin);
+        break;
+    }
+
+    const updates = { 
+      position: verticalPos,
+      y: Math.max(0, y) // Asegurar que no sea negativo
+    };
+
+    console.log('🐛[DEBUG] Position updates:', {
+      componentName: config.name,
+      updates,
+      calculations: {
+        containerHeight,
+        componentHeight,
+        verticalMargin,
+        calculatedY: y
+      }
+    });
+
+    // Actualizar tanto la posición conceptual como las coordenadas precisas
+    onChange(updates);
+  };
+
+  // Función para convertir posición horizontal a coordenadas
+  const handleHorizontalPositionChange = (horizontalPos: string) => {
+    if (!containerDimensions) {
+      onChange({ horizontalPosition: horizontalPos });
+      return;
+    }
+
+    const containerWidth = containerDimensions.width;
+    // Para texto, verificar si tiene maxWidth configurado
+    let componentWidth = 200; // valor por defecto
+    
+    if (isImageComponent) {
+      componentWidth = getImageWidth();
+    } else {
+      // Para texto, usar maxWidth si está definido, sino usar 95% para Autor, 85% para otros
+      const defaultMaxWidth = config.name?.includes('Autor') ? '95%' : '85%';
+      const maxWidth = config.containerStyle?.maxWidth || defaultMaxWidth;
+      if (maxWidth.includes('%')) {
+        const percent = parseInt(maxWidth) / 100;
+        componentWidth = Math.round(containerWidth * percent);
+      } else if (maxWidth.includes('px')) {
+        componentWidth = parseInt(maxWidth);
+      } else {
+        componentWidth = Math.round(containerWidth * 0.85);
+      }
+    }
+    
+    let x = 0;
+
+    // Márgenes adaptativos: más margen para texto
+    const horizontalMargin = isImageComponent ? 20 : 40;
+
+    switch (horizontalPos) {
+      case 'left':
+        // Borde izquierdo del componente en el límite izquierdo
+        x = horizontalMargin;
+        break;
+      case 'center':
+        // Centro del componente en el centro del contenedor
+        x = Math.round((containerWidth - componentWidth) / 2);
+        break;
+      case 'right':
+        // Borde derecho del componente en el límite derecho
+        x = Math.round(containerWidth - componentWidth - horizontalMargin);
+        break;
+    }
+
+    const updates = { 
+      horizontalPosition: horizontalPos,
+      x: Math.max(0, x) // Asegurar que no sea negativo
+    };
+
+    // Actualizar tanto la posición conceptual como las coordenadas precisas
+    onChange(updates);
+  };
+
   return (
     <div className="space-y-6">
       {/* Vertical Position */}
@@ -108,7 +223,7 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
           {verticalPositions.map(pos => (
             <button
               key={pos.value}
-              onClick={() => onChange({ position: pos.value })}
+              onClick={() => handleVerticalPositionChange(pos.value)}
               className={`px-3 py-2 rounded-lg border-2 transition-all ${
                 config.position === pos.value
                   ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
@@ -132,7 +247,7 @@ const PositionPanel: React.FC<PositionPanelProps> = ({ config, onChange, pageTyp
           {horizontalPositions.map(pos => (
             <button
               key={pos.value}
-              onClick={() => onChange({ horizontalPosition: pos.value })}
+              onClick={() => handleHorizontalPositionChange(pos.value)}
               className={`px-3 py-2 rounded-lg border-2 transition-all ${
                 (config.horizontalPosition || 'center') === pos.value
                   ? 'border-purple-600 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'

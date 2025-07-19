@@ -72,8 +72,17 @@ const Toast: React.FC<ToastProps> = ({
     }
   };
 
+  // Agregar data-testid para E2E testing
+  const getTestId = () => {
+    if (type === 'success' && message.includes('actualizado correctamente')) {
+      return 'save-success-message';
+    }
+    return undefined;
+  };
+
   return (
     <div 
+      data-testid={getTestId()}
       className={`max-w-md p-4 rounded-lg shadow-lg border ${getBgColor()} transition-opacity duration-300 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}

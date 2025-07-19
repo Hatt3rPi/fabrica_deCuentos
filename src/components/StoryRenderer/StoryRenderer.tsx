@@ -10,6 +10,8 @@ import {
   RenderContext,
   debugStyleConfig 
 } from '../../utils/storyStyleUtils';
+import TemplateRenderer from '../unified/TemplateRenderer';
+import { UnifiedRenderOptions } from '../../types/unifiedTemplate';
 
 // ============================================================================
 // TIPOS Y INTERFACES
@@ -64,6 +66,9 @@ export interface StoryRendererProps {
   
   /** ID único para identificar esta instancia */
   instanceId?: string;
+  
+  /** Usar el sistema unificado de renderizado */
+  useUnifiedRenderer?: boolean;
 }
 
 export interface StoryRendererRef {
@@ -87,7 +92,8 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
     contextConfig,
     debug = false,
     onError,
-    instanceId = 'story-renderer'
+    instanceId = 'story-renderer',
+    useUnifiedRenderer = true // Por defecto usar sistema unificado
   }, ref) => {
     
     // ========================================================================
@@ -331,6 +337,62 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
     // RENDER PRINCIPAL
     // ========================================================================
     
+    if (useUnifiedRenderer) {
+      // Usar sistema unificado de renderizado
+      const unifiedPageType = pageType === 'page' ? 'content' : pageType;
+      
+      const renderOptions: UnifiedRenderOptions = {
+        context: context === 'admin' ? 'admin-preview' : context === 'wizard' ? 'wizard' : 'viewer',
+        enableScaling: true,
+        preserveAspectRatio: true,
+        targetDimensions: dimensions,
+        features: {
+          enableAnimations: false,
+          enableInteractions: false,
+          enableDebugInfo: debug,
+          enableValidation: true
+        },
+        performance: {
+          lazyLoadImages: context !== 'pdf',
+          optimizeFor: context === 'pdf' ? 'quality' : 'balance'
+        }
+      };
+      
+      const contentData = {
+        title: pageType === 'cover' ? content : undefined,
+        text: pageType !== 'cover' ? content : undefined,
+        authorName: pageType === 'cover' ? 'Por Autor' : undefined
+      };
+      
+      return (
+        <div 
+          ref={containerRef}
+          className="story-renderer relative"
+          data-page-type={pageType}
+          data-context={context}
+          data-instance={instanceId}
+          data-testid="story-renderer"
+          data-unified="true"
+        >
+          {/* Overlays de admin (grid, rulers) - solo para contexto admin */}
+          {renderAdminOverlays()}
+          
+          {/* Renderizado unificado */}
+          <TemplateRenderer
+            config={config}
+            pageType={unifiedPageType}
+            content={contentData}
+            renderOptions={renderOptions}
+            debug={debug}
+          />
+          
+          {/* Debug info */}
+          {renderDebugInfo()}
+        </div>
+      );
+    }
+    
+    // Sistema legacy para compatibilidad
     return (
       <div 
         ref={containerRef}
@@ -339,6 +401,7 @@ const StoryRenderer = React.forwardRef<StoryRendererRef, StoryRendererProps>(
         data-context={context}
         data-instance={instanceId}
         data-testid="story-renderer"
+        data-unified="false"
       >
         {/* Overlays de admin (grid, rulers) */}
         {renderAdminOverlays()}
